@@ -1,6 +1,8 @@
 # 00 — Overview
 
-Status: draft for owner review. Companion files: `01` roles, `02` interfaces, `03` data, `04` messages, `05` scale, `06` security, `07` roadmap, `08` open questions.
+Status: draft for owner review, audited against the primary sources (see `09-conformance.md` for the matrix, the national choices and what remains unverified). Companion files: `01` roles, `02` interfaces, `03` data, `04` messages, `05` scale, `06` security, `07` roadmap, `08` open questions, `09` conformance.
+
+Citation rule: article and paragraph numbers of 2021/664, 2021/665, 2021/666, 2019/947, 2019/945 (as amended by 2020/1058) and 376/2014 were re-read from the published texts. Anything marked *(unverified)* could not be re-read and must be confirmed before it is relied on.
 
 ## 1. Purpose and scope
 
@@ -21,10 +23,12 @@ Two regulatory layers, both from the Basic Regulation (EU) 2018/1139:
 
 | Layer | Applies | What it brings | Primary source |
 |---|---|---|---|
-| UAS operations | everywhere | Open / specific / certified categories, 120 m height limit in open (UAS.OPEN.010), operator registration (Art. 14), geographical zones (Art. 15), competent authority tasks (Art. 18). Product rules, class marks C0–C6 and direct Remote ID in 2019/945. | Reg. (EU) 2019/947, 2019/945 ([EASA Easy Access Rules UAS](https://www.easa.europa.eu/en/document-library/easy-access-rules/easy-access-rules-unmanned-aircraft-systems-regulations-eu-2019947-and-eu-2019945)) |
-| U-space | only inside designated U-space airspace | Mandatory services: network identification (Art. 8), geo-awareness (Art. 9), UAS flight authorisation (Art. 10), traffic information (Art. 11). Optional: weather (Art. 12), conformance monitoring (Art. 13). Common information services (Art. 5), USSP and CISP certification (Art. 14–16), competent authority (Art. 17–18). Applicable since 26 Jan 2023. | Reg. (EU) 2021/664 ([EUR-Lex](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32021R0664), [EASA Easy Access Rules U-space](https://www.easa.europa.eu/en/document-library/easy-access-rules/online-publications/easy-access-rules-u-space)); 2021/665 (ATS providers: dynamic airspace reconfiguration); 2021/666 (e-conspicuity of manned aircraft in U-space airspace outside controlled airspace) |
+| UAS operations | everywhere | Open / specific / certified categories (Art. 3–6), 120 m from the closest point of the surface in open (UAS.OPEN.010(2)), remote pilot competency (Art. 8, UAS.OPEN.020/030/040), operator registration (Art. 14), geographical zones (Art. 15), competent authority tasks (Art. 18), operator occurrence reporting (Art. 19(2) → 376/2014). Product rules, class marks C0–C6 and direct Remote ID in 2019/945 as amended by 2020/1058. | Reg. (EU) 2019/947, 2019/945 ([EASA Easy Access Rules UAS](https://www.easa.europa.eu/en/document-library/easy-access-rules/easy-access-rules-unmanned-aircraft-systems-regulations-eu-2019947-and-eu-2019945)) |
+| U-space | only inside designated U-space airspace; A1 flights with C0 or privately built < 250 g UA and IFR flights are out of its scope (Art. 1(3)) | Mandatory services (Art. 3(2)): network identification (Art. 8), geo-awareness (Art. 9), UAS flight authorisation (Art. 10), traffic information (Art. 11). Optional per airspace (Art. 3(3)): weather (Art. 12), conformance monitoring (Art. 13). Per-airspace requirements (Art. 3(4), Annex I), registry access for USSPs (Art. 3(5)), dynamic reconfiguration (Art. 4), common information services (Art. 5, Annex II–III), operator duties (Art. 6), USSP duties (Art. 7, Annex V), certification (Art. 14–16, Annex VI–VII), competent authority (Art. 17–18). Applicable since 26 Jan 2023. | Reg. (EU) 2021/664 ([EUR-Lex](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32021R0664), [EASA Easy Access Rules U-space](https://www.easa.europa.eu/en/document-library/easy-access-rules/online-publications/easy-access-rules-u-space)); 2021/665 (adds ATS.OR.127 coordination and ATS.TR.237 dynamic reconfiguration to 2017/373); 2021/666 (SERA.6005(c): manned aircraft in U-space airspace not under ATC make themselves electronically conspicuous to USSPs; SERA.6005(d): the airspace is promulgated in the AIP) |
 
-Annexes of 2021/664 as the EASA Easy Access Rules list them: I criteria for U-space airspace; II publication of common information; III data quality, latency and protection; IV flight authorisation request; V exchange of operational data between USSPs and ATS providers; VI–VII certificates.
+Annexes of 2021/664 (re-read): I criteria for UAS capabilities, service performance and operational conditions per U-space airspace; II common information online through common open, secure, scalable technologies, non-discriminatory, common secure interoperable open protocol; III data quality (verification, metadata, authenticated transfer, error reporting) and protection (encryption, security risk management, insider risk) — it sets **no numeric latency**; the latency and performance figures are the Member State's determination under Art. 3(4)(b); IV the ten items of a flight authorisation request; V the USSP–ATS exchange (service level agreement, exchange model with extension mechanism, recognised encryption, open protocol); VI–VII certificate forms.
+
+Standards chosen to implement the open protocols the regulation requires but does not name (a national/ecosystem choice, `09 §2`): ASTM F3411-22a for network identification (SP, DP, DSS, ISA), ASTM F3548-21 for flight authorisation interoperability (operational intents, constraints, DSS), EUROCAE ED-318 for geo-zone and U-space data provision, ASD-STAN EN 4709-002 / ASTM F3411 broadcast for direct Remote ID.
 
 Georgia: GCAA's UAS rules in force since 2021-01-01 mirror 2019/947 (open/specific/certified, 120 m, operator registration, direct Remote ID for C1–C3) per [uas.gov.ge](https://uas.gov.ge/EN); zones are shown on [airspace.gov.ge](https://airspace.gov.ge/) with no machine-readable feed. Whether 2021/664 is adopted and any U-space airspace designated is **unverified** (`08-open-questions.md` Q1–Q2). The system is built so that the 2019/947 layer works on day one and the 2021/664 layer activates per designated volume.
 
@@ -32,10 +36,10 @@ Georgia: GCAA's UAS rules in force since 2021-01-01 mirror 2019/947 (open/specif
 
 | Code name | Role | Regulation | Owner of truth for |
 |---|---|---|---|
-| `uspace-authority` | Competent authority (GCAA; branding is configuration) | 2019/947 Art. 14, 15, 18; 2021/664 Art. 3, 17, 18; 376/2014 | Registry (operators, UAS, pilots), geo-zones, U-space airspace designations, USSP/CISP certificates, violations, incidents, Remote ID receiver network, audit of oversight |
-| `uspace-cisp` | Common Information Service Provider | 2021/664 Art. 5, Annex II; ED-318 | The published, versioned common information picture: zones, U-space airspaces, dynamic restrictions, USSP list, publication history |
-| `uspace-ussp` | U-space Service Provider | 2021/664 Art. 7–13, Annex III–V; F3411, F3548 | Operational intents and authorisations, network identification of its flights, conformance state, traffic information issued, service records |
-| `uspace-ansp` | ANSP's U-space interface (not an ATM system) | 2021/665; 2021/664 Art. 4, Annex V | Dynamic airspace reconfigurations, manned traffic feed as handed to U-space, coordination messages |
+| `uspace-authority` | Competent authority (GCAA; branding is configuration) | 2019/947 Art. 14, 15, 17, 18; 2021/664 Art. 3, 5(1), 14–18; 376/2014 Art. 6(3), 6(6) | Registry (operators, UAS, pilots), geo-zones, U-space airspace designations and their Art. 3(4) requirements, USSP/CISP certificates and register (Art. 18(a)), violations, occurrences, Remote ID receiver network, audit of oversight; F3411 Display Provider for its own picture |
+| `uspace-cisp` | Single Common Information Service Provider (Art. 5(6), state-run: national choice) | 2021/664 Art. 5, Annex II–III; ED-318 | The published, versioned common information picture: zones, U-space airspaces with requirements and adjacency, dynamic restrictions, ATS operational data, USSP list and terms, publication history |
+| `uspace-ussp` | U-space Service Provider | 2021/664 Art. 7–13, 15, Annex III–V; F3411, F3548 | Operational intents and authorisations (with authorisation numbers and deviation thresholds), network identification of its flights, conformance state, traffic information issued, service records (≥ 30 days, Art. 15(1)(g)) |
+| `uspace-ansp` | ANSP's U-space interface (not an ATM system) | 2021/665 (ATS.OR.127, ATS.TR.237); 2021/664 Art. 4, 5(2), 7(3), Annex V | Dynamic airspace reconfigurations, manned traffic feed as handed to U-space, coordination messages |
 | `uspace-lab` | Integration, SITL, scenarios, load tests, demo | — | Nothing in production; test vectors, scenarios, load reports |
 | `courier` (external) | UAS operator; a USSP client later | 2021/664 Art. 6 | Its own fleet and missions |
 
@@ -74,9 +78,12 @@ flowchart LR
   PUB -->|ED-318 pull + signed webhook| AUTH
   MT -->|manned traffic stream| USSP
   MT -->|manned traffic stream| AUTH
+  EC[Manned e-conspicuity: ADS-B / ADS-L] -->|SERA.6005 c| USSP
   OP <-->|intents, telemetry, traffic info, alerts| USSP
-  USSP <-->|F3548 / F3411| DSS
-  USSP -->|F3411 DP, records, incidents| AUTH
+  USSP <-->|F3548 / F3411 SP| DSS
+  AUTH <-->|F3411 DP: ISA discovery| DSS
+  AUTH -->|F3411 GET /uss/flights| USSP
+  USSP -->|records, occurrences, start/cease notices| AUTH
   USSP -->|registry validity lookups| REG
   RX -->|signed ODID frames| RIDRX
   POL -->|queries| AUTH
@@ -92,19 +99,19 @@ Solid arrows are production interfaces (`02-interfaces.md`); dotted arrows exist
 | Term | Definition here |
 |---|---|
 | Authority | The competent authority of 2019/947 Art. 17 / 2021/664 Art. 17: GCAA. Registers, designates, certifies, oversees, records incidents. Does not provide U-space services. |
-| CISP | Common Information Service Provider (2021/664 Art. 2, Art. 5): publishes the common information of Annex II to USSPs, the authority, ATS providers and the public. A member state may designate a single CISP per U-space airspace (Art. 5(6), paragraph number unverified against the consolidated text); it may be the state itself. |
-| ANSP | Air navigation service provider; here the ATS provider of 2021/665 whose U-space duties are dynamic airspace reconfiguration and coordination data (Annex V). |
-| USSP | U-space Service Provider (Art. 7): a certified legal person providing the U-space services to UAS operators. |
+| CISP | Common Information Service Provider (2021/664 Art. 2(4), Art. 5): makes the common information of Art. 5(1)–(3) available per Annex II–III to authorities, ATS providers, USSPs and UAS operators on a non-discriminatory basis (Art. 5(5)). A member state may designate a single CISP on an exclusive basis (Art. 5(6)); it must then be certified under Chapter V (Art. 5(7)). That it is state-run here is a national choice. |
+| ANSP | Air navigation service provider; here the ATS provider of 2021/665: ATS.OR.127 (manned traffic information for U-space airspace in controlled airspace, coordination procedures with USSPs and the CISP) and ATS.TR.237 (dynamic reconfiguration by ATC units, notification of activation, deactivation and temporary limitations to USSPs and the CISP); Annex V exchange. |
+| USSP | U-space Service Provider (Art. 7): a certified legal person providing the U-space services to UAS operators; an operator may be its own USSP (Art. 6(2)). |
 | DSS | Discovery and Synchronisation Service: the ASTM F3548 / F3411 broker through which USSPs discover each other's operational intents, constraints and identification service areas. Reference implementation: [InterUSS DSS](https://github.com/interuss/dss). |
 | Operator | UAS operator (2019/947 Art. 2): the legal or natural person operating UAS, registered under Art. 14, holder of the registration number. |
 | Remote pilot | The natural person flying the UAS (2019/947 Art. 2), holder of competency proof (A1/A3, A2, STS). |
 | UAS | Unmanned aircraft system: the aircraft plus its remote control equipment (2019/947 Art. 2). Identified by manufacturer serial (ANSI/CTA-2063-A) and, for class-marked UAS, class label. |
-| Direct Remote ID | Broadcast identification (2019/945 Part 6; ASD-STAN EN 4709-002; ASTM F3411 broadcast): operator registration number, serial, position, height, velocity, take-off point, time, emergency status, over Bluetooth or Wi-Fi. Unauthenticated. |
-| Network Remote ID | Identification over the internet (ASTM F3411 network): a Net-RID Service Provider serves `/uss/flights`; a Display Provider aggregates. In U-space it is the network identification service of 2021/664 Art. 8. |
-| Operational intent | ASTM F3548 term for a declared flight volume set in 4D with a state (Accepted, Activated, Nonconforming, Contingent). The carrier of a 2021/664 Art. 10 flight authorisation request and its result. |
-| Geo-zone | UAS geographical zone (2019/947 Art. 15): a volume that facilitates, restricts or excludes UAS operations; encoded per EUROCAE ED-269 / ED-318 with type PROHIBITED, REQ_AUTHORIZATION, CONDITIONAL, NO_RESTRICTION, USPACE. |
-| U-space airspace | A geographical zone designated by the member state where UAS may operate only with U-space services (2021/664 Art. 2, Art. 3). |
-| Dynamic airspace reconfiguration | Temporary modification of U-space airspace limits by the ATS provider to accommodate manned traffic (2021/664 Art. 4; 2021/665). |
-| Conformance | Whether a flight stays within its authorised volumes and times (2021/664 Art. 13, F3548 conformance states). Height conformance is part of it. |
-| Airprox | A situation in which the distance between aircraft and their relative positions and speeds were such that safety may have been compromised; a reportable occurrence under Reg. (EU) 376/2014 and 2015/1018, reported within 72 h. |
-| Violation | The authority's finding that a rule was broken (height, zone, unregistered aircraft, no authorisation). Distinct from a USSP alert, which is a service to the operator. |
+| Direct Remote ID | Broadcast identification (2019/945 as amended by 2020/1058: Parts 2–4 point (12) for C1–C3, Part 6 for the add-on; ASD-STAN EN 4709-002; ASTM F3411 broadcast). Content for class-marked UA: operator registration number (with the verification code, see `06 §5`), serial (ANSI/CTA-2063-A), time stamp, position, height above surface or take-off point, course, ground speed, remote pilot position or take-off point, emergency status. The add-on list (Part 6) has no emergency status. Over Bluetooth or Wi-Fi, open and documented protocol, unauthenticated. |
+| Network Remote ID | Identification over the internet (ASTM F3411-22a network): a Net-RID Service Provider serves `/uss/flights` and `/uss/flights/{id}/details` for the ISAs it registers in the DSS; a Display Provider discovers ISAs through the DSS and pulls from the Service Providers. In U-space it is the network identification service of 2021/664 Art. 8; the authority is a standard Display Provider. |
+| Operational intent | ASTM F3548-21 term for a declared flight volume set in 4D with a DSS state (`Accepted`, `Activated`, `Nonconforming`, `Contingent`). The carrier of a 2021/664 Art. 10 flight authorisation request and its result; the authorisation itself is the USSP's decision with a unique authorisation number (Art. 10(11)) and deviation thresholds (Art. 10(2)(d)). |
+| Geo-zone | UAS geographical zone (2019/947 Art. 15): a volume that facilitates, restricts or excludes UAS operations, published with its period of validity in a common unique digital format (Art. 15(3), Art. 18(f)); encoded per EUROCAE ED-318 `UASZone` with type `PROHIBITED`, `REQ_AUTHORIZATION`, `CONDITIONAL`, `NO_RESTRICTION`, `USPACE` (ED-269 names the same set `restriction`, spelled `REQ_AUTHORISATION`). |
+| U-space airspace | A geographical zone designated by the member state where UAS may operate only with U-space services (2021/664 Art. 2(1), Art. 3), with the UAS capability, service performance and operational requirements of Art. 3(4). |
+| Dynamic airspace reconfiguration | Temporary modification of U-space airspace limits by ATC units to accommodate manned traffic (2021/664 Art. 2(6), Art. 4; ATS.TR.237). |
+| Conformance | Whether a flight stays within its authorisation, its deviation thresholds and the Art. 6(1) requirements (2021/664 Art. 13(1); F3548 conformance states). Height conformance is part of it; the authorised upper limit never exceeds the applicable zone or airspace ceiling, so a height constraint set under Art. 3(4)(c) is covered. |
+| Occurrence | An event reportable under Reg. (EU) 376/2014 Art. 4 (mandatory, categories of Art. 4(1), within 72 h of awareness: Art. 4(7)–(8)) or Art. 5 (voluntary); airprox is one. UAS-specific occurrence classes are in 2015/1018 *(annex not re-read; unverified)*. Occurrence information may be used only for safety (Art. 15(2)) and never to attribute blame (Art. 16(6)–(7)). |
+| Violation | The authority's finding, from its own evidence, that a rule was broken (height, zone, unregistered aircraft, no authorisation); 2019/947 Art. 18(a), (k). Distinct from a USSP alert (a service to the operator) and from an occurrence report (protected by 376/2014). |

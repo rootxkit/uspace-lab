@@ -2,12 +2,13 @@
 
 ## 1. Load model
 
-Assumptions: 1 Hz telemetry per airborne UAS (F3411 network minimum); average internal `track/telemetry/v1` 600 B JSON; direct Remote ID at 1–3 frames/s per heard aircraft and ~40 % of airborne UAS heard by at least one receiver; manned traffic tens of aircraft; 2.5 intents per drone-day; consoles 10 / 30 / 60 concurrent, each viewing a cell set with ≤ 200 tracks.
+Assumptions: 1 Hz telemetry per airborne UAS (the authority's determination under 2021/664 Art. 8(3); equals the F3411 `NetMinUasLocRefreshFrequencyHz`); average internal `track/telemetry/v1` 600 B JSON; direct Remote ID at 1–3 frames/s per heard aircraft and ~40 % of airborne UAS heard by at least one receiver; manned traffic tens of aircraft; 2.5 intents per drone-day; consoles 10 / 30 / 60 concurrent, each viewing a cell set with ≤ 200 tracks; the authority's F3411 DP views cover every ISA (≤ 7 km diagonal per view).
 
 | Quantity | 100 drones | 1000 drones | 5000 drones |
 |---|---|---|---|
 | Operator telemetry into USSP (msg/s) | 100 | 1 000 | 5 000 |
-| USSP → authority display push (msg/s) | 100 | 1 000 | 5 000 |
+| Authority DP → USSP `GET /uss/flights` polls (1 Hz per active view; flights returned/s equals airborne UAS) | 10 views / 100 flights | 50 / 1 000 | 200 / 5 000 |
+| Optional national push USSP → authority (msg/s, if enabled) | 100 | 1 000 | 5 000 |
 | Direct RID observations into authority (msg/s) | ≈ 100 | ≈ 1 000 | ≈ 5 000 |
 | Internal track fan-out per system (msg/s, with CPA, zone, conformance, console consumers ≈ 4×) | 400 | 4 000 | 20 000 |
 | CPA pair checks per second (800 m radius, grid index; worst-case clustering 10 % of fleet in one cell) | < 1 000 | ≈ 50 000 | ≈ 1 250 000 |
@@ -23,7 +24,7 @@ CPA at 5000 is the first thing that breaks a naive design: it is quadratic withi
 
 | System | Hot path (stateless ingest, partitioned consumers, sub-second) | Control plane (transactional, seconds, PostgreSQL) |
 |---|---|---|
-| authority | RID observation decode and time placement; USSP display ingest; ANSP manned ingest; identification resolution from a registry projection; violation detectors (120 m, zones, unregistered, no authorisation); picture WS by viewport | registry, zones, certificates, incidents, evidence, source control, audit, token service |
+| authority | RID observation decode and time placement; F3411 DP poller (ISA discovery, SP polls, 24 h cache); ANSP manned ingest; identification resolution from a registry projection; violation detectors (120 m, zones, unregistered, no authorisation); picture WS by viewport | registry, zones, certificates, incidents, occurrence reports, evidence, source control, audit, token service |
 | cisp | change notification fan-out; bbox reads from a materialised current-version table; public map | publications, versions, subscriptions, delivery log |
 | ussp | telemetry ingest; conformance per flight; CPA / traffic information per cell; geo-awareness evaluation; alert state machine; F3411 SP serving; traffic WS | intents, DSS interaction, registry validation, accounts, records, occurrences |
 | ansp | manned feed normalisation and fan-out | restrictions lifecycle, coordination inbox, adapters |
@@ -32,7 +33,7 @@ Rules: ingest processes hold no per-aircraft state beyond a short dedupe window 
 
 ## 3. Partitioning and NATS subject design
 
-Partition key: **H3 cell at resolution 5** (`cell5`, average edge ≈ 8.5 km, area ≈ 250 km²; Georgia ≈ 280 cells) with the parent **resolution 3** (`cell3`, ≈ 12 cells for the country) as the coarse key. A track's cell is computed at ingest from its position; a consumer owning a set of `cell5`s also subscribes to their ring-1 neighbours for CPA (800 m search radius ≪ cell edge, so one ring suffices).
+Partition key (internal only; no standard governs it — a design choice): **H3 cell at resolution 5** (`cell5`, average edge ≈ 8.5 km, area ≈ 250 km²; Georgia ≈ 280 cells) with the parent **resolution 3** (`cell3`, ≈ 12 cells for the country) as the coarse key. H3 cells never appear on an external interface; external areas are F3411 views, F3548 volumes and ED-318 geometries. A track's cell is computed at ingest from its position; a consumer owning a set of `cell5`s also subscribes to their ring-1 neighbours for CPA (800 m search radius ≪ cell edge, so one ring suffices).
 
 Subjects (one NATS cluster per system; JetStream for durable subjects, core NATS for high-rate ephemeral ones):
 
@@ -55,12 +56,14 @@ Consumer scaling: CPA / conformance / detector workers form a JetStream consumer
 
 | Data | Store | Hot retention | Compressed / cold | Rationale |
 |---|---|---|---|---|
-| Telemetry, tracks, manned tracks, RID observations | TimescaleDB hypertables, 1-day chunks, `compress_segmentby` = track/flight id, `compress_orderby` = `captured_at` | 7 days uncompressed | compressed to 90 days online; monthly archive to object storage (Parquet) for 2 years at the authority, 1 year at USSPs — **numbers are design defaults; 2021/664 Annex III and national rules decide (Q8)** | evidence and records |
-| Alerts, violations, conformance states | PostgreSQL | all | 5 years | regulatory |
-| Intents, decisions, DSS log | PostgreSQL | all | 5 years | regulatory |
-| Incidents, evidence packs | PostgreSQL + object storage, hash-sealed | all | indefinite | 376/2014 |
+| Telemetry, own tracks, manned tracks, RID observations | TimescaleDB hypertables, 1-day chunks, `compress_segmentby` = track/flight id, `compress_orderby` = `captured_at` | 7 days uncompressed | compressed to 90 days online; monthly archive to object storage (Parquet) for 2 years at the authority, 1 year at USSPs — **national choice (Q8)**: the regulatory floor is 30 days for USSP/CISP operational records, longer while pertinent to an investigation (2021/664 Art. 15(1)(g)); the authority's recorded-data demand is its Art. 18(b) determination; the ceiling is the storage-limitation principle (`06 §5`) | evidence and records |
+| F3411 DP cache (`ussp_flights`, `peer_flights`) and F3548 peer data (`peer_intents`) | TimescaleDB / PostgreSQL | 24 h | **none** — disposed of at 24 h (F3411 `NetDpMaxDataRetentionPeriodSeconds = 86400`, F3548 `ExternalDataMaxRetentionTimeHours = 24`); what a decision or violation relied on is copied into that record | standard limit |
+| Alerts, violations, conformance states | PostgreSQL | all | 5 years (national choice; floor 30 days) | regulatory |
+| Intents, decisions, DSS log | PostgreSQL | all | 5 years (national choice; floor 30 days) | regulatory |
+| Incidents, evidence packs | PostgreSQL + object storage, hash-sealed | all | indefinite (national choice) | oversight |
+| Occurrence reports | PostgreSQL, segregated schema | all | indefinite, personal details removed at export and purged per DPO rule (national choice) | 376/2014 Art. 6(6), 16(3) |
 | CIS publications and versions | PostgreSQL | all | indefinite | "what was published at T" |
-| Audit `events` | PostgreSQL, append-only, partitioned by month | all | 10 years | oversight |
+| Audit `events` | PostgreSQL, append-only, partitioned by month | all | 10 years (national choice) | oversight |
 | JetStream streams | broker disk | per subject table above | — | replay and restart only |
 
 Capacity on the single staging droplet: at 100 drones every system together writes < 10 GB/day uncompressed; a 500 GB volume holds > 30 days hot for all. At 1000 drones each system needs its own database host; at 5000, TimescaleDB multi-node or per-`cell3` sharding of the telemetry hypertable.
@@ -76,7 +79,8 @@ Capacity on the single staging droplet: at 100 drones every system together writ
 | CPA workers | if a cell's pair budget is exceeded the worker widens its tick to 2 s for that cell, reports `degraded`, and the alert carries `evaluation_period_s`; it never skips a cell silently |
 | Console WS | server-side throttle per viewport; `dropped_frames` counter visible in the UI |
 | Webhooks (CISP) | bounded retry queue per subscriber; the subscriber's mandatory 60 s pull makes delivery loss recoverable |
-| Cross-system pushes (USSP → authority display) | 10 min bounded buffer, then drop oldest with a gap record both sides can reconcile from records |
+| Authority DP polls (F3411) | one poller per active view; a Service Provider slower than p99 3 s is marked `slow` and its view polled at 0.5 Hz with age shown; never more than one in-flight request per view |
+| Optional national push (USSP → authority) | 10 min bounded buffer, then drop oldest with a gap record both sides can reconcile from records |
 
 ## 6. Failure domains
 
@@ -88,9 +92,9 @@ Capacity on the single staging droplet: at 100 drones every system together writ
 | TimescaleDB (one system) | live picture continues from NATS; records queue in JetStream mirror; replay later | unaffected |
 | PostgreSQL (one system) | control plane refuses writes; hot path runs on projections (registry validity, zones, policy, switches) with age shown | unaffected |
 | CISP | subscribers run on cache with `cis_age_s`; new U-space authorisations refused after 300 s | ANSP degraded path to USSPs |
-| Authority | USSPs use validity cache 24 h; display push buffers; receivers buffer | CISP keeps serving; no real-time service depends on the authority |
-| DSS | cross-USSP deconfliction unavailable; local intents and all in-flight services continue | — |
-| ANSP feed | USSP traffic information marks manned traffic unavailable; optional own receiver at lower trust | — |
+| Authority | USSPs use validity cache 24 h; its DP views stop (USSP SP interfaces unaffected); receivers buffer | CISP keeps serving; no real-time service depends on the authority |
+| DSS | cross-USSP deconfliction unavailable; the authority's ISA discovery falls back to known ISAs; local intents and all in-flight services continue | — |
+| ANSP feed | USSP traffic information marks manned traffic unavailable; its own e-conspicuity receiver continues at trust `broadcast` | — |
 | Token service | tokens valid for their TTL (≤ 1 h), JWKS cached 24 h; new tokens fail → systems alarm; a second issuer instance is the first scaling step | — |
 | The whole droplet (staging) | everything; flights are unaffected because nothing commands them | — |
 
@@ -103,7 +107,9 @@ Run from `uspace-lab` against the staging images with simulated operators, recei
 | Property | Pass criterion |
 |---|---|
 | Ingest-to-picture latency | p99 < 1 s (operator telemetry to USSP console frame; receiver frame to authority picture) |
-| Alert latency | proximity / nonconformance raised p99 < 2 s after the triggering sample's `captured_at`; zone alert within one tick of entry |
+| F3411 timing | SP `GET /uss/flights` p95 ≤ 1 s, p99 ≤ 3 s under load; authority DP display p95 ≤ 1 s, p99 ≤ 3 s after SP response; details p95 ≤ 2 s, p99 ≤ 6 s; DP cache empty of anything older than 24 h |
+| F3548 timing | peer notification of an intent change ≤ 5 s; conflicting-intent notification to the other USS ≤ 1 s; details request answered ≤ 1 s; constraint notification ≤ 5 s |
+| Alert latency | proximity / nonconformance raised p99 < 2 s after the triggering sample's `captured_at`; zone alert within one tick of entry; Art. 13(2) notices to peers and ANSP within 5 s and acknowledged |
 | Missed alerts | zero against the scenario's expected set; every expected clear observed |
 | No silent loss | every `dropped_*`, `gap`, `degraded` counter accounted for in the report; sum of accepted + dropped = sent |
 | CPA budget | pair checks per worker per second within budget; `evaluation_period_s` never above 2 s |

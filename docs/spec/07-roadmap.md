@@ -17,36 +17,36 @@ Build order: knowledge transfer → cisp → authority → ussp → ansp → lab
 
 | Milestone | Done when |
 |---|---|
-| **C-M1 Publish and read** (first demo) | the authority-role test client publishes an ED-318 zone set and a U-space airspace; `GET /v1/zones?bbox=` returns them with `ETag`; a second publication yields a diff in `/v1/changes`; a webhook subscriber receives the signed change within 1 s and the public map shows the zones |
-| C-M2 Restrictions | ANSP-role client activates a restriction; subscribers notified within 1 s; `ended` and `cancelled` lifecycle; history by version and `at=` |
+| **C-M1 Publish and read** (first demo) | the authority-role test client publishes an ED-318 zone set and a U-space airspace with its Art. 3(4) requirements, adjacency and USSP list with terms; `GET /v1/zones?bbox=` returns them with `ETag` and `updateDateTime`; a second publication yields a diff in `/v1/changes`; a webhook subscriber receives the signed change within 1 s and the public map shows the zones; an ED-269 file round-trips through the import mapping |
+| C-M2 Restrictions | ANSP-role client activates a restriction; subscribers notified within 1 s; the same restriction appears as an F3548 constraint in the lab DSS; `ended` and `cancelled` lifecycle; history by version and `at=` |
 | C-M3 Hardening | 60 s reconciliation pull proven by killing the subscriber during a change; delivery log; rate-limited public API; CISP console (publications, subscriptions, deliveries) |
 
 ### Phase 2 — `uspace-authority`
 
 | Milestone | Done when |
 |---|---|
-| **A-M1 Registry and zones** (first demo) | an operator, a pilot and two UAS registered, suspended and looked up by number and serial; `GET /v1/registry/validate` returns status only; an ED-318 zone authored in the console publishes to the CISP and appears on its map; every change in `events` |
+| **A-M1 Registry and zones** (first demo) | an operator (all 2019/947 Art. 14(2) fields), a pilot and two UAS registered, suspended and looked up by number and serial; `GET /v1/registry/validate` returns status only; an ED-318 zone authored in the console publishes to the CISP and appears on its map; every change in `events` |
 | A-M2 Remote ID picture | a lab receiver posts signed ODID frames for SITL aircraft; decode, HAE → AMSL, pressure fallback, identity per transmitter, time placement; four identification statuses shown; source control by type and instance with `source_disabled` ageing |
-| A-M3 Violations and incidents | 120 m (with DEM), zone incursion, unregistered and identification-mismatch violations raised and closed from SITL; an incident opened from a violation; evidence pack exported and its hash verified; 376/2014 intake endpoint accepts an occurrence from a test USSP |
-| A-M4 Ecosystem token service and USSP display ingest | clients registered from certificates; JWKS; the USSP's display push appears as `trust: provider`; police realm with purpose-logged queries |
+| A-M3 Violations and occurrences | 120 m (with DEM), zone incursion, unregistered and identification-mismatch violations raised and closed from SITL; an incident opened from a violation; evidence pack exported and its hash verified; 376/2014 intake accepts an occurrence from a test USSP, holds the reporter identity for `incident_officer` only, exports a de-identified ECCAIRS/ADREP-compatible record, and cannot be linked to a violation |
+| A-M4 Ecosystem token service and F3411 Display Provider | clients registered from certificates; JWKS; the authority discovers the lab USSP's ISAs through the lab DSS, polls `/uss/flights` per view and shows flights as `trust: provider`; the DP cache is proven empty of data older than 24 h; USSP start-of-operations notice recorded; police realm with purpose-logged queries |
 | A-M5 Replace the predecessor | `utm.chikox.net` and `ingest.chikox.net` retired; the authority holds the registry and the picture |
 
 ### Phase 3 — `uspace-ussp`
 
 | Milestone | Done when |
 |---|---|
-| **S-M1 Intents and geo-awareness** (first demo) | an operator client files an intent; it is checked against the CIS cache (zones, restrictions) and existing intents; two overlapping intents filed in either order give the same decision; a refusal names the conflicting item; registry validity fetched from the authority and cached |
-| S-M2 Telemetry, network ID, conformance | SITL aircraft stream telemetry over the operator WS; `/uss/flights` serves them (F3411 v22a); the authority's DP view shows them; conformance raises and clears on a SITL aircraft leaving its volume, including height above the authorised upper; lost link after the configured silence |
-| S-M3 Traffic information | CPA proximity alerts between two SITL aircraft and between a SITL aircraft and a lab manned track; traffic WS by intent and bbox with trust class and age; stale and unavailable sources flagged |
-| S-M4 DSS and peers | InterUSS DSS in the lab; intents written as F3548 references with ovn; a second lab USSP's intent conflicts are detected; `pending_dss` behaviour when the DSS is down; peer flights via F3411 as `provider` |
-| S-M5 Records and occurrences | per-flight records fetched by the authority; an airprox occurrence posted; USSP console (flights, alerts, DSS state, degraded inputs) |
+| **S-M1 Intents and geo-awareness** (first demo) | an operator client files an intent with all ten Annex IV items; it is checked against the CIS cache (zones, restrictions, airspace constraints) and existing intents; two overlapping intents filed in either order give the same decision; a special-operation intent (SERA Art. 4) wins priority, equal priority is first come first served; a refusal names the conflicting item; an acceptance carries an authorisation number and deviation thresholds; activation is confirmed; registry validity fetched from the authority and cached; a C0 A1 flight is accepted without authorisation (Art. 1(3)) |
+| S-M2 Telemetry, network ID, conformance | SITL aircraft stream telemetry over the operator WS; an ISA is created in the lab DSS and `/uss/flights` serves them (F3411 v22a, p99 ≤ 3 s); the authority's DP view shows them; conformance raises and clears on a SITL aircraft leaving its volume or its deviation thresholds, including height above the authorised upper; nearby operators get `nonconformance_nearby`, the lab ANSP acknowledges the notice, the peer sees `Nonconforming`; lost link after the configured silence |
+| S-M3 Traffic information | CPA proximity alerts between two SITL aircraft and between a SITL aircraft and a lab manned track; a lab ADS-B e-conspicuity source feeds traffic information directly; traffic WS by intent and bbox with trust class and age; stale and unavailable sources flagged |
+| S-M4 DSS and peers | InterUSS DSS in the lab; intents written as F3548 references with ovn; a second lab USSP's intent conflicts are detected and notified within 1 s; `pending_dss` behaviour when the DSS is down; peer flights via F3411 as `provider`; a lab constraint from the ANSP triggers `restriction_activated` and an authorisation update; peer data purged at 24 h |
+| S-M5 Records and occurrences | per-flight records (≥ 30 days) fetched by the authority; an airprox occurrence posted within 72 h of awareness; start / cease notices; USSP console (flights, alerts, DSS state, degraded inputs, emergency workflow) |
 
 ### Phase 4 — `uspace-ansp`
 
 | Milestone | Done when |
 |---|---|
-| **N-M1 Restrictions and manned feed** (first demo) | a supervisor activates a restriction over a SITL aircraft: the CISP publishes within 1 s, the USSP raises `restriction_activated` on the affected intent within one tick, the authority shows it; a recorded ADS-B file streams as manned traffic to the USSP and the authority |
-| N-M2 Coordination | Annex V inbox receives intents touching the restricted volume and non-conformance notices; degraded direct path to USSPs when the CISP is down |
+| **N-M1 Restrictions and manned feed** (first demo) | a supervisor activates a restriction over a SITL aircraft: the CISP publishes within 1 s and the DSS constraint is written, the USSP raises `restriction_activated` on the affected intent within one tick, the authority shows it; a recorded ADS-B file streams as manned traffic to the USSP and the authority (ATS.OR.127) |
+| N-M2 Coordination | Annex V inbox receives intents touching the restricted volume and non-conformance notices and acknowledges them (Art. 13(2)); degraded direct path to USSPs when the CISP is down |
 
 ### Phase 5 — `uspace-lab` (full)
 
@@ -67,7 +67,7 @@ Build order: knowledge transfer → cisp → authority → ussp → ansp → lab
 | Old task | What it was | New home | Status |
 |---|---|---|---|
 | U-01 UAS operator registry | operators, pilots, UAS | authority A-M1 | kept |
-| U-02 Network identification | statuses, resolution in adapters, network RID ingest, spoof guard | USSP S-M2 serves it (Art. 8); authority A-M2/A-M4 consumes and resolves for its picture; status table and `serial_conflict` rule as vectors (KT-2) | kept, split |
+| U-02 Network identification | statuses, resolution in adapters, network RID ingest, spoof guard | USSP S-M2 serves it as an F3411 Service Provider (Art. 8); authority A-M4 consumes it as a standard F3411 Display Provider and resolves for its picture (the predecessor's push ingest survives only as the optional national extension); status table and `serial_conflict` rule as vectors (KT-2) | kept, split |
 | U-03 Geo-awareness / ED-269 | zone model, import/export, editor | authority A-M1 authors (ED-318 supersedes ED-269 data model); CISP C-M1 publishes; USSP S-M1 evaluates | kept, split |
 | U-04 Dynamic airspace reconfiguration | temporary restriction | ANSP N-M1 (owner), CISP C-M2, USSP alert | kept, re-assigned to ANSP |
 | U-05 Flight authorisation | 4D intents, overlap checks | USSP S-M1 | kept |
@@ -99,6 +99,6 @@ Build order: knowledge transfer → cisp → authority → ussp → ansp → lab
 | P1-01..P1-13, S-01..S-09, S-24, S-30 operator relay (relay-v1), MAVLink gateway, drain logic | QGC relay, backlog drain | **dropped**: operators feed network ID through the USSP API; the relay's `backlog`/drain semantics survive as the time fields and the operator client's queue rule | dropped (concepts kept) |
 | P1-09 station link quality | relay link metrics | **dropped** | dropped |
 | P5-08, P5-09, P5-16 deterministic resolution advice | lower id holds, higher descends | **dropped**: the USSP informs, it does not resolve; the remote pilot decides | dropped |
-| P5-19 height limit as alert to operators | 120 m alert in the monitor | authority violation only; USSP height conformance is against the authorised volume | re-scoped |
+| P5-19 height limit as alert to operators | 120 m alert in the monitor | authority violation (947 Art. 18(k)); USSP height conformance is against the authorised volume and the airspace's Art. 3(4)(c) constraints, which cap the volume, so inside U-space airspace the two agree | re-scoped |
 | P5-17 OpenUTM evaluation | adopt or build | decided: InterUSS DSS adopted; USSP services built | closed |
 | D-01..D-04 demo readiness | `make demo`, soak, staging check, script | lab L-M1..L-M3 | kept |
