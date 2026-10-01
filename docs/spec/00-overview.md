@@ -154,17 +154,20 @@ Where the same package appears in two systems, it lives once in the shared Go mo
 
 | Package | Content | Vectors that pin it |
 |---|---|---|
-| `odid` | ODID / Remote ID message types (Basic ID, Location, System, Operator ID, Self-ID, Authentication, Message Pack), decode from BT4/BT5/Wi-Fi frames, special-value handling | `odid_decode`, `rid_identity`, `rid_receiver_auth` |
-| `geodesy` | WGS84 distance, bearing, projection to local metres, H3 helpers | `geodesy` |
+| `core` | shared base types: positions, altitudes and their sources, times, identification statuses and reasons, zone types, severities, field errors, counters | (through every package below) |
+| `odid` | ODID / Remote ID message types (Basic ID, Location, System, Operator ID, Self-ID, Authentication, Message Pack), decode and encode for BT4/BT5/Wi-Fi frames, special-value handling | `odid_decode` |
+| `rid` | Remote ID observation rules above the codec: Basic ID and Location joined per transmitter address, freshness, unidentified tracks, anomalies; geodetic or pressure altitude with its hold | `rid_identity`, `pressure_altitude` |
+| `timeplace` | `ts` / `rx_ts` / `captured_at` / `backlog` placement, Remote ID hour reconstruction and broadcast time tolerance, network Remote ID placement, source clock skew | `rid_time` |
+| `geodesy` | WGS84 distance, bearing, points in circles and polygons, projection to local metres, H3 helpers | `geodesy` |
 | `terrain`, `geoid` | DEM and EGM2008 readers (Copernicus GLO-30 / SRTM tiles, 2.5′ geoid grid), HAE ↔ AMSL, AGL where ground known | `terrain_geoid` |
-| `ed269`, `ed318` | zone models, GeoJSON parse and validate, the ED-269 → ED-318 mapping, applicability (TimePeriod, DailyPeriod, daylight events) | `ed269_parse`, `zones_applicability` |
-| `f3411`, `f3548` | the `uas_standards` types for v22a and v21, scopes, constants, DSS and USS client/server helpers | schema examples |
-| `regnum`, `serial` | registration number (public part, secret part hash, checksum when adopted) and ANSI/CTA-2063-A serial validation and normalisation | `serials_and_registration`, `fleet_match` |
-| `identify` | identification status and reason resolution, `serial_conflict` rule, basis (authenticated / as broadcast) | `identification_status`, `rid_identity` |
-| `zones` | zone judgement: horizontal containment, vertical references (AGL / AMSL / WGS84), pressure-altitude margin and `within_band`, applicability at `captured_at` | `zones_vertical`, `zones_applicability`, `pressure_altitude` |
-| `cpa` | closest point of approach, alert thresholds and hysteresis, lifecycle numbers | `cpa`, `alert_lifecycle` |
-| `auth` | JWT / JWKS verification (`§6.2`), scope checks, token issuance helpers | `rid_receiver_auth`, `jwt_verify` (to add) |
-| `timeplace` | `ts` / `rx_ts` / `captured_at` / `backlog` placement, broadcast time tolerance, source clock skew | `rid_time` |
+| `ed269` | ED-269 zone model, strict GeoJSON parse, validate and export, applicability (TimePeriod, DailyPeriod, daylight events) | `ed269_parse`, `zones_applicability` |
+| `ed318`, `f3411`, `f3548` | the ED-318 UASZone model and the ED-269 → ED-318 mapping; the `uas_standards` types for F3411 v22a and F3548 v21, scopes, constants, DSS and USS client/server helpers | schema examples |
+| `regnum`, `serial` | registration number (public part, secret part hash, checksum when adopted) and ANSI/CTA-2063-A serial validation, normalisation and fold key | `serials_and_registration` |
+| `identify` | identification status and reason resolution, `serial_conflict` rule, basis (authenticated / as broadcast), the spoofing guard (`fleet_match`) | `identification_status`, `fleet_match` |
+| `zones` | zone judgement: horizontal containment, vertical references (AGL / AMSL / WGS84), pressure-altitude margin and `within_band`, height limit, applicability at `captured_at`, zone index | `zones_vertical` |
+| `cpa` | closest point of approach, loss of separation over the window, neighbour grid | `cpa` |
+| `alerting` | the alert state machine of a monitor: admission, raise, refresh, hysteresis, clear reasons, the aircraft cap | `alert_lifecycle` |
+| `auth` | JWT / JWKS verification (`§6.2`), scope checks, token issuance helpers; Remote ID receiver HMAC signatures | `jwt_verify`, `rid_receiver_auth` |
 | `sources` | source-control model (type / instance switches, version and epoch) | `source_control` |
 | `vectors` | the test harness: loads `uspace-lab/knowledge/vectors/*.json`, runs each file against the package it names, used as `go test` in `uspace-core` and in every system's CI | all |
 
