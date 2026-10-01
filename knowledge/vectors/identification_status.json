@@ -1,0 +1,985 @@
+{
+ "description": "Network identification (U-02): every track resolved against the registry to registered, suspended, unknown_operator or unidentified, with a stable reason code and a mismatch flag. fixtures.registry is the projection every case reads unless the case gives input.registry_override. input.kind: 'broadcast' (serial + operator ID), 'remote_id_block' (a direct Remote ID observation's identity), 'bound' (a track whose aircraft an authenticated binding names), 'serial_conflict'. An identification alert is raised for statuses {unidentified, unknown_operator} inside PROHIBITED or REQ_AUTHORISATION zones; a mismatch raises identification_mismatch anywhere.",
+ "source": [
+  "utm gateway/tests/test_identification.py",
+  "utm gateway/identification.py",
+  "utm gateway/registry_projection.py RegistrySnapshot.find_uas, operator_key",
+  "utm docs/runbooks/u02-identification.md"
+ ],
+ "units": {},
+ "tolerance": {
+  "all fields": "exact"
+ },
+ "owners": [
+  "authority",
+  "ussp"
+ ],
+ "generated": "Expected values computed by knowledge/tools/gen_vectors.py, which runs the old Python implementation (rootxkit/utm @ 484cd228035f) on these inputs. Regenerate rather than edit.",
+ "utm_commit": "484cd228035f2f424530e233ce72100d0fc1842a",
+ "fixtures": {
+  "registry": {
+   "operators": [
+    {
+     "operator_id": "00000000-0000-0000-0000-000000000001",
+     "registration_number": "GEOabcd1234efgh",
+     "status": "active"
+    },
+    {
+     "operator_id": "00000000-0000-0000-0000-000000000002",
+     "registration_number": "GEOSUSP00000001",
+     "status": "suspended"
+    },
+    {
+     "operator_id": "00000000-0000-0000-0000-000000000003",
+     "registration_number": "GEOREVK00000001",
+     "status": "revoked"
+    }
+   ],
+   "uas": [
+    {
+     "drone_id": "00000000-0000-0000-0000-00000000000a",
+     "label": "uas-a",
+     "serial": "1581F5FKD229400A",
+     "registration_status": "active",
+     "uas_operator_id": "00000000-0000-0000-0000-000000000001",
+     "in_registry": true
+    },
+    {
+     "drone_id": "00000000-0000-0000-0000-00000000000b",
+     "label": "uas-b",
+     "serial": "1581F5FKD229400B",
+     "registration_status": "suspended",
+     "uas_operator_id": "00000000-0000-0000-0000-000000000001",
+     "in_registry": true
+    },
+    {
+     "drone_id": "00000000-0000-0000-0000-00000000000c",
+     "label": "uas-c",
+     "serial": "1581F5FKD229400C",
+     "registration_status": "revoked",
+     "uas_operator_id": "00000000-0000-0000-0000-000000000001",
+     "in_registry": true
+    },
+    {
+     "drone_id": "00000000-0000-0000-0000-00000000000d",
+     "label": "uas-d",
+     "serial": "SN-D",
+     "registration_status": "active",
+     "uas_operator_id": "00000000-0000-0000-0000-000000000002",
+     "in_registry": true
+    },
+    {
+     "drone_id": "00000000-0000-0000-0000-00000000000e",
+     "label": "uas-e",
+     "serial": "SN-E",
+     "registration_status": "active",
+     "uas_operator_id": "00000000-0000-0000-0000-000000000003",
+     "in_registry": true
+    },
+    {
+     "drone_id": "00000000-0000-0000-0000-00000000000f",
+     "label": "hexa-01",
+     "serial": "SN-FLEET",
+     "registration_status": "active",
+     "uas_operator_id": null,
+     "in_registry": true
+    },
+    {
+     "drone_id": "00000000-0000-0000-0000-000000000010",
+     "label": "uas-g",
+     "serial": "SN-G",
+     "registration_status": "active",
+     "uas_operator_id": "00000000-0000-0000-0000-000000000004",
+     "in_registry": true
+    },
+    {
+     "drone_id": "00000000-0000-0000-0000-000000000011",
+     "label": "orphan",
+     "serial": "SN-ORPHAN",
+     "registration_status": "active",
+     "uas_operator_id": null,
+     "in_registry": false
+    }
+   ],
+   "notes": [
+    "uas_operator_id 00000000-0000-0000-0000-000000000004 owns uas-g but is not in the operators list (a projection written out of order, or lost).",
+    "orphan is in the telemetry projection but has no relational aircraft (in_registry false: 'unregistered' in the projection).",
+    "hexa-01 is our own fleet: registered, no UAS operator."
+   ]
+  }
+ },
+ "incident_statuses": [
+  "unidentified",
+  "unknown_operator"
+ ],
+ "cases": [
+  {
+   "name": "registered-matched",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "1581F5FKD229400A",
+    "operator_reg": "GEOabcd1234efgh"
+   },
+   "expected": {
+    "status": "registered",
+    "reason": "matched",
+    "serial": "1581F5FKD229400A",
+    "operator_reg": "GEOabcd1234efgh",
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-00000000000a"
+   },
+   "why": "Serial registered and active, owner active, operator ID is the owner's."
+  },
+  {
+   "name": "registered-case-insensitive-and-trimmed",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "1581F5FKD229400A",
+    "operator_reg": " geoABCD1234EFGH "
+   },
+   "expected": {
+    "status": "registered",
+    "reason": "matched",
+    "serial": "1581F5FKD229400A",
+    "operator_reg": "geoABCD1234EFGH",
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-00000000000a"
+   },
+   "why": "Operator numbers compare case-insensitively, around stray spaces (U-01)."
+  },
+  {
+   "name": "suspended-uas",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "1581F5FKD229400B",
+    "operator_reg": "GEOabcd1234efgh"
+   },
+   "expected": {
+    "status": "suspended",
+    "reason": "uas_suspended",
+    "serial": "1581F5FKD229400B",
+    "operator_reg": "GEOabcd1234efgh",
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-00000000000b"
+   },
+   "why": "The UAS itself is suspended."
+  },
+  {
+   "name": "suspended-uas-revoked",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "1581F5FKD229400C",
+    "operator_reg": "GEOabcd1234efgh"
+   },
+   "expected": {
+    "status": "suspended",
+    "reason": "uas_revoked",
+    "serial": "1581F5FKD229400C",
+    "operator_reg": "GEOabcd1234efgh",
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-00000000000c"
+   },
+   "why": "A revoked UAS is reported as suspended status, reason uas_revoked."
+  },
+  {
+   "name": "suspended-operator",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "SN-D",
+    "operator_reg": "GEOSUSP00000001"
+   },
+   "expected": {
+    "status": "suspended",
+    "reason": "operator_suspended",
+    "serial": "SN-D",
+    "operator_reg": "GEOSUSP00000001",
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-00000000000d"
+   },
+   "why": "The owner is suspended."
+  },
+  {
+   "name": "suspended-operator-revoked",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "SN-E",
+    "operator_reg": "GEOREVK00000001"
+   },
+   "expected": {
+    "status": "suspended",
+    "reason": "operator_revoked",
+    "serial": "SN-E",
+    "operator_reg": "GEOREVK00000001",
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-00000000000e"
+   },
+   "why": "The owner is revoked."
+  },
+  {
+   "name": "suspended-outranks-operator-id-mismatch-still-flagged",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "1581F5FKD229400B",
+    "operator_reg": "GEOOTHER0000001"
+   },
+   "expected": {
+    "status": "suspended",
+    "reason": "uas_suspended",
+    "serial": "1581F5FKD229400B",
+    "operator_reg": "GEOOTHER0000001",
+    "mismatch": true,
+    "registered_operator_reg": "GEOabcd1234efgh",
+    "drone_id": "00000000-0000-0000-0000-00000000000b"
+   },
+   "why": "Suspension outranks the operator ID: status suspended whatever is claimed; the mismatch is still flagged."
+  },
+  {
+   "name": "unknown-operator-absent",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "1581F5FKD229400A",
+    "operator_reg": null
+   },
+   "expected": {
+    "status": "unknown_operator",
+    "reason": "operator_absent",
+    "serial": "1581F5FKD229400A",
+    "operator_reg": null,
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-00000000000a"
+   },
+   "why": "A registered serial broadcast without an Operator ID is not registered."
+  },
+  {
+   "name": "unknown-operator-blank",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "1581F5FKD229400A",
+    "operator_reg": "  "
+   },
+   "expected": {
+    "status": "unknown_operator",
+    "reason": "operator_absent",
+    "serial": "1581F5FKD229400A",
+    "operator_reg": null,
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-00000000000a"
+   },
+   "why": "A blank Operator ID is absent."
+  },
+  {
+   "name": "unknown-operator-mismatch-unregistered-number",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "1581F5FKD229400A",
+    "operator_reg": "GEONOTREGISTERED"
+   },
+   "expected": {
+    "status": "unknown_operator",
+    "reason": "operator_mismatch",
+    "serial": "1581F5FKD229400A",
+    "operator_reg": "GEONOTREGISTERED",
+    "mismatch": true,
+    "registered_operator_reg": "GEOabcd1234efgh",
+    "drone_id": "00000000-0000-0000-0000-00000000000a"
+   },
+   "why": "A registered serial with a number that is not its owner's is a mismatch: never registered."
+  },
+  {
+   "name": "unknown-operator-mismatch-other-registered-number",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "1581F5FKD229400A",
+    "operator_reg": "GEOSUSP00000001"
+   },
+   "expected": {
+    "status": "unknown_operator",
+    "reason": "operator_mismatch",
+    "serial": "1581F5FKD229400A",
+    "operator_reg": "GEOSUSP00000001",
+    "mismatch": true,
+    "registered_operator_reg": "GEOabcd1234efgh",
+    "drone_id": "00000000-0000-0000-0000-00000000000a"
+   },
+   "why": "Another registered operator's number is still a mismatch."
+  },
+  {
+   "name": "unknown-serial-with-active-operator",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "SN-NOBODY",
+    "operator_reg": "GEOabcd1234efgh"
+   },
+   "expected": {
+    "status": "unknown_operator",
+    "reason": "serial_unknown",
+    "serial": "SN-NOBODY",
+    "operator_reg": "GEOabcd1234efgh",
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": null
+   },
+   "why": "An unknown airframe flown by a known operator is unknown_operator: nothing registered is flying."
+  },
+  {
+   "name": "unknown-serial-no-operator",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "SN-NOBODY",
+    "operator_reg": null
+   },
+   "expected": {
+    "status": "unknown_operator",
+    "reason": "serial_unknown",
+    "serial": "SN-NOBODY",
+    "operator_reg": null,
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": null
+   },
+   "why": "Unknown serial."
+  },
+  {
+   "name": "owner-not-in-projection",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "SN-G",
+    "operator_reg": "GEOabcd1234efgh"
+   },
+   "expected": {
+    "status": "unknown_operator",
+    "reason": "owner_unknown",
+    "serial": "SN-G",
+    "operator_reg": "GEOabcd1234efgh",
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-000000000010"
+   },
+   "why": "The owner is not in the projection: nothing says it is active."
+  },
+  {
+   "name": "in-projection-but-not-registry",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "SN-ORPHAN",
+    "operator_reg": null
+   },
+   "expected": {
+    "status": "unknown_operator",
+    "reason": "not_in_registry",
+    "serial": "SN-ORPHAN",
+    "operator_reg": null,
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-000000000011"
+   },
+   "why": "A projection row with no relational aircraft is never registered (migration 0010)."
+  },
+  {
+   "name": "eu-secret-suffix-stripped",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "1581F5FKD229400A",
+    "operator_reg": "GEOabcd1234efgh-x9z"
+   },
+   "expected": {
+    "status": "registered",
+    "reason": "matched",
+    "serial": "1581F5FKD229400A",
+    "operator_reg": "GEOabcd1234efgh-x9z",
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-00000000000a"
+   },
+   "why": "An EU operator number may be broadcast with '-' and its three secret characters; only the public part is compared."
+  },
+  {
+   "name": "fleet-serial-alone",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "SN-FLEET",
+    "operator_reg": null
+   },
+   "expected": {
+    "status": "registered",
+    "reason": "fleet",
+    "serial": "SN-FLEET",
+    "operator_reg": null,
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-00000000000f"
+   },
+   "why": "Our own fleet aircraft (no UAS operator) is registered on its serial alone."
+  },
+  {
+   "name": "fleet-ignores-operator-id",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "SN-FLEET",
+    "operator_reg": "GEOANYTHING00001"
+   },
+   "expected": {
+    "status": "registered",
+    "reason": "fleet",
+    "serial": "SN-FLEET",
+    "operator_reg": "GEOANYTHING00001",
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-00000000000f"
+   },
+   "why": "The fleet has no UAS operator to compare with."
+  },
+  {
+   "name": "unidentified-no-serial",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": null,
+    "operator_reg": "GEOabcd1234efgh"
+   },
+   "expected": {
+    "status": "unidentified",
+    "reason": "no_serial",
+    "serial": null,
+    "operator_reg": "GEOabcd1234efgh",
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": null
+   },
+   "why": "No serial at all is unidentified, whatever operator is claimed."
+  },
+  {
+   "name": "unidentified-empty-serial",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "",
+    "operator_reg": null
+   },
+   "expected": {
+    "status": "unidentified",
+    "reason": "no_serial",
+    "serial": null,
+    "operator_reg": null,
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": null
+   },
+   "why": "An empty serial is no serial."
+  },
+  {
+   "name": "serial-case-folded-when-unambiguous",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "sn-fleet",
+    "operator_reg": null
+   },
+   "expected": {
+    "status": "registered",
+    "reason": "fleet",
+    "serial": "sn-fleet",
+    "operator_reg": null,
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-00000000000f"
+   },
+   "why": "An exact serial match wins; otherwise a case-insensitive match when exactly one aircraft has it."
+  },
+  {
+   "name": "ambiguous-case-fold-is-unknown",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "Ab-1",
+    "operator_reg": null,
+    "registry_override": {
+     "operators": [],
+     "uas": [
+      {
+       "drone_id": "00000000-0000-0000-0000-000000000014",
+       "serial": "ab-1",
+       "registration_status": "active",
+       "uas_operator_id": null,
+       "in_registry": true
+      },
+      {
+       "drone_id": "00000000-0000-0000-0000-000000000015",
+       "serial": "AB-1",
+       "registration_status": "active",
+       "uas_operator_id": null,
+       "in_registry": true
+      }
+     ]
+    }
+   },
+   "expected": {
+    "status": "unknown_operator",
+    "reason": "serial_unknown",
+    "serial": "Ab-1",
+    "operator_reg": null,
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": null
+   },
+   "why": "Two aircraft differ only by case: a folded match is ambiguous and matches neither."
+  },
+  {
+   "name": "ambiguous-exact-match-wins",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "ab-1",
+    "operator_reg": null,
+    "registry_override": {
+     "operators": [],
+     "uas": [
+      {
+       "drone_id": "00000000-0000-0000-0000-000000000014",
+       "serial": "ab-1",
+       "registration_status": "active",
+       "uas_operator_id": null,
+       "in_registry": true
+      },
+      {
+       "drone_id": "00000000-0000-0000-0000-000000000015",
+       "serial": "AB-1",
+       "registration_status": "active",
+       "uas_operator_id": null,
+       "in_registry": true
+      }
+     ]
+    }
+   },
+   "expected": {
+    "status": "registered",
+    "reason": "fleet",
+    "serial": "ab-1",
+    "operator_reg": null,
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-000000000014"
+   },
+   "why": "The exact spelling still matches its own aircraft."
+  },
+  {
+   "name": "empty-registry-knows-nobody",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "1581F5FKD229400A",
+    "operator_reg": "GEOabcd1234efgh",
+    "registry_override": {
+     "operators": [],
+     "uas": []
+    }
+   },
+   "expected": {
+    "status": "unknown_operator",
+    "reason": "serial_unknown",
+    "serial": "1581F5FKD229400A",
+    "operator_reg": "GEOabcd1234efgh",
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": null
+   },
+   "why": "With no registry, a matching-looking broadcast is unknown_operator, not registered."
+  },
+  {
+   "name": "remote-id-block-registered",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "remote_id_block",
+    "remote_id": {
+     "identified": true,
+     "ua_id": "1581F5FKD229400A",
+     "id_type": 1,
+     "operator_id": "GEOabcd1234efgh"
+    }
+   },
+   "expected": {
+    "status": "registered",
+    "reason": "matched",
+    "serial": "1581F5FKD229400A",
+    "operator_reg": "GEOabcd1234efgh",
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-00000000000a"
+   },
+   "why": "A direct Remote ID block resolves by its Basic ID serial and Operator ID."
+  },
+  {
+   "name": "remote-id-block-no-operator",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "remote_id_block",
+    "remote_id": {
+     "identified": true,
+     "ua_id": "1581F5FKD229400A",
+     "id_type": 1,
+     "operator_id": null
+    }
+   },
+   "expected": {
+    "status": "unknown_operator",
+    "reason": "operator_absent",
+    "serial": "1581F5FKD229400A",
+    "operator_reg": null,
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-00000000000a"
+   },
+   "why": "No Operator ID: unknown_operator."
+  },
+  {
+   "name": "remote-id-block-unidentified",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "remote_id_block",
+    "remote_id": {
+     "identified": false,
+     "ua_id": "",
+     "id_type": 0,
+     "operator_id": "GEOabcd1234efgh"
+    }
+   },
+   "expected": {
+    "status": "unidentified",
+    "reason": "no_serial",
+    "serial": null,
+    "operator_reg": "GEOabcd1234efgh",
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": null
+   },
+   "why": "An unidentified transmitter (S-32) is unidentified."
+  },
+  {
+   "name": "remote-id-block-caa-registration-is-not-a-serial",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "remote_id_block",
+    "remote_id": {
+     "identified": true,
+     "ua_id": "1581F5FKD229400A",
+     "id_type": 2,
+     "operator_id": "GEOabcd1234efgh"
+    }
+   },
+   "expected": {
+    "status": "unknown_operator",
+    "reason": "not_a_serial",
+    "serial": null,
+    "operator_reg": "GEOabcd1234efgh",
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": null
+   },
+   "why": "A CAA registration ID equal to a registered serial is not that aircraft: only ID type 1 is looked up as a serial (reason not_a_serial)."
+  },
+  {
+   "name": "remote-id-block-session-id-is-not-a-serial",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "remote_id_block",
+    "remote_id": {
+     "identified": true,
+     "ua_id": "SESSION-1",
+     "id_type": 4,
+     "operator_id": "GEOabcd1234efgh"
+    }
+   },
+   "expected": {
+    "status": "unknown_operator",
+    "reason": "not_a_serial",
+    "serial": null,
+    "operator_reg": "GEOabcd1234efgh",
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": null
+   },
+   "why": "A session ID is an identity but not a serial."
+  },
+  {
+   "name": "remote-id-block-empty-non-serial-is-unidentified",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "remote_id_block",
+    "remote_id": {
+     "identified": true,
+     "ua_id": "  ",
+     "id_type": 2,
+     "operator_id": "GEOabcd1234efgh"
+    }
+   },
+   "expected": {
+    "status": "unidentified",
+    "reason": "no_serial",
+    "serial": null,
+    "operator_reg": "GEOabcd1234efgh",
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": null
+   },
+   "why": "A blank identity of another type is no identity."
+  },
+  {
+   "name": "relay-fleet",
+   "owner": [
+    "ussp"
+   ],
+   "input": {
+    "kind": "bound",
+    "drone_id": "00000000-0000-0000-0000-00000000000f"
+   },
+   "expected": {
+    "status": "registered",
+    "reason": "relay_binding",
+    "serial": "SN-FLEET",
+    "operator_reg": null,
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-00000000000f"
+   },
+   "why": "A relay track is identified by its station binding, not by a broadcast claim."
+  },
+  {
+   "name": "relay-registered-uas",
+   "owner": [
+    "ussp"
+   ],
+   "input": {
+    "kind": "bound",
+    "drone_id": "00000000-0000-0000-0000-00000000000a"
+   },
+   "expected": {
+    "status": "registered",
+    "reason": "relay_binding",
+    "serial": "1581F5FKD229400A",
+    "operator_reg": "GEOabcd1234efgh",
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-00000000000a"
+   },
+   "why": "A bound registered UAS."
+  },
+  {
+   "name": "relay-suspended-uas",
+   "owner": [
+    "ussp"
+   ],
+   "input": {
+    "kind": "bound",
+    "drone_id": "00000000-0000-0000-0000-00000000000b"
+   },
+   "expected": {
+    "status": "suspended",
+    "reason": "uas_suspended",
+    "serial": "1581F5FKD229400B",
+    "operator_reg": "GEOabcd1234efgh",
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-00000000000b"
+   },
+   "why": "Bound, but the registry suspends it."
+  },
+  {
+   "name": "relay-operator-suspended",
+   "owner": [
+    "ussp"
+   ],
+   "input": {
+    "kind": "bound",
+    "drone_id": "00000000-0000-0000-0000-00000000000d"
+   },
+   "expected": {
+    "status": "suspended",
+    "reason": "operator_suspended",
+    "serial": "SN-D",
+    "operator_reg": "GEOSUSP00000001",
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-00000000000d"
+   },
+   "why": "Bound, operator suspended."
+  },
+  {
+   "name": "relay-not-yet-projected",
+   "owner": [
+    "ussp"
+   ],
+   "input": {
+    "kind": "bound",
+    "drone_id": "00000000-0000-0000-0000-000000000063"
+   },
+   "expected": {
+    "status": "registered",
+    "reason": "relay_binding",
+    "serial": null,
+    "operator_reg": null,
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-000000000063"
+   },
+   "why": "Bound but not yet in the projection read: the binding is the proof (registered)."
+  },
+  {
+   "name": "relay-not-in-registry",
+   "owner": [
+    "ussp"
+   ],
+   "input": {
+    "kind": "bound",
+    "drone_id": "00000000-0000-0000-0000-000000000011"
+   },
+   "expected": {
+    "status": "unknown_operator",
+    "reason": "not_in_registry",
+    "serial": "SN-ORPHAN",
+    "operator_reg": null,
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-000000000011"
+   },
+   "why": "Bound, but the registry has no such aircraft."
+  },
+  {
+   "name": "serial-conflict",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "serial_conflict",
+    "serial": "SN-FLEET",
+    "operator_reg": " GEOX "
+   },
+   "expected": {
+    "status": "unknown_operator",
+    "reason": "serial_conflict",
+    "serial": "SN-FLEET",
+    "operator_reg": "GEOX",
+    "mismatch": true,
+    "registered_operator_reg": null,
+    "drone_id": null
+   },
+   "why": "S-10: one of our serials heard where our authenticated telemetry says the aircraft is not: a separate track, unknown_operator with mismatch (see fleet_match.json for when)."
+  }
+ ]
+}

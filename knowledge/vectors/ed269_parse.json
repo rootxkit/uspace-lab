@@ -1,0 +1,5832 @@
+{
+ "description": "EUROCAE ED-269 geo-zone documents read strictly (U-03). accepted true: the zones as summarised (limits in metres) and, where given, the export, which must equal the input. accepted false: every problem with its JSON path and reason; a Go implementation must at least produce must_include (path suffix and reason phrase), and should report all problems, capped at 100 with a count of the rest. Field names follow InterUSS uas_standards eurocae_ed269.py, Luxembourg's live file and the Swiss BAZL profile, since EUROCAE's text is paywalled. WGS84 as a vertical reference is this project's extension.",
+ "source": [
+  "utm airspace/tests/test_ed269.py",
+  "utm airspace/tests/fixtures/ed269_valid.json",
+  "utm airspace/ed269.py"
+ ],
+ "units": {
+  "lower_m/upper_m/radius_m": "metres (FT * 0.3048)",
+  "coordinates": "GeoJSON order [lon, lat]"
+ },
+ "tolerance": {
+  "metres": 1e-09,
+  "problems": "path and phrase as in must_include"
+ },
+ "owners": [
+  "cisp"
+ ],
+ "generated": "Expected values computed by knowledge/tools/gen_vectors.py, which runs the old Python implementation (rootxkit/utm @ 484cd228035f) on these inputs. Regenerate rather than edit.",
+ "utm_commit": "484cd228035f2f424530e233ce72100d0fc1842a",
+ "limits": {
+  "identifier_max": 7,
+  "name_max": 200,
+  "message_max": 200,
+  "reasons_max": 9,
+  "max_ring_vertices": 5000,
+  "max_problems": 100
+ },
+ "cases": [
+  {
+   "name": "valid-file-round-trips-unchanged",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "title": "U-03 test zones",
+     "description": "Invented zones around Tbilisi for tests; not real restrictions",
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      },
+      {
+       "identifier": "TST002",
+       "country": "GEO",
+       "name": "Test circle in feet, AMSL",
+       "type": "COMMON",
+       "restriction": "REQ_AUTHORISATION",
+       "reason": [
+        "POPULATION"
+       ],
+       "applicability": [
+        {
+         "permanent": "NO",
+         "startDateTime": "2026-01-01T00:00:00Z",
+         "endDateTime": "2027-01-01T00:00:00+04:00"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "purpose": "NOTIFICATION"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "FT",
+         "lowerLimit": 1500,
+         "lowerVerticalReference": "AMSL",
+         "upperLimit": 2500.5,
+         "upperVerticalReference": "AMSL",
+         "horizontalProjection": {
+          "type": "Circle",
+          "center": [
+           44.7831,
+           41.6938
+          ],
+          "radius": 1640
+         }
+        }
+       ],
+       "restrictionConditions": [
+        "Notify 24 h before"
+       ],
+       "region": 7,
+       "regulationExemption": "NO",
+       "uSpaceClass": "EUROCONTROL",
+       "extendedProperties": {
+        "source": "test",
+        "revision": 3
+       }
+      },
+      {
+       "identifier": "TST003",
+       "country": "GEO",
+       "type": "COMMON",
+       "restriction": "CONDITIONAL",
+       "reason": [
+        "OTHER"
+       ],
+       "otherReasonInfo": "Night works",
+       "message": "Applies at night, Monday to Friday",
+       "applicability": [
+        {
+         "permanent": "NO",
+         "startDateTime": "2026-09-01T00:00:00.00Z",
+         "endDateTime": "2026-12-31T23:59:59.00Z",
+         "schedule": [
+          {
+           "day": [
+            "MON",
+            "TUE",
+            "WED",
+            "THU",
+            "FRI"
+           ],
+           "startTime": "22:00:00.00Z",
+           "endTime": "02:00:00.00Z"
+          }
+         ]
+        }
+       ],
+       "zoneAuthority": [],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerVerticalReference": "WGS84",
+         "upperLimit": 600,
+         "upperVerticalReference": "WGS84",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.85,
+             41.73
+            ],
+            [
+             44.86,
+             41.73
+            ],
+            [
+             44.86,
+             41.74
+            ],
+            [
+             44.85,
+             41.73
+            ]
+           ]
+          ]
+         }
+        }
+       ],
+       "title": "Night works"
+      },
+      {
+       "identifier": "TST004",
+       "country": "GEO",
+       "name": "Test information zone",
+       "type": "COMMON",
+       "restriction": "NO_RESTRICTION",
+       "applicability": [
+        {
+         "permanent": "NO",
+         "schedule": [
+          {
+           "day": [
+            "ANY"
+           ],
+           "startTime": "08:00+04:00",
+           "endTime": "18:00+04:00"
+          }
+         ]
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "purpose": "INFORMATION"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerVerticalReference": "AGL",
+         "upperVerticalReference": "AMSL",
+         "horizontalProjection": {
+          "type": "Circle",
+          "center": [
+           44.9,
+           41.75
+          ],
+          "radius": 250.5
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": true,
+    "zones": [
+     {
+      "identifier": "TST001",
+      "restriction": "PROHIBITED",
+      "lower_m": 0.0,
+      "lower_reference": "AGL",
+      "upper_m": 120.0,
+      "upper_reference": "AGL",
+      "shape": "Polygon",
+      "radius_m": null,
+      "periods": 1
+     },
+     {
+      "identifier": "TST002",
+      "restriction": "REQ_AUTHORISATION",
+      "lower_m": 457.20000000000005,
+      "lower_reference": "AMSL",
+      "upper_m": 762.1524000000001,
+      "upper_reference": "AMSL",
+      "shape": "Circle",
+      "radius_m": 499.872,
+      "periods": 1
+     },
+     {
+      "identifier": "TST003",
+      "restriction": "CONDITIONAL",
+      "lower_m": null,
+      "lower_reference": "WGS84",
+      "upper_m": 600.0,
+      "upper_reference": "WGS84",
+      "shape": "Polygon",
+      "radius_m": null,
+      "periods": 1
+     },
+     {
+      "identifier": "TST004",
+      "restriction": "NO_RESTRICTION",
+      "lower_m": null,
+      "lower_reference": "AGL",
+      "upper_m": null,
+      "upper_reference": "AMSL",
+      "shape": "Circle",
+      "radius_m": 250.5,
+      "periods": 1
+     }
+    ],
+    "export": {
+     "title": "U-03 test zones",
+     "description": "Invented zones around Tbilisi for tests; not real restrictions",
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      },
+      {
+       "identifier": "TST002",
+       "country": "GEO",
+       "name": "Test circle in feet, AMSL",
+       "type": "COMMON",
+       "restriction": "REQ_AUTHORISATION",
+       "reason": [
+        "POPULATION"
+       ],
+       "applicability": [
+        {
+         "permanent": "NO",
+         "startDateTime": "2026-01-01T00:00:00Z",
+         "endDateTime": "2027-01-01T00:00:00+04:00"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "purpose": "NOTIFICATION"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "FT",
+         "lowerLimit": 1500,
+         "lowerVerticalReference": "AMSL",
+         "upperLimit": 2500.5,
+         "upperVerticalReference": "AMSL",
+         "horizontalProjection": {
+          "type": "Circle",
+          "center": [
+           44.7831,
+           41.6938
+          ],
+          "radius": 1640
+         }
+        }
+       ],
+       "restrictionConditions": [
+        "Notify 24 h before"
+       ],
+       "region": 7,
+       "regulationExemption": "NO",
+       "uSpaceClass": "EUROCONTROL",
+       "extendedProperties": {
+        "source": "test",
+        "revision": 3
+       }
+      },
+      {
+       "identifier": "TST003",
+       "country": "GEO",
+       "type": "COMMON",
+       "restriction": "CONDITIONAL",
+       "reason": [
+        "OTHER"
+       ],
+       "message": "Applies at night, Monday to Friday",
+       "applicability": [
+        {
+         "permanent": "NO",
+         "startDateTime": "2026-09-01T00:00:00.00Z",
+         "endDateTime": "2026-12-31T23:59:59.00Z",
+         "schedule": [
+          {
+           "day": [
+            "MON",
+            "TUE",
+            "WED",
+            "THU",
+            "FRI"
+           ],
+           "startTime": "22:00:00.00Z",
+           "endTime": "02:00:00.00Z"
+          }
+         ]
+        }
+       ],
+       "zoneAuthority": [],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerVerticalReference": "WGS84",
+         "upperLimit": 600,
+         "upperVerticalReference": "WGS84",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.85,
+             41.73
+            ],
+            [
+             44.86,
+             41.73
+            ],
+            [
+             44.86,
+             41.74
+            ],
+            [
+             44.85,
+             41.73
+            ]
+           ]
+          ]
+         }
+        }
+       ],
+       "otherReasonInfo": "Night works",
+       "title": "Night works"
+      },
+      {
+       "identifier": "TST004",
+       "country": "GEO",
+       "name": "Test information zone",
+       "type": "COMMON",
+       "restriction": "NO_RESTRICTION",
+       "applicability": [
+        {
+         "permanent": "NO",
+         "schedule": [
+          {
+           "day": [
+            "ANY"
+           ],
+           "startTime": "08:00+04:00",
+           "endTime": "18:00+04:00"
+          }
+         ]
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "purpose": "INFORMATION"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerVerticalReference": "AGL",
+         "upperVerticalReference": "AMSL",
+         "horizontalProjection": {
+          "type": "Circle",
+          "center": [
+           44.9,
+           41.75
+          ],
+          "radius": 250.5
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "why": "U-03 done-when: an ED-269 file round-trips unchanged. Nothing is normalised on the way in except null optional fields (read absent, written absent); numbers round-trip by value (5.0 -> 5)."
+  },
+  {
+   "name": "list-wrapper-and-byte-order-mark",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document_utf8_with_bom_base64": "77u/eyJmb3JtYXRWZXJzaW9uIjogIjEuMCIsICJjcmVhdGVkQXQiOiAiMjAyNi0xMC0wMVQwMDowMDowMFoiLCAiVUFTWm9uZUxpc3QiOiBbeyJpZGVudGlmaWVyIjogIlRTVDAwMSIsICJjb3VudHJ5IjogIkdFTyIsICJuYW1lIjogIlRlc3QgcHJvaGliaXRlZCBzcXVhcmUgd2l0aCBhIGhvbGUiLCAidHlwZSI6ICJDT01NT04iLCAicmVzdHJpY3Rpb24iOiAiUFJPSElCSVRFRCIsICJyZWFzb24iOiBbIlNFTlNJVElWRSIsICJBSVJfVFJBRkZJQyJdLCAibWVzc2FnZSI6ICJUZXN0IHpvbmUsIG5vdCBhIHJlYWwgcmVzdHJpY3Rpb24iLCAiYXBwbGljYWJpbGl0eSI6IFt7InBlcm1hbmVudCI6ICJZRVMifV0sICJ6b25lQXV0aG9yaXR5IjogW3sibmFtZSI6ICJUZXN0IGF1dGhvcml0eSIsICJzZXJ2aWNlIjogIkFpcnNwYWNlIiwgImNvbnRhY3ROYW1lIjogIkR1dHkgb2ZmaWNlciIsICJzaXRlVVJMIjogImh0dHBzOi8vZXhhbXBsZS5pbnZhbGlkL3pvbmVzIiwgImVtYWlsIjogInpvbmVzQGV4YW1wbGUuaW52YWxpZCIsICJwaG9uZSI6ICIrOTk1IDMyIDAwMCAwMDAwIiwgInB1cnBvc2UiOiAiQVVUSE9SSVpBVElPTiIsICJpbnRlcnZhbEJlZm9yZSI6ICJQMkQifV0sICJnZW9tZXRyeSI6IFt7InVvbURpbWVuc2lvbnMiOiAiTSIsICJsb3dlckxpbWl0IjogMCwgImxvd2VyVmVydGljYWxSZWZlcmVuY2UiOiAiQUdMIiwgInVwcGVyTGltaXQiOiAxMjAsICJ1cHBlclZlcnRpY2FsUmVmZXJlbmNlIjogIkFHTCIsICJob3Jpem9udGFsUHJvamVjdGlvbiI6IHsidHlwZSI6ICJQb2x5Z29uIiwgImNvb3JkaW5hdGVzIjogW1tbNDQuOCwgNDEuN10sIFs0NC44MiwgNDEuN10sIFs0NC44MiwgNDEuNzJdLCBbNDQuOCwgNDEuNzJdLCBbNDQuOCwgNDEuN11dLCBbWzQ0LjgwNSwgNDEuNzA1XSwgWzQ0LjgxNSwgNDEuNzA1XSwgWzQ0LjgxNSwgNDEuNzE1XSwgWzQ0LjgwNSwgNDEuNzE1XSwgWzQ0LjgwNSwgNDEuNzA1XV1dfX1dfSwgeyJpZGVudGlmaWVyIjogIlRTVDAwMiIsICJjb3VudHJ5IjogIkdFTyIsICJuYW1lIjogIlRlc3QgY2lyY2xlIGluIGZlZXQsIEFNU0wiLCAidHlwZSI6ICJDT01NT04iLCAicmVzdHJpY3Rpb24iOiAiUkVRX0FVVEhPUklTQVRJT04iLCAicmVhc29uIjogWyJQT1BVTEFUSU9OIl0sICJhcHBsaWNhYmlsaXR5IjogW3sicGVybWFuZW50IjogIk5PIiwgInN0YXJ0RGF0ZVRpbWUiOiAiMjAyNi0wMS0wMVQwMDowMDowMFoiLCAiZW5kRGF0ZVRpbWUiOiAiMjAyNy0wMS0wMVQwMDowMDowMCswNDowMCJ9XSwgInpvbmVBdXRob3JpdHkiOiBbeyJuYW1lIjogIlRlc3QgYXV0aG9yaXR5IiwgInB1cnBvc2UiOiAiTk9USUZJQ0FUSU9OIn1dLCAiZ2VvbWV0cnkiOiBbeyJ1b21EaW1lbnNpb25zIjogIkZUIiwgImxvd2VyTGltaXQiOiAxNTAwLCAibG93ZXJWZXJ0aWNhbFJlZmVyZW5jZSI6ICJBTVNMIiwgInVwcGVyTGltaXQiOiAyNTAwLjUsICJ1cHBlclZlcnRpY2FsUmVmZXJlbmNlIjogIkFNU0wiLCAiaG9yaXpvbnRhbFByb2plY3Rpb24iOiB7InR5cGUiOiAiQ2lyY2xlIiwgImNlbnRlciI6IFs0NC43ODMxLCA0MS42OTM4XSwgInJhZGl1cyI6IDE2NDB9fV0sICJyZXN0cmljdGlvbkNvbmRpdGlvbnMiOiBbIk5vdGlmeSAyNCBoIGJlZm9yZSJdLCAicmVnaW9uIjogNywgInJlZ3VsYXRpb25FeGVtcHRpb24iOiAiTk8iLCAidVNwYWNlQ2xhc3MiOiAiRVVST0NPTlRST0wiLCAiZXh0ZW5kZWRQcm9wZXJ0aWVzIjogeyJzb3VyY2UiOiAidGVzdCIsICJyZXZpc2lvbiI6IDN9fSwgeyJpZGVudGlmaWVyIjogIlRTVDAwMyIsICJjb3VudHJ5IjogIkdFTyIsICJ0eXBlIjogIkNPTU1PTiIsICJyZXN0cmljdGlvbiI6ICJDT05ESVRJT05BTCIsICJyZWFzb24iOiBbIk9USEVSIl0sICJvdGhlclJlYXNvbkluZm8iOiAiTmlnaHQgd29ya3MiLCAibWVzc2FnZSI6ICJBcHBsaWVzIGF0IG5pZ2h0LCBNb25kYXkgdG8gRnJpZGF5IiwgImFwcGxpY2FiaWxpdHkiOiBbeyJwZXJtYW5lbnQiOiAiTk8iLCAic3RhcnREYXRlVGltZSI6ICIyMDI2LTA5LTAxVDAwOjAwOjAwLjAwWiIsICJlbmREYXRlVGltZSI6ICIyMDI2LTEyLTMxVDIzOjU5OjU5LjAwWiIsICJzY2hlZHVsZSI6IFt7ImRheSI6IFsiTU9OIiwgIlRVRSIsICJXRUQiLCAiVEhVIiwgIkZSSSJdLCAic3RhcnRUaW1lIjogIjIyOjAwOjAwLjAwWiIsICJlbmRUaW1lIjogIjAyOjAwOjAwLjAwWiJ9XX1dLCAiem9uZUF1dGhvcml0eSI6IFtdLCAiZ2VvbWV0cnkiOiBbeyJ1b21EaW1lbnNpb25zIjogIk0iLCAibG93ZXJWZXJ0aWNhbFJlZmVyZW5jZSI6ICJXR1M4NCIsICJ1cHBlckxpbWl0IjogNjAwLCAidXBwZXJWZXJ0aWNhbFJlZmVyZW5jZSI6ICJXR1M4NCIsICJob3Jpem9udGFsUHJvamVjdGlvbiI6IHsidHlwZSI6ICJQb2x5Z29uIiwgImNvb3JkaW5hdGVzIjogW1tbNDQuODUsIDQxLjczXSwgWzQ0Ljg2LCA0MS43M10sIFs0NC44NiwgNDEuNzRdLCBbNDQuODUsIDQxLjczXV1dfX1dLCAidGl0bGUiOiAiTmlnaHQgd29ya3MifSwgeyJpZGVudGlmaWVyIjogIlRTVDAwNCIsICJjb3VudHJ5IjogIkdFTyIsICJuYW1lIjogIlRlc3QgaW5mb3JtYXRpb24gem9uZSIsICJ0eXBlIjogIkNPTU1PTiIsICJyZXN0cmljdGlvbiI6ICJOT19SRVNUUklDVElPTiIsICJhcHBsaWNhYmlsaXR5IjogW3sicGVybWFuZW50IjogIk5PIiwgInNjaGVkdWxlIjogW3siZGF5IjogWyJBTlkiXSwgInN0YXJ0VGltZSI6ICIwODowMCswNDowMCIsICJlbmRUaW1lIjogIjE4OjAwKzA0OjAwIn1dfV0sICJ6b25lQXV0aG9yaXR5IjogW3sicHVycG9zZSI6ICJJTkZPUk1BVElPTiJ9XSwgImdlb21ldHJ5IjogW3sidW9tRGltZW5zaW9ucyI6ICJNIiwgImxvd2VyVmVydGljYWxSZWZlcmVuY2UiOiAiQUdMIiwgInVwcGVyVmVydGljYWxSZWZlcmVuY2UiOiAiQU1TTCIsICJob3Jpem9udGFsUHJvamVjdGlvbiI6IHsidHlwZSI6ICJDaXJjbGUiLCAiY2VudGVyIjogWzQ0LjksIDQxLjc1XSwgInJhZGl1cyI6IDI1MC41fX1dfV19"
+   },
+   "expected": {
+    "accepted": true,
+    "zones": [
+     {
+      "identifier": "TST001",
+      "restriction": "PROHIBITED",
+      "lower_m": 0.0,
+      "lower_reference": "AGL",
+      "upper_m": 120.0,
+      "upper_reference": "AGL",
+      "shape": "Polygon",
+      "radius_m": null,
+      "periods": 1
+     },
+     {
+      "identifier": "TST002",
+      "restriction": "REQ_AUTHORISATION",
+      "lower_m": 457.20000000000005,
+      "lower_reference": "AMSL",
+      "upper_m": 762.1524000000001,
+      "upper_reference": "AMSL",
+      "shape": "Circle",
+      "radius_m": 499.872,
+      "periods": 1
+     },
+     {
+      "identifier": "TST003",
+      "restriction": "CONDITIONAL",
+      "lower_m": null,
+      "lower_reference": "WGS84",
+      "upper_m": 600.0,
+      "upper_reference": "WGS84",
+      "shape": "Polygon",
+      "radius_m": null,
+      "periods": 1
+     },
+     {
+      "identifier": "TST004",
+      "restriction": "NO_RESTRICTION",
+      "lower_m": null,
+      "lower_reference": "AGL",
+      "upper_m": null,
+      "upper_reference": "AMSL",
+      "shape": "Circle",
+      "radius_m": 250.5,
+      "periods": 1
+     }
+    ]
+   },
+   "why": "Both published wrappers are read (features; UASZoneList); Luxembourg's live file starts with a UTF-8 BOM."
+  },
+  {
+   "name": "null-optional-fields-read-absent-export-absent",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "zone": {
+     "identifier": "TST001",
+     "country": "GEO",
+     "name": null,
+     "type": "COMMON",
+     "restriction": "PROHIBITED",
+     "reason": [
+      "SENSITIVE",
+      "AIR_TRAFFIC"
+     ],
+     "message": null,
+     "applicability": [
+      {
+       "permanent": "YES"
+      }
+     ],
+     "zoneAuthority": [
+      {
+       "name": "Test authority",
+       "service": "Airspace",
+       "contactName": "Duty officer",
+       "siteURL": "https://example.invalid/zones",
+       "email": "zones@example.invalid",
+       "phone": null,
+       "purpose": "AUTHORIZATION",
+       "intervalBefore": "P2D"
+      }
+     ],
+     "geometry": [
+      {
+       "uomDimensions": "M",
+       "lowerLimit": 0,
+       "lowerVerticalReference": "AGL",
+       "upperLimit": null,
+       "upperVerticalReference": "AGL",
+       "horizontalProjection": {
+        "type": "Polygon",
+        "coordinates": [
+         [
+          [
+           44.8,
+           41.7
+          ],
+          [
+           44.82,
+           41.7
+          ],
+          [
+           44.82,
+           41.72
+          ],
+          [
+           44.8,
+           41.72
+          ],
+          [
+           44.8,
+           41.7
+          ]
+         ],
+         [
+          [
+           44.805,
+           41.705
+          ],
+          [
+           44.815,
+           41.705
+          ],
+          [
+           44.815,
+           41.715
+          ],
+          [
+           44.805,
+           41.715
+          ],
+          [
+           44.805,
+           41.705
+          ]
+         ]
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": true,
+    "export": {
+     "identifier": "TST001",
+     "country": "GEO",
+     "type": "COMMON",
+     "restriction": "PROHIBITED",
+     "reason": [
+      "SENSITIVE",
+      "AIR_TRAFFIC"
+     ],
+     "applicability": [
+      {
+       "permanent": "YES"
+      }
+     ],
+     "zoneAuthority": [
+      {
+       "name": "Test authority",
+       "service": "Airspace",
+       "contactName": "Duty officer",
+       "siteURL": "https://example.invalid/zones",
+       "email": "zones@example.invalid",
+       "purpose": "AUTHORIZATION",
+       "intervalBefore": "P2D"
+      }
+     ],
+     "geometry": [
+      {
+       "uomDimensions": "M",
+       "lowerLimit": 0,
+       "lowerVerticalReference": "AGL",
+       "upperVerticalReference": "AGL",
+       "horizontalProjection": {
+        "type": "Polygon",
+        "coordinates": [
+         [
+          [
+           44.8,
+           41.7
+          ],
+          [
+           44.82,
+           41.7
+          ],
+          [
+           44.82,
+           41.72
+          ],
+          [
+           44.8,
+           41.72
+          ],
+          [
+           44.8,
+           41.7
+          ]
+         ],
+         [
+          [
+           44.805,
+           41.705
+          ],
+          [
+           44.815,
+           41.705
+          ],
+          [
+           44.815,
+           41.715
+          ],
+          [
+           44.805,
+           41.715
+          ],
+          [
+           44.805,
+           41.705
+          ]
+         ]
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "why": "An optional field that is null is absent, and written back absent."
+  },
+  {
+   "name": "refuse-no-identifier",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].identifier",
+      "reason": "missing: required"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "identifier",
+     "reason_contains": "missing"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-long-identifier",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TOOLONG1",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].identifier",
+      "reason": "is 8 characters; at most 7"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "identifier",
+     "reason_contains": "at most 7"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-bad-country",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GE",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].country",
+      "reason": "'GE' is not an ISO 3166-1 alpha-3 code"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "country",
+     "reason_contains": "ISO 3166-1 alpha-3"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-lower-case-country",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "geo",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].country",
+      "reason": "'geo' is not an ISO 3166-1 alpha-3 code"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "country",
+     "reason_contains": "ISO 3166-1"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-no-type",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].type",
+      "reason": "missing: required"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "type",
+     "reason_contains": "missing"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-bad-restriction",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "FORBIDDEN",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].restriction",
+      "reason": "'FORBIDDEN' is not one of PROHIBITED, REQ_AUTHORISATION, CONDITIONAL, NO_RESTRICTION"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "restriction",
+     "reason_contains": "not one"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-american-spelling-req-authorization",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "REQ_AUTHORIZATION",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].restriction",
+      "reason": "'REQ_AUTHORIZATION' is not an ED-269 value; ED-269 spells it REQ_AUTHORISATION"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "restriction",
+     "reason_contains": "spells it REQ_AUTHORISATION"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-bad-reason",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "WEATHER"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].reason[0]",
+      "reason": "'WEATHER' is not one of AIR_TRAFFIC, SENSITIVE, PRIVACY, POPULATION, NATURE, NOISE, FOREIGN_TERRITORY, EMERGENCY, OTHER"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "reason[0]",
+     "reason_contains": "not one of"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-repeated-reason",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "NOISE",
+        "NOISE"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].reason[1]",
+      "reason": "NOISE is listed twice"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "reason[1]",
+     "reason_contains": "twice"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-long-message",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].message",
+      "reason": "is 201 characters; at most 200"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "message",
+     "reason_contains": "at most 200"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-unknown-field",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ],
+       "colour": "red"
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].colour",
+      "reason": "unknown field; not part of ED-269"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "colour",
+     "reason_contains": "unknown field"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-no-authority-list",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].zoneAuthority",
+      "reason": "missing: required (a list, which may be empty)"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "zoneAuthority",
+     "reason_contains": "missing"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-bad-purpose",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORISATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].zoneAuthority[0].purpose",
+      "reason": "'AUTHORISATION' is not one of AUTHORIZATION, NOTIFICATION, INFORMATION"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "zoneAuthority[0].purpose",
+     "reason_contains": "not one of"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-unknown-authority-field",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D",
+         "fax": "1"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].zoneAuthority[0].fax",
+      "reason": "unknown field; not part of ED-269"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "zoneAuthority[0].fax",
+     "reason_contains": "unknown field"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-no-applicability",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].applicability",
+      "reason": "missing: required, at least one period"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "applicability",
+     "reason_contains": "missing"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-empty-applicability",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].applicability",
+      "reason": "must be a list of at least one period"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "applicability",
+     "reason_contains": "at least"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-permanent-with-an-end",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES",
+         "endDateTime": "2027-01-01T00:00:00Z"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].applicability[0].endDateTime",
+      "reason": "a permanent period (permanent YES) applies at all times and has no endDateTime"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "applicability[0].endDateTime",
+     "reason_contains": "permanent YES"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-bad-permanent",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "Yes"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].applicability[0].permanent",
+      "reason": "'Yes' is not one of YES, NO"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "applicability[0].permanent",
+     "reason_contains": "not one of"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-not-permanent-and-never",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "NO"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].applicability[0]",
+      "reason": "permanent NO needs a startDateTime, an endDateTime or a schedule to say when it applies"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "applicability[0]",
+     "reason_contains": "to say when"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-naive-date",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "NO",
+         "startDateTime": "2026-01-01T00:00:00"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].applicability[0].startDateTime",
+      "reason": "'2026-01-01T00:00:00' has no offset; give Z or +hh:mm"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "applicability[0].startDateTime",
+     "reason_contains": "no offset"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-end-before-start",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "NO",
+         "startDateTime": "2026-02-01T00:00:00Z",
+         "endDateTime": "2026-01-01T00:00:00Z"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].applicability[0].endDateTime",
+      "reason": "is not after startDateTime"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "applicability[0].endDateTime",
+     "reason_contains": "not after"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-schedule-without-offset",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "NO",
+         "schedule": [
+          {
+           "day": [
+            "MON"
+           ],
+           "startTime": "08:00",
+           "endTime": "09:00"
+          }
+         ]
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].applicability[0].schedule[0].startTime",
+      "reason": "'08:00' is not a time of day with an offset, e.g. 17:00:00.00Z or 08:30+04:00"
+     },
+     {
+      "field": "features[0].applicability[0].schedule[0].endTime",
+      "reason": "'09:00' is not a time of day with an offset, e.g. 17:00:00.00Z or 08:30+04:00"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "applicability[0].schedule[0].startTime",
+     "reason_contains": "with an offset"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-schedule-with-two-offsets",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "NO",
+         "schedule": [
+          {
+           "day": [
+            "MON"
+           ],
+           "startTime": "08:00Z",
+           "endTime": "09:00+04:00"
+          }
+         ]
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].applicability[0].schedule[0].endTime",
+      "reason": "has a different offset from startTime; a daily period needs one"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "applicability[0].schedule[0].endTime",
+     "reason_contains": "different offset"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-schedule-start-equals-end",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "NO",
+         "schedule": [
+          {
+           "day": [
+            "MON"
+           ],
+           "startTime": "08:00Z",
+           "endTime": "08:00Z"
+          }
+         ]
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].applicability[0].schedule[0].endTime",
+      "reason": "is the same as startTime"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "applicability[0].schedule[0].endTime",
+     "reason_contains": "same as startTime"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-bad-day",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "NO",
+         "schedule": [
+          {
+           "day": [
+            "MONDAY"
+           ],
+           "startTime": "08:00Z",
+           "endTime": "09:00Z"
+          }
+         ]
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].applicability[0].schedule[0].day[0]",
+      "reason": "'MONDAY' is not one of MON, TUE, WED, THU, FRI, SAT, SUN, ANY"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "applicability[0].schedule[0].day[0]",
+     "reason_contains": "not one of"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-no-geometry",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].geometry",
+      "reason": "missing: required, one airspace volume"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "geometry",
+     "reason_contains": "missing"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-two-volumes",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        },
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].geometry",
+      "reason": "has 2 volumes; one volume per zone is supported (publish each volume as its own zone)"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "geometry",
+     "reason_contains": "one volume per zone"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-bad-unit",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "KM",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].geometry[0].uomDimensions",
+      "reason": "'KM' is not one of M, FT"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "uomDimensions",
+     "reason_contains": "not one"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-bad-reference",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "FL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].geometry[0].upperVerticalReference",
+      "reason": "'FL' is not one of AGL, AMSL, WGS84"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "upperVerticalReference",
+     "reason_contains": "not one of"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-limit-as-a-string",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": "0",
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].geometry[0].lowerLimit",
+      "reason": "must be a number, not a string"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "geometry[0].lowerLimit",
+     "reason_contains": "must be a number"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-upper-not-above-lower",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 0,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].geometry[0].upperLimit",
+      "reason": "is not above lowerLimit"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "geometry[0].upperLimit",
+     "reason_contains": "not above"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-unclosed-ring",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].geometry[0].horizontalProjection.coordinates[0]",
+      "reason": "is not closed: the last position must repeat the first"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "horizontalProjection.coordinates[0]",
+     "reason_contains": "not closed"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-latitude-out-of-range",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             91.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             91.7
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].geometry[0].horizontalProjection.coordinates[0][0]",
+      "reason": "[44.8, 91.7] is outside longitude and latitude ranges"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "horizontalProjection.coordinates[0][0]",
+     "reason_contains": "outside"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-ring-of-three-positions",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].geometry[0].horizontalProjection.coordinates[0]",
+      "reason": "a ring needs at least four positions, closed"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "horizontalProjection.coordinates[0]",
+     "reason_contains": "at least four"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-unknown-shape",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Ellipse",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].geometry[0].horizontalProjection.type",
+      "reason": "'Ellipse' is not Polygon or Circle"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "horizontalProjection.type",
+     "reason_contains": "not Polygon or Circle"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-circle-without-radius",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Circle",
+          "center": [
+           44.8,
+           41.7
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].geometry[0].horizontalProjection.radius",
+      "reason": "must be a number above 0"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "horizontalProjection.radius",
+     "reason_contains": "above 0"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-circle-with-coordinates",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Circle",
+          "center": [
+           44.8,
+           41.7
+          ],
+          "radius": 5,
+          "coordinates": []
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].geometry[0].horizontalProjection.coordinates",
+      "reason": "not a field of a Circle"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "horizontalProjection.coordinates",
+     "reason_contains": "not a field of a Circle"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-bad-region",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ],
+       "region": "7"
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].region",
+      "reason": "must be an integer, not a string"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "region",
+     "reason_contains": "must be an integer"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "refuse-bad-exemption",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ],
+       "regulationExemption": "MAYBE"
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].regulationExemption",
+      "reason": "'MAYBE' is not one of YES, NO"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "regulationExemption",
+     "reason_contains": "not one of"
+    }
+   },
+   "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
+  },
+  {
+   "name": "base-feature-is-accepted",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": true,
+    "zones": [
+     {
+      "identifier": "TST001",
+      "restriction": "PROHIBITED",
+      "lower_m": 0.0,
+      "lower_reference": "AGL",
+      "upper_m": 120.0,
+      "upper_reference": "AGL",
+      "shape": "Polygon",
+      "radius_m": null,
+      "periods": 1
+     }
+    ]
+   },
+   "why": "The presence pair of every refusal above."
+  },
+  {
+   "name": "refuse-document-not-json",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "bytes_base64": "e25vdCBqc29u"
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "$",
+      "reason": "not JSON: Expecting property name enclosed in double quotes at line 1"
+     }
+    ],
+    "must_include": {
+     "field": "$",
+     "reason_contains": "not JSON"
+    }
+   },
+   "why": "A document-level refusal with a named reason. Deep nesting must be refused, not crash the reader (a stack-exhaustion attack)."
+  },
+  {
+   "name": "refuse-document-not-utf8",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "bytes_base64": "//4="
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "$",
+      "reason": "not UTF-8: invalid start byte"
+     }
+    ],
+    "must_include": {
+     "field": "$",
+     "reason_contains": "not UTF-8"
+    }
+   },
+   "why": "A document-level refusal with a named reason. Deep nesting must be refused, not crash the reader (a stack-exhaustion attack)."
+  },
+  {
+   "name": "refuse-document-not-an-object",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "bytes_base64": "W10="
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "$",
+      "reason": "not a JSON object"
+     }
+    ],
+    "must_include": {
+     "field": "$",
+     "reason_contains": "not a JSON object"
+    }
+   },
+   "why": "A document-level refusal with a named reason. Deep nesting must be refused, not crash the reader (a stack-exhaustion attack)."
+  },
+  {
+   "name": "refuse-document-no-features",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "bytes_base64": "eyJ6b25lcyI6IFtdfQ=="
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features",
+      "reason": "missing: an ED-269 document lists its zones here"
+     }
+    ],
+    "must_include": {
+     "field": "features",
+     "reason_contains": "missing"
+    }
+   },
+   "why": "A document-level refusal with a named reason. Deep nesting must be refused, not crash the reader (a stack-exhaustion attack)."
+  },
+  {
+   "name": "refuse-document-features-not-a-list",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "bytes_base64": "eyJmZWF0dXJlcyI6IHt9fQ=="
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features",
+      "reason": "must be a list of zones"
+     }
+    ],
+    "must_include": {
+     "field": "features",
+     "reason_contains": "list of zones"
+    }
+   },
+   "why": "A document-level refusal with a named reason. Deep nesting must be refused, not crash the reader (a stack-exhaustion attack)."
+  },
+  {
+   "name": "refuse-document-unknown-document-field",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "bytes_base64": "eyJmZWF0dXJlcyI6IFtdLCAiYXV0aG9yIjogIngifQ=="
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "author",
+      "reason": "unknown field; not part of an ED-269 document"
+     }
+    ],
+    "must_include": {
+     "field": "author",
+     "reason_contains": "unknown field"
+    }
+   },
+   "why": "A document-level refusal with a named reason. Deep nesting must be refused, not crash the reader (a stack-exhaustion attack)."
+  },
+  {
+   "name": "refuse-document-nested-too-deeply",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "bytes_description": "100000 '[' then 100000 ']'"
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "$",
+      "reason": "nested too deeply to be ED-269"
+     }
+    ],
+    "must_include": {
+     "field": "$",
+     "reason_contains": "nested too deeply"
+    }
+   },
+   "why": "A document-level refusal with a named reason. Deep nesting must be refused, not crash the reader (a stack-exhaustion attack)."
+  },
+  {
+   "name": "refuse-repeated-identifier-names-both-places",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      },
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[1].identifier",
+      "reason": "'TST001' is also the identifier of features[0]"
+     }
+    ]
+   },
+   "why": "A duplicate identifier names the second place and the first."
+  },
+  {
+   "name": "refuse-reports-every-problem-not-only-the-first",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "XX",
+       "name": "Test prohibited square with a hole",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      },
+      {
+       "identifier": "TST002",
+       "country": "GEO",
+       "name": "Test circle in feet, AMSL",
+       "type": "COMMON",
+       "restriction": "REQ_AUTHORISATION",
+       "reason": [
+        "POPULATION"
+       ],
+       "applicability": [
+        {
+         "permanent": "NO",
+         "startDateTime": "2026-01-01T00:00:00Z",
+         "endDateTime": "2027-01-01T00:00:00+04:00"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "purpose": "NOTIFICATION"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "FT",
+         "lowerLimit": 1500,
+         "lowerVerticalReference": "AMSL",
+         "upperLimit": 2500.5,
+         "upperVerticalReference": "AMSL",
+         "horizontalProjection": {
+          "type": "Circle",
+          "center": [
+           44.7831,
+           41.6938
+          ],
+          "radius": 1640
+         }
+        }
+       ],
+       "restrictionConditions": [
+        "Notify 24 h before"
+       ],
+       "region": 7,
+       "regulationExemption": "NO",
+       "uSpaceClass": "EUROCONTROL",
+       "extendedProperties": {
+        "source": "test",
+        "revision": 3
+       }
+      },
+      {
+       "identifier": "TST003",
+       "country": "GEO",
+       "type": "COMMON",
+       "restriction": "NONE",
+       "reason": [
+        "OTHER"
+       ],
+       "otherReasonInfo": "Night works",
+       "message": "Applies at night, Monday to Friday",
+       "applicability": [
+        {
+         "permanent": "NO",
+         "startDateTime": "2026-09-01T00:00:00.00Z",
+         "endDateTime": "2026-12-31T23:59:59.00Z",
+         "schedule": [
+          {
+           "day": [
+            "MON",
+            "TUE",
+            "WED",
+            "THU",
+            "FRI"
+           ],
+           "startTime": "22:00:00.00Z",
+           "endTime": "02:00:00.00Z"
+          }
+         ]
+        }
+       ],
+       "zoneAuthority": [],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerVerticalReference": "WGS84",
+         "upperLimit": 600,
+         "upperVerticalReference": "WGS84",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.85,
+             41.73
+            ],
+            [
+             44.86,
+             41.73
+            ],
+            [
+             44.86,
+             41.74
+            ],
+            [
+             44.85,
+             41.73
+            ]
+           ]
+          ]
+         }
+        }
+       ],
+       "title": "Night works"
+      },
+      {
+       "identifier": "TST004",
+       "country": "GEO",
+       "name": "Test information zone",
+       "type": "COMMON",
+       "restriction": "NO_RESTRICTION",
+       "applicability": [
+        {
+         "permanent": "NO",
+         "schedule": [
+          {
+           "day": [
+            "ANY"
+           ],
+           "startTime": "08:00+04:00",
+           "endTime": "18:00+04:00"
+          }
+         ]
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "purpose": "INFORMATION"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerVerticalReference": "AGL",
+         "upperVerticalReference": "AMSL",
+         "horizontalProjection": {
+          "type": "Circle",
+          "center": [
+           44.9,
+           41.75
+          ],
+          "radius": 250.5
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].country",
+      "reason": "'XX' is not an ISO 3166-1 alpha-3 code"
+     },
+     {
+      "field": "features[2].restriction",
+      "reason": "'NONE' is not one of PROHIBITED, REQ_AUTHORISATION, CONDITIONAL, NO_RESTRICTION"
+     }
+    ]
+   },
+   "why": "All or nothing, and every problem named: half an authority's zones looks complete and is not."
+  }
+ ]
+}

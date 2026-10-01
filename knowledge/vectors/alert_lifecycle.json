@@ -1,0 +1,4873 @@
+{
+ "description": "Alert raise/clear sequences through the airspace monitor. Each case is a list of steps on one monitor: observe (one aircraft message at wall time t_s), tick (no message), switch_source (U-15). expected.per_step[i] lists what step i raised and cleared (with the clear reason: resolved, stale, source_disabled). Aircraft fields: id, lat_deg/lon_deg (computed; north_m/east_m are how the case was built), alt_amsl_m (default 550), vn/ve/vd (m/s, vd down), flying (default true: armed for relay, airborne for Remote ID), captured_at_s (default t_s; the ingest's placement), rx_at_s (default captured_at_s), station_clock_offset_s (the station's own ts = captured_at_s + offset; default 0), backlog, source (relay | remote_id), station, alt_source, identification, transmitter, identified. Policy 60 s / 60 m / 20 m / 800 m; defaults clear_after_s 3, stale_after_s 15, neighbour_max_age_s 10, live_max_age_s 10, pressure_uncertainty_m 250. Zones are ED-269 features.",
+ "source": [
+  "utm airspace/tests/test_monitor.py",
+  "utm airspace/tests/test_monitor_geozones.py",
+  "utm airspace/tests/test_source_control.py",
+  "utm airspace/tests/test_identification.py",
+  "utm airspace/tests/test_pressure_altitude.py",
+  "utm airspace/monitor.py"
+ ],
+ "units": {
+  "t_s": "seconds, epoch, the monitor's wall clock",
+  "alt_amsl_m": "metres",
+  "speeds": "m/s"
+ },
+ "tolerance": {
+  "times": "exact",
+  "detail floats": "0.1 (the old monitor rounds detail to 0.1)"
+ },
+ "owners": [
+  "authority",
+  "ussp"
+ ],
+ "generated": "Expected values computed by knowledge/tools/gen_vectors.py, which runs the old Python implementation (rootxkit/utm @ 484cd228035f) on these inputs. Regenerate rather than edit.",
+ "utm_commit": "484cd228035f2f424530e233ce72100d0fc1842a",
+ "policy": {
+  "t_cpa_max_s": 60,
+  "d_horizontal_min_m": 60,
+  "d_vertical_min_m": 20,
+  "neighbour_radius_m": 800
+ },
+ "hysteresis_rule": "cleared resolved when (last time shown false) - (last time shown true) > clear_after_s; a message that could not judge a pair or zone neither refreshes nor shows false",
+ "cases": [
+  {
+   "name": "head-on-raises-one-critical",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {},
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 500,
+       "vn": -10,
+       "lat_deg": 41.719601756624705,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     }
+    ],
+    "active_after": [
+     {
+      "kind": "conflict",
+      "severity": "critical",
+      "aircraft": [
+       "A",
+       "B"
+      ],
+      "detail": {
+       "t_cpa_s": 25.0,
+       "d_cpa_horizontal_m": 0.0,
+       "d_alt_at_cpa_m": 0.0,
+       "d_horizontal_now_m": 500.0,
+       "vertical_separation_known": true
+      }
+     }
+    ],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "A raise names both aircraft once; t_cpa 25 s.",
+   "source": "test_monitor.py::test_a_head_on_pair_raises_one_critical_conflict_naming_both"
+  },
+  {
+   "name": "raised-once-not-every-tick",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {},
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 500,
+       "vn": -10,
+       "lat_deg": 41.719601756624705,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 10,
+       "vn": 10,
+       "lat_deg": 41.715190035132494,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1.0
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 490,
+       "vn": -10,
+       "lat_deg": 41.71951172149221,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1.0
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     }
+    ],
+    "active_after": [
+     {
+      "kind": "conflict",
+      "severity": "critical",
+      "aircraft": [
+       "A",
+       "B"
+      ],
+      "detail": {
+       "t_cpa_s": 24.0,
+       "d_cpa_horizontal_m": 0.0,
+       "d_alt_at_cpa_m": 0.0,
+       "d_horizontal_now_m": 480.0,
+       "vertical_separation_known": true
+      }
+     }
+    ],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "An alert is raised once per condition and refreshed silently while true.",
+   "source": "test_monitor.py::test_the_same_conflict_is_not_raised_again_every_tick"
+  },
+  {
+   "name": "resolved-after-hysteresis",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {
+     "clear_after_s": 3.0
+    },
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 500,
+       "vn": -10,
+       "lat_deg": 41.719601756624705,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 500,
+       "vn": 10,
+       "lat_deg": 41.719601756624705,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1.0
+      }
+     },
+     {
+      "t_s": 3.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 510,
+       "vn": 10,
+       "lat_deg": 41.7196917917572,
+       "lon_deg": 44.8271,
+       "captured_at_s": 3.0
+      }
+     },
+     {
+      "t_s": 3.5,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 520,
+       "vn": 10,
+       "lat_deg": 41.719781826889694,
+       "lon_deg": 44.8271,
+       "captured_at_s": 3.5
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        },
+        "reason": "resolved"
+       }
+      ]
+     }
+    ],
+    "active_after": [],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "Shown false from 1.0 s; cleared 'resolved' only once shown false for MORE than clear_after_s since last true (0 s): at 3.5 s, not 3.0 s.",
+   "source": "test_monitor.py::test_a_resolved_conflict_clears_only_after_the_hysteresis"
+  },
+  {
+   "name": "silence-does-not-clear-before-stale",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {
+     "clear_after_s": 3.0,
+     "stale_after_s": 15.0
+    },
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 500,
+       "vn": -10,
+       "lat_deg": 41.719601756624705,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 10.0,
+      "op": "tick"
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     }
+    ],
+    "active_after": [
+     {
+      "kind": "conflict",
+      "severity": "critical",
+      "aircraft": [
+       "A",
+       "B"
+      ],
+      "detail": {
+       "t_cpa_s": 25.0,
+       "d_cpa_horizontal_m": 0.0,
+       "d_alt_at_cpa_m": 0.0,
+       "d_horizontal_now_m": 500.0,
+       "vertical_separation_known": true
+      }
+     }
+    ],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "No message shows the pair apart, so the alert stays.",
+   "source": "test_monitor.py::test_silence_does_not_clear_a_conflict_before_the_aircraft_are_stale"
+  },
+  {
+   "name": "silent-aircraft-cleared-stale-by-tick",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {
+     "stale_after_s": 15.0
+    },
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 500,
+       "vn": -10,
+       "lat_deg": 41.719601756624705,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 10.0,
+      "op": "tick"
+     },
+     {
+      "t_s": 16.0,
+      "op": "tick"
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        },
+        "reason": "stale"
+       }
+      ]
+     }
+    ],
+    "active_after": [],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "The end of a condition can be the ABSENCE of telemetry: a tick with no message must drop stale aircraft (>15 s) and clear with reason stale, not resolved.",
+   "source": "test_monitor.py::test_an_aircraft_that_goes_silent_is_dropped_and_its_alerts_cleared"
+  },
+  {
+   "name": "on-the-ground-raises-nothing",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {},
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "flying": false,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 20,
+       "vn": -10,
+       "flying": false,
+       "lat_deg": 41.71528007026499,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     }
+    ],
+    "active_after": [],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "Disarmed aircraft at a base are routinely metres apart; alerting would teach operators to ignore alerts.",
+   "source": "test_monitor.py::test_a_pair_on_the_ground_raises_nothing"
+  },
+  {
+   "name": "disarming-clears-as-stale",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {},
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 500,
+       "vn": -10,
+       "lat_deg": 41.719601756624705,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 500,
+       "flying": false,
+       "lat_deg": 41.719601756624705,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1.0
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        },
+        "reason": "stale"
+       }
+      ]
+     }
+    ],
+    "active_after": [],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "A disarmed aircraft leaves the picture; its conflict clears as stale (S-25 proposes a 'landed' reason; not built).",
+   "source": "test_monitor.py::test_disarming_clears_the_conflict"
+  },
+  {
+   "name": "hovering-inside-minima-stays-alerted",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {
+     "clear_after_s": 3.0
+    },
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": -0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": 0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1.0
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": -0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1.0
+      }
+     },
+     {
+      "t_s": 2.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": -0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 2.0
+      }
+     },
+     {
+      "t_s": 2.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": 0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 2.0
+      }
+     },
+     {
+      "t_s": 3.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 3.0
+      }
+     },
+     {
+      "t_s": 3.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": -0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 3.0
+      }
+     },
+     {
+      "t_s": 4.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": -0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 4.0
+      }
+     },
+     {
+      "t_s": 4.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": 0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 4.0
+      }
+     },
+     {
+      "t_s": 5.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 5.0
+      }
+     },
+     {
+      "t_s": 5.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": -0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 5.0
+      }
+     },
+     {
+      "t_s": 6.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": -0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 6.0
+      }
+     },
+     {
+      "t_s": 6.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": 0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 6.0
+      }
+     },
+     {
+      "t_s": 7.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 7.0
+      }
+     },
+     {
+      "t_s": 7.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": -0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 7.0
+      }
+     },
+     {
+      "t_s": 8.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": -0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 8.0
+      }
+     },
+     {
+      "t_s": 8.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": 0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 8.0
+      }
+     },
+     {
+      "t_s": 9.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 9.0
+      }
+     },
+     {
+      "t_s": 9.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": -0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 9.0
+      }
+     },
+     {
+      "t_s": 10.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": -0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 10.0
+      }
+     },
+     {
+      "t_s": 10.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": 0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 10.0
+      }
+     },
+     {
+      "t_s": 11.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 11.0
+      }
+     },
+     {
+      "t_s": 11.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": -0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 11.0
+      }
+     },
+     {
+      "t_s": 12.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": -0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 12.0
+      }
+     },
+     {
+      "t_s": 12.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": 0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 12.0
+      }
+     },
+     {
+      "t_s": 13.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 13.0
+      }
+     },
+     {
+      "t_s": 13.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": -0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 13.0
+      }
+     },
+     {
+      "t_s": 14.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": -0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 14.0
+      }
+     },
+     {
+      "t_s": 14.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": 0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 14.0
+      }
+     },
+     {
+      "t_s": 15.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 15.0
+      }
+     },
+     {
+      "t_s": 15.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": -0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 15.0
+      }
+     },
+     {
+      "t_s": 16.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": -0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 16.0
+      }
+     },
+     {
+      "t_s": 16.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": 0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 16.0
+      }
+     },
+     {
+      "t_s": 17.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 17.0
+      }
+     },
+     {
+      "t_s": 17.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": -0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 17.0
+      }
+     },
+     {
+      "t_s": 18.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": -0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 18.0
+      }
+     },
+     {
+      "t_s": 18.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": 0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 18.0
+      }
+     },
+     {
+      "t_s": 19.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 19.0
+      }
+     },
+     {
+      "t_s": 19.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": -0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 19.0
+      }
+     },
+     {
+      "t_s": 20.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": -0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 20.0
+      }
+     },
+     {
+      "t_s": 20.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": 0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 20.0
+      }
+     },
+     {
+      "t_s": 21.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 21.0
+      }
+     },
+     {
+      "t_s": 21.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": -0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 21.0
+      }
+     },
+     {
+      "t_s": 22.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": -0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 22.0
+      }
+     },
+     {
+      "t_s": 22.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": 0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 22.0
+      }
+     },
+     {
+      "t_s": 23.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 23.0
+      }
+     },
+     {
+      "t_s": 23.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": -0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 23.0
+      }
+     },
+     {
+      "t_s": 24.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": -0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 24.0
+      }
+     },
+     {
+      "t_s": 24.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": 0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 24.0
+      }
+     },
+     {
+      "t_s": 25.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 25.0
+      }
+     },
+     {
+      "t_s": 25.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": -0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 25.0
+      }
+     },
+     {
+      "t_s": 26.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": -0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 26.0
+      }
+     },
+     {
+      "t_s": 26.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": 0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 26.0
+      }
+     },
+     {
+      "t_s": 27.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 27.0
+      }
+     },
+     {
+      "t_s": 27.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": -0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 27.0
+      }
+     },
+     {
+      "t_s": 28.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": -0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 28.0
+      }
+     },
+     {
+      "t_s": 28.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": 0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 28.0
+      }
+     },
+     {
+      "t_s": 29.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 29.0
+      }
+     },
+     {
+      "t_s": 29.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 29.9,
+       "vn": -0.01,
+       "lat_deg": 41.71536920504616,
+       "lon_deg": 44.8271,
+       "captured_at_s": 29.0
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 0.0,
+         "d_cpa_horizontal_m": 29.9,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 29.9,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     }
+    ],
+    "active_after": [
+     {
+      "kind": "conflict",
+      "severity": "critical",
+      "aircraft": [
+       "A",
+       "B"
+      ],
+      "detail": {
+       "t_cpa_s": 1495.0,
+       "d_cpa_horizontal_m": 0.0,
+       "d_alt_at_cpa_m": 0.0,
+       "d_horizontal_now_m": 29.9,
+       "vertical_separation_known": true
+      }
+     }
+    ],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "SITL 2026-09-29: 29.9 m apart hovering with velocity noise. Raised once and never cleared as resolved while they stay.",
+   "source": "test_monitor.py::test_a_hovering_pair_inside_the_minimum_stays_alerted"
+  },
+  {
+   "name": "hovering-outside-minima-raises-nothing",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {},
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 80,
+       "vn": -0.01,
+       "lat_deg": 41.715820281059955,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1.0
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 80,
+       "vn": -0.01,
+       "lat_deg": 41.715820281059955,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1.0
+      }
+     },
+     {
+      "t_s": 2.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 2.0
+      }
+     },
+     {
+      "t_s": 2.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 80,
+       "vn": -0.01,
+       "lat_deg": 41.715820281059955,
+       "lon_deg": 44.8271,
+       "captured_at_s": 2.0
+      }
+     },
+     {
+      "t_s": 3.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 3.0
+      }
+     },
+     {
+      "t_s": 3.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 80,
+       "vn": -0.01,
+       "lat_deg": 41.715820281059955,
+       "lon_deg": 44.8271,
+       "captured_at_s": 3.0
+      }
+     },
+     {
+      "t_s": 4.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 4.0
+      }
+     },
+     {
+      "t_s": 4.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 80,
+       "vn": -0.01,
+       "lat_deg": 41.715820281059955,
+       "lon_deg": 44.8271,
+       "captured_at_s": 4.0
+      }
+     },
+     {
+      "t_s": 5.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 5.0
+      }
+     },
+     {
+      "t_s": 5.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 80,
+       "vn": -0.01,
+       "lat_deg": 41.715820281059955,
+       "lon_deg": 44.8271,
+       "captured_at_s": 5.0
+      }
+     },
+     {
+      "t_s": 6.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 6.0
+      }
+     },
+     {
+      "t_s": 6.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 80,
+       "vn": -0.01,
+       "lat_deg": 41.715820281059955,
+       "lon_deg": 44.8271,
+       "captured_at_s": 6.0
+      }
+     },
+     {
+      "t_s": 7.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 7.0
+      }
+     },
+     {
+      "t_s": 7.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 80,
+       "vn": -0.01,
+       "lat_deg": 41.715820281059955,
+       "lon_deg": 44.8271,
+       "captured_at_s": 7.0
+      }
+     },
+     {
+      "t_s": 8.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 8.0
+      }
+     },
+     {
+      "t_s": 8.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 80,
+       "vn": -0.01,
+       "lat_deg": 41.715820281059955,
+       "lon_deg": 44.8271,
+       "captured_at_s": 8.0
+      }
+     },
+     {
+      "t_s": 9.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 0.01,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 9.0
+      }
+     },
+     {
+      "t_s": 9.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 80,
+       "vn": -0.01,
+       "lat_deg": 41.715820281059955,
+       "lon_deg": 44.8271,
+       "captured_at_s": 9.0
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     }
+    ],
+    "active_after": [],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "The absence pair at 80 m.",
+   "source": "test_monitor.py::test_a_hovering_pair_outside_the_minimum_raises_nothing"
+  },
+  {
+   "name": "diverging-clears-resolved-once-past-minimum",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {
+     "clear_after_s": 3.0
+    },
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 40,
+       "vn": 5,
+       "lat_deg": 41.71546014052998,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 45,
+       "vn": 5,
+       "lat_deg": 41.71550515809622,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1.0
+      }
+     },
+     {
+      "t_s": 2.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 50,
+       "vn": 5,
+       "lat_deg": 41.71555017566247,
+       "lon_deg": 44.8271,
+       "captured_at_s": 2.0
+      }
+     },
+     {
+      "t_s": 3.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 55,
+       "vn": 5,
+       "lat_deg": 41.715595193228715,
+       "lon_deg": 44.8271,
+       "captured_at_s": 3.0
+      }
+     },
+     {
+      "t_s": 4.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 60,
+       "vn": 5,
+       "lat_deg": 41.715640210794966,
+       "lon_deg": 44.8271,
+       "captured_at_s": 4.0
+      }
+     },
+     {
+      "t_s": 5.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 65,
+       "vn": 5,
+       "lat_deg": 41.71568522836121,
+       "lon_deg": 44.8271,
+       "captured_at_s": 5.0
+      }
+     },
+     {
+      "t_s": 6.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 70,
+       "vn": 5,
+       "lat_deg": 41.71573024592746,
+       "lon_deg": 44.8271,
+       "captured_at_s": 6.0
+      }
+     },
+     {
+      "t_s": 7.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 75,
+       "vn": 5,
+       "lat_deg": 41.715775263493704,
+       "lon_deg": 44.8271,
+       "captured_at_s": 7.0
+      }
+     },
+     {
+      "t_s": 8.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 80,
+       "vn": 5,
+       "lat_deg": 41.715820281059955,
+       "lon_deg": 44.8271,
+       "captured_at_s": 8.0
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 0.0,
+         "d_cpa_horizontal_m": 40.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 40.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 0.0,
+         "d_cpa_horizontal_m": 55.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 55.0,
+         "vertical_separation_known": true
+        },
+        "reason": "resolved"
+       }
+      ]
+     },
+     {
+      "raised": [],
+      "cleared": []
+     }
+    ],
+    "active_after": [],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "Opening at 5 m/s from 40 m: inside until t=3 (55 m), shown clear from t=4 (60 m), cleared at t=7 (more than 3 s after last true).",
+   "source": "test_monitor.py::test_a_diverging_pair_clears_resolved_only_once_past_the_minimum"
+  },
+  {
+   "name": "silent-neighbour-ends-stale-never-resolved",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {
+     "stale_after_s": 15.0,
+     "clear_after_s": 3.0,
+     "neighbour_max_age_s": 10.0
+    },
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 500,
+       "vn": -10,
+       "lat_deg": 41.719601756624705,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 10,
+       "vn": 10,
+       "lat_deg": 41.715190035132494,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1.0
+      }
+     },
+     {
+      "t_s": 2.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 20,
+       "vn": 10,
+       "lat_deg": 41.71528007026499,
+       "lon_deg": 44.8271,
+       "captured_at_s": 2.0
+      }
+     },
+     {
+      "t_s": 3.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 30,
+       "vn": 10,
+       "lat_deg": 41.71537010539748,
+       "lon_deg": 44.8271,
+       "captured_at_s": 3.0
+      }
+     },
+     {
+      "t_s": 4.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 40,
+       "vn": 10,
+       "lat_deg": 41.71546014052998,
+       "lon_deg": 44.8271,
+       "captured_at_s": 4.0
+      }
+     },
+     {
+      "t_s": 5.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 50,
+       "vn": 10,
+       "lat_deg": 41.71555017566247,
+       "lon_deg": 44.8271,
+       "captured_at_s": 5.0
+      }
+     },
+     {
+      "t_s": 6.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 60,
+       "vn": 10,
+       "lat_deg": 41.715640210794966,
+       "lon_deg": 44.8271,
+       "captured_at_s": 6.0
+      }
+     },
+     {
+      "t_s": 7.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 70,
+       "vn": 10,
+       "lat_deg": 41.71573024592746,
+       "lon_deg": 44.8271,
+       "captured_at_s": 7.0
+      }
+     },
+     {
+      "t_s": 8.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 80,
+       "vn": 10,
+       "lat_deg": 41.715820281059955,
+       "lon_deg": 44.8271,
+       "captured_at_s": 8.0
+      }
+     },
+     {
+      "t_s": 9.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 90,
+       "vn": 10,
+       "lat_deg": 41.71591031619245,
+       "lon_deg": 44.8271,
+       "captured_at_s": 9.0
+      }
+     },
+     {
+      "t_s": 10.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 100,
+       "vn": 10,
+       "lat_deg": 41.71600035132494,
+       "lon_deg": 44.8271,
+       "captured_at_s": 10.0
+      }
+     },
+     {
+      "t_s": 11.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 110,
+       "vn": 10,
+       "lat_deg": 41.71609038645744,
+       "lon_deg": 44.8271,
+       "captured_at_s": 11.0
+      }
+     },
+     {
+      "t_s": 12.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 120,
+       "vn": 10,
+       "lat_deg": 41.71618042158993,
+       "lon_deg": 44.8271,
+       "captured_at_s": 12.0
+      }
+     },
+     {
+      "t_s": 13.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 130,
+       "vn": 10,
+       "lat_deg": 41.71627045672243,
+       "lon_deg": 44.8271,
+       "captured_at_s": 13.0
+      }
+     },
+     {
+      "t_s": 14.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 140,
+       "vn": 10,
+       "lat_deg": 41.716360491854914,
+       "lon_deg": 44.8271,
+       "captured_at_s": 14.0
+      }
+     },
+     {
+      "t_s": 15.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 150,
+       "vn": 10,
+       "lat_deg": 41.71645052698741,
+       "lon_deg": 44.8271,
+       "captured_at_s": 15.0
+      }
+     },
+     {
+      "t_s": 16.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 160,
+       "vn": 10,
+       "lat_deg": 41.7165405621199,
+       "lon_deg": 44.8271,
+       "captured_at_s": 16.0
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 15.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 300.0,
+         "vertical_separation_known": true
+        },
+        "reason": "stale"
+       }
+      ]
+     }
+    ],
+    "active_after": [],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "B goes silent, A keeps reporting (and A flies through B's last position). Once B's sample is more than 10 s old the pair cannot be judged: neither refreshed nor shown clear. It ends when B is dropped (t=16) with reason stale. Without this rule A's own messages 'resolved' a conflict with an aircraft nobody could see.",
+   "source": "test_monitor.py::test_a_silent_neighbours_conflict_ends_stale_never_resolved"
+  },
+  {
+   "name": "reporting-neighbour-can-resolve",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {
+     "clear_after_s": 3.0
+    },
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 500,
+       "vn": -10,
+       "lat_deg": 41.719601756624705,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 10,
+       "vn": 10,
+       "lat_deg": 41.715190035132494,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1.0
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 510,
+       "vn": 10,
+       "lat_deg": 41.7196917917572,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1.0
+      }
+     },
+     {
+      "t_s": 2.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 20,
+       "vn": 10,
+       "lat_deg": 41.71528007026499,
+       "lon_deg": 44.8271,
+       "captured_at_s": 2.0
+      }
+     },
+     {
+      "t_s": 2.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 520,
+       "vn": 10,
+       "lat_deg": 41.719781826889694,
+       "lon_deg": 44.8271,
+       "captured_at_s": 2.0
+      }
+     },
+     {
+      "t_s": 3.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 30,
+       "vn": 10,
+       "lat_deg": 41.71537010539748,
+       "lon_deg": 44.8271,
+       "captured_at_s": 3.0
+      }
+     },
+     {
+      "t_s": 3.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 530,
+       "vn": 10,
+       "lat_deg": 41.71987186202219,
+       "lon_deg": 44.8271,
+       "captured_at_s": 3.0
+      }
+     },
+     {
+      "t_s": 4.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 40,
+       "vn": 10,
+       "lat_deg": 41.71546014052998,
+       "lon_deg": 44.8271,
+       "captured_at_s": 4.0
+      }
+     },
+     {
+      "t_s": 4.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 540,
+       "vn": 10,
+       "lat_deg": 41.71996189715468,
+       "lon_deg": 44.8271,
+       "captured_at_s": 4.0
+      }
+     },
+     {
+      "t_s": 5.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 50,
+       "vn": 10,
+       "lat_deg": 41.71555017566247,
+       "lon_deg": 44.8271,
+       "captured_at_s": 5.0
+      }
+     },
+     {
+      "t_s": 5.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 550,
+       "vn": 10,
+       "lat_deg": 41.72005193228718,
+       "lon_deg": 44.8271,
+       "captured_at_s": 5.0
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 24.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 480.0,
+         "vertical_separation_known": true
+        },
+        "reason": "resolved"
+       }
+      ]
+     },
+     {
+      "raised": [],
+      "cleared": []
+     }
+    ],
+    "active_after": [],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "The presence pair: B reports, diverging, and it resolves.",
+   "source": "test_monitor.py::test_a_neighbour_that_keeps_reporting_can_still_resolve"
+  },
+  {
+   "name": "evidence-outranks-stale",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {
+     "stale_after_s": 3.0,
+     "clear_after_s": 3.0
+    },
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 500,
+       "vn": -10,
+       "lat_deg": 41.719601756624705,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 510,
+       "vn": 10,
+       "lat_deg": 41.7196917917572,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1.0
+      }
+     },
+     {
+      "t_s": 3.5,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 540,
+       "vn": 10,
+       "lat_deg": 41.71996189715468,
+       "lon_deg": 44.8271,
+       "captured_at_s": 3.5
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        },
+        "reason": "resolved"
+       }
+      ]
+     }
+    ],
+    "active_after": [],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "When an alert is both shown false for longer than the hysteresis and one aircraft just went stale, the reason is resolved: evidence outranks silence.",
+   "source": "test_monitor.py::test_evidence_of_resolution_outranks_going_stale"
+  },
+  {
+   "name": "backlog-raises-nothing-then-live-alerts",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {},
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "backlog": true,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 500,
+       "vn": -10,
+       "backlog": true,
+       "lat_deg": 41.719601756624705,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 10,
+       "vn": 10,
+       "lat_deg": 41.715190035132494,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1.0
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 490,
+       "vn": -10,
+       "lat_deg": 41.71951172149221,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1.0
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 24.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 480.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     }
+    ],
+    "active_after": [
+     {
+      "kind": "conflict",
+      "severity": "critical",
+      "aircraft": [
+       "A",
+       "B"
+      ],
+      "detail": {
+       "t_cpa_s": 24.0,
+       "d_cpa_horizontal_m": 0.0,
+       "d_alt_at_cpa_m": 0.0,
+       "d_horizontal_now_m": 480.0,
+       "vertical_separation_known": true
+      }
+     }
+    ],
+    "counters": {
+     "rejected_backlog": 2,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "Records the ingest flagged as backlog (queued before the session that delivered them, or delivered while draining) are history: counted, recorded, never alerted. Live records alert again.",
+   "source": "test_monitor.py::test_a_relay_backlog_raises_nothing_and_live_records_alert_again"
+  },
+  {
+   "name": "late-delivery-not-evaluated",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {
+     "live_max_age_s": 10.0
+    },
+    "steps": [
+     {
+      "t_s": 20.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "captured_at_s": 5.0,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271
+      }
+     },
+     {
+      "t_s": 20.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 500,
+       "vn": -10,
+       "captured_at_s": 5.0,
+       "lat_deg": 41.719601756624705,
+       "lon_deg": 44.8271
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     }
+    ],
+    "active_after": [],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 2,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "live_max_age_s applies to wall - rx_ts (ingest-to-monitor leg only): 15 s late is rejected as late, counted, not alerted.",
+   "source": "test_monitor.py::test_the_live_window_applies_to_the_gateway_to_monitor_leg_only"
+  },
+  {
+   "name": "station-clock-skew-costs-no-alert",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {},
+    "steps": [
+     {
+      "t_s": 100.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "station": "gs-1",
+       "station_clock_offset_s": -3600.0,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 100.0
+      }
+     },
+     {
+      "t_s": 100.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 500,
+       "vn": -10,
+       "station": "gs-2",
+       "station_clock_offset_s": 86400.0,
+       "lat_deg": 41.719601756624705,
+       "lon_deg": 44.8271,
+       "captured_at_s": 100.0
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     }
+    ],
+    "active_after": [
+     {
+      "kind": "conflict",
+      "severity": "critical",
+      "aircraft": [
+       "A",
+       "B"
+      ],
+      "detail": {
+       "t_cpa_s": 25.0,
+       "d_cpa_horizontal_m": 0.0,
+       "d_alt_at_cpa_m": 0.0,
+       "d_horizontal_now_m": 500.0,
+       "vertical_separation_known": true
+      }
+     }
+    ],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "A's station clock is an hour behind, B's a day ahead. Placement uses the ingest's clock (captured_at derived from rx_ts), so a station clock wrong by any amount still raises. (The station's own `ts` is used only to order samples within one source.)",
+   "source": "test_monitor.py::test_a_station_clock_off_by_any_amount_still_raises_the_conflict"
+  },
+  {
+   "name": "out-of-order-sample-ignored",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {},
+    "steps": [
+     {
+      "t_s": 1.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1.0
+      }
+     },
+     {
+      "t_s": 2.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": -10,
+       "vn": 10,
+       "captured_at_s": 0.5,
+       "lat_deg": 41.715009964867505,
+       "lon_deg": 44.8271
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     }
+    ],
+    "active_after": [],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 1,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "Within one source, a sample older on that station's clock than the one held, and not received later, is out of order: counted and ignored. Samples from different sources are never ordered against each other.",
+   "source": "test_monitor.py::test_a_sample_older_than_the_one_held_is_ignored"
+  },
+  {
+   "name": "source-disabled-clears-with-its-own-reason",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {},
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 500,
+       "vn": -10,
+       "source": "remote_id",
+       "station": "rx-1",
+       "lat_deg": 41.719601756624705,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "switch_source",
+      "source_type": "remote_id",
+      "instance_id": null,
+      "enabled": false
+     },
+     {
+      "t_s": 2.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 480,
+       "vn": -10,
+       "source": "remote_id",
+       "station": "rx-1",
+       "lat_deg": 41.719421686359716,
+       "lon_deg": 44.8271,
+       "captured_at_s": 2.0
+      }
+     },
+     {
+      "t_s": 3.0,
+      "op": "switch_source",
+      "source_type": "remote_id",
+      "instance_id": null,
+      "enabled": true
+     },
+     {
+      "t_s": 3.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 470,
+       "vn": -10,
+       "source": "remote_id",
+       "station": "rx-1",
+       "lat_deg": 41.71933165122722,
+       "lon_deg": 44.8271,
+       "captured_at_s": 3.0
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        },
+        "reason": "source_disabled"
+       }
+      ]
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 22.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 440.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     }
+    ],
+    "active_after": [
+     {
+      "kind": "conflict",
+      "severity": "critical",
+      "aircraft": [
+       "A",
+       "B"
+      ],
+      "detail": {
+       "t_cpa_s": 22.0,
+       "d_cpa_horizontal_m": 0.0,
+       "d_alt_at_cpa_m": 0.0,
+       "d_horizontal_now_m": 440.0,
+       "vertical_separation_known": true
+      }
+     }
+    ],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 1,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "U-15: switching Remote ID off drops its aircraft at once and clears with reason source_disabled (neither resolved: nothing showed it false; nor stale: it was deliberately removed). While off its messages are counted, not judged. On again, the next message raises again.",
+   "source": "test_source_control.py"
+  },
+  {
+   "name": "one-station-off-drops-only-its-aircraft",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {},
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "station": "gs-1",
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 500,
+       "vn": -10,
+       "station": "gs-2",
+       "lat_deg": 41.719601756624705,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "C",
+       "north_m": 5000,
+       "station": "gs-2",
+       "lat_deg": 41.76011756624707,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "switch_source",
+      "source_type": "relay",
+      "instance_id": "gs-1",
+      "enabled": false
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        },
+        "reason": "source_disabled"
+       }
+      ]
+     }
+    ],
+    "active_after": [],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "An instance switch touches only that instance's tracks.",
+   "source": "test_source_control.py::test_switching_one_station_off_drops_only_its_aircraft"
+  },
+  {
+   "name": "zone-enter-and-leave",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {
+     "zones": [
+      {
+       "identifier": "Z1",
+       "country": "GEO",
+       "type": "COMMON",
+       "restriction": "REQ_AUTHORISATION",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerVerticalReference": "AMSL",
+         "upperVerticalReference": "AMSL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8171,
+             41.7051
+            ],
+            [
+             44.8371,
+             41.7051
+            ],
+            [
+             44.8371,
+             41.7251
+            ],
+            [
+             44.8171,
+             41.7251
+            ],
+            [
+             44.8171,
+             41.7051
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ],
+     "clear_after_s": 3.0
+    },
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 5000,
+       "lat_deg": 41.76011756624707,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1.0
+      }
+     },
+     {
+      "t_s": 2.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 2.0
+      }
+     },
+     {
+      "t_s": 3.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 5000,
+       "lat_deg": 41.76011756624707,
+       "lon_deg": 44.8271,
+       "captured_at_s": 3.0
+      }
+     },
+     {
+      "t_s": 5.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 5000,
+       "lat_deg": 41.76011756624707,
+       "lon_deg": 44.8271,
+       "captured_at_s": 5.0
+      }
+     },
+     {
+      "t_s": 6.5,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 5000,
+       "lat_deg": 41.76011756624707,
+       "lon_deg": 44.8271,
+       "captured_at_s": 6.5
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "zone",
+        "severity": "warning",
+        "aircraft": [
+         "A"
+        ],
+        "detail": {
+         "identifier": "Z1",
+         "restriction": "REQ_AUTHORISATION"
+        }
+       }
+      ],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": [
+       {
+        "kind": "zone",
+        "severity": "warning",
+        "aircraft": [
+         "A"
+        ],
+        "detail": {
+         "identifier": "Z1",
+         "restriction": "REQ_AUTHORISATION"
+        },
+        "reason": "resolved"
+       }
+      ]
+     }
+    ],
+    "active_after": [],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "Entering raises once; leaving clears as resolved after the hysteresis (last true 2.0 s, cleared at 6.5 s, not 5.0 s).",
+   "source": "test_monitor.py::test_outside_the_zone_raises_nothing_and_leaving_clears"
+  },
+  {
+   "name": "zone-stops-applying-clears",
+   "owner": [
+    "authority",
+    "ussp",
+    "cisp"
+   ],
+   "input": {
+    "config": {
+     "zones": [
+      {
+       "identifier": "Z2",
+       "country": "GEO",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "applicability": [
+        {
+         "permanent": "NO",
+         "startDateTime": "2026-10-01T10:00:00Z",
+         "endDateTime": "2026-10-01T11:00:00Z"
+        }
+       ],
+       "zoneAuthority": [],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerVerticalReference": "AMSL",
+         "upperVerticalReference": "AMSL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8171,
+             41.7051
+            ],
+            [
+             44.8371,
+             41.7051
+            ],
+            [
+             44.8371,
+             41.7251
+            ],
+            [
+             44.8171,
+             41.7251
+            ],
+            [
+             44.8171,
+             41.7051
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ],
+     "clear_after_s": 3.0
+    },
+    "steps": [
+     {
+      "t_s": 1790852399.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1790852399.0
+      }
+     },
+     {
+      "t_s": 1790852401.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1790852401.0
+      }
+     },
+     {
+      "t_s": 1790852405.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1790852405.0
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [
+       {
+        "kind": "zone",
+        "severity": "critical",
+        "aircraft": [
+         "A"
+        ],
+        "detail": {
+         "identifier": "Z2",
+         "restriction": "PROHIBITED"
+        }
+       }
+      ],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": [
+       {
+        "kind": "zone",
+        "severity": "critical",
+        "aircraft": [
+         "A"
+        ],
+        "detail": {
+         "identifier": "Z2",
+         "restriction": "PROHIBITED"
+        },
+        "reason": "resolved"
+       }
+      ]
+     }
+    ],
+    "active_after": [],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "Applicability is judged at the placed time in UTC. The window ends while the aircraft sits inside; the alert clears resolved.",
+   "source": "test_monitor_geozones.py::test_a_zone_that_stops_applying_clears_its_alert"
+  },
+  {
+   "name": "applicability-at-placed-time-not-arrival",
+   "owner": [
+    "authority",
+    "ussp",
+    "cisp"
+   ],
+   "input": {
+    "config": {
+     "zones": [
+      {
+       "identifier": "Z2",
+       "country": "GEO",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "applicability": [
+        {
+         "permanent": "NO",
+         "startDateTime": "2026-10-01T10:00:00Z",
+         "endDateTime": "2026-10-01T11:00:00Z"
+        }
+       ],
+       "zoneAuthority": [],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerVerticalReference": "AMSL",
+         "upperVerticalReference": "AMSL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8171,
+             41.7051
+            ],
+            [
+             44.8371,
+             41.7051
+            ],
+            [
+             44.8371,
+             41.7251
+            ],
+            [
+             44.8171,
+             41.7251
+            ],
+            [
+             44.8171,
+             41.7051
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ],
+     "live_max_age_s": 10.0
+    },
+    "steps": [
+     {
+      "t_s": 1790852404.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "captured_at_s": 1790852399.0,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [
+       {
+        "kind": "zone",
+        "severity": "critical",
+        "aircraft": [
+         "A"
+        ],
+        "detail": {
+         "identifier": "Z2",
+         "restriction": "PROHIBITED"
+        }
+       }
+      ],
+      "cleared": []
+     }
+    ],
+    "active_after": [
+     {
+      "kind": "zone",
+      "severity": "critical",
+      "aircraft": [
+       "A"
+      ],
+      "detail": {
+       "identifier": "Z2",
+       "restriction": "PROHIBITED"
+      }
+     }
+    ],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "Captured inside the window, judged 5 s later after it ended: the aircraft WAS in the zone while it applied.",
+   "source": "test_monitor_geozones.py::test_applicability_is_judged_at_the_placed_time_not_the_arrival"
+  },
+  {
+   "name": "severity-change-is-raised-again",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {
+     "zones": [
+      {
+       "identifier": "Z3",
+       "country": "GEO",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerVerticalReference": "AMSL",
+         "upperVerticalReference": "AMSL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8171,
+             41.7051
+            ],
+            [
+             44.8371,
+             41.7051
+            ],
+            [
+             44.8371,
+             41.7251
+            ],
+            [
+             44.8171,
+             41.7251
+            ],
+            [
+             44.8171,
+             41.7051
+            ]
+           ]
+          ]
+         },
+         "lowerLimit": 400,
+         "upperLimit": 600
+        }
+       ]
+      }
+     ]
+    },
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "alt_amsl_m": 500.0,
+       "alt_source": "pressure",
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "alt_amsl_m": 700.0,
+       "alt_source": "pressure",
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1.0
+      }
+     },
+     {
+      "t_s": 2.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "alt_amsl_m": 500.0,
+       "alt_source": "pressure",
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 2.0
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [
+       {
+        "kind": "zone",
+        "severity": "critical",
+        "aircraft": [
+         "A"
+        ],
+        "detail": {
+         "identifier": "Z3",
+         "restriction": "PROHIBITED",
+         "vertical_known": false,
+         "within_band": true
+        }
+       }
+      ],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "zone",
+        "severity": "warning",
+        "aircraft": [
+         "A"
+        ],
+        "detail": {
+         "identifier": "Z3",
+         "restriction": "PROHIBITED",
+         "vertical_known": false,
+         "within_band": false
+        }
+       }
+      ],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "zone",
+        "severity": "critical",
+        "aircraft": [
+         "A"
+        ],
+        "detail": {
+         "identifier": "Z3",
+         "restriction": "PROHIBITED",
+         "vertical_known": false,
+         "within_band": true
+        }
+       }
+      ],
+      "cleared": []
+     }
+    ],
+    "active_after": [
+     {
+      "kind": "zone",
+      "severity": "critical",
+      "aircraft": [
+       "A"
+      ],
+      "detail": {
+       "identifier": "Z3",
+       "restriction": "PROHIBITED",
+       "vertical_known": false,
+       "within_band": true
+      }
+     }
+    ],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "S-33: on pressure altitude, inside the band is critical, inside only the band widened by 250 m is warning. A severity change is raised again under the same key, never changed silently in place.",
+   "source": "test_pressure_altitude.py::test_a_severity_change_is_raised_again_not_changed_in_place"
+  },
+  {
+   "name": "unidentified-in-prohibited-zone-raises-identification",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {
+     "zones": [
+      {
+       "identifier": "Z4",
+       "country": "GEO",
+       "type": "COMMON",
+       "restriction": "PROHIBITED",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerVerticalReference": "AMSL",
+         "upperVerticalReference": "AMSL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8171,
+             41.7051
+            ],
+            [
+             44.8371,
+             41.7051
+            ],
+            [
+             44.8371,
+             41.7251
+            ],
+            [
+             44.8171,
+             41.7251
+            ],
+            [
+             44.8171,
+             41.7051
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ],
+     "clear_after_s": 3.0
+    },
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "source": "remote_id",
+       "identification": {
+        "status": "unidentified",
+        "reason": "no_serial",
+        "serial": null,
+        "operator_reg": null,
+        "mismatch": false
+       },
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 5000,
+       "source": "remote_id",
+       "identification": {
+        "status": "unidentified",
+        "reason": "no_serial",
+        "serial": null,
+        "operator_reg": null,
+        "mismatch": false
+       },
+       "lat_deg": 41.76011756624707,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1.0
+      }
+     },
+     {
+      "t_s": 4.5,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 5000,
+       "source": "remote_id",
+       "identification": {
+        "status": "unidentified",
+        "reason": "no_serial",
+        "serial": null,
+        "operator_reg": null,
+        "mismatch": false
+       },
+       "lat_deg": 41.76011756624707,
+       "lon_deg": 44.8271,
+       "captured_at_s": 4.5
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [
+       {
+        "kind": "zone",
+        "severity": "critical",
+        "aircraft": [
+         "A"
+        ],
+        "detail": {
+         "identifier": "Z4",
+         "restriction": "PROHIBITED"
+        }
+       },
+       {
+        "kind": "identification",
+        "severity": "critical",
+        "aircraft": [
+         "A"
+        ],
+        "detail": {
+         "identifier": "Z4",
+         "restriction": "PROHIBITED",
+         "status": "unidentified",
+         "identification_reason": "no_serial"
+        }
+       }
+      ],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": [
+       {
+        "kind": "zone",
+        "severity": "critical",
+        "aircraft": [
+         "A"
+        ],
+        "detail": {
+         "identifier": "Z4",
+         "restriction": "PROHIBITED"
+        },
+        "reason": "resolved"
+       },
+       {
+        "kind": "identification",
+        "severity": "critical",
+        "aircraft": [
+         "A"
+        ],
+        "detail": {
+         "identifier": "Z4",
+         "restriction": "PROHIBITED",
+         "status": "unidentified",
+         "identification_reason": "no_serial"
+        },
+        "reason": "resolved"
+       }
+      ]
+     }
+    ],
+    "active_after": [],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "U-02: an unidentified or unknown_operator aircraft inside PROHIBITED or REQ_AUTHORISATION raises 'identification' beside the zone alert: the incident seam. Both clear together.",
+   "source": "airspace/tests/test_identification.py"
+  },
+  {
+   "name": "mismatch-raised-on-the-ground-too",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {},
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "source": "remote_id",
+       "flying": false,
+       "identification": {
+        "status": "unknown_operator",
+        "reason": "operator_mismatch",
+        "serial": "S1",
+        "operator_reg": "GEOX",
+        "mismatch": true,
+        "registered_operator_reg": "GEOY"
+       },
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [
+       {
+        "kind": "identification_mismatch",
+        "severity": "warning",
+        "aircraft": [
+         "A"
+        ],
+        "detail": {
+         "status": "unknown_operator",
+         "identification_reason": "operator_mismatch"
+        }
+       }
+      ],
+      "cleared": []
+     }
+    ],
+    "active_after": [
+     {
+      "kind": "identification_mismatch",
+      "severity": "warning",
+      "aircraft": [
+       "A"
+      ],
+      "detail": {
+       "status": "unknown_operator",
+       "identification_reason": "operator_mismatch"
+      }
+     }
+    ],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "identification_mismatch is about who, not where: judged on every live message, on the ground and without an altitude too.",
+   "source": "airspace/tests/test_identification.py::test_a_mismatch_is_judged_without_a_track"
+  },
+  {
+   "name": "backlog-raises-no-mismatch",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {},
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "source": "remote_id",
+       "backlog": true,
+       "identification": {
+        "status": "unknown_operator",
+        "reason": "operator_mismatch",
+        "serial": "S1",
+        "operator_reg": "GEOX",
+        "mismatch": true,
+        "registered_operator_reg": "GEOY"
+       },
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     }
+    ],
+    "active_after": [],
+    "counters": {
+     "rejected_backlog": 1,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "History raises no identity alert either.",
+   "source": "airspace/tests/test_identification.py::test_a_backlog_message_raises_no_mismatch"
+  },
+  {
+   "name": "unidentified-and-serial-of-same-transmitter-never-pair",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {},
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "source": "remote_id",
+       "transmitter": "TX-1",
+       "identified": false,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 5,
+       "vn": 10,
+       "source": "remote_id",
+       "transmitter": "TX-1",
+       "identified": true,
+       "lat_deg": 41.71514501756624,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     }
+    ],
+    "active_after": [],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "S-32: one radio under two ids (unidentified, then its serial) must not conflict with itself.",
+   "source": "test_monitor.py::test_an_unidentified_track_and_the_serial_of_its_transmitter_are_one"
+  },
+  {
+   "name": "two-serials-on-one-transmitter-do-pair",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {},
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "source": "remote_id",
+       "transmitter": "TX-1",
+       "identified": true,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 5,
+       "vn": 10,
+       "source": "remote_id",
+       "transmitter": "TX-1",
+       "identified": true,
+       "lat_deg": 41.71514501756624,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 0.0,
+         "d_cpa_horizontal_m": 5.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 5.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     }
+    ],
+    "active_after": [
+     {
+      "kind": "conflict",
+      "severity": "critical",
+      "aircraft": [
+       "A",
+       "B"
+      ],
+      "detail": {
+       "t_cpa_s": 0.0,
+       "d_cpa_horizontal_m": 5.0,
+       "d_alt_at_cpa_m": 0.0,
+       "d_horizontal_now_m": 5.0,
+       "vertical_separation_known": true
+      }
+     }
+    ],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    }
+   },
+   "why": "Two identified tracks on one address are two claims (a spoofer on its victim's address among them): judged like any pair.",
+   "source": "test_monitor.py::test_two_serials_on_one_transmitter_address_are_a_conflict"
+  }
+ ]
+}

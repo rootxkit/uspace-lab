@@ -1,0 +1,235 @@
+{
+ "description": "Whether a source (type, instance) is switched on (U-15). Applied at the adapter (refuse, count) and by every consumer (drop the tracks, clear alerts as source_disabled). Followers apply a state only if its version is strictly higher within the same epoch, and take any state from a new epoch (a restored database).",
+ "source": [
+  "utm common/sources.py SourceControlState.why_disabled",
+  "utm airspace/tests/test_source_control.py",
+  "utm docs/runbooks/u15-source-control.md"
+ ],
+ "units": {},
+ "tolerance": {
+  "all": "exact"
+ },
+ "owners": [
+  "authority",
+  "ussp",
+  "ansp"
+ ],
+ "generated": "Expected values computed by knowledge/tools/gen_vectors.py, which runs the old Python implementation (rootxkit/utm @ 484cd228035f) on these inputs. Regenerate rather than edit.",
+ "utm_commit": "484cd228035f2f424530e233ce72100d0fc1842a",
+ "cases": [
+  {
+   "name": "nothing-published-everything-enabled",
+   "owner": [
+    "authority",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "controls": [],
+    "default_deny": false,
+    "query": {
+     "source_type": "remote_id",
+     "instance_id": "rx-1"
+    }
+   },
+   "expected": {
+    "enabled": true,
+    "why_disabled": null
+   },
+   "why": "Before any state, every source is enabled: followers never fail closed."
+  },
+  {
+   "name": "type-off-disables-every-instance",
+   "owner": [
+    "authority",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "controls": [
+     {
+      "source_type": "remote_id",
+      "instance_id": null,
+      "enabled": false
+     },
+     {
+      "source_type": "remote_id",
+      "instance_id": "rx-1",
+      "enabled": true
+     }
+    ],
+    "default_deny": false,
+    "query": {
+     "source_type": "remote_id",
+     "instance_id": "rx-1"
+    }
+   },
+   "expected": {
+    "enabled": false,
+    "why_disabled": "type"
+   },
+   "why": "A type switched off wins over an instance switched on."
+  },
+  {
+   "name": "instance-off",
+   "owner": [
+    "authority",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "controls": [
+     {
+      "source_type": "relay",
+      "instance_id": "gs-1",
+      "enabled": false
+     }
+    ],
+    "default_deny": false,
+    "query": {
+     "source_type": "relay",
+     "instance_id": "gs-1"
+    }
+   },
+   "expected": {
+    "enabled": false,
+    "why_disabled": "instance"
+   },
+   "why": "One station off."
+  },
+  {
+   "name": "other-instance-untouched",
+   "owner": [
+    "authority",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "controls": [
+     {
+      "source_type": "relay",
+      "instance_id": "gs-1",
+      "enabled": false
+     }
+    ],
+    "default_deny": false,
+    "query": {
+     "source_type": "relay",
+     "instance_id": "gs-2"
+    }
+   },
+   "expected": {
+    "enabled": true,
+    "why_disabled": null
+   },
+   "why": "Another station of the same type is enabled."
+  },
+  {
+   "name": "default-deny-unknown-instance",
+   "owner": [
+    "authority",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "controls": [],
+    "default_deny": true,
+    "query": {
+     "source_type": "relay",
+     "instance_id": "gs-9"
+    }
+   },
+   "expected": {
+    "enabled": false,
+    "why_disabled": "default_deny"
+   },
+   "why": "With default deny, an instance with no row is disabled; the flag travels with the state so every follower agrees."
+  },
+  {
+   "name": "default-deny-instance-row-on",
+   "owner": [
+    "authority",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "controls": [
+     {
+      "source_type": "relay",
+      "instance_id": "gs-9",
+      "enabled": true
+     }
+    ],
+    "default_deny": true,
+    "query": {
+     "source_type": "relay",
+     "instance_id": "gs-9"
+    }
+   },
+   "expected": {
+    "enabled": true,
+    "why_disabled": null
+   },
+   "why": "An explicit row overrides default deny."
+  },
+  {
+   "name": "type-on-row-does-not-override-instance-off",
+   "owner": [
+    "authority",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "controls": [
+     {
+      "source_type": "relay",
+      "instance_id": null,
+      "enabled": true
+     },
+     {
+      "source_type": "relay",
+      "instance_id": "gs-1",
+      "enabled": false
+     }
+    ],
+    "default_deny": false,
+    "query": {
+     "source_type": "relay",
+     "instance_id": "gs-1"
+    }
+   },
+   "expected": {
+    "enabled": false,
+    "why_disabled": "instance"
+   },
+   "why": "A type row that is ON does not re-enable an instance switched off."
+  },
+  {
+   "name": "whole-type-query",
+   "owner": [
+    "authority",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "controls": [
+     {
+      "source_type": "relay",
+      "instance_id": "gs-1",
+      "enabled": false
+     }
+    ],
+    "default_deny": true,
+    "query": {
+     "source_type": "relay",
+     "instance_id": null
+    }
+   },
+   "expected": {
+    "enabled": true,
+    "why_disabled": null
+   },
+   "why": "Asking about the whole type: only a type row decides."
+  }
+ ]
+}

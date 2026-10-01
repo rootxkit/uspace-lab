@@ -1,0 +1,321 @@
+{
+ "description": "The spoofing guard (S-10, U-02): a broadcast claiming one of our fleet's serials, judged against that aircraft's authenticated telemetry. verdict: stranger (not ours), withhold (ours, live, agreeing: the authenticated track is better), as_ours (ours, link quiet: the broadcast speaks for it, still marked broadcast), conflict (ours, live, more than spoof_distance_m away: a separate unverified track, unknown_operator, mismatch, reason serial_conflict). relay_rows are what the bus delivered, in order.",
+ "source": [
+  "utm gateway/remote_id_match.py judge(), LinkFreshness",
+  "utm gateway/tests/test_remote_id_match.py",
+  "utm docs/runbooks/u02-identification.md"
+ ],
+ "units": {
+  "*_s": "seconds",
+  "apart_m": "metres, haversine on a 6,371,008.8 m sphere",
+  "positions": "[lat_deg, lon_deg]"
+ },
+ "tolerance": {
+  "apart_m": 0.01,
+  "verdict": "exact"
+ },
+ "owners": [
+  "authority",
+  "ussp"
+ ],
+ "generated": "Expected values computed by knowledge/tools/gen_vectors.py, which runs the old Python implementation (rootxkit/utm @ 484cd228035f) on these inputs. Regenerate rather than edit.",
+ "utm_commit": "484cd228035f2f424530e233ce72100d0fc1842a",
+ "cases": [
+  {
+   "name": "stranger",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "serial_is_ours": false,
+    "relay_rows": [],
+    "broadcast_position": [
+     41.7151,
+     44.8271
+    ],
+    "now_s": 0.0,
+    "live_for_s": 5.0,
+    "spoof_distance_m": 300.0
+   },
+   "expected": {
+    "verdict": "stranger",
+    "apart_m": null,
+    "ignored_history_rows": 0
+   },
+   "why": "Not one of our serials: nothing to judge."
+  },
+  {
+   "name": "relay-live-and-agreeing-withhold",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "serial_is_ours": true,
+    "relay_rows": [
+     {
+      "heard_at_s": 0.0,
+      "lat_deg": 41.7151,
+      "lon_deg": 44.8271
+     }
+    ],
+    "broadcast_position": [
+     41.71554966050632,
+     44.8271
+    ],
+    "now_s": 1.0,
+    "live_for_s": 5.0,
+    "spoof_distance_m": 300.0
+   },
+   "expected": {
+    "verdict": "withhold",
+    "apart_m": 50.00003607802221,
+    "ignored_history_rows": 0
+   },
+   "why": "Our relay is live and the broadcast is 50 m from it: the relay track is better; the broadcast is stored, not published."
+  },
+  {
+   "name": "relay-live-far-away-conflict",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "serial_is_ours": true,
+    "relay_rows": [
+     {
+      "heard_at_s": 0.0,
+      "lat_deg": 41.7151,
+      "lon_deg": 44.8271
+     }
+    ],
+    "broadcast_position": [
+     41.719596605063174,
+     44.8271
+    ],
+    "now_s": 1.0,
+    "live_for_s": 5.0,
+    "spoof_distance_m": 300.0
+   },
+   "expected": {
+    "verdict": "conflict",
+    "apart_m": 500.0003607781002,
+    "ignored_history_rows": 0
+   },
+   "why": "500 m from where the authenticated relay places our aircraft: not our aircraft (S-10). A separate unverified track, serial_conflict."
+  },
+  {
+   "name": "relay-quiet-broadcast-speaks-for-ours",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "serial_is_ours": true,
+    "relay_rows": [
+     {
+      "heard_at_s": 0.0,
+      "lat_deg": 41.7151,
+      "lon_deg": 44.8271
+     }
+    ],
+    "broadcast_position": [
+     41.719596605063174,
+     44.8271
+    ],
+    "now_s": 5.1,
+    "live_for_s": 5.0,
+    "spoof_distance_m": 300.0
+   },
+   "expected": {
+    "verdict": "as_ours",
+    "apart_m": null,
+    "ignored_history_rows": 0
+   },
+   "why": "Relay silent for more than 5 s: the broadcast takes over as our aircraft, still marked as a broadcast (P1-15). Nothing can contradict it."
+  },
+  {
+   "name": "relay-live-exactly-at-live-for",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "serial_is_ours": true,
+    "relay_rows": [
+     {
+      "heard_at_s": 0.0,
+      "lat_deg": 41.7151,
+      "lon_deg": 44.8271
+     }
+    ],
+    "broadcast_position": [
+     41.71554966050632,
+     44.8271
+    ],
+    "now_s": 5.0,
+    "live_for_s": 5.0,
+    "spoof_distance_m": 300.0
+   },
+   "expected": {
+    "verdict": "withhold",
+    "apart_m": 50.00003607802221,
+    "ignored_history_rows": 0
+   },
+   "why": "Heard exactly 5 s ago is still live (<=)."
+  },
+  {
+   "name": "relay-live-no-position-withhold",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "serial_is_ours": true,
+    "relay_rows": [
+     {
+      "heard_at_s": 0.0
+     }
+    ],
+    "broadcast_position": [
+     41.719596605063174,
+     44.8271
+    ],
+    "now_s": 1.0,
+    "live_for_s": 5.0,
+    "spoof_distance_m": 300.0
+   },
+   "expected": {
+    "verdict": "withhold",
+    "apart_m": null,
+    "ignored_history_rows": 0
+   },
+   "why": "Live relay without a position yet: withheld, never judged a conflict without a distance."
+  },
+  {
+   "name": "relay-backlog-is-history",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "serial_is_ours": true,
+    "relay_rows": [
+     {
+      "heard_at_s": 0.0,
+      "lat_deg": 41.7151,
+      "lon_deg": 44.8271,
+      "backlog": true
+     }
+    ],
+    "broadcast_position": [
+     41.71905701245559,
+     44.8271
+    ],
+    "now_s": 1.0,
+    "live_for_s": 5.0,
+    "spoof_distance_m": 300.0
+   },
+   "expected": {
+    "verdict": "as_ours",
+    "apart_m": null,
+    "ignored_history_rows": 1
+   },
+   "why": "U-02 review: a relay draining its queue after an outage delivers minutes-old positions. A backlog row neither makes the link live nor moves the position; without this our own current broadcast was split off as a spoof (SITL re-check 2026-10-01, 438 m apart)."
+  },
+  {
+   "name": "relay-row-captured-long-before-receipt-is-history",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "serial_is_ours": true,
+    "relay_rows": [
+     {
+      "heard_at_s": 0.0,
+      "lat_deg": 41.7151,
+      "lon_deg": 44.8271,
+      "behind_s": 6.0
+     }
+    ],
+    "broadcast_position": [
+     41.71905701245559,
+     44.8271
+    ],
+    "now_s": 1.0,
+    "live_for_s": 5.0,
+    "spoof_distance_m": 300.0
+   },
+   "expected": {
+    "verdict": "as_ours",
+    "apart_m": null,
+    "ignored_history_rows": 1
+   },
+   "why": "A row captured more than live_for_s before the Gateway received it is history too, even if not flagged backlog."
+  },
+  {
+   "name": "relay-row-slightly-behind-is-live",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "serial_is_ours": true,
+    "relay_rows": [
+     {
+      "heard_at_s": 0.0,
+      "lat_deg": 41.7151,
+      "lon_deg": 44.8271,
+      "behind_s": 4.0
+     }
+    ],
+    "broadcast_position": [
+     41.71905701245559,
+     44.8271
+    ],
+    "now_s": 1.0,
+    "live_for_s": 5.0,
+    "spoof_distance_m": 300.0
+   },
+   "expected": {
+    "verdict": "conflict",
+    "apart_m": 440.0003174844735,
+    "ignored_history_rows": 0
+   },
+   "why": "4 s behind receipt is within live_for_s: live, and 440 m is a conflict."
+  },
+  {
+   "name": "remote-id-rows-do-not-make-the-link-live",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "serial_is_ours": true,
+    "relay_rows": [
+     {
+      "heard_at_s": 0.0,
+      "lat_deg": 41.7151,
+      "lon_deg": 44.8271,
+      "source": "remote_id"
+     }
+    ],
+    "broadcast_position": [
+     41.719596605063174,
+     44.8271
+    ],
+    "now_s": 1.0,
+    "live_for_s": 5.0,
+    "spoof_distance_m": 300.0
+   },
+   "expected": {
+    "verdict": "as_ours",
+    "apart_m": null,
+    "ignored_history_rows": 0
+   },
+   "why": "Only relay telemetry counts; a broadcast (source remote_id or network_remote_id) never vouches for itself."
+  }
+ ]
+}
