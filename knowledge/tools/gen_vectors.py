@@ -54,12 +54,13 @@ from airspace import ed269  # noqa: E402
 from airspace.cpa import (  # noqa: E402
     SeparationPolicy,
     Track,
+    advance,
     closest_approach,
     local_offset_m,
 )
 from airspace.ed269 import Ed269Error, applies, parse, parse_applicability  # noqa: E402
 from airspace.geodesy import distance_m as vincenty_m  # noqa: E402
-from airspace.monitor import AirspaceMonitor  # noqa: E402
+from airspace.monitor import AirspaceMonitor, Severity  # noqa: E402
 from airspace.zones import great_circle_m, monitored_zone  # noqa: E402
 from common import pgm  # noqa: E402
 from common.geoid import GeoidGrid  # noqa: E402
@@ -69,6 +70,7 @@ from common.uas_identity import (  # noqa: E402
     ClassLabel,
     RegistrationStatus,
     cta2063_problem,
+    normalize_serial,
     public_registration_number,
     registration_number_problem,
     serial_problem,
@@ -147,7 +149,9 @@ def write(name: str, head: dict[str, Any], cases: list[dict[str, Any]]) -> None:
         assert set(case) >= {"name", "owner", "input", "expected", "why"}, case
     document = {**head, "cases": cases}
     text = json.dumps(document, indent=1, ensure_ascii=False, allow_nan=False)
-    (OUT / name).write_text(text + "\n", encoding="utf-8")
+    # LF on every platform, so the bytes (and the SHA256SUMS a consuming
+    # repository computes) do not depend on where the generator ran.
+    (OUT / name).write_text(text + "\n", encoding="utf-8", newline="\n")
     print(f"{name}: {len(cases)} cases")
 
 
@@ -167,6 +171,33 @@ def case(
 
 def iso(moment: datetime) -> str:
     return moment.astimezone(UTC).isoformat()
+
+
+# --- decisions that supersede the old code ------------------------------------------
+#
+# A few expected values are deliberately not what utm computes: while
+# uspace-core implemented waves 1-3 (PRs #3-#15), the owner and the reviews
+# decided otherwise, each time for a lesson, regulation or review finding.
+# Such a value is never typed into the JSON. It is set here, through
+# decided(), which:
+#   - takes the value utm computes (or NOT_IN_UTM when utm has no notion of
+#     the input, the policy or the field) and the decided value;
+#   - refuses to run when the two are equal: an override that changes
+#     nothing is stale and must be deleted;
+#   - returns the decision text, which the case carries as "decision", and
+#     records it in DECISIONS, printed at the end of the run.
+# Everything else in a decided case (inputs, the parts of the expected
+# value the decision does not touch) is still computed by utm.
+
+NOT_IN_UTM = object()
+DECISIONS: list[tuple[str, str, str]] = []
+
+
+def decided(file: str, name: str, old: Any, new: Any, decision: str) -> str:
+    if old is not NOT_IN_UTM:
+        assert old != new, f"{file}#{name}: the decided value equals utm's; delete the override"
+    DECISIONS.append((file, name, decision))
+    return decision
 
 
 # =================================================================================
@@ -1366,6 +1397,44 @@ def ident(found: Any) -> dict[str, Any]:
     }
 
 
+IDENT_FILE = "identification_status.json"
+
+# Spec 04 section 3.2 renamed two of utm's reason codes (uspace-core PR #9).
+REASON_RENAMES = {
+    "fleet": (
+        "matched",
+        "Spec 04 section 3.2 has no 'fleet' reason: our own fleet aircraft is "
+        "registered on its serial alone, reason matched (uspace-core PR #9).",
+    ),
+    "relay_binding": (
+        "session_binding",
+        "Spec 04 section 3.2 calls an authenticated binding 'session_binding'; "
+        "utm's relay binding is one (uspace-core PR #9, PLAN section 11 gap 5).",
+    ),
+}
+
+
+def ident_case(name: str, owner: Any, inp: dict[str, Any], found: Any, why: str) -> dict[str, Any]:
+    """A case whose expected value is utm's, with spec 04's reason codes."""
+    expected = ident(found)
+    extra: dict[str, Any] = {}
+    if expected["reason"] in REASON_RENAMES:
+        new_reason, text = REASON_RENAMES[expected["reason"]]
+        extra["decision"] = decided(IDENT_FILE, name, expected["reason"], new_reason, text)
+        expected = {**expected, "reason": new_reason}
+    return case(name, owner, inp, expected, why, **extra)
+
+
+def uas_row(n: int, serial: str, status: str = "active", owner: UUID | None = None) -> dict[str, Any]:
+    return {
+        "drone_id": str(UUID(int=n)),
+        "serial": serial,
+        "registration_status": status,
+        "uas_operator_id": None if owner is None else str(owner),
+        "in_registry": True,
+    }
+
+
 def gen_identification() -> None:
     snap = snapshot()
     cases = []
@@ -1394,11 +1463,11 @@ def gen_identification() -> None:
     ]
     for name, serial, operator, why in table:
         cases.append(
-            case(
+            ident_case(
                 name,
                 ["authority", "ussp"],
                 {"kind": "broadcast", "serial": serial, "operator_reg": operator},
-                ident(resolve(snap, serial=serial, operator_reg=operator)),
+                resolve(snap, serial=serial, operator_reg=operator),
                 why,
             )
         )
@@ -1417,23 +1486,132 @@ def gen_identification() -> None:
         ("ambiguous-exact-match-wins", "ab-1", "The exact spelling still matches its own aircraft."),
     ):
         cases.append(
-            case(
+            ident_case(
                 name,
                 ["authority", "ussp"],
                 {"kind": "broadcast", "serial": serial, "operator_reg": None, "registry_override": {"operators": [], "uas": amb_fixture}},
-                ident(resolve(ambiguous, serial=serial, operator_reg=None)),
+                resolve(ambiguous, serial=serial, operator_reg=None),
                 why,
             )
         )
     cases.append(
-        case(
+        ident_case(
             "empty-registry-knows-nobody",
             ["authority", "ussp"],
             {"kind": "broadcast", "serial": "1581F5FKD229400A", "operator_reg": "GEOabcd1234efgh", "registry_override": {"operators": [], "uas": []}},
-            ident(resolve(RegistrySnapshot(), serial="1581F5FKD229400A", operator_reg="GEOabcd1234efgh")),
+            resolve(RegistrySnapshot(), serial="1581F5FKD229400A", operator_reg="GEOabcd1234efgh"),
             "With no registry, a matching-looking broadcast is unknown_operator, not registered.",
         )
     )
+
+    # --- decided after utm (uspace-core PR #9) -----------------------------
+    unknown = ident(resolve(snap, serial="SN-NOBODY", operator_reg=None))
+    kilo = RegistrySnapshot(uas=(UasFacts(UUID(int=30), "k", "SN-KILO", R.ACTIVE, None),))
+    for name, serial, reg, override, why in (
+        (
+            "serial-lookalike-long-s-does-not-fold",
+            "\u017fn-fleet",
+            snap,
+            None,
+            "G-12: U+017F (long s) upper-cases to S under Unicode rules, so a "
+            "Unicode fold would let a look-alike spelling claim our fleet "
+            "serial SN-FLEET. Only ASCII letters fold.",
+        ),
+        (
+            "serial-lookalike-dotless-i-does-not-fold",
+            "sn-k\u0131lo",
+            kilo,
+            [uas_row(30, "SN-KILO")],
+            "G-12: U+0131 (dotless i) upper-cases to I under Unicode rules. "
+            "Only ASCII letters fold, so it does not match SN-KILO.",
+        ),
+    ):
+        inp: dict[str, Any] = {"kind": "broadcast", "serial": serial, "operator_reg": None}
+        if override is not None:
+            inp["registry_override"] = {"operators": [], "uas": override}
+        old_found = ident(resolve(reg, serial=serial, operator_reg=None))
+        new_found = {**unknown, "serial": serial}
+        cases.append(
+            case(
+                name,
+                ["authority", "ussp"],
+                inp,
+                new_found,
+                why,
+                decision=decided(
+                    IDENT_FILE,
+                    name,
+                    old_found,
+                    new_found,
+                    "Serials fold ASCII letters only (LESSONS G-12, uspace-core PR #9 "
+                    "review). utm's str.upper() folds look-alikes onto ASCII.",
+                ),
+            )
+        )
+    dup = [uas_row(31, "SN-DUP"), uas_row(32, "SN-DUP")]
+    dup_snap = RegistrySnapshot(uas=tuple(UasFacts(UUID(int=n), "d", "SN-DUP", R.ACTIVE, None) for n in (31, 32)))
+    old_found = ident(resolve(dup_snap, serial="SN-DUP", operator_reg=None))
+    new_found = {**unknown, "serial": "SN-DUP"}
+    cases.append(
+        case(
+            "duplicate-serial-is-ambiguous",
+            ["authority", "ussp"],
+            {"kind": "broadcast", "serial": "SN-DUP", "operator_reg": None, "registry_override": {"operators": [], "uas": dup}},
+            new_found,
+            "Two aircraft registered with the same serial: the match is "
+            "ambiguous and names neither (G-05). utm let the last row win, so "
+            "which aircraft a broadcast named depended on load order.",
+            decision=decided(
+                IDENT_FILE,
+                "duplicate-serial-is-ambiguous",
+                old_found,
+                new_found,
+                "A serial two aircraft share exactly is ambiguous, as a folded one "
+                "is (G-05, uspace-core PR #9). utm let the last row win.",
+            ),
+        )
+    )
+    pending_op = UUID(int=40)
+    for name, uas, operators, operator_reg, new_found, why in (
+        (
+            "unrecognised-uas-status-is-not-in-registry",
+            [uas_row(33, "SN-PEND", status="pending")],
+            [],
+            None,
+            {**unknown, "reason": "not_in_registry", "serial": "SN-PEND", "drone_id": str(UUID(int=33))},
+            "G-03: a registration status the resolver does not know is never "
+            "active and never suspended (suspended raises no identification "
+            "incident). The row exists, but nothing says it is a valid "
+            "registration: unknown_operator, not_in_registry.",
+        ),
+        (
+            "unrecognised-owner-status-is-owner-unknown",
+            [uas_row(34, "SN-PENDOP", owner=pending_op)],
+            [{"operator_id": str(pending_op), "registration_number": "GEOPEND00000001", "status": "pending"}],
+            "GEOPEND00000001",
+            {**unknown, "reason": "owner_unknown", "serial": "SN-PENDOP", "operator_reg": "GEOPEND00000001", "drone_id": str(UUID(int=34))},
+            "The owner's status is not one the resolver knows: nothing says "
+            "the owner is in good standing, so unknown_operator, owner_unknown.",
+        ),
+    ):
+        cases.append(
+            case(
+                name,
+                ["authority", "ussp"],
+                {"kind": "broadcast", "serial": uas[0]["serial"], "operator_reg": operator_reg, "registry_override": {"operators": operators, "uas": uas}},
+                new_found,
+                why,
+                decision=decided(
+                    IDENT_FILE,
+                    name,
+                    NOT_IN_UTM,
+                    new_found,
+                    "An unrecognised registration status fails safe as an "
+                    "incident-raising status (uspace-core PR #9, coordinator "
+                    "answer). utm's RegistrationStatus cannot hold one.",
+                ),
+            )
+        )
     rid_base = {"identified": True, "ua_id": "1581F5FKD229400A", "id_type": 1, "operator_id": "GEOabcd1234efgh"}
     for name, changes, why in (
         ("remote-id-block-registered", {}, "A direct Remote ID block resolves by its Basic ID serial and Operator ID."),
@@ -1445,11 +1623,11 @@ def gen_identification() -> None:
     ):
         block = {**rid_base, **changes}
         cases.append(
-            case(
+            ident_case(
                 name,
                 ["authority", "ussp"],
                 {"kind": "remote_id_block", "remote_id": block},
-                ident(resolve_remote_id(snap, block)),
+                resolve_remote_id(snap, block),
                 why,
             )
         )
@@ -1462,20 +1640,42 @@ def gen_identification() -> None:
         ("relay-not-in-registry", UUID(int=17), "Bound, but the registry has no such aircraft."),
     ):
         cases.append(
-            case(
+            ident_case(
                 name,
                 "ussp",
                 {"kind": "bound", "drone_id": str(drone_id)},
-                ident(resolve_bound(snap, drone_id)),
+                resolve_bound(snap, drone_id),
                 why,
             )
         )
+    old_found = ident(resolve_bound(snap, UUID(int=16)))
+    new_found = {**old_found, "status": "unknown_operator", "reason": "owner_unknown"}
     cases.append(
         case(
+            "relay-owner-not-in-projection",
+            "ussp",
+            {"kind": "bound", "drone_id": str(UUID(int=16))},
+            new_found,
+            "Bound, but the aircraft's owner is not in the projection: the "
+            "binding proves which aircraft it is, not that its owner is in good "
+            "standing. As for a broadcast (owner-not-in-projection): "
+            "unknown_operator, owner_unknown.",
+            decision=decided(
+                IDENT_FILE,
+                "relay-owner-not-in-projection",
+                old_found,
+                new_found,
+                "A bound aircraft whose owner is missing resolves owner_unknown, "
+                "as a broadcast does (uspace-core PR #9 review). utm said registered.",
+            ),
+        )
+    )
+    cases.append(
+        ident_case(
             "serial-conflict",
             ["authority", "ussp"],
             {"kind": "serial_conflict", "serial": "SN-FLEET", "operator_reg": " GEOX "},
-            ident(serial_conflict("SN-FLEET", " GEOX ")),
+            serial_conflict("SN-FLEET", " GEOX "),
             "S-10: one of our serials heard where our authenticated telemetry "
             "says the aircraft is not: a separate track, unknown_operator with "
             "mismatch (see fleet_match.json for when).",
@@ -1583,23 +1783,98 @@ def gen_identification() -> None:
                 why + " The pattern is configuration (UAS_OPERATOR_REGISTRATION_PATTERN): Georgia's exact shape is unconfirmed.",
             )
         )
+    # G-04 as decided in uspace-core PR #4 and #9: the secret part (a
+    # hyphen and three ASCII letters or digits) is stripped only when what
+    # precedes it is a registration number under the configured pattern
+    # (as given, or with its ASCII letters upper-cased), and the compare
+    # key upper-cases ASCII letters only. utm stripped any three-character
+    # alphanumeric tail and upper-cased with str.upper(), which folds
+    # U+017F onto S and U+0131 onto I.
+    def ascii_upper(value: str) -> str:
+        return "".join(chr(ord(c) - 32) if "a" <= c <= "z" else c for c in value)
+
+    def ascii_alnum(value: str) -> bool:
+        return all("0" <= c <= "9" or "A" <= c <= "Z" or "a" <= c <= "z" for c in value)
+
+    def public_part(value: str) -> str:
+        stripped = value.strip()
+        head, hyphen, tail = stripped.rpartition("-")
+        if (
+            hyphen
+            and head
+            and len(tail) == 3
+            and ascii_alnum(tail)
+            and len(head) <= 64
+            and (eu.fullmatch(head) or eu.fullmatch(ascii_upper(head)))
+        ):
+            return head
+        return stripped
+
+    def spelled(value: str) -> str:
+        """A case name in ASCII: the look-alikes spelt out."""
+        return value.replace("ſ", "[long-s]").replace("ı", "[dotless-i]")
+
+    g04 = (
+        "Strip the secret part only after a registration number under the "
+        "configured pattern, and upper-case ASCII letters only (LESSONS G-04, "
+        "G-12; uspace-core PR #4 and #9). utm stripped any three-character "
+        "tail and folded with str.upper()."
+    )
     for given, why in (
         ("FIN87astrdge12k8-xyz", "The EU number with its three secret characters."),
         (" FIN87astrdge12k8-XY1 ", "Trimmed first, then stripped."),
         ("FIN87astrdge12k8", "No secret tail: unchanged."),
         ("GEO-OP-SITL", "A four-character tail is not a secret: unchanged."),
-        ("GEO-OP-ABC", "PITFALL: any 3-alphanumeric tail after the last hyphen is stripped, so a test identifier like GEO-OP-ABC becomes GEO-OP. Registered numbers may not contain '-', so this only affects what is broadcast."),
+        ("GEO-OP-ABC", "G-04: the secret part follows a registration number, and GEO-OP is none under the pattern, so nothing is stripped. utm stripped any three-character tail and compared GEO-OP."),
         ("FIN87astrdge12k8-", "An empty tail is not stripped."),
         ("-xyz", "Nothing before the hyphen: unchanged."),
         ("FIN87astrdge12k8-x!z", "A non-alphanumeric tail is not a secret."),
+        ("fin87astrdge12k8-xyz", "A number broadcast in lower case still has its secret part stripped: the head is matched with its ASCII letters upper-cased."),
+        ("FIN87astrdge12k\u017f", "G-12: U+017F (long s) is not folded onto S: the compare key keeps it, so a look-alike never compares equal to FIN87ASTRDGE12KS."),
+        ("f\u0131n87astrdge12k8-xyz", "G-12: U+0131 (dotless i) is not folded onto I, so the head is no registration number under the ASCII pattern and nothing is stripped."),
+        ("FIN87astrdge12k8-x\u017fz", "A tail with a non-ASCII letter is not a secret part."),
     ):
+        name = f"public-part-{spelled(given.strip()) or 'blank'}"
+        old = {"public": public_registration_number(given), "compare_key": operator_key(given)}
+        new = {"public": public_part(given), "compare_key": ascii_upper(public_part(given))}
+        extra = {} if new == old else {"decision": decided("serials_and_registration.json", name, old, new, g04)}
         cases.append(
             case(
-                f"public-part-{given.strip() or 'blank'}",
+                name,
                 ["authority", "ussp"],
                 {"kind": "public_registration_number", "value": given},
-                {"public": public_registration_number(given), "compare_key": operator_key(given)},
-                why + " compare_key is what identification compares (public part, upper case).",
+                new,
+                why + " compare_key is what identification compares (public part, ASCII letters upper-cased).",
+                **extra,
+            )
+        )
+    for given, why in (
+        ("sn-fleet", "ASCII letters fold: the key of a lower-case spelling is the upper-case one."),
+        (" 1581f5fkd229400a ", "Trimmed, then folded."),
+        ("\u017fn-fleet", "G-12: U+017F (long s) is kept, so it never folds onto SN-FLEET."),
+        ("sn-k\u0131lo", "G-12: U+0131 (dotless i) is kept, so it never folds onto SN-KILO."),
+    ):
+        name = f"serial-fold-{spelled(given.strip())}"
+        old = {"fold_key": normalize_serial(given).upper()}
+        new = {"fold_key": ascii_upper(normalize_serial(given))}
+        extra = {}
+        if new != old:
+            extra["decision"] = decided(
+                "serials_and_registration.json",
+                name,
+                old,
+                new,
+                "Serials fold ASCII letters only (LESSONS G-12, uspace-core PR #9 "
+                "review). utm's str.upper() folds look-alikes onto ASCII.",
+            )
+        cases.append(
+            case(
+                name,
+                ["authority", "ussp"],
+                {"kind": "serial_fold", "serial": given},
+                new,
+                why + " fold_key is what a case-insensitive serial lookup compares (G-05); an exact match still wins.",
+                **extra,
             )
         )
     write(
@@ -1609,7 +1884,8 @@ def gen_identification() -> None:
             "numbers (EU 2019/947 Art. 14), as U-01 validates them on "
             "registration and U-02 compares them on identification. Match "
             "`valid` exactly; `problem` is the old wording, `problem_contains` "
-            "the part the old tests pinned.",
+            "the part the old tests pinned. kind serial_fold gives the key a "
+            "case-insensitive serial lookup compares (G-05, G-12).",
             [
                 "utm common/tests/test_uas_identity.py",
                 "utm common/uas_identity.py",
@@ -1634,8 +1910,19 @@ def gen_fleet_match() -> None:
     near = (41.7151, 44.8271)
     cases = []
 
-    def judged(name: str, why: str, *, registered: bool = True, relay: list[dict[str, Any]], broadcast: tuple[float, float] | None, now_s: float) -> None:
-        links = LinkFreshness(live_for_s=5.0)
+    def judged(
+        name: str,
+        why: str,
+        *,
+        registered: bool = True,
+        relay: list[dict[str, Any]],
+        broadcast: tuple[float, float] | None,
+        now_s: float,
+        live_for_s: float = 5.0,
+        spoof_distance_m: float = 300.0,
+        problem: str | None = None,
+    ) -> None:
+        links = LinkFreshness(live_for_s=live_for_s)
         for row in relay:
             body = {
                 "drone_id": str(ours.drone_id),
@@ -1655,8 +1942,29 @@ def gen_fleet_match() -> None:
             broadcast,
             links,
             now_s=now_s,
-            spoof_distance_m=300.0,
+            spoof_distance_m=spoof_distance_m,
         )
+        expected = {
+            "verdict": result.verdict.value,
+            "apart_m": result.apart_m,
+            "ignored_history_rows": links.ignored_history,
+            "problem": None,
+        }
+        extra: dict[str, Any] = {}
+        if problem is not None:
+            # A threshold that is not a finite number above zero withholds
+            # before any row is read (LESSONS E-15, uspace-core PR #9 review).
+            old = expected
+            expected = {"verdict": "withhold", "apart_m": None, "ignored_history_rows": 0, "problem": problem}
+            extra["decision"] = decided(
+                "fleet_match.json",
+                name,
+                old,
+                expected,
+                "A live_for_s or spoof_distance_m that is not a finite number above "
+                "zero withholds, naming the threshold, and is never as_ours or "
+                "conflict (LESSONS E-15, uspace-core PR #9 review). utm judged with it.",
+            )
         cases.append(
             case(
                 name,
@@ -1666,15 +1974,12 @@ def gen_fleet_match() -> None:
                     "relay_rows": relay,
                     "broadcast_position": None if broadcast is None else list(broadcast),
                     "now_s": now_s,
-                    "live_for_s": 5.0,
-                    "spoof_distance_m": 300.0,
+                    "live_for_s": live_for_s,
+                    "spoof_distance_m": spoof_distance_m,
                 },
-                {
-                    "verdict": result.verdict.value,
-                    "apart_m": result.apart_m,
-                    "ignored_history_rows": links.ignored_history,
-                },
+                expected,
                 why,
+                **extra,
             )
         )
 
@@ -1715,6 +2020,33 @@ def gen_fleet_match() -> None:
         broadcast=north(500),
         now_s=1.0,
     )
+    judged(
+        "zero-live-window-withholds",
+        "E-15: with live_for_s 0 every row is history, so utm let the broadcast speak for our aircraft (as_ours) while our relay was live 500 m away. A threshold that disarms the guard withholds and names itself.",
+        relay=[{"heard_at_s": 0.0, "lat_deg": near[0], "lon_deg": near[1]}],
+        broadcast=north(500),
+        now_s=1.0,
+        live_for_s=0.0,
+        problem="live_for_s",
+    )
+    judged(
+        "zero-spoof-distance-withholds",
+        "E-15: with spoof_distance_m 0 any distance is a conflict, so our own broadcast 50 m from the relay was split off as a spoof. A threshold that cannot be used withholds and names itself.",
+        relay=[{"heard_at_s": 0.0, "lat_deg": near[0], "lon_deg": near[1]}],
+        broadcast=north(50),
+        now_s=1.0,
+        spoof_distance_m=0.0,
+        problem="spoof_distance_m",
+    )
+    judged(
+        "negative-live-window-withholds",
+        "E-15: a negative window is no window either.",
+        relay=[{"heard_at_s": 0.0, "lat_deg": near[0], "lon_deg": near[1]}],
+        broadcast=north(500),
+        now_s=1.0,
+        live_for_s=-5.0,
+        problem="live_for_s",
+    )
     write(
         "fleet_match.json",
         header(
@@ -1725,7 +2057,10 @@ def gen_fleet_match() -> None:
             "quiet: the broadcast speaks for it, still marked broadcast), "
             "conflict (ours, live, more than spoof_distance_m away: a separate "
             "unverified track, unknown_operator, mismatch, reason "
-            "serial_conflict). relay_rows are what the bus delivered, in order.",
+            "serial_conflict). relay_rows are what the bus delivered, in order. "
+            "problem names a threshold (live_for_s, spoof_distance_m) that is "
+            "not a finite number above zero: the guard then withholds before "
+            "reading any row; null otherwise.",
             [
                 "utm gateway/remote_id_match.py judge(), LinkFreshness",
                 "utm gateway/tests/test_remote_id_match.py",
@@ -1771,15 +2106,79 @@ def track_spec(n: int, north_m: float, east_m: float = 0.0, *, vn: float = 0.0, 
     return spec, track
 
 
+def loss_of_separation(a: Track, b: Track, policy: SeparationPolicy) -> float | None:
+    """When the pair is first inside both minima within the window, or None.
+
+    Decided in uspace-core PR #10 (owner): a conflict is a loss of
+    separation at any time in [0, t_cpa_max_s], not only at the horizontal
+    t_cpa (LESSONS C-19). The pair is put in utm's frame (the older sample
+    advanced, the tangent plane about the mid latitude), then the open
+    interval where the horizontal distance is below its minimum (a
+    quadratic) is intersected with the open interval where the vertical
+    gap is below its minimum (linear); with the vertical unknown the
+    horizontal interval decides alone. utm judged only now and at t_cpa.
+    """
+    if a.captured_at_s < b.captured_at_s:
+        a = advance(a, b.captured_at_s - a.captured_at_s)
+    elif b.captured_at_s < a.captured_at_s:
+        b = advance(b, a.captured_at_s - b.captured_at_s)
+    lat0, lon0 = (a.lat_deg + b.lat_deg) / 2, a.lon_deg
+    an, ae = local_offset_m(lat0, lon0, a.lat_deg, a.lon_deg)
+    bn, be = local_offset_m(lat0, lon0, b.lat_deg, b.lon_deg)
+    pn, pe, vn, ve = bn - an, be - ae, b.vn_ms - a.vn_ms, b.ve_ms - a.ve_ms
+    inf = float("inf")
+    sq = vn * vn + ve * ve
+    c = pn * pn + pe * pe - policy.d_horizontal_min_m**2
+    if sq < 1e-12:
+        start, end = (-inf, inf) if c < 0 else (inf, -inf)
+    else:
+        half_b = pn * vn + pe * ve
+        disc = half_b * half_b - sq * c
+        if disc <= 0:
+            start, end = inf, -inf
+        else:
+            root = disc**0.5
+            start, end = (-half_b - root) / sq, (-half_b + root) / sq
+    if a.vertical_known and b.vertical_known:
+        gap, rate, vmin = b.alt_amsl_m - a.alt_amsl_m, a.vd_ms - b.vd_ms, policy.d_vertical_min_m
+        if rate == 0:
+            v_start, v_end = (-inf, inf) if abs(gap) < vmin else (inf, -inf)
+        else:
+            t1, t2 = (-vmin - gap) / rate, (vmin - gap) / rate
+            v_start, v_end = min(t1, t2), max(t1, t2)
+        start, end = max(start, v_start), min(end, v_end)
+    if start < end and end > 0 and start < policy.t_cpa_max_s:
+        return max(start, 0.0)
+    return None
+
+
 def gen_cpa() -> None:
     cases = []
     max_age_s = 10.0
 
-    def pair(name: str, a: tuple[dict[str, Any], Track], b: tuple[dict[str, Any], Track], why: str, owner: Any = None) -> None:
+    def pair(
+        name: str,
+        a: tuple[dict[str, Any], Track],
+        b: tuple[dict[str, Any], Track],
+        why: str,
+        owner: Any = None,
+        policy: dict[str, float] | None = None,
+    ) -> None:
+        pol = POLICY if policy is None else SeparationPolicy(**policy)
         judged = abs(a[1].captured_at_s - b[1].captured_at_s) <= max_age_s
         expected: dict[str, Any] = {"judged": judged}
-        if judged:
+        extra: dict[str, Any] = {}
+        inp: dict[str, Any] = {"a": a[0], "b": b[0], "neighbour_max_age_s": max_age_s}
+        if policy is not None:
+            inp["policy"] = policy
+        if not judged:
+            expected["not_judged"] = "stale_neighbour"
+        else:
             approach = closest_approach(a[1], b[1])
+            old_conflict = pol.is_conflict(approach)
+            los_start_s = loss_of_separation(a[1], b[1], pol)
+            conflict = los_start_s is not None
+            assert conflict or not old_conflict, f"{name}: the window criterion lost a utm conflict"
             expected.update(
                 {
                     "t_cpa_s": approach.t_cpa_s,
@@ -1788,10 +2187,34 @@ def gen_cpa() -> None:
                     "d_horizontal_now_m": approach.d_horizontal_now_m,
                     "d_alt_now_m": approach.d_alt_now_m if approach.vertical_known else None,
                     "vertical_known": approach.vertical_known,
-                    "conflict": POLICY.is_conflict(approach),
+                    "conflict": conflict,
+                    "los_start_s": los_start_s,
                 }
             )
-        cases.append(case(name, owner or ["ussp", "authority"], {"a": a[0], "b": b[0], "neighbour_max_age_s": max_age_s}, expected, why))
+            invalid = pol.d_horizontal_min_m <= 0 or pol.d_vertical_min_m <= 0
+            if conflict != old_conflict and not invalid:
+                extra["decision"] = decided(
+                    "cpa.json",
+                    name,
+                    old_conflict,
+                    conflict,
+                    "A conflict is a loss of separation at any time in the window, "
+                    "not only at the horizontal t_cpa (LESSONS C-19, uspace-core "
+                    "PR #10, owner decision). utm judged now and at t_cpa only.",
+                )
+            if invalid:
+                old = {**expected, "conflict": old_conflict, "los_start_s": None}
+                expected = {"judged": False, "not_judged": "invalid_policy"}
+                extra["decision"] = decided(
+                    "cpa.json",
+                    name,
+                    old,
+                    expected,
+                    "A zero separation minimum disarms the check, so the pair is not "
+                    "judged (invalid_policy) rather than judged clear (LESSONS E-15, "
+                    "uspace-core PR #10 review). utm judged with it.",
+                )
+        cases.append(case(name, owner or ["ussp", "authority"], inp, expected, why, **extra))
 
     pair("head-on", track_spec(1, 0, vn=10), track_spec(2, 1000, vn=-10), "1 km apart closing at 20 m/s: CPA 0 m in 50 s, inside the 60 s window.")
     pair("crossing-right-angles", track_spec(1, -300, vn=10), track_spec(2, 0, 300, ve=-10), "Both reach the same point in 30 s.")
@@ -1839,6 +2262,41 @@ def gen_cpa() -> None:
     pair("same-pair-geodetic-no-conflict", track_spec(1, 0, vn=10, alt=500), track_spec(2, 500, vn=-10, alt=600), "The presence pair: on geodetic altitudes 100 m apart they do not conflict.")
     pair("one-pressure-track-makes-the-pair-unknown", track_spec(1, 0, vn=10, alt=500), track_spec(2, 500, vn=-10, alt=600, vertical_known=False), "One unknown makes the pair's vertical unknown.")
     pair("horizontally-clear-pressure-tracks", track_spec(1, 0, alt=500, vertical_known=False), track_spec(2, 500, alt=500, vertical_known=False), "Unknown vertically is not a conflict by itself.")
+    pair(
+        "vertical-gap-under-minimum-before-t-cpa",
+        track_spec(1, 0, vn=10, alt=550),
+        track_spec(2, 1000, vn=-10, vd=1.0, alt=578.6),
+        "C-19: head-on, inside 60 m horizontally from 47 s to 53 s. B descends 1 m/s from 28.6 m above A: the vertical gap is 21.4 m at the horizontal t_cpa (50 s), above the 20 m minimum, but 18.4 m at 47 s. Judged only at t_cpa this pair is clear; it loses separation from 47 s.",
+    )
+    pair(
+        "vertical-gap-closes-after-the-pass",
+        track_spec(1, 0, vn=10, alt=550),
+        track_spec(2, 1000, vn=-10, vd=1.0, alt=625.0),
+        "The absence pair: the vertical gap falls under 20 m only from 55 s, after the horizontal interval (47-53 s) ends. Never inside both minima at once: clear.",
+    )
+    pair(
+        "enters-minima-before-window-end-t-cpa-beyond",
+        track_spec(1, 0, vn=5),
+        track_spec(2, 640, vn=-5),
+        "C-19: closing at 10 m/s from 640 m, t_cpa is 64 s, beyond the 60 s window, but the pair is inside 60 m from 58 s. The window bounds the start of the loss of separation, not t_cpa: a conflict, los_start_s 58.",
+    )
+    pair(
+        "enters-minima-after-window-end",
+        track_spec(1, 0, vn=5),
+        track_spec(2, 680, vn=-5),
+        "The absence pair: from 680 m the pair enters the minima at 62 s, after the window. Not yet a conflict.",
+    )
+    for which, policy in (
+        ("horizontal", {**POLICY_JSON, "d_horizontal_min_m": 0}),
+        ("vertical", {**POLICY_JSON, "d_vertical_min_m": 0}),
+    ):
+        pair(
+            f"zero-{which}-minimum-is-invalid-policy",
+            track_spec(1, 0, vn=10),
+            track_spec(2, 1000, vn=-10),
+            f"E-15: a zero {which} minimum makes every pair clear, which silently disarms the check. The policy is refused (invalid_policy) and nothing is judged, never judged clear. The pair is the head-on one, a conflict under the real policy.",
+            policy=policy,
+        )
     write(
         "cpa.json",
         header(
@@ -1847,11 +2305,22 @@ def gen_cpa() -> None:
             "plane about the pair's mid latitude with WGS-84 meridional and "
             "prime-vertical radii (local_offset_m); the older sample is advanced "
             "to the newer one's time first. t_cpa from the horizontal motion "
-            "only, clamped to >= 0; vertical separation evaluated at t_cpa. "
-            "conflict = (d_h_now < d_h_min AND (vertical unknown OR d_alt_now < "
-            "d_v_min)) OR (t_cpa < t_max AND d_cpa_h < d_h_min AND (vertical "
-            "unknown OR d_alt_at_cpa < d_v_min)). described_as is how the case "
-            "was built (metres from 41.7151N 44.8271E); the inputs are lat/lon.",
+            "only, clamped to >= 0; vertical separation evaluated at t_cpa "
+            "(the reported numbers). conflict is a loss of separation at any "
+            "time in [0, t_cpa_max_s] (C-19): the open interval where the "
+            "horizontal distance is below d_h_min overlaps the open interval "
+            "where the vertical gap is below d_v_min (with the vertical "
+            "unknown, the horizontal interval alone), and that overlap starts "
+            "before t_cpa_max_s. This contains utm's criterion, (d_h_now < "
+            "d_h_min AND (vertical unknown OR d_alt_now < d_v_min)) OR (t_cpa "
+            "< t_max AND d_cpa_h < d_h_min AND (vertical unknown OR "
+            "d_alt_at_cpa < d_v_min)). los_start_s is the start of the "
+            "overlap (0 when inside now), null when there is no conflict. A "
+            "pair not judged gives not_judged: stale_neighbour, or "
+            "invalid_policy for a case whose input.policy (which replaces the "
+            "header policy) has a minimum that is not above zero. "
+            "described_as is how the case was built (metres from 41.7151N "
+            "44.8271E); the inputs are lat/lon.",
             [
                 "utm airspace/tests/test_cpa.py",
                 "utm airspace/tests/test_monitor.py (neighbour age)",
@@ -1864,7 +2333,7 @@ def gen_cpa() -> None:
                 "vn/ve/vd_ms": "m/s north, east, DOWN (MAVLink GLOBAL_POSITION_INT convention)",
                 "captured_at_s": "seconds, one clock for all aircraft",
             },
-            {"t_cpa_s": 0.01, "distances_m": 0.01, "booleans": "exact"},
+            {"t_cpa_s": 0.01, "los_start_s": 0.01, "distances_m": 0.01, "booleans": "exact"},
             ["ussp", "authority"],
             policy=POLICY_JSON,
         ),
@@ -1876,7 +2345,7 @@ def gen_cpa() -> None:
 # alert_lifecycle.json and zones_vertical.json (the monitor)
 # =================================================================================
 
-LETTER = {"A": UUID(int=1), "B": UUID(int=2), "C": UUID(int=3)}
+LETTER = {"A": UUID(int=1), "B": UUID(int=2), "C": UUID(int=3), "D": UUID(int=4)}
 BY_UUID = {v: k for k, v in LETTER.items()}
 DETAIL_KEYS = (
     "t_cpa_s",
@@ -2032,6 +2501,7 @@ def run_monitor(config: dict[str, Any], steps: list[dict[str, Any]]) -> dict[str
         neighbour_max_age_s=config.get("neighbour_max_age_s", 10.0),
         live_max_age_s=config.get("live_max_age_s", 10.0),
         pressure_uncertainty_m=config.get("pressure_uncertainty_m", 250.0),
+        conditional_severity=Severity(config.get("conditional_severity", "warning")),
         source_enabled=enabled,
     )
     out = []
@@ -2089,16 +2559,46 @@ def neutral_steps(steps: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def gen_lifecycle() -> None:
     cases = []
+    file = "alert_lifecycle.json"
 
-    def seq(name: str, config: dict[str, Any], steps: list[dict[str, Any]], why: str, owner: Any = None, source: str = "") -> None:
+    def seq(
+        name: str,
+        config: dict[str, Any],
+        steps: list[dict[str, Any]],
+        why: str,
+        owner: Any = None,
+        source: str = "",
+        *,
+        refused: set[int] | None = None,
+        counters: dict[str, int] | None = None,
+        decision: str | None = None,
+        not_in_utm: bool = False,
+    ) -> None:
+        """One sequence. With a decision, the expected value is utm's run
+        with the refused steps left out (a refused sample judges nothing,
+        so it is as if it never came), an empty result at each refused
+        step, and the counters utm does not have."""
+        expected = run_monitor(config, steps)
+        extra: dict[str, Any] = {}
+        if decision is not None:
+            refused = refused or set()
+            new = run_monitor(config, [st for i, st in enumerate(steps) if i not in refused])
+            for i in sorted(refused):
+                new["per_step"].insert(i, {"raised": [], "cleared": []})
+            new["counters"] = {**new["counters"], **(counters or {})}
+            events = ("per_step", "active_after")
+            old = NOT_IN_UTM if not_in_utm else {k: expected[k] for k in events}
+            extra["decision"] = decided(file, name, old, {k: new[k] for k in events}, decision)
+            expected = new
         cases.append(
             case(
                 name,
                 owner or ["authority", "ussp"],
                 {"config": config, "steps": neutral_steps(steps)},
-                run_monitor(config, steps),
+                expected,
                 why,
                 source=source,
+                **extra,
             )
         )
 
@@ -2140,11 +2640,24 @@ def gen_lifecycle() -> None:
         source="test_monitor.py::test_a_pair_on_the_ground_raises_nothing",
     )
     seq(
-        "disarming-clears-as-stale",
+        "disarming-clears-as-landed",
         {},
         head_on + [obs(1.0, id="B", north_m=500, flying=False)],
-        "A disarmed aircraft leaves the picture; its conflict clears as stale (S-25 proposes a 'landed' reason; not built).",
+        "C-14: a disarmed aircraft leaves the picture and its conflict clears with reason landed. utm cleared it as stale (S-25), which reads as 'we lost it' when the aircraft is known to be on the ground.",
         source="test_monitor.py::test_disarming_clears_the_conflict",
+    )
+    landed = cases[-1]
+    old_cleared = landed["expected"]["per_step"][2]["cleared"]
+    assert [c["reason"] for c in old_cleared] == ["stale"], old_cleared
+    new_cleared = [{**c, "reason": "landed"} for c in old_cleared]
+    landed["expected"]["per_step"][2]["cleared"] = new_cleared
+    landed["decision"] = decided(
+        file,
+        landed["name"],
+        old_cleared,
+        new_cleared,
+        "A disarm or landing clears as landed (LESSONS C-14, PLAN section 11 gap 4, "
+        "uspace-core PR #15, owner decision). utm cleared it as stale.",
     )
     steps = []
     for t in range(30):
@@ -2320,6 +2833,99 @@ def gen_lifecycle() -> None:
         "Two identified tracks on one address are two claims (a spoofer on its victim's address among them): judged like any pair.",
         source="test_monitor.py::test_two_serials_on_one_transmitter_address_are_a_conflict",
     )
+    # --- decided in uspace-core PR #15 (reviews of the alert state machine) --
+    t06 = (
+        "A sample placed before the aircraft's latest one, from any source, is "
+        "refused (rejected_older_than_held) and judges nothing (LESSONS T-06, "
+        "T-13; uspace-core PR #15 review). utm took it from another station and "
+        "rewound the track."
+    )
+    seq(
+        "older-placement-from-another-station-is-refused",
+        {},
+        head_on
+        + [
+            obs(1.0, id="B", north_m=490, vn=-10, station="gs-2"),
+            {"t_s": 2.0, "op": "observe", "aircraft": {"id": "B", "north_m": 5000, "station": "gs-9", "captured_at_s": -5.0, "rx_at_s": 2.0}},
+            {"t_s": 14.0, "op": "tick"},
+        ],
+        "T-13: B, held at 1 s, is heard through another station placed at -5 s, far away. utm took it and rewound B's track to -5 s, so the tick at 14 s dropped B as stale and cleared the conflict, though B was heard at 1 s. Refused and counted; the conflict stands.",
+        refused={3},
+        counters={"rejected_older_than_held": 1},
+        decision=t06,
+    )
+    seq(
+        "placement-ahead-of-tolerance-is-refused",
+        {},
+        head_on
+        + [
+            {"t_s": 1.0, "op": "observe", "aircraft": {"id": "B", "north_m": 5000, "captured_at_s": 6.0, "rx_at_s": 1.0, "station": "gs-2"}},
+            obs(2.0, id="B", north_m=480, vn=-10, station="gs-2"),
+        ],
+        "T-13: a clear sample placed 5 s ahead of its own receipt (more than ahead_tolerance_s, 1 s). utm took it: the pair was shown clear at 6 s, more than the hysteresis after the last true reading, and the conflict resolved at once; the real sample at 2 s did not raise it again. Refused and counted; the real sample at 2 s still refreshes the conflict.",
+        refused={2},
+        counters={"rejected_placed_ahead": 1},
+        decision=(
+            "A sample placed ahead of its receipt, or received ahead of the wall "
+            "clock, by more than ahead_tolerance_s is refused (rejected_placed_ahead) "
+            "and buys no hysteresis (LESSONS T-13; uspace-core PR #15 review). utm "
+            "took it."
+        ),
+    )
+    cap = (
+        "Past max_aircraft only an aircraft without an active alert is evicted, "
+        "and a new id is refused (rejected_capacity) when every aircraft held has "
+        "one; eviction never clears an alert (LESSONS C-18; uspace-core PR #15 "
+        "review). utm held every aircraft it heard."
+    )
+    seq(
+        "eviction-takes-an-aircraft-without-an-alert",
+        {"max_aircraft": 3},
+        head_on
+        + [
+            obs(0.0, id="C", north_m=5000, station="gs-3"),
+            obs(0.0, id="D", north_m=9000, station="gs-4"),
+            obs(1.0, id="A", north_m=10, vn=10),
+        ],
+        "C-18: at the cap of 3, a new aircraft D evicts C, the one aircraft that holds no alert. The conflict between A and B is neither cleared nor touched, and refreshes at 1 s.",
+        counters={"aircraft_evicted": 1},
+        decision=cap,
+        not_in_utm=True,
+    )
+    seq(
+        "full-of-alert-holders-refuses-new-ids",
+        {"max_aircraft": 2},
+        head_on
+        + [
+            obs(0.0, id="C", north_m=5000, station="gs-3"),
+            obs(0.5, id="C", north_m=5000, station="gs-3"),
+            {"t_s": 1.0, "op": "tick"},
+        ],
+        "C-18: the cap of 2 is held by A and B, both in conflict. A new id is refused and counted, per source too; nothing is evicted, so a flood of new ids can never clear a real conflict.",
+        refused={2, 3},
+        counters={"rejected_capacity": 2, "rejected_capacity/relay/gs-3": 2},
+        decision=cap,
+        not_in_utm=True,
+    )
+    seq(
+        "source-share-refuses-a-flooding-source",
+        {"max_aircraft": 4, "max_source_share": 0.5},
+        [
+            obs(0.0, id="A", north_m=0, vn=10, source="remote_id", station="rx-1"),
+            obs(0.0, id="B", north_m=500, vn=-10, source="remote_id", station="rx-1"),
+            obs(0.0, id="C", north_m=5000, source="remote_id", station="rx-1"),
+            obs(0.0, id="D", north_m=30, station="gs-1"),
+        ],
+        "C-18: receiver rx-1 already holds 2 aircraft with an alert, its share (0.5 of 4). A new id from it is refused (rejected_source_share), so one receiver flooding alert-raising ids cannot take the whole cap. Another source is still judged: D from a relay raises its conflict with A.",
+        refused={2},
+        counters={"rejected_source_share": 1, "rejected_source_share/remote_id/rx-1": 1},
+        decision=(
+            "A new id is refused while its source holds max_source_share of "
+            "max_aircraft in alert-holding aircraft (LESSONS C-18; uspace-core "
+            "PR #15 review). utm had no cap and no share."
+        ),
+        not_in_utm=True,
+    )
     write(
         "alert_lifecycle.json",
         header(
@@ -2327,7 +2933,7 @@ def gen_lifecycle() -> None:
             "is a list of steps on one monitor: observe (one aircraft message "
             "at wall time t_s), tick (no message), switch_source (U-15). "
             "expected.per_step[i] lists what step i raised and cleared (with "
-            "the clear reason: resolved, stale, source_disabled). Aircraft "
+            "the clear reason: resolved, stale, source_disabled, landed). Aircraft "
             "fields: id, lat_deg/lon_deg (computed; north_m/east_m are how the "
             "case was built), alt_amsl_m (default 550), vn/ve/vd (m/s, vd "
             "down), flying (default true: armed for relay, airborne for Remote "
@@ -2335,9 +2941,18 @@ def gen_lifecycle() -> None:
             "(default captured_at_s), station_clock_offset_s (the station's own "
             "ts = captured_at_s + offset; default 0), backlog, source (relay | remote_id), "
             "station, alt_source, identification, transmitter, identified. "
+            "An absent alt_source is geodetic: a vertical position, judged "
+            "against the vertical minimum (utm read every altitude but "
+            "'pressure' that way). "
             "Policy 60 s / 60 m / 20 m / 800 m; defaults clear_after_s 3, "
             "stale_after_s 15, neighbour_max_age_s 10, live_max_age_s 10, "
-            "pressure_uncertainty_m 250. Zones are ED-269 features.",
+            "pressure_uncertainty_m 250, ahead_tolerance_s 1, max_aircraft "
+            "50000, max_source_share 0.5. The source key of max_source_share "
+            "is (source, station). Zones are ED-269 features. counters lists "
+            "the counts the case pins; a refused sample is counted under its "
+            "reason (rejected_older_than_held, rejected_placed_ahead, "
+            "rejected_capacity, rejected_source_share, the last two also per "
+            "source as <counter>/<source>/<station>) and judges nothing.",
             [
                 "utm airspace/tests/test_monitor.py",
                 "utm airspace/tests/test_monitor_geozones.py",
@@ -2359,8 +2974,45 @@ def gen_lifecycle() -> None:
 def gen_zones_vertical() -> None:
     cases = []
     ground, n_m = 500.0, 15.0
+    file = "zones_vertical.json"
 
-    def one(name: str, zone: dict[str, Any], alt: float, why: str, *, ground_m: Any = "absent", undulation: float | None = None, alt_source: str | None = None, max_height: float | None = None, owner: Any = None, source: str = "") -> None:
+    def missing(zone: dict[str, Any], ground_m: Any, undulation: float | None, max_height: float | None) -> list[str]:
+        """What each limit that needs a height lacks here, in uspace-core's
+        reason codes (PR #12): no_terrain, ground_unknown, no_geoid."""
+        def ground_reason() -> list[str]:
+            if ground_m == "absent":
+                return ["no_terrain"]
+            return ["ground_unknown"] if ground_m is None else []
+
+        if not zone:
+            return ground_reason() if max_height is not None else []
+        volume = zone["geometry"][0]
+        out: list[str] = []
+        for key, ref_key, lower in (("lowerLimit", "lowerVerticalReference", True), ("upperLimit", "upperVerticalReference", False)):
+            if key not in volume:
+                continue
+            ref = volume[ref_key]
+            if ref == "AGL" and not (lower and volume[key] <= 0):
+                out += ground_reason()
+            elif ref == "WGS84" and undulation is None:
+                out.append("no_geoid")
+        return sorted(set(out), key=["no_terrain", "ground_unknown", "no_geoid"].index)
+
+    def one(
+        name: str,
+        zone: dict[str, Any],
+        alt: float,
+        why: str,
+        *,
+        ground_m: Any = "absent",
+        undulation: float | None = None,
+        alt_source: str | None = None,
+        max_height: float | None = None,
+        owner: Any = None,
+        source: str = "",
+        conditional_severity: str | None = None,
+        zone_type: str | None = None,
+    ) -> None:
         config: dict[str, Any] = {"zones": [zone] if zone else []}
         if ground_m != "absent":
             config["ground_m"] = ground_m
@@ -2368,27 +3020,63 @@ def gen_zones_vertical() -> None:
             config["geoid_undulation_m"] = undulation
         if max_height is not None:
             config["max_height_agl_m"] = max_height
+        if conditional_severity is not None:
+            config["conditional_severity"] = conditional_severity
         spec: dict[str, Any] = {"id": "A", "north_m": 0, "alt_amsl_m": alt}
         if alt_source:
             spec["alt_source"] = alt_source
         result = run_monitor(config, [obs(0.0, **spec)])
-        cases.append(
-            case(
+        raised = result["per_step"][0]["raised"]
+        counters = {k: result["counters"][k] for k in ("zone_checks_not_evaluated", "zone_limits_not_judged")}
+        unjudged = counters["zone_checks_not_evaluated"] or counters["zone_limits_not_judged"] or (not zone and not raised)
+        expected = {"raised": raised, "counters": counters, "reasons": missing(zone, ground_m, undulation, max_height) if unjudged else []}
+        inp: dict[str, Any] = {
+            "zone": zone or None,
+            "aircraft": {"alt_amsl_m": alt, "alt_source": alt_source or "geodetic"},
+            "terrain": "none" if ground_m == "absent" else ({"ground_m": ground_m} if ground_m is not None else "unknown here"),
+            "geoid_undulation_m": undulation,
+            "max_height_agl_m": max_height,
+            "pressure_uncertainty_m": 250.0,
+            "conditional_severity": conditional_severity or "warning",
+        }
+        extra: dict[str, Any] = {}
+        if zone_type == "USPACE":
+            # utm has no U-space zone type. The decided value is utm's raise
+            # for the same volume as a CONDITIONAL zone, at info and without
+            # an ED-269 restriction.
+            inp["zone_type"] = zone_type
+            as_conditional = run_monitor({**config, "zones": [{**zone, "restriction": "CONDITIONAL"}]}, [obs(0.0, **spec)])
+            new_raised = [
+                {**r, "severity": "info", "detail": {k: v for k, v in r["detail"].items() if k != "restriction"}}
+                for r in as_conditional["per_step"][0]["raised"]
+            ]
+            assert new_raised, name
+            extra["decision"] = decided(
+                file,
                 name,
-                owner or ["authority", "ussp"],
-                {
-                    "zone": zone or None,
-                    "aircraft": {"alt_amsl_m": alt, "alt_source": alt_source or "geodetic"},
-                    "terrain": "none" if ground_m == "absent" else ({"ground_m": ground_m} if ground_m is not None else "unknown here"),
-                    "geoid_undulation_m": undulation,
-                    "max_height_agl_m": max_height,
-                    "pressure_uncertainty_m": 250.0,
-                },
-                {"raised": result["per_step"][0]["raised"], "counters": {k: result["counters"][k] for k in ("zone_checks_not_evaluated", "zone_limits_not_judged")}},
-                why,
-                source=source,
+                NOT_IN_UTM,
+                new_raised,
+                "Being in U-space airspace raises info, the lowest severity, so "
+                "that it is visible; whether the flight is authorised is judged "
+                "elsewhere (uspace-core PR #12, owner decision). utm had no "
+                "U-space zone type.",
             )
-        )
+            expected["raised"] = new_raised
+        elif conditional_severity == "info" and any(r["severity"] == "warning" and r["detail"].get("within_band") is False for r in raised):
+            new_raised = [{**r, "severity": "info"} for r in raised]
+            extra["decision"] = decided(
+                file,
+                name,
+                raised,
+                new_raised,
+                "A pressure altitude inside only the widened band raises "
+                "min(warning, the zone's severity): an info zone stays info, "
+                "since being possibly inside never raises more than being "
+                "definitely inside (uspace-core PR #12, owner decision). utm "
+                "raised warning.",
+            )
+            expected["raised"] = new_raised
+        cases.append(case(name, owner or ["authority", "ussp"], inp, expected, why, source=source, **extra))
 
     G = "test_monitor_geozones.py::"
     for restriction in ("PROHIBITED", "REQ_AUTHORISATION", "CONDITIONAL", "NO_RESTRICTION"):
@@ -2410,7 +3098,20 @@ def gen_zones_vertical() -> None:
     one("feet-converted-outside", feet, 615.0, "615 m is above 609.6 m.")
     one("conditional-agl-no-terrain-not-evaluated", zone_feature("C1", "CONDITIONAL", upper=(120, "AGL")), 550.0, "A CONDITIONAL zone whose AGL limit cannot be judged is NOT evaluated: no alert, counted, an active one neither refreshed nor cleared.", source=G + "test_a_limit_without_its_data_is_not_evaluated_and_counted")
     one("conditional-agl-ground-unknown-not-evaluated", zone_feature("C1", "CONDITIONAL", upper=(120, "AGL")), 550.0, "Terrain configured but unknown here (cell never fetched, nodata, unreadable tile): the same. Unknown ground is never 0.", ground_m=None)
-    one("prohibited-wgs84-no-geoid-not-evaluated", zone_feature("P1", upper=(600, "WGS84")), 550.0, "A WGS84 limit without the geoid is not evaluated, even for PROHIBITED (S-37 proposes a warning here; not built).")
+    one("prohibited-wgs84-no-geoid-not-evaluated", zone_feature("P1", upper=(600, "WGS84")), 550.0, "A WGS84 limit without the geoid is not evaluated, even for PROHIBITED, with reason no_geoid (Z-09). S-37 proposes a warning here, as for an AGL limit without the DEM; that is still open, and this case pins today's rule.")
+    one(
+        "conditional-agl-and-wgs84-missing-both-reported",
+        zone_feature("C2", "CONDITIONAL", lower=(50, "AGL"), upper=(600, "WGS84")),
+        550.0,
+        "An AGL limit with no terrain and a WGS84 limit with no geoid: not evaluated, and the reasons name both, so that an operator fixing one is not surprised by the other.",
+    )
+    one(
+        "conditional-agl-ground-unknown-and-wgs84-missing-both-reported",
+        zone_feature("C3", "CONDITIONAL", upper=(120, "AGL"), lower=(0, "WGS84")),
+        550.0,
+        "Ground configured but unknown here, and no geoid: both reasons.",
+        ground_m=None,
+    )
     for restriction in ("PROHIBITED", "REQ_AUTHORISATION"):
         one(f"{restriction.lower()}-agl-ceiling-no-terrain-warns", zone_feature("P2", restriction, lower=(0, "AGL"), upper=(120, "AGL")), 550.0, "U-03 review: a PROHIBITED/REQ_AUTHORISATION zone whose only unjudged limit is AGL raises a WARNING with vertical_known false and limit_not_judged: a false warning beats a missed critical.", source=G + "test_an_agl_ceiling_without_the_ground_warns_that_it_was_not_judged")
     one("prohibited-agl-with-ground-own-severity", zone_feature("P3", lower=(0, "AGL"), upper=(120, "AGL")), ground + 50, "The presence pair: with the DEM, 50 m AGL is critical, nothing flagged.", ground_m=ground, source=G + "test_the_same_agl_zone_with_the_ground_is_judged_at_its_own_severity")
@@ -2424,6 +3125,41 @@ def gen_zones_vertical() -> None:
     one("pressure-wgs84-zone-through-geoid-and-margin", zone_feature("PW", upper=(600, "WGS84")), 700.0, "700 + 15 = 715 m HAE, 115 m above a 600 m WGS84 ceiling, inside the 250 m margin: warning, within_band false.", undulation=n_m, alt_source="pressure", source=G + "test_a_pressure_track_in_a_wgs84_zone_goes_through_the_geoid_and_the_margin")
     one("pressure-and-unjudged-agl-carry-both-flags", pz, 550.0, "Both: warning, limit_not_judged and vertical_known false.", alt_source="pressure", source=G + "test_a_pressure_track_and_an_unjudged_agl_ceiling_carry_both_flags")
     one("pressure-zone-without-limits-judged-as-for-anyone", zone_feature("PN"), 550.0, "A zone with no altitude limits is judged as for anyone: no margin, no flag.", alt_source="pressure", source="test_pressure_altitude.py::test_a_zone_without_altitude_limits_is_judged_as_for_anyone")
+    cz = zone_feature("CI", "CONDITIONAL", lower=(0, "AGL"), upper=(120, "AGL"))
+    one(
+        "conditional-info-pressure-inside-as-indicated-stays-info",
+        cz,
+        ground + 100,
+        "A CONDITIONAL zone the policy puts at info, pressure altitude 100 m AGL: inside as indicated, the zone's own severity (info), within_band true.",
+        ground_m=ground,
+        alt_source="pressure",
+        conditional_severity="info",
+    )
+    one(
+        "conditional-info-pressure-in-widened-band-stays-info",
+        cz,
+        ground + 300,
+        "The same zone at 300 m AGL, inside only the band widened by 250 m: min(warning, info) is info. Being possibly inside never raises more than being definitely inside would.",
+        ground_m=ground,
+        alt_source="pressure",
+        conditional_severity="info",
+    )
+    one(
+        "uspace-zone-raises-info",
+        zone_feature("U1", "NO_RESTRICTION"),
+        550.0,
+        "U-space airspace (2021/664) is visible at the lowest severity. Whether the flight there is authorised is judged by the authorisation check, not here.",
+        zone_type="USPACE",
+    )
+    one(
+        "uspace-zone-pressure-in-widened-band-stays-info",
+        zone_feature("U2", "NO_RESTRICTION", lower=(0, "AGL"), upper=(120, "AGL")),
+        ground + 300,
+        "Pressure altitude inside only the widened band of a U-space zone: still info, within_band false.",
+        ground_m=ground,
+        alt_source="pressure",
+        zone_type="USPACE",
+    )
     H = "test_height_limit.py::"
     for alt in (619.0, 620.0, 620.5, 650.0):
         one(f"height-limit-120-at-{alt}", {}, alt, "P5-19: AMSL minus DEM ground (500 m) over 120 m warns; exactly at the limit is allowed (strictly greater).", ground_m=ground, max_height=120.0, source=H + "test_the_limit_itself_is_allowed")
@@ -2439,9 +3175,18 @@ def gen_zones_vertical() -> None:
             "AMSL altitude; AGL against AMSL minus the DEM ground under the "
             "aircraft; WGS84 against AMSL plus the geoid undulation. "
             "terrain: 'none' (not configured), 'unknown here', or ground_m. "
+            "conditional_severity is what a CONDITIONAL zone raises (info or "
+            "warning). zone_type, when present, replaces the type the "
+            "restriction maps to: USPACE is U-space airspace, which ED-269 "
+            "cannot express (ED-318 carries it), so the feature's restriction "
+            "is a placeholder and the raise names no restriction. "
             "expected.raised is what one observation raises; counters show "
             "zone_checks_not_evaluated (silent, not judged) and "
-            "zone_limits_not_judged (warned because AGL could not be judged).",
+            "zone_limits_not_judged (warned because AGL could not be judged). "
+            "reasons is the set of what was missing whenever a zone was not "
+            "evaluated, a limit was not judged or the height limit was not "
+            "evaluated (no_terrain, ground_unknown, no_geoid), every one of "
+            "them; empty otherwise. Its order is not significant.",
             [
                 "utm airspace/tests/test_monitor_geozones.py",
                 "utm airspace/tests/test_pressure_altitude.py",
@@ -2689,6 +3434,40 @@ def gen_ed269() -> None:
                 "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed.",
             )
         )
+    # Decided in uspace-core PR #7 (owner): `type` is ED-269's enumeration,
+    # COMMON or CUSTOMIZED. utm accepted any string.
+    name = "refuse-type-not-common-or-customized"
+    feature = mutate(["type"], "STANDARD")
+    utm_doc = parse(json.dumps({"features": [feature]}).encode())
+    problems = [{"field": "features[0].type", "reason": "'STANDARD' is not one of COMMON, CUSTOMIZED"}]
+    cases.append(
+        case(
+            name,
+            "cisp",
+            {"document": {"features": [feature]}},
+            {"accepted": False, "problems": problems, "must_include": {"field_endswith": "type", "reason_contains": "not one of"}},
+            "ED-269's zone type is an enumeration (COMMON, CUSTOMIZED). A reader that accepts any string publishes a zone other readers refuse.",
+            decision=decided(
+                "ed269_parse.json",
+                name,
+                {"accepted": True, "zones": [zone_summary(z) for z in utm_doc.zones]},
+                {"accepted": False, "problems": problems},
+                "type is refused unless COMMON or CUSTOMIZED (uspace-core PR #7, "
+                "owner decision). utm accepted any string; the problem text is "
+                "uspace-core's, and only must_include binds.",
+            ),
+        )
+    )
+    customized = mutate(["type"], "CUSTOMIZED")
+    cases.append(
+        case(
+            "type-customized-is-accepted",
+            "cisp",
+            {"document": {"features": [customized]}},
+            {"accepted": True, "zones": [zone_summary(z) for z in parse(json.dumps({"features": [customized]}).encode()).zones]},
+            "The presence pair: CUSTOMIZED, spelt with a Z as ED-269 publishes it, is the other accepted type.",
+        )
+    )
     cases.append(
         case(
             "base-feature-is-accepted",
@@ -3152,6 +3931,10 @@ def main() -> None:
     gen_terrain_geoid()
     gen_receiver_auth()
     gen_source_control()
+    sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
+    print(f"{len(DECISIONS)} cases carry a decision that supersedes utm:")
+    for file, name, decision in DECISIONS:
+        print(f"  {file}#{name}: {decision[:100]}")
 
 
 if __name__ == "__main__":
