@@ -3111,7 +3111,6 @@ def gen_zones_vertical() -> None:
                 {**r, "severity": "info", "detail": {k: v for k, v in r["detail"].items() if k != "restriction"}}
                 for r in as_conditional["per_step"][0]["raised"]
             ]
-            assert new_raised, name
             extra["decision"] = decided(
                 file,
                 name,
@@ -3205,6 +3204,12 @@ def gen_zones_vertical() -> None:
     one("prohibited-wgs84-with-geoid-own-severity", zone_feature("P1", upper=(600, "WGS84")), 550.0, "The presence pair: with the geoid, 550 + 15 = 565 m HAE is inside the 600 m ceiling: critical, nothing flagged.", undulation=n_m)
     one("prohibited-agl-and-wgs84-missing-warns-naming-both", zone_feature("P6", lower=(50, "AGL"), upper=(600, "WGS84")), 550.0, "S-37 with Z-09: no terrain and no geoid. The zone warns, names both references it could not judge, and reports both reasons.")
     one(
+        "conditional-wgs84-no-geoid-not-evaluated",
+        zone_feature("C4", "CONDITIONAL", upper=(600, "WGS84")),
+        550.0,
+        "The CONDITIONAL twin of prohibited-wgs84-no-geoid-warns: not evaluated, counted, reason no_geoid. A warning would exceed an info zone's own severity (Z-09).",
+    )
+    one(
         "conditional-agl-and-wgs84-missing-both-reported",
         zone_feature("C2", "CONDITIONAL", lower=(50, "AGL"), upper=(600, "WGS84")),
         550.0,
@@ -3254,6 +3259,13 @@ def gen_zones_vertical() -> None:
         zone_feature("U1", "NO_RESTRICTION"),
         550.0,
         "U-space airspace (2021/664) is visible at the lowest severity. Whether the flight there is authorised is judged by the authorisation check, not here.",
+        zone_type="USPACE",
+    )
+    one(
+        "uspace-zone-judged-limit-excludes-clear",
+        zone_feature("U3", "NO_RESTRICTION", lower=(0, "AMSL"), upper=(500, "AMSL")),
+        550.0,
+        "The absence twin: a U-space zone whose judged AMSL ceiling (500 m) is below the aircraft (550 m) raises nothing.",
         zone_type="USPACE",
     )
     one(

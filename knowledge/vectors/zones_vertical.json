@@ -1786,6 +1786,83 @@
    "decision": "S-37, owner decision: a WGS84 limit with no geoid is treated like an AGL limit with no DEM (LESSONS Z-09). A PROHIBITED or REQ_AUTHORISATION zone warns with limit_not_judged and reason no_geoid; a limit that cannot be judged is never silent there. utm left the zone not evaluated."
   },
   {
+   "name": "conditional-wgs84-no-geoid-not-evaluated",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "zone": {
+     "identifier": "C4",
+     "country": "GEO",
+     "type": "COMMON",
+     "restriction": "CONDITIONAL",
+     "applicability": [
+      {
+       "permanent": "YES"
+      }
+     ],
+     "zoneAuthority": [],
+     "geometry": [
+      {
+       "uomDimensions": "M",
+       "lowerVerticalReference": "AMSL",
+       "upperVerticalReference": "WGS84",
+       "horizontalProjection": {
+        "type": "Polygon",
+        "coordinates": [
+         [
+          [
+           44.8171,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7051
+          ]
+         ]
+        ]
+       },
+       "upperLimit": 600
+      }
+     ]
+    },
+    "aircraft": {
+     "alt_amsl_m": 550.0,
+     "alt_source": "geodetic"
+    },
+    "terrain": "none",
+    "geoid_undulation_m": null,
+    "max_height_agl_m": null,
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
+   },
+   "expected": {
+    "raised": [],
+    "counters": {
+     "zone_checks_not_evaluated": 1,
+     "zone_limits_not_judged": 0
+    },
+    "reasons": [
+     "no_geoid"
+    ]
+   },
+   "why": "The CONDITIONAL twin of prohibited-wgs84-no-geoid-warns: not evaluated, counted, reason no_geoid. A warning would exceed an info zone's own severity (Z-09).",
+   "source": ""
+  },
+  {
    "name": "conditional-agl-and-wgs84-missing-both-reported",
    "owner": [
     "authority",
@@ -3366,6 +3443,84 @@
     "reasons": []
    },
    "why": "U-space airspace (2021/664) is visible at the lowest severity. Whether the flight there is authorised is judged by the authorisation check, not here.",
+   "source": "",
+   "decision": "Being in U-space airspace raises info, the lowest severity, so that it is visible; whether the flight is authorised is judged elsewhere (uspace-core PR #12, owner decision). utm had no U-space zone type."
+  },
+  {
+   "name": "uspace-zone-judged-limit-excludes-clear",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "zone": {
+     "identifier": "U3",
+     "country": "GEO",
+     "type": "COMMON",
+     "restriction": "NO_RESTRICTION",
+     "applicability": [
+      {
+       "permanent": "YES"
+      }
+     ],
+     "zoneAuthority": [],
+     "geometry": [
+      {
+       "uomDimensions": "M",
+       "lowerVerticalReference": "AMSL",
+       "upperVerticalReference": "AMSL",
+       "horizontalProjection": {
+        "type": "Polygon",
+        "coordinates": [
+         [
+          [
+           44.8171,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7051
+          ]
+         ]
+        ]
+       },
+       "lowerLimit": 0,
+       "upperLimit": 500
+      }
+     ]
+    },
+    "aircraft": {
+     "alt_amsl_m": 550.0,
+     "alt_source": "geodetic"
+    },
+    "terrain": "none",
+    "geoid_undulation_m": null,
+    "max_height_agl_m": null,
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning",
+    "zone_type": "USPACE"
+   },
+   "expected": {
+    "raised": [],
+    "counters": {
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    },
+    "reasons": []
+   },
+   "why": "The absence twin: a U-space zone whose judged AMSL ceiling (500 m) is below the aircraft (550 m) raises nothing.",
    "source": "",
    "decision": "Being in U-space airspace raises info, the lowest severity, so that it is visible; whether the flight is authorised is judged elsewhere (uspace-core PR #12, owner decision). utm had no U-space zone type."
   },
