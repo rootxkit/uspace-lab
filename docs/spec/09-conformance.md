@@ -230,12 +230,12 @@ Provisions checked: GDPR — 8 rows.
 
 | Source and clause | Requirement | Owning system | Spec section | Status | Note |
 |---|---|---|---|---|---|
-| Rule: Go for fast data exchange and high load | hot paths in Go | authority, ussp, ansp engines | `00 §6.1`; `05 §2` | met | CISP has no hot path |
-| Rule: NestJS for business logic and human-driven parts | records, workflow, accounts, certificates, intake | all apps; CISP entirely | `00 §6.1`; `02 §3` | met | |
+| Rule: Go is the entire backend of every system (hot path and control plane; all of `uspace-cisp`) | every API, ingest, engine, workflow and the token service in Go | all | `00 §6.1`; `02 §3`; `05 §2` | met | |
 | Rule: Next.js for every web UI, render only | public and internal UIs, BFF cookie layer only | all `web` | `00 §6.1`; `06 §3` | met | no DB / NATS access from `web` |
-| Hard rule: safety logic only in Go, pinned by `knowledge/vectors/` | identification, zone judging, CPA, conformance, strategic deconfliction | engines | `00 §6`; `04 §1`; `06` T12; `07` KT-2 | met | USSP `app` delegates `Deconflict` to the engine; authority `app` never re-judges |
-| Boundary: NestJS calls Go over NATS or REST | request-reply subjects, KV projections, JetStream events | authority, ussp, ansp | `00 §6.2`; `04 §1` | met | |
-| One JWT verified identically in both languages | JWKS, `kid`, RS256 only, `aud`, scope; shared vector | all | `00 §6.2`; `06` T13 | met | `jwt_verify.json` to be added in KT-2 |
+| Hard rule: safety logic once, in Go packages, pinned by `knowledge/vectors/` | identification, zone judging, CPA, conformance, strategic deconfliction | `uspace-core` packages used by every system | `00 §6`; `04 §1`; `06` T12; `07` KT-2 | met | vectors present in this repo (16 files) after merging `main` |
+| Process decomposition: hot-path and control-plane processes of one Go module, shared `internal/`, NATS only where it decouples | | authority, cisp, ussp, ansp | `00 §6.1`–`6.2`; `05 §2`, `§6` | met | judgements are package calls, not internal hops |
+| Generated bindings Go → TypeScript only | JSON Schema and OpenAPI → client types | all `web` | `04 §1`; `07` KT-2 | met | |
+| One JWT verifier (`uspace-core/auth`) | JWKS, `kid`, RS256 only, `aud`, scope | all | `00 §6.2`; `06 §3` | met | |
 | Data: PostgreSQL/PostGIS, TimescaleDB, NATS JetStream; Python only in `uspace-lab` | | all | `03`; `05 §3` | met | |
 
 ## 2. Deliberate national choices

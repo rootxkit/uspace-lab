@@ -2,7 +2,7 @@
 
 Article references are to Reg. (EU) 2021/664 unless prefixed (`947` = 2019/947, `945` = 2019/945 as amended by 2020/1058, `665` = 2021/665, `666` = 2021/666, `376` = 376/2014). Paragraph numbers were re-read from the published texts; the few that could not be are marked *(unverified)*. Rows marked **NC** are national choices the regulation leaves open (`09 §2`).
 
-Which service inside a system carries each obligation follows `00 §6`: safety logic (A7's detection, S1's identification, S3's conflict judgement, S4, S5, S2's zone evaluation, N2's feed) is the Go engine; records, workflow, accounts and certificates (A1, A5, A6, A8–A10, C1–C6, S8, S9, S11, N1, N3, N4) are NestJS; every console and portal is Next.js.
+Every obligation below is implemented in Go (`00 §6`): the safety judgements (A7, S1, S2, S3, S4, S5, N2) in the shared packages pinned by `knowledge/vectors/`, run by the hot-path processes; records, workflow, accounts and certificates (A1, A5, A6, A8–A10, C1–C6, S8, S9, S11, N1, N3, N4) by each system's `api` process. Every console and portal is Next.js and only renders.
 
 ## 1. `uspace-authority` — the competent authority
 
