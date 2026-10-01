@@ -1,5 +1,5 @@
 {
- "description": "Closest point of approach and the conflict test (ARCHITECTURE §6.2, P5-07, S-11, S-33). Positions are projected onto a local tangent plane about the pair's mid latitude with WGS-84 meridional and prime-vertical radii (local_offset_m); the older sample is advanced to the newer one's time first. t_cpa from the horizontal motion only, clamped to >= 0; vertical separation evaluated at t_cpa. conflict = (d_h_now < d_h_min AND (vertical unknown OR d_alt_now < d_v_min)) OR (t_cpa < t_max AND d_cpa_h < d_h_min AND (vertical unknown OR d_alt_at_cpa < d_v_min)). described_as is how the case was built (metres from 41.7151N 44.8271E); the inputs are lat/lon.",
+ "description": "Closest point of approach and the conflict test (ARCHITECTURE §6.2, P5-07, S-11, S-33). Positions are projected onto a local tangent plane about the pair's mid latitude with WGS-84 meridional and prime-vertical radii (local_offset_m); the older sample is advanced to the newer one's time first. t_cpa from the horizontal motion only, clamped to >= 0; vertical separation evaluated at t_cpa (the reported numbers). conflict is a loss of separation that starts in [0, t_cpa_max_s), half-open: one starting exactly at t_cpa_max_s is not yet a conflict (C-19). The open interval where the horizontal distance is below d_h_min overlaps the open interval where the vertical gap is below d_v_min (with the vertical unknown, the horizontal interval alone), and that overlap starts before t_cpa_max_s. This contains utm's criterion, (d_h_now < d_h_min AND (vertical unknown OR d_alt_now < d_v_min)) OR (t_cpa < t_max AND d_cpa_h < d_h_min AND (vertical unknown OR d_alt_at_cpa < d_v_min)). los_start_s is the start of the overlap (0 when inside now), null when there is no conflict. A pair not judged gives not_judged: stale_neighbour, or invalid_policy for a case whose input.policy (which replaces the header policy) has a minimum that is not a finite number above zero. JSON has no NaN: a policy value given as the string \"NaN\" is IEEE NaN. described_as is how the case was built (metres from 41.7151N 44.8271E); the inputs are lat/lon.",
  "source": [
   "utm airspace/tests/test_cpa.py",
   "utm airspace/tests/test_monitor.py (neighbour age)",
@@ -14,6 +14,7 @@
  },
  "tolerance": {
   "t_cpa_s": 0.01,
+  "los_start_s": 0.01,
   "distances_m": 0.01,
   "booleans": "exact"
  },
@@ -75,7 +76,8 @@
     "d_horizontal_now_m": 1000.0007861298747,
     "d_alt_now_m": 0.0,
     "vertical_known": true,
-    "conflict": true
+    "conflict": true,
+    "los_start_s": 47.000039306493676
    },
    "why": "1 km apart closing at 20 m/s: CPA 0 m in 50 s, inside the 60 s window."
   },
@@ -124,7 +126,8 @@
     "d_horizontal_now_m": 424.2684593463484,
     "d_alt_now_m": 0.0,
     "vertical_known": true,
-    "conflict": true
+    "conflict": true,
+    "los_start_s": 25.7576697878204
    },
    "why": "Both reach the same point in 30 s."
   },
@@ -173,7 +176,8 @@
     "d_horizontal_now_m": 583.1041282197857,
     "d_alt_now_m": 0.0,
     "vertical_known": true,
-    "conflict": false
+    "conflict": false,
+    "los_start_s": null
    },
    "why": "B 20 s late: they pass 200/sqrt(2) = 141 m apart; no conflict."
   },
@@ -222,7 +226,8 @@
     "d_horizontal_now_m": 200.00003144512795,
     "d_alt_now_m": 0.0,
     "vertical_known": true,
-    "conflict": true
+    "conflict": true,
+    "los_start_s": 28.000006289025606
    },
    "why": "Same track, 5 m/s faster from 200 m behind: caught up in 40 s."
   },
@@ -271,7 +276,8 @@
     "d_horizontal_now_m": 45.00000000123144,
     "d_alt_now_m": 0.0,
     "vertical_known": true,
-    "conflict": true
+    "conflict": true,
+    "los_start_s": 0.0
    },
    "why": "Zero relative velocity: every time is equally close, t_cpa is 0 (no division by zero), 45 m apart and staying so is a conflict."
   },
@@ -320,7 +326,8 @@
     "d_horizontal_now_m": 49.999933436241115,
     "d_alt_now_m": 0.0,
     "vertical_known": true,
-    "conflict": true
+    "conflict": true,
+    "los_start_s": 0.0
    },
    "why": "The same degenerate case at rest: 50 m now."
   },
@@ -369,7 +376,8 @@
     "d_horizontal_now_m": 100.00000786173413,
     "d_alt_now_m": 0.0,
     "vertical_known": true,
-    "conflict": false
+    "conflict": false,
+    "los_start_s": null
    },
    "why": "Closest approach in the past: t_cpa reported as 0 and distances as now. A negative t_cpa would read as 'already happened, safe'."
   },
@@ -418,7 +426,8 @@
     "d_horizontal_now_m": 10.000000078664515,
     "d_alt_now_m": 0.0,
     "vertical_known": true,
-    "conflict": true
+    "conflict": true,
+    "los_start_s": 0.0
    },
    "why": "Diverging is not a pass while 10 m apart: inside the minima now is a conflict."
   },
@@ -467,7 +476,8 @@
     "d_horizontal_now_m": 1000.0007861298747,
     "d_alt_now_m": 50,
     "vertical_known": true,
-    "conflict": false
+    "conflict": false,
+    "los_start_s": null
    },
    "why": "Head-on horizontally but 50 m apart vertically: no conflict. Horizontal and vertical are separate; a single 3-D CPA would let a climb hide a head-on."
   },
@@ -516,7 +526,8 @@
     "d_horizontal_now_m": 1000.0007861298747,
     "d_alt_now_m": 50,
     "vertical_known": true,
-    "conflict": true
+    "conflict": true,
+    "los_start_s": 47.000039306493676
    },
    "why": "vd is positive DOWN (MAVLink): climbing 1 m/s closes 50 m in 50 s. The vertical gap is evaluated at t_cpa."
   },
@@ -565,7 +576,8 @@
     "d_horizontal_now_m": 1000.0007861298747,
     "d_alt_now_m": 0.0,
     "vertical_known": true,
-    "conflict": false
+    "conflict": false,
+    "los_start_s": null
    },
    "why": "Meeting in 100 s is beyond the 60 s window: not yet."
   },
@@ -614,7 +626,8 @@
     "d_horizontal_now_m": 583.1041282197857,
     "d_alt_now_m": 0.0,
     "vertical_known": true,
-    "conflict": false
+    "conflict": false,
+    "los_start_s": null
    },
    "why": "The result does not depend on which aircraft is first."
   },
@@ -663,7 +676,8 @@
     "d_horizontal_now_m": 583.1041282197857,
     "d_alt_now_m": 0.0,
     "vertical_known": true,
-    "conflict": false
+    "conflict": false,
+    "los_start_s": null
    },
    "why": "The result does not depend on which aircraft is first."
   },
@@ -712,7 +726,8 @@
     "d_horizontal_now_m": 30.000000707665826,
     "d_alt_now_m": 0.0,
     "vertical_known": true,
-    "conflict": true
+    "conflict": true,
+    "los_start_s": 0.0
    },
    "why": "Found in SITL (P5-07, 2026-09-29): 30 m apart, hovering, 1 cm/s GPS noise puts the CPA 3000 s away, outside the window. §6.2's three-part test alone cleared the alert as resolved while they were still 30 m apart. Inside the minima NOW is a conflict whatever t_cpa says."
   },
@@ -761,7 +776,8 @@
     "d_horizontal_now_m": 80.00000503159285,
     "d_alt_now_m": 0.0,
     "vertical_known": true,
-    "conflict": false
+    "conflict": false,
+    "los_start_s": null
    },
    "why": "The absence pair: 80 m apart with the same noise is not a conflict."
   },
@@ -810,7 +826,8 @@
     "d_horizontal_now_m": 40.000001258002705,
     "d_alt_now_m": 0.0,
     "vertical_known": true,
-    "conflict": true
+    "conflict": true,
+    "los_start_s": 0.0
    },
    "why": "A diverging pair stays a conflict until it is actually past the 60 m minimum (60 m is not < 60)."
   },
@@ -859,7 +876,8 @@
     "d_horizontal_now_m": 50.00000196556382,
     "d_alt_now_m": 0.0,
     "vertical_known": true,
-    "conflict": true
+    "conflict": true,
+    "los_start_s": 0.0
    },
    "why": "A diverging pair stays a conflict until it is actually past the 60 m minimum (60 m is not < 60)."
   },
@@ -908,7 +926,8 @@
     "d_horizontal_now_m": 60.00000283034918,
     "d_alt_now_m": 0.0,
     "vertical_known": true,
-    "conflict": false
+    "conflict": false,
+    "los_start_s": null
    },
    "why": "A diverging pair stays a conflict until it is actually past the 60 m minimum (60 m is not < 60)."
   },
@@ -957,7 +976,8 @@
     "d_horizontal_now_m": 30.000000707665826,
     "d_alt_now_m": 30,
     "vertical_known": true,
-    "conflict": false
+    "conflict": false,
+    "los_start_s": null
    },
    "why": "Inside horizontally but 30 m apart vertically now: not a conflict."
   },
@@ -1006,7 +1026,8 @@
     "d_horizontal_now_m": 1000.0007821997393,
     "d_alt_now_m": 0.0,
     "vertical_known": true,
-    "conflict": true
+    "conflict": true,
+    "los_start_s": 47.000039109986965
    },
    "why": "S-11: A's sample is 5 s older, taken 50 m back down its track. It is advanced along its velocity to B's time first: the answer is 50 s, as with fresh samples, not 52.5 s. A 5 s old sample at 15 m/s is 75 m wrong against a 60 m minimum."
   },
@@ -1055,7 +1076,8 @@
     "d_horizontal_now_m": 1000.0007821997393,
     "d_alt_now_m": 0.0,
     "vertical_known": true,
-    "conflict": true
+    "conflict": true,
+    "los_start_s": 47.000039109986965
    },
    "why": "Same, other order."
   },
@@ -1097,7 +1119,8 @@
     "neighbour_max_age_s": 10.0
    },
    "expected": {
-    "judged": false
+    "judged": false,
+    "not_judged": "stale_neighbour"
    },
    "why": "B's sample is 11 s older than A's, beyond neighbour_max_age_s (10 s): too old to advance along a straight line with meaning. The pair is not judged by this message: neither raised, nor refreshed, nor shown clear (silence is not evidence)."
   },
@@ -1146,7 +1169,8 @@
     "d_horizontal_now_m": 500.0002908679951,
     "d_alt_now_m": 0.0,
     "vertical_known": true,
-    "conflict": true
+    "conflict": true,
+    "los_start_s": 22.000014543399743
    },
    "why": "Exactly 10 s apart is still judged (<=), after advancing B."
   },
@@ -1195,7 +1219,8 @@
     "d_horizontal_now_m": 500.0001965320389,
     "d_alt_now_m": null,
     "vertical_known": false,
-    "conflict": true
+    "conflict": true,
+    "los_start_s": 22.000009826601946
    },
    "why": "S-33: pressure altitudes are not vertical positions (QNH can move them 160 m). The vertical minimum is treated as not met: judged on the horizontal alone; d_alt is null, never a number."
   },
@@ -1244,7 +1269,8 @@
     "d_horizontal_now_m": 500.0001965320389,
     "d_alt_now_m": 100,
     "vertical_known": true,
-    "conflict": false
+    "conflict": false,
+    "los_start_s": null
    },
    "why": "The presence pair: on geodetic altitudes 100 m apart they do not conflict."
   },
@@ -1293,7 +1319,8 @@
     "d_horizontal_now_m": 500.0001965320389,
     "d_alt_now_m": null,
     "vertical_known": false,
-    "conflict": true
+    "conflict": true,
+    "los_start_s": 22.000009826601946
    },
    "why": "One unknown makes the pair's vertical unknown."
   },
@@ -1342,9 +1369,513 @@
     "d_horizontal_now_m": 500.0001965320389,
     "d_alt_now_m": null,
     "vertical_known": false,
-    "conflict": false
+    "conflict": false,
+    "los_start_s": null
    },
    "why": "Unknown vertically is not a conflict by itself."
+  },
+  {
+   "name": "vertical-gap-under-minimum-before-t-cpa",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.72410351324941,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 578.6,
+     "vn_ms": -10,
+     "ve_ms": 0.0,
+     "vd_ms": 1.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 1000,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 50.00003930649373,
+    "d_cpa_horizontal_m": 0.0,
+    "d_alt_at_cpa_m": 21.40003930649368,
+    "d_horizontal_now_m": 1000.0007861298747,
+    "d_alt_now_m": 28.600000000000023,
+    "vertical_known": true,
+    "conflict": true,
+    "los_start_s": 47.000039306493676
+   },
+   "why": "C-19: head-on, inside 60 m horizontally from 47 s to 53 s. B descends 1 m/s from 28.6 m above A: the vertical gap is 21.4 m at the horizontal t_cpa (50 s), above the 20 m minimum, but 18.4 m at 47 s. Judged only at t_cpa this pair is clear; it loses separation from 47 s.",
+   "decision": "A conflict is a loss of separation at any time in the window, not only at the horizontal t_cpa (LESSONS C-19, uspace-core PR #10, owner decision). utm judged now and at t_cpa only."
+  },
+  {
+   "name": "vertical-gap-closes-after-the-pass",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.72410351324941,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 625.0,
+     "vn_ms": -10,
+     "ve_ms": 0.0,
+     "vd_ms": 1.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 1000,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 50.00003930649373,
+    "d_cpa_horizontal_m": 0.0,
+    "d_alt_at_cpa_m": 24.999960693506296,
+    "d_horizontal_now_m": 1000.0007861298747,
+    "d_alt_now_m": 75.0,
+    "vertical_known": true,
+    "conflict": false,
+    "los_start_s": null
+   },
+   "why": "The absence pair: the vertical gap falls under 20 m only from 55 s, after the horizontal interval (47-53 s) ends. Never inside both minima at once: clear."
+  },
+  {
+   "name": "enters-minima-before-window-end-t-cpa-beyond",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 5,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.72086224847963,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": -5,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 640,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 64.00003219985969,
+    "d_cpa_horizontal_m": 0.0,
+    "d_alt_at_cpa_m": 0.0,
+    "d_horizontal_now_m": 640.0003219985969,
+    "d_alt_now_m": 0.0,
+    "vertical_known": true,
+    "conflict": true,
+    "los_start_s": 58.00003219985969
+   },
+   "why": "C-19: closing at 10 m/s from 640 m, t_cpa is 64 s, beyond the 60 s window, but the pair is inside 60 m from 58 s. The window bounds the start of the loss of separation, not t_cpa: a conflict, los_start_s 58.",
+   "decision": "A conflict is a loss of separation at any time in the window, not only at the horizontal t_cpa (LESSONS C-19, uspace-core PR #10, owner decision). utm judged now and at t_cpa only."
+  },
+  {
+   "name": "enters-minima-after-window-end",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 5,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.7212223890096,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": -5,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 680,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 68.00003635055604,
+    "d_cpa_horizontal_m": 0.0,
+    "d_alt_at_cpa_m": 0.0,
+    "d_horizontal_now_m": 680.0003635055605,
+    "d_alt_now_m": 0.0,
+    "vertical_known": true,
+    "conflict": false,
+    "los_start_s": null
+   },
+   "why": "The absence pair: from 680 m the pair enters the minima at 62 s, after the window. Not yet a conflict."
+  },
+  {
+   "name": "loss-starting-exactly-at-window-end-is-clear",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550,
+     "vn_ms": 0.0,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.71537010539748,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 600,
+     "vn_ms": 0.0,
+     "ve_ms": 0.0,
+     "vd_ms": 0.5,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 30,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 0.0,
+    "d_cpa_horizontal_m": 30.000000707665826,
+    "d_alt_at_cpa_m": 50.0,
+    "d_horizontal_now_m": 30.000000707665826,
+    "d_alt_now_m": 50,
+    "vertical_known": true,
+    "conflict": false,
+    "los_start_s": null
+   },
+   "why": "C-19, the boundary: 30 m apart horizontally and staying so, B descending 0.5 m/s from 50 m above A. The vertical gap reaches 20 m at exactly 60 s (exact in binary), so the loss of separation would start at t_cpa_max_s. The window is half-open, [0, 60): clear."
+  },
+  {
+   "name": "loss-starting-just-before-window-end-is-conflict",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550,
+     "vn_ms": 0.0,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.71537010539748,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 599.95,
+     "vn_ms": 0.0,
+     "ve_ms": 0.0,
+     "vd_ms": 0.5,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 30,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 0.0,
+    "d_cpa_horizontal_m": 30.000000707665826,
+    "d_alt_at_cpa_m": 49.950000000000045,
+    "d_horizontal_now_m": 30.000000707665826,
+    "d_alt_now_m": 49.950000000000045,
+    "vertical_known": true,
+    "conflict": true,
+    "los_start_s": 59.90000000000009
+   },
+   "why": "The presence twin: from 49.95 m the gap reaches 20 m at 59.9 s, inside the window: a conflict with los_start_s 59.9. utm judged the gap at t_cpa (0 s, 49.95 m) and said clear.",
+   "decision": "A conflict is a loss of separation at any time in the window, not only at the horizontal t_cpa (LESSONS C-19, uspace-core PR #10, owner decision). utm judged now and at t_cpa only."
+  },
+  {
+   "name": "zero-horizontal-minimum-is-invalid-policy",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.72410351324941,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": -10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 1000,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0,
+    "policy": {
+     "t_cpa_max_s": 60,
+     "d_horizontal_min_m": 0,
+     "d_vertical_min_m": 20,
+     "neighbour_radius_m": 800
+    }
+   },
+   "expected": {
+    "judged": false,
+    "not_judged": "invalid_policy"
+   },
+   "why": "E-15: a zero horizontal minimum makes every pair clear, which silently disarms the check. The policy is refused (invalid_policy) and nothing is judged, never judged clear. The pair is the head-on one, a conflict under the real policy.",
+   "decision": "A zero separation minimum disarms the check, so the pair is not judged (invalid_policy) rather than judged clear (LESSONS E-15, uspace-core PR #10 review). utm judged with it."
+  },
+  {
+   "name": "zero-vertical-minimum-is-invalid-policy",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.72410351324941,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": -10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 1000,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0,
+    "policy": {
+     "t_cpa_max_s": 60,
+     "d_horizontal_min_m": 60,
+     "d_vertical_min_m": 0,
+     "neighbour_radius_m": 800
+    }
+   },
+   "expected": {
+    "judged": false,
+    "not_judged": "invalid_policy"
+   },
+   "why": "E-15: a zero vertical minimum makes every pair clear, which silently disarms the check. The policy is refused (invalid_policy) and nothing is judged, never judged clear. The pair is the head-on one, a conflict under the real policy.",
+   "decision": "A zero separation minimum disarms the check, so the pair is not judged (invalid_policy) rather than judged clear (LESSONS E-15, uspace-core PR #10 review). utm judged with it."
+  },
+  {
+   "name": "negative-horizontal-minimum-is-invalid-policy",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.72410351324941,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": -10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 1000,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0,
+    "policy": {
+     "t_cpa_max_s": 60,
+     "d_horizontal_min_m": -60,
+     "d_vertical_min_m": 20,
+     "neighbour_radius_m": 800
+    }
+   },
+   "expected": {
+    "judged": false,
+    "not_judged": "invalid_policy"
+   },
+   "why": "E-15: a negative horizontal minimum makes every pair clear, which silently disarms the check. The policy is refused (invalid_policy) and nothing is judged, never judged clear. The pair is the head-on one, a conflict under the real policy.",
+   "decision": "A zero separation minimum disarms the check, so the pair is not judged (invalid_policy) rather than judged clear (LESSONS E-15, uspace-core PR #10 review). utm judged with it."
+  },
+  {
+   "name": "nan-vertical-minimum-is-invalid-policy",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.72410351324941,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": -10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 1000,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0,
+    "policy": {
+     "t_cpa_max_s": 60,
+     "d_horizontal_min_m": 60,
+     "d_vertical_min_m": "NaN",
+     "neighbour_radius_m": 800
+    }
+   },
+   "expected": {
+    "judged": false,
+    "not_judged": "invalid_policy"
+   },
+   "why": "E-15: a NaN vertical minimum fails every comparison, so every pair is clear, which silently disarms the check. The policy is refused (invalid_policy) and nothing is judged, never judged clear. The pair is the head-on one, a conflict under the real policy.",
+   "decision": "A zero separation minimum disarms the check, so the pair is not judged (invalid_policy) rather than judged clear (LESSONS E-15, uspace-core PR #10 review). utm judged with it."
   }
  ]
 }

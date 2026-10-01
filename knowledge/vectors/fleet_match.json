@@ -1,5 +1,5 @@
 {
- "description": "The spoofing guard (S-10, U-02): a broadcast claiming one of our fleet's serials, judged against that aircraft's authenticated telemetry. verdict: stranger (not ours), withhold (ours, live, agreeing: the authenticated track is better), as_ours (ours, link quiet: the broadcast speaks for it, still marked broadcast), conflict (ours, live, more than spoof_distance_m away: a separate unverified track, unknown_operator, mismatch, reason serial_conflict). relay_rows are what the bus delivered, in order.",
+ "description": "The spoofing guard (S-10, U-02): a broadcast claiming one of our fleet's serials, judged against that aircraft's authenticated telemetry. verdict: stranger (not ours), withhold (ours, live, agreeing: the authenticated track is better), as_ours (ours, link quiet: the broadcast speaks for it, still marked broadcast), conflict (ours, live, more than spoof_distance_m away: a separate unverified track, unknown_operator, mismatch, reason serial_conflict). relay_rows are what the bus delivered, in order. problem names a threshold (live_for_s, spoof_distance_m) that is not a finite number above zero: the guard then withholds before reading any row; null otherwise.",
  "source": [
   "utm gateway/remote_id_match.py judge(), LinkFreshness",
   "utm gateway/tests/test_remote_id_match.py",
@@ -41,7 +41,8 @@
    "expected": {
     "verdict": "stranger",
     "apart_m": null,
-    "ignored_history_rows": 0
+    "ignored_history_rows": 0,
+    "problem": null
    },
    "why": "Not one of our serials: nothing to judge."
   },
@@ -71,7 +72,8 @@
    "expected": {
     "verdict": "withhold",
     "apart_m": 50.00003607802221,
-    "ignored_history_rows": 0
+    "ignored_history_rows": 0,
+    "problem": null
    },
    "why": "Our relay is live and the broadcast is 50 m from it: the relay track is better; the broadcast is stored, not published."
   },
@@ -101,7 +103,8 @@
    "expected": {
     "verdict": "conflict",
     "apart_m": 500.0003607781002,
-    "ignored_history_rows": 0
+    "ignored_history_rows": 0,
+    "problem": null
    },
    "why": "500 m from where the authenticated relay places our aircraft: not our aircraft (S-10). A separate unverified track, serial_conflict."
   },
@@ -131,7 +134,8 @@
    "expected": {
     "verdict": "as_ours",
     "apart_m": null,
-    "ignored_history_rows": 0
+    "ignored_history_rows": 0,
+    "problem": null
    },
    "why": "Relay silent for more than 5 s: the broadcast takes over as our aircraft, still marked as a broadcast (P1-15). Nothing can contradict it."
   },
@@ -161,7 +165,8 @@
    "expected": {
     "verdict": "withhold",
     "apart_m": 50.00003607802221,
-    "ignored_history_rows": 0
+    "ignored_history_rows": 0,
+    "problem": null
    },
    "why": "Heard exactly 5 s ago is still live (<=)."
   },
@@ -189,7 +194,8 @@
    "expected": {
     "verdict": "withhold",
     "apart_m": null,
-    "ignored_history_rows": 0
+    "ignored_history_rows": 0,
+    "problem": null
    },
    "why": "Live relay without a position yet: withheld, never judged a conflict without a distance."
   },
@@ -220,7 +226,8 @@
    "expected": {
     "verdict": "as_ours",
     "apart_m": null,
-    "ignored_history_rows": 1
+    "ignored_history_rows": 1,
+    "problem": null
    },
    "why": "U-02 review: a relay draining its queue after an outage delivers minutes-old positions. A backlog row neither makes the link live nor moves the position; without this our own current broadcast was split off as a spoof (SITL re-check 2026-10-01, 438 m apart)."
   },
@@ -251,7 +258,8 @@
    "expected": {
     "verdict": "as_ours",
     "apart_m": null,
-    "ignored_history_rows": 1
+    "ignored_history_rows": 1,
+    "problem": null
    },
    "why": "A row captured more than live_for_s before the Gateway received it is history too, even if not flagged backlog."
   },
@@ -282,7 +290,8 @@
    "expected": {
     "verdict": "conflict",
     "apart_m": 440.0003174844735,
-    "ignored_history_rows": 0
+    "ignored_history_rows": 0,
+    "problem": null
    },
    "why": "4 s behind receipt is within live_for_s: live, and 440 m is a conflict."
   },
@@ -313,9 +322,138 @@
    "expected": {
     "verdict": "as_ours",
     "apart_m": null,
-    "ignored_history_rows": 0
+    "ignored_history_rows": 0,
+    "problem": null
    },
    "why": "Only relay telemetry counts; a broadcast (source remote_id or network_remote_id) never vouches for itself."
+  },
+  {
+   "name": "zero-live-window-withholds",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "serial_is_ours": true,
+    "relay_rows": [
+     {
+      "heard_at_s": 0.0,
+      "lat_deg": 41.7151,
+      "lon_deg": 44.8271
+     }
+    ],
+    "broadcast_position": [
+     41.719596605063174,
+     44.8271
+    ],
+    "now_s": 1.0,
+    "live_for_s": 0.0,
+    "spoof_distance_m": 300.0
+   },
+   "expected": {
+    "verdict": "withhold",
+    "apart_m": null,
+    "ignored_history_rows": 0,
+    "problem": "live_for_s"
+   },
+   "why": "E-15: with live_for_s 0 every row is history, so utm let the broadcast speak for our aircraft (as_ours) while our relay was live 500 m away. A threshold that disarms the guard withholds and names itself.",
+   "decision": "A live_for_s or spoof_distance_m that is not a finite number above zero withholds, naming the threshold, and is never as_ours or conflict (LESSONS E-15, uspace-core PR #9 review). utm judged with it."
+  },
+  {
+   "name": "zero-spoof-distance-withholds",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "serial_is_ours": true,
+    "relay_rows": [
+     {
+      "heard_at_s": 0.0,
+      "lat_deg": 41.7151,
+      "lon_deg": 44.8271
+     }
+    ],
+    "broadcast_position": [
+     41.71554966050632,
+     44.8271
+    ],
+    "now_s": 1.0,
+    "live_for_s": 5.0,
+    "spoof_distance_m": 0.0
+   },
+   "expected": {
+    "verdict": "withhold",
+    "apart_m": null,
+    "ignored_history_rows": 0,
+    "problem": "spoof_distance_m"
+   },
+   "why": "E-15: with spoof_distance_m 0 any distance is a conflict, so our own broadcast 50 m from the relay was split off as a spoof. A threshold that cannot be used withholds and names itself.",
+   "decision": "A live_for_s or spoof_distance_m that is not a finite number above zero withholds, naming the threshold, and is never as_ours or conflict (LESSONS E-15, uspace-core PR #9 review). utm judged with it."
+  },
+  {
+   "name": "negative-spoof-distance-withholds",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "serial_is_ours": true,
+    "relay_rows": [
+     {
+      "heard_at_s": 0.0,
+      "lat_deg": 41.7151,
+      "lon_deg": 44.8271
+     }
+    ],
+    "broadcast_position": [
+     41.71554966050632,
+     44.8271
+    ],
+    "now_s": 1.0,
+    "live_for_s": 5.0,
+    "spoof_distance_m": -300.0
+   },
+   "expected": {
+    "verdict": "withhold",
+    "apart_m": null,
+    "ignored_history_rows": 0,
+    "problem": "spoof_distance_m"
+   },
+   "why": "E-15: a negative spoof distance makes every distance a conflict, so our own broadcast 50 m from the relay was split off as a spoof.",
+   "decision": "A live_for_s or spoof_distance_m that is not a finite number above zero withholds, naming the threshold, and is never as_ours or conflict (LESSONS E-15, uspace-core PR #9 review). utm judged with it."
+  },
+  {
+   "name": "negative-live-window-withholds",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "serial_is_ours": true,
+    "relay_rows": [
+     {
+      "heard_at_s": 0.0,
+      "lat_deg": 41.7151,
+      "lon_deg": 44.8271
+     }
+    ],
+    "broadcast_position": [
+     41.719596605063174,
+     44.8271
+    ],
+    "now_s": 1.0,
+    "live_for_s": -5.0,
+    "spoof_distance_m": 300.0
+   },
+   "expected": {
+    "verdict": "withhold",
+    "apart_m": null,
+    "ignored_history_rows": 0,
+    "problem": "live_for_s"
+   },
+   "why": "E-15: a negative window is no window either.",
+   "decision": "A live_for_s or spoof_distance_m that is not a finite number above zero withholds, naming the threshold, and is never as_ours or conflict (LESSONS E-15, uspace-core PR #9 review). utm judged with it."
   }
  ]
 }

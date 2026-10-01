@@ -478,14 +478,15 @@
    },
    "expected": {
     "status": "registered",
-    "reason": "fleet",
+    "reason": "matched",
     "serial": "SN-FLEET",
     "operator_reg": null,
     "mismatch": false,
     "registered_operator_reg": null,
     "drone_id": "00000000-0000-0000-0000-00000000000f"
    },
-   "why": "Our own fleet aircraft (no UAS operator) is registered on its serial alone."
+   "why": "Our own fleet aircraft (no UAS operator) is registered on its serial alone.",
+   "decision": "Spec 04 section 3.2 has no 'fleet' reason: our own fleet aircraft is registered on its serial alone, reason matched (uspace-core PR #9)."
   },
   {
    "name": "fleet-ignores-operator-id",
@@ -500,14 +501,15 @@
    },
    "expected": {
     "status": "registered",
-    "reason": "fleet",
+    "reason": "matched",
     "serial": "SN-FLEET",
     "operator_reg": "GEOANYTHING00001",
     "mismatch": false,
     "registered_operator_reg": null,
     "drone_id": "00000000-0000-0000-0000-00000000000f"
    },
-   "why": "The fleet has no UAS operator to compare with."
+   "why": "The fleet has no UAS operator to compare with.",
+   "decision": "Spec 04 section 3.2 has no 'fleet' reason: our own fleet aircraft is registered on its serial alone, reason matched (uspace-core PR #9)."
   },
   {
    "name": "unidentified-no-serial",
@@ -566,14 +568,15 @@
    },
    "expected": {
     "status": "registered",
-    "reason": "fleet",
+    "reason": "matched",
     "serial": "sn-fleet",
     "operator_reg": null,
     "mismatch": false,
     "registered_operator_reg": null,
     "drone_id": "00000000-0000-0000-0000-00000000000f"
    },
-   "why": "An exact serial match wins; otherwise a case-insensitive match when exactly one aircraft has it."
+   "why": "An exact serial match wins; otherwise a case-insensitive match when exactly one aircraft has it.",
+   "decision": "Spec 04 section 3.2 has no 'fleet' reason: our own fleet aircraft is registered on its serial alone, reason matched (uspace-core PR #9)."
   },
   {
    "name": "ambiguous-case-fold-is-unknown",
@@ -648,14 +651,15 @@
    },
    "expected": {
     "status": "registered",
-    "reason": "fleet",
+    "reason": "matched",
     "serial": "ab-1",
     "operator_reg": null,
     "mismatch": false,
     "registered_operator_reg": null,
     "drone_id": "00000000-0000-0000-0000-000000000014"
    },
-   "why": "The exact spelling still matches its own aircraft."
+   "why": "The exact spelling still matches its own aircraft.",
+   "decision": "Spec 04 section 3.2 has no 'fleet' reason: our own fleet aircraft is registered on its serial alone, reason matched (uspace-core PR #9)."
   },
   {
    "name": "empty-registry-knows-nobody",
@@ -682,6 +686,182 @@
     "drone_id": null
    },
    "why": "With no registry, a matching-looking broadcast is unknown_operator, not registered."
+  },
+  {
+   "name": "serial-lookalike-long-s-does-not-fold",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "ſn-fleet",
+    "operator_reg": null
+   },
+   "expected": {
+    "status": "unknown_operator",
+    "reason": "serial_unknown",
+    "serial": "ſn-fleet",
+    "operator_reg": null,
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": null
+   },
+   "why": "G-12: U+017F (long s) upper-cases to S under Unicode rules, so a Unicode fold would let a look-alike spelling claim our fleet serial SN-FLEET. Only ASCII letters fold.",
+   "decision": "Serials fold ASCII letters only (LESSONS G-12, uspace-core PR #9 review). utm's str.upper() folds look-alikes onto ASCII."
+  },
+  {
+   "name": "serial-lookalike-dotless-i-does-not-fold",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "sn-kılo",
+    "operator_reg": null,
+    "registry_override": {
+     "operators": [],
+     "uas": [
+      {
+       "drone_id": "00000000-0000-0000-0000-00000000001e",
+       "serial": "SN-KILO",
+       "registration_status": "active",
+       "uas_operator_id": null,
+       "in_registry": true
+      }
+     ]
+    }
+   },
+   "expected": {
+    "status": "unknown_operator",
+    "reason": "serial_unknown",
+    "serial": "sn-kılo",
+    "operator_reg": null,
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": null
+   },
+   "why": "G-12: U+0131 (dotless i) upper-cases to I under Unicode rules. Only ASCII letters fold, so it does not match SN-KILO.",
+   "decision": "Serials fold ASCII letters only (LESSONS G-12, uspace-core PR #9 review). utm's str.upper() folds look-alikes onto ASCII."
+  },
+  {
+   "name": "duplicate-serial-is-ambiguous",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "SN-DUP",
+    "operator_reg": null,
+    "registry_override": {
+     "operators": [],
+     "uas": [
+      {
+       "drone_id": "00000000-0000-0000-0000-00000000001f",
+       "serial": "SN-DUP",
+       "registration_status": "active",
+       "uas_operator_id": null,
+       "in_registry": true
+      },
+      {
+       "drone_id": "00000000-0000-0000-0000-000000000020",
+       "serial": "SN-DUP",
+       "registration_status": "active",
+       "uas_operator_id": null,
+       "in_registry": true
+      }
+     ]
+    }
+   },
+   "expected": {
+    "status": "unknown_operator",
+    "reason": "serial_unknown",
+    "serial": "SN-DUP",
+    "operator_reg": null,
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": null
+   },
+   "why": "Two aircraft registered with the same serial: the match is ambiguous and names neither (G-05). utm let the last row win, so which aircraft a broadcast named depended on load order.",
+   "decision": "A serial two aircraft share exactly is ambiguous, as a folded one is (G-05, uspace-core PR #9). utm let the last row win."
+  },
+  {
+   "name": "unrecognised-uas-status-is-not-in-registry",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "SN-PEND",
+    "operator_reg": null,
+    "registry_override": {
+     "operators": [],
+     "uas": [
+      {
+       "drone_id": "00000000-0000-0000-0000-000000000021",
+       "serial": "SN-PEND",
+       "registration_status": "pending",
+       "uas_operator_id": null,
+       "in_registry": true
+      }
+     ]
+    }
+   },
+   "expected": {
+    "status": "unknown_operator",
+    "reason": "not_in_registry",
+    "serial": "SN-PEND",
+    "operator_reg": null,
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-000000000021"
+   },
+   "why": "G-03: a registration status the resolver does not know is never active and never suspended (suspended raises no identification incident). The row exists, but nothing says it is a valid registration: unknown_operator, not_in_registry.",
+   "decision": "An unrecognised registration status fails safe as an incident-raising status (owner decision 2026-10-01, uspace-core PR #9 review). utm's RegistrationStatus cannot hold one."
+  },
+  {
+   "name": "unrecognised-owner-status-is-owner-unknown",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "broadcast",
+    "serial": "SN-PENDOP",
+    "operator_reg": "GEOPEND00000001",
+    "registry_override": {
+     "operators": [
+      {
+       "operator_id": "00000000-0000-0000-0000-000000000028",
+       "registration_number": "GEOPEND00000001",
+       "status": "pending"
+      }
+     ],
+     "uas": [
+      {
+       "drone_id": "00000000-0000-0000-0000-000000000022",
+       "serial": "SN-PENDOP",
+       "registration_status": "active",
+       "uas_operator_id": "00000000-0000-0000-0000-000000000028",
+       "in_registry": true
+      }
+     ]
+    }
+   },
+   "expected": {
+    "status": "unknown_operator",
+    "reason": "owner_unknown",
+    "serial": "SN-PENDOP",
+    "operator_reg": "GEOPEND00000001",
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-000000000022"
+   },
+   "why": "The owner's status is not one the resolver knows: nothing says the owner is in good standing, so unknown_operator, owner_unknown.",
+   "decision": "An unrecognised registration status fails safe as an incident-raising status (owner decision 2026-10-01, uspace-core PR #9 review). utm's RegistrationStatus cannot hold one."
   },
   {
    "name": "remote-id-block-registered",
@@ -850,14 +1030,15 @@
    },
    "expected": {
     "status": "registered",
-    "reason": "relay_binding",
+    "reason": "session_binding",
     "serial": "SN-FLEET",
     "operator_reg": null,
     "mismatch": false,
     "registered_operator_reg": null,
     "drone_id": "00000000-0000-0000-0000-00000000000f"
    },
-   "why": "A relay track is identified by its station binding, not by a broadcast claim."
+   "why": "A relay track is identified by its station binding, not by a broadcast claim.",
+   "decision": "Spec 04 section 3.2 calls an authenticated binding 'session_binding'; utm's relay binding is one (uspace-core PR #9, PLAN section 11 gap 5)."
   },
   {
    "name": "relay-registered-uas",
@@ -870,14 +1051,15 @@
    },
    "expected": {
     "status": "registered",
-    "reason": "relay_binding",
+    "reason": "session_binding",
     "serial": "1581F5FKD229400A",
     "operator_reg": "GEOabcd1234efgh",
     "mismatch": false,
     "registered_operator_reg": null,
     "drone_id": "00000000-0000-0000-0000-00000000000a"
    },
-   "why": "A bound registered UAS."
+   "why": "A bound registered UAS.",
+   "decision": "Spec 04 section 3.2 calls an authenticated binding 'session_binding'; utm's relay binding is one (uspace-core PR #9, PLAN section 11 gap 5)."
   },
   {
    "name": "relay-suspended-uas",
@@ -930,14 +1112,15 @@
    },
    "expected": {
     "status": "registered",
-    "reason": "relay_binding",
+    "reason": "session_binding",
     "serial": null,
     "operator_reg": null,
     "mismatch": false,
     "registered_operator_reg": null,
     "drone_id": "00000000-0000-0000-0000-000000000063"
    },
-   "why": "Bound but not yet in the projection read: the binding is the proof (registered)."
+   "why": "Bound but not yet in the projection read: the binding is the proof (registered).",
+   "decision": "Spec 04 section 3.2 calls an authenticated binding 'session_binding'; utm's relay binding is one (uspace-core PR #9, PLAN section 11 gap 5)."
   },
   {
    "name": "relay-not-in-registry",
@@ -958,6 +1141,27 @@
     "drone_id": "00000000-0000-0000-0000-000000000011"
    },
    "why": "Bound, but the registry has no such aircraft."
+  },
+  {
+   "name": "relay-owner-not-in-projection",
+   "owner": [
+    "ussp"
+   ],
+   "input": {
+    "kind": "bound",
+    "drone_id": "00000000-0000-0000-0000-000000000010"
+   },
+   "expected": {
+    "status": "unknown_operator",
+    "reason": "owner_unknown",
+    "serial": "SN-G",
+    "operator_reg": null,
+    "mismatch": false,
+    "registered_operator_reg": null,
+    "drone_id": "00000000-0000-0000-0000-000000000010"
+   },
+   "why": "Bound, but the aircraft's owner is not in the projection: the binding proves which aircraft it is, not that its owner is in good standing. As for a broadcast (owner-not-in-projection): unknown_operator, owner_unknown.",
+   "decision": "A bound aircraft whose owner is missing resolves owner_unknown, as a broadcast does (uspace-core PR #9 review). utm said registered."
   },
   {
    "name": "serial-conflict",

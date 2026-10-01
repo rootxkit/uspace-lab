@@ -10,6 +10,11 @@ the code behind. Each lesson has:
   it (`P1-15`, `S-32`, `PR #21`, and so on resolve in utm's `TASKS.md`);
 - **Applies to**: which of the five new repositories owns it.
 
+A few lessons (T-13, E-14, E-15, G-12, C-18, C-19) were learnt later, in
+the reviews of `rootxkit/uspace-core` waves 1 to 3 (PRs #3 to #15). Their
+**Why** names the core PR. Each is a mistake that a second implementation
+would be just as likely to make.
+
 | Code | Repository | Role |
 |---|---|---|
 | `authority` | uspace-authority | Competent authority: registry, Remote ID monitoring, identification, violations, incidents |
@@ -238,6 +243,34 @@ bound.**
   D-02 for what goes wrong otherwise.
 - Applies to: all.
 
+**E-14. Shared work never runs on one caller's cancellable context.**
+- Rule: work that serves every caller (a JWKS refresh, a cache fill, a
+  registry reload) runs on a context of its own, with its own timeout. A
+  caller whose context is already done starts nothing and spends no rate
+  limit; a caller that cancels mid-way is released, and the work finishes
+  for the others.
+- Why: uspace-core PR #8 review. The JWKS refresh ran on the request's
+  context. An unauthenticated request with an unknown `kid` and a
+  cancelled context aborted the fetch, stamped the once-a-minute refresh
+  limit with a failure, and kept a rotated key out for a minute; repeated
+  every minute, it held key rotation down for ever, with no credential at
+  all. A key-rotation denial of service.
+- Applies to: all.
+
+**E-15. A zero or invalid threshold refuses the check, never disarms it.**
+- Rule: a policy value or threshold that is zero, negative, NaN or
+  infinite where that makes the check meaningless is refused and named.
+  The check then reports "not judged", never "clear" and never the
+  permissive verdict. Counted.
+- Why: uspace-core PRs #3, #9 and #10. A zero value is what an unset Go
+  field holds. A spoofing guard with `live_for_s` 0 took every row as
+  history and let the broadcast speak for our aircraft; with
+  `spoof_distance_m` 0 any distance was a spoof. A separation minimum of
+  0 or below, or NaN, makes every pair clear. `fleet_match.json#zero-*`,
+  `#negative-*`,
+  `cpa.json#*-minimum-is-invalid-policy`.
+- Applies to: all.
+
 ---
 
 ## 2. Time and clocks
@@ -370,6 +403,23 @@ counted, not dropped.**
 - Rule: missing `rx_ts` means "place at arrival time". Missing `ts` means
   "do not order within the source". Count both and log once per aircraft.
 - Why: S-11. A missed alert costs more than a position one second out.
+- Applies to: authority, ussp.
+
+**T-13. A track only moves forward, and never past now.**
+- Rule: a sample placed before the aircraft's latest one, from any source
+  or station, is refused and counted (T-06 says so for one source; it
+  holds across sources too). A sample placed ahead of its own receipt, or
+  received ahead of the wall clock, by more than a small tolerance (1 s)
+  is refused and counted. Hysteresis and staleness count on the wall
+  clock, capped at it, never on a placement alone.
+- Why: uspace-core PR #15 review. Backward: a sample of a held aircraft
+  heard through another station, placed 6 s earlier, rewound the track,
+  and the next tick cleared a live conflict as stale. Forward: a clear
+  sample placed 5 s ahead of its receipt resolved a conflict at once, and
+  one placed far in the future pinned the track so that every real sample
+  after it was "older than held". utm took both.
+  `alert_lifecycle.json#older-placement-from-another-station-is-refused`,
+  `#placement-ahead-of-tolerance-is-refused`.
 - Applies to: authority, ussp.
 
 ---
@@ -729,13 +779,15 @@ REQ_AUTHORISATION zone raises `identification`.**
 
 **G-04. Compare operator numbers on their public part, ignoring case,
 and never register the secret.**
-- Rule: strip a trailing hyphen plus three alphanumeric characters (the
-  EU secret) from a broadcast number, trim it, and upper-case it before
-  comparing. A registration with a hyphen is refused: only the public
-  part is registered.
-- Pitfall: the strip applies to *any* three-character alphanumeric tail,
-  so a test id like `GEO-OP-ABC` compares as `GEO-OP`. Pick test ids
-  accordingly.
+- Rule: trim a broadcast number. Strip a trailing hyphen plus three ASCII
+  letters or digits (the EU secret part) only when what precedes it is a
+  registration number under the configured pattern, as given or with its
+  ASCII letters upper-cased. Upper-case ASCII letters before comparing
+  (G-12). A registration with a hyphen is refused: only the public part
+  is registered.
+- Pitfall (utm): utm stripped *any* three-character alphanumeric tail, so
+  `GEO-OP-ABC` compared as `GEO-OP`. uspace-core decided against that (PR
+  #4): `GEO-OP` is no registration number, so nothing is stripped.
 - Why: U-01 and U-02. `serials_and_registration.json#public-part-*`,
   `identification_status.json#eu-secret-suffix-stripped`.
 - Applies to: authority, ussp.
@@ -805,6 +857,21 @@ repair it regularly.**
   method the authority has agreed. Nothing is scraped.
 - Why: P2-08, P11-01.
 - Applies to: authority.
+
+**G-12. Fold identifiers on ASCII letters only.**
+- Rule: a case-insensitive key of a serial or a registration number
+  upper-cases `a` to `z` and nothing else. Never use a Unicode case
+  mapping (`strings.ToUpper`, `str.upper()`, `casefold()`) on an
+  identifier that is compared, and never match a pattern against a
+  Unicode-folded value.
+- Why: uspace-core PR #9 review. Unicode upper-cases U+017F (long s) to
+  `S` and U+0131 (dotless i) to `I`. With a Unicode fold, a broadcast of
+  `ſn-fleet` matched our fleet serial `SN-FLEET`, and a look-alike
+  operator number compared equal to a registered one: a spoofer needs
+  only a look-alike letter. utm folded with `str.upper()`.
+  `serials_and_registration.json#serial-fold-*`, `#public-part-*[long-s]*`,
+  `identification_status.json#serial-lookalike-*`.
+- Applies to: authority, ussp.
 
 ---
 
@@ -1021,17 +1088,27 @@ be judged decide.**
 
 **Z-09. When a limit cannot be judged, warn for the zones that matter.**
 - Rule:
-  - A PROHIBITED or REQ_AUTHORISATION zone whose only unjudged limit is
-    AGL raises a warning with `vertical_known: false` and
-    `limit_not_judged: true`.
-  - Otherwise (CONDITIONAL, or a WGS84 limit without the geoid) the zone
-    is not evaluated: no alert, counted, logged once per zone and
-    aircraft. An active alert is neither refreshed nor cleared.
-  - While any PROHIBITED zone needs terrain and none is configured, the
-    startup log and every status line are at error level.
-- Why: U-03 review. A false warning beats a missed critical. S-37 (open)
-  proposes the same warning for a WGS84 limit with no geoid.
-  `zones_vertical.json#*-no-terrain-*`.
+  - A PROHIBITED or REQ_AUTHORISATION zone with a limit it cannot judge
+    (AGL with no DEM or unknown ground, WGS84 with no geoid) raises a
+    warning with `vertical_known: false`, `limit_not_judged: true` and
+    `not_judged` naming each such reference, and reports every reason
+    (`no_terrain`, `ground_unknown`, `no_geoid`). A judged limit that
+    excludes the aircraft still decides (Z-08).
+  - A CONDITIONAL zone with such a limit is not evaluated: no alert,
+    counted with its reasons, logged once per zone and aircraft. An
+    active alert is neither refreshed nor cleared. A warning there would
+    exceed the zone's own severity when policy puts CONDITIONAL at info,
+    against the widened-band cap (a possible inside never raises more
+    than a definite one).
+  - While any PROHIBITED zone needs terrain or the geoid and none is
+    configured, the startup log and every status line are at error level.
+- Why: U-03 review. A false warning beats a missed critical. S-37 asked
+  for the same warning for a WGS84 limit with no geoid; the owner decided
+  it (2026-10-01): a limit that cannot be judged is never silent in a
+  zone that matters. utm left such a zone not evaluated.
+  `zones_vertical.json#*-no-terrain-*`, `#*-wgs84-no-geoid-warns`,
+  `#prohibited-agl-and-wgs84-missing-warns-naming-both`, and the
+  CONDITIONAL `#*-both-reported`.
 - Applies to: authority, ussp.
 
 **Z-10. Map each restriction to a severity, and nothing lifts a
@@ -1090,6 +1167,7 @@ restrictions must be pushed.**
 **C-03. Inside the minima now is a conflict, whatever `t_cpa` says.**
 - Rule: conflict = (inside both minima now) OR (`t_cpa` within the window
   AND inside both minima at CPA). An unknown vertical counts as inside.
+  C-19 widens the second clause to any time in the window.
 - Why: SITL, P5-07, 2026-09-29. Two aircraft hovering 25-30 m apart have
   centimetres per second of GPS velocity noise, which put the CPA
   3,000 s away. §6.2's three-part test alone cleared the alert as
@@ -1192,9 +1270,9 @@ one.**
 **C-14. A clear carries its own numbers and the right reason.**
 - Rule: a clear reports the separation that cleared it, not the last
   active value. A landed aircraft clears with `landed`, not `stale`.
-- Why: S-25 (open in utm). The old monitor clears a disarm as `stale`.
-  `alert_lifecycle.json#disarming-clears-as-stale` records the old
-  behaviour. The new system should improve on it.
+- Why: S-25 (open in utm). The old monitor cleared a disarm as `stale`.
+  uspace-core decided `landed` (PR #15), and
+  `alert_lifecycle.json#disarming-clears-as-landed` now pins it.
 - Applies to: ussp, authority.
 
 **C-15. Neighbour lookup uses a grid at least one radius wide, checked
@@ -1222,6 +1300,40 @@ detection.**
   handling is strategic (F3548), and its conformance monitoring covers
   only declared flights.
 - Applies to: ussp, lab.
+
+**C-18. A bound on aircraft never clears an alert.**
+- Rule: past the cap on aircraft held (E-10), evict only an aircraft
+  without an active alert (not flying first, then unidentified, then the
+  least recently heard). When every aircraft held has an alert, refuse
+  the new id, count it, and report that the monitor is full. Bound each
+  source's share of the cap in alert-holding aircraft, so that one
+  receiver cannot fill it.
+- Why: uspace-core PR #15 review. With plain least-recently-heard
+  eviction, a flood of spoofed Remote ID ids evicted a real aircraft and
+  cleared its real conflict: eviction became a way to switch off safety
+  alerts, a denial of service on the one output that matters. utm held
+  every aircraft. `alert_lifecycle.json#eviction-*`, `#full-of-*`,
+  `#source-share-*`.
+- Applies to: authority, ussp.
+
+**C-19. Judge loss of separation over the whole window, not only at
+`t_cpa`.**
+- Rule: a pair is in conflict when it comes inside both minima at a time
+  in `[0, t_cpa_max_s)`: the interval where the horizontal distance is
+  below its minimum overlaps the interval where the vertical gap is below
+  its minimum, and the overlap starts before the window ends. The window
+  is half-open: a loss of separation starting exactly at `t_cpa_max_s`
+  is not yet a conflict. With the vertical unknown the horizontal interval alone
+  decides. Report when the loss of separation starts, and rank conflicts
+  by it.
+- Why: uspace-core PR #10. The vertical gap at the horizontal `t_cpa` is
+  one sample of a line. A pair 21.4 m apart vertically at `t_cpa` was
+  under 20 m three seconds before it; and a pair whose `t_cpa` (64 s) lay
+  beyond the 60 s window entered the minima at 58 s. utm judged both
+  clear. `cpa.json#vertical-gap-under-minimum-before-t-cpa`,
+  `#enters-minima-before-window-end-t-cpa-beyond`,
+  `#loss-starting-exactly-at-window-end-is-clear`.
+- Applies to: ussp, authority.
 
 ---
 
@@ -1404,13 +1516,13 @@ principle generalises, its general form is above.
 | Area | Lessons |
 |---|---|
 | Invariants | INV-01 to INV-03 |
-| Engineering rules | E-01 to E-13 |
-| Time and clocks | T-01 to T-12 |
+| Engineering rules | E-01 to E-15 |
+| Time and clocks | T-01 to T-13 |
 | Remote ID and ODID | R-01 to R-17 |
 | Identity and spoofing | I-01 to I-09 |
-| Identification and registry | G-01 to G-11 |
+| Identification and registry | G-01 to G-12 |
 | Geodesy and datums | D-01 to D-12 |
 | Zones and ED-269 | Z-01 to Z-13 |
-| CPA and alerting | C-01 to C-17 |
+| CPA and alerting | C-01 to C-19 |
 | Ingest reliability | B-01 to B-16 |
 | Not carried over | X-01 to X-14 |

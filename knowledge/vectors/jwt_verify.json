@@ -1,0 +1,362 @@
+{
+ "description": "Verifying ecosystem JWTs (spec 00 section 6.2, 06 section 3): RS256 only, kid from the allow-listed issuer's JWKS, aud, exp/nbf with 30 s skew, jti, and the space-separated scope claim checked per endpoint. Each refusal names its reason (the verifier's counter) and the claim.",
+ "source": [
+  "spec 00 section 6.2",
+  "spec 06 section 3",
+  "RFC 7519",
+  "RFC 8725"
+ ],
+ "units": {
+  "max_skew_s": "seconds",
+  "now_s": "epoch seconds on the verifier's clock"
+ },
+ "tolerance": {
+  "accepted": "exact",
+  "claim": "exact",
+  "reason": "exact",
+  "scopes": "exact"
+ },
+ "owners": [
+  "authority",
+  "cisp",
+  "ussp",
+  "ansp"
+ ],
+ "generated": "hand-written in uspace-core WP-11 from spec 00 §6.2 and 06 §3; not from utm. Tokens are signed by auth/internal/genvectors with an RSA key generated at run time and discarded; only its public JWKS is kept (06 §4). Regenerate rather than edit.",
+ "utm_commit": "484cd228035f2f424530e233ce72100d0fc1842a",
+ "fixtures": {
+  "issuer": "https://authority.uspace.example/",
+  "audience": "ussp-1",
+  "max_skew_s": 30,
+  "jwks": {
+   "keys": [
+    {
+     "kty": "RSA",
+     "kid": "uspace-vector-1",
+     "use": "sig",
+     "alg": "RS256",
+     "n": "6_GrFg7wwtZy2RweTxNgblMR6rkO4CB5J5Dh9JA-MDD1yQgjpff4NkHDDIQmXDvkRgyekW-Foqa1_1WAY8hR-N3llOtOOSLY-nSDoquYF7X7agB6lT1L5IAvnWXlIwD8KHTl_WLfI-ZLH9ThDzSENbnN2ssBBfpQVK5I6Y8LSdb2Z2sm5ZXNFb8yX9KB008ia0DgK5keSFN32HHV3Qic5Dx92v4mu8LwtbvA3pgoYRvXgbna0SjaqThzlDA-15pQzLrWENaWPpVeBhbtLk9mekcuNufnqwV5JsS1aomkEQd-hi26OYERHy-zQ9gGu9YoYeSSZGq-fxc3p0TP9L3p-Q",
+     "e": "AQAB"
+    }
+   ]
+  }
+ },
+ "cases": [
+  {
+   "name": "accept-valid",
+   "owner": [
+    "authority",
+    "cisp",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InVzcGFjZS12ZWN0b3ItMSJ9.eyJpc3MiOiJodHRwczovL2F1dGhvcml0eS51c3BhY2UuZXhhbXBsZS8iLCJzdWIiOiJvcGVyYXRvci1HRU8tMSIsImF1ZCI6InVzc3AtMSIsImlhdCI6MTc4OTk5OTk0MCwiZXhwIjoxNzkwMDAwNjAwLCJqdGkiOiJqdGktMDAwMSIsInNjb3BlIjoicmlkLnJlYWQgZmxpZ2h0cy53cml0ZSJ9.x8E2OI1TE3FxKs-D3V2RojOKd9HpcTcfMEJGGO7Ii_UbAYcMZxLZGI--RlfGuZMJh6G9XhWYan7SdoLFQ_7V_xxd0AuqVl_hfC4tXIRfBrjGZoMwBakU_JLExflrOsr46fLJ1uHe6xcZB47Hb9aTEAKs-yGMlUSztTKSdUpECyrhU4Fs7DfnejOCyjb1afHF4jpr1ClnydQcS-Wd_9GfJh7SBvdQG0Y-BdCYwpz1JcahUwNq3qFdCyzF4_bCgYTzmCtkTYSXgjVjvE3jHfs-Fi7p9WIAho66YoUs8MBsbGyEA9t-O5UlWfbFt7pZhSQyB_5c6xgizTlAwkkD3Zka3w",
+    "now_s": 1790000000,
+    "require_scope": "rid.read"
+   },
+   "expected": {
+    "accepted": true,
+    "subject": "operator-GEO-1",
+    "scopes": [
+     "rid.read",
+     "flights.write"
+    ],
+    "require_scope_ok": true
+   },
+   "why": "RS256 by the issuer's key under its kid, allow-listed iss, our aud, inside exp, sub, jti and a scope that RequireScope finds."
+  },
+  {
+   "name": "refuse-wrong-audience",
+   "owner": [
+    "authority",
+    "cisp",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InVzcGFjZS12ZWN0b3ItMSJ9.eyJpc3MiOiJodHRwczovL2F1dGhvcml0eS51c3BhY2UuZXhhbXBsZS8iLCJzdWIiOiJvcGVyYXRvci1HRU8tMSIsImF1ZCI6ImNpc3AtMSIsImlhdCI6MTc4OTk5OTk0MCwiZXhwIjoxNzkwMDAwNjAwLCJqdGkiOiJqdGktMDAwMSIsInNjb3BlIjoicmlkLnJlYWQgZmxpZ2h0cy53cml0ZSJ9.ukFKveKtjo-QRlqzq2bHRObraL4ChHYcJpiVg2lK421oLYsDv3JdWcuHqPB7zZ9M5AYlclMkAD-qGD3R7uHLRJGFV19jqcMAlT9itFoiM0BBKAP9Nth8cAnhg-n3OrW2vOglTxyGGANo5TB2WoVPubZZ2O3vNNWLF1vVx_7W73BpOlK5UAKZcuuqCruWjoNt1nYt8MbBaorkURAB_3wJGi120Pm027D6M0HAulZl7WIuCmRynuSIWI0FgKIUQ7Moi2rWZeSJ8ZxlV4Tx7sIexiYVwWzKb6Ubtd9vxAMeRoeq-MCU0uK6aLPG-WPpb6PR_c_l4e2UCBmeaxgSd4CJhw",
+    "now_s": 1790000000
+   },
+   "expected": {
+    "accepted": false,
+    "reason": "rejected_audience",
+    "claim": "aud"
+   },
+   "why": "A token for another system is not a token for this one (00 section 6.2: aud equals the own system id)."
+  },
+  {
+   "name": "refuse-expired-beyond-skew",
+   "owner": [
+    "authority",
+    "cisp",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InVzcGFjZS12ZWN0b3ItMSJ9.eyJpc3MiOiJodHRwczovL2F1dGhvcml0eS51c3BhY2UuZXhhbXBsZS8iLCJzdWIiOiJvcGVyYXRvci1HRU8tMSIsImF1ZCI6InVzc3AtMSIsImlhdCI6MTc4OTk5OTk0MCwiZXhwIjoxNzg5OTk5OTY5LCJqdGkiOiJqdGktMDAwMSIsInNjb3BlIjoicmlkLnJlYWQgZmxpZ2h0cy53cml0ZSJ9.gOH5jqyqTlHL3X8Rc3RCpIYxCrKRmNBWJAr704FcmQ7csOV3glTWvZ2c9SQ7kZbOc2qpn3yUYlYtWY3JU6gYaPsBD_K78GdnNWQKBLPgmAKIIyqQF2ztmetEw5P7NpKUnxohlRJ3JCoXbEEpe9KPdQGuTjnvDNtpES54sfMjLc5wdmxknBY9WNOaR4Aujvu_zqAHZSrdIw9l99L5qjevskzKIyv99Zbe6OR-rNUUpRLEhe3mL9PKvXIzg-__FpWd6ozndShVjseN9vvraOdpCY6eMTy3I6HPWykYHZJkMgIrJ5uxa0j55oyTy4YufI8A-rqnSFKAQNkmr5ArYyyCTA",
+    "now_s": 1790000000
+   },
+   "expected": {
+    "accepted": false,
+    "reason": "rejected_expired",
+    "claim": "exp"
+   },
+   "why": "Expired 31 s ago: beyond the 30 s skew."
+  },
+  {
+   "name": "accept-expired-within-skew",
+   "owner": [
+    "authority",
+    "cisp",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InVzcGFjZS12ZWN0b3ItMSJ9.eyJpc3MiOiJodHRwczovL2F1dGhvcml0eS51c3BhY2UuZXhhbXBsZS8iLCJzdWIiOiJvcGVyYXRvci1HRU8tMSIsImF1ZCI6InVzc3AtMSIsImlhdCI6MTc4OTk5OTk0MCwiZXhwIjoxNzg5OTk5OTcxLCJqdGkiOiJqdGktMDAwMSIsInNjb3BlIjoicmlkLnJlYWQgZmxpZ2h0cy53cml0ZSJ9.cx252SgvPTdSBTecZZPb6xlShH9R0evOy0xWHk5KJPzuqtEqW70h2FynYOLBj404Q5M_aD5Z4ZTw9oAn8soFFaEEQ8o1LXuFdcv7L3VurX0F-sjMDLMikFYYvd780ZNLjk5ZqUeUXvV3LFlYeMKZRhUS1QZtFjd9CljOwYdyFkmRFC6Jo9fdvCyk_z3fC5VQ9EQlQTp2SVAER0-f0Rv8y0ssKR893SEwaBN87CXfRw2_W5M5rUWtLCAfUXztiRttLkRpqR0e92DCulG2SAJqvVBtDOEj3TF7AVcyAnyROWaMHKlEWAqun6QO8qfs1gazL4GCJxjjOUljkwPvAqGRjA",
+    "now_s": 1790000000
+   },
+   "expected": {
+    "accepted": true,
+    "subject": "operator-GEO-1",
+    "scopes": [
+     "rid.read",
+     "flights.write"
+    ]
+   },
+   "why": "Expired 29 s ago: inside the 30 s skew allowed for clock differences."
+  },
+  {
+   "name": "refuse-unknown-kid",
+   "owner": [
+    "authority",
+    "cisp",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InVzcGFjZS12ZWN0b3ItdW5rbm93biJ9.eyJpc3MiOiJodHRwczovL2F1dGhvcml0eS51c3BhY2UuZXhhbXBsZS8iLCJzdWIiOiJvcGVyYXRvci1HRU8tMSIsImF1ZCI6InVzc3AtMSIsImlhdCI6MTc4OTk5OTk0MCwiZXhwIjoxNzkwMDAwNjAwLCJqdGkiOiJqdGktMDAwMSIsInNjb3BlIjoicmlkLnJlYWQgZmxpZ2h0cy53cml0ZSJ9.iwVrQVblUZvdX-OTYpuotKOiVsJ7BY0GYt9_hqLiLVTbz3Md0olcOd2vx92gdn7J8eI1_T7ONn8OwusyD9ZNGq6VwQc4U3kTTcPoQsVPloUTdfJO6tyLmj9ZmR5tnV-W4_IJVstfGX2V3FCxfOPZtuSTR1LncgJetqccjMJSGWsr0Gl2BK48gUE3qhAVXtbEO1zFSfXPC0o6BVUEu_jbKiudOp0fKyAmnx-rtKKzg5QRSY9FTmKoWpcEw8B4lpk3SkmMwzo9cUkw9qv7_7SZSgzH48CWC2Ds6Wn65x4p1N7S5nv3eDimdAX3Qf1qo5nIZnr5p_D49RXKNlHIOP88Eg",
+    "now_s": 1790000000
+   },
+   "expected": {
+    "accepted": false,
+    "reason": "rejected_kid",
+    "claim": "kid"
+   },
+   "why": "The kid is not in the issuer's JWKS (after the rate-limited refresh)."
+  },
+  {
+   "name": "refuse-missing-kid",
+   "owner": [
+    "authority",
+    "cisp",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2F1dGhvcml0eS51c3BhY2UuZXhhbXBsZS8iLCJzdWIiOiJvcGVyYXRvci1HRU8tMSIsImF1ZCI6InVzc3AtMSIsImlhdCI6MTc4OTk5OTk0MCwiZXhwIjoxNzkwMDAwNjAwLCJqdGkiOiJqdGktMDAwMSIsInNjb3BlIjoicmlkLnJlYWQgZmxpZ2h0cy53cml0ZSJ9.2iMIhPvOYQnJW7F26d8th24AXbG6MatnB3KOxdipedYDDBaIOuGerai5QD8zMa1RyHwwBFjbdbd5PxkHLrB87LkdxoYUrUq9wK1V0xpz36VTmzqxT4VnogrSG7flHwXTzFydty5oV5nEFgv85TRB3FS4YpyFQPKYu2L1Jf_eBrdf6q0_eyAeds38E4BPFbUVuSJGRtNsBWjp9bh1LK6N4oH_qHN7mDhSviEUcxJHcl5JslJDwMXkhRFGs9NHjCgJ3RGyPZmRlShBH8ak1y8Rug_tVaOVPnhG0HqAxMyJClcZHTPnYGKLFJDD11KyfVTiGWjvX0S939pwmGTsDCzmiw",
+    "now_s": 1790000000
+   },
+   "expected": {
+    "accepted": false,
+    "reason": "rejected_kid",
+    "claim": "kid"
+   },
+   "why": "kid is required: keys are selected by kid, never by trying each key."
+  },
+  {
+   "name": "refuse-unknown-issuer",
+   "owner": [
+    "authority",
+    "cisp",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InVzcGFjZS12ZWN0b3ItMSJ9.eyJpc3MiOiJodHRwczovL2lzc3Vlci5hdHRhY2tlci5leGFtcGxlLyIsInN1YiI6Im9wZXJhdG9yLUdFTy0xIiwiYXVkIjoidXNzcC0xIiwiaWF0IjoxNzg5OTk5OTQwLCJleHAiOjE3OTAwMDA2MDAsImp0aSI6Imp0aS0wMDAxIiwic2NvcGUiOiJyaWQucmVhZCBmbGlnaHRzLndyaXRlIn0.ruXJhlPd0edDaBzC2K6pZlcNhLdfQR2OXQRiH6f5hfUtqCHRVF_AgBkB9gxMU2PM6brZBEDES9ZBfnBLP5WR627m6Io0fxmVM_ioK3_7USP3gKknmwrO-xhVvRflAsClf7b__svukCW0eO_oKWQhuOe_4P22nm8bubdlDVvsXt10SXT8PCuqJz-RJsdk0ESnb_0y7lG86My3mgZy-58dSJa4cclfHQUfqoaJgbzRJIdaEiH-VKArbfEQM-JzQ6R3_pFkr0dvfwuPKtA8z_9uNkNWufiNbNP-wszF2dKkdo-7mvopkyYnlc5Kt6_Aqsqwl5S1UBfeAXvEWwDbhMn3kw",
+    "now_s": 1790000000
+   },
+   "expected": {
+    "accepted": false,
+    "reason": "rejected_issuer",
+    "claim": "iss"
+   },
+   "why": "iss is not on the allow-list; refused before any JWKS fetch, even though the signature is good."
+  },
+  {
+   "name": "refuse-alg-none",
+   "owner": [
+    "authority",
+    "cisp",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "token": "eyJhbGciOiJub25lIiwidHlwIjoiSldUIiwia2lkIjoidXNwYWNlLXZlY3Rvci0xIn0.eyJpc3MiOiJodHRwczovL2F1dGhvcml0eS51c3BhY2UuZXhhbXBsZS8iLCJzdWIiOiJvcGVyYXRvci1HRU8tMSIsImF1ZCI6InVzc3AtMSIsImlhdCI6MTc4OTk5OTk0MCwiZXhwIjoxNzkwMDAwNjAwLCJqdGkiOiJqdGktMDAwMSIsInNjb3BlIjoicmlkLnJlYWQgZmxpZ2h0cy53cml0ZSJ9.",
+    "now_s": 1790000000
+   },
+   "expected": {
+    "accepted": false,
+    "reason": "rejected_algorithm",
+    "claim": "alg"
+   },
+   "why": "alg none carries no signature (RFC 8725 section 2.1)."
+  },
+  {
+   "name": "refuse-hs256-public-key-as-secret",
+   "owner": [
+    "authority",
+    "cisp",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InVzcGFjZS12ZWN0b3ItMSJ9.eyJpc3MiOiJodHRwczovL2F1dGhvcml0eS51c3BhY2UuZXhhbXBsZS8iLCJzdWIiOiJvcGVyYXRvci1HRU8tMSIsImF1ZCI6InVzc3AtMSIsImlhdCI6MTc4OTk5OTk0MCwiZXhwIjoxNzkwMDAwNjAwLCJqdGkiOiJqdGktMDAwMSIsInNjb3BlIjoicmlkLnJlYWQgZmxpZ2h0cy53cml0ZSJ9.PcpInQaqiTZDKvB-aoumKV44AvAALSP8uRHOMuJGocA",
+    "now_s": 1790000000
+   },
+   "expected": {
+    "accepted": false,
+    "reason": "rejected_algorithm",
+    "claim": "alg"
+   },
+   "why": "HS256 keyed with the issuer's public key PEM: the key-confusion attack. Only RS256 is accepted, so the public key is never used as an HMAC secret."
+  },
+  {
+   "name": "refuse-alg-rs512-same-key",
+   "owner": [
+    "authority",
+    "cisp",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "token": "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCIsImtpZCI6InVzcGFjZS12ZWN0b3ItMSJ9.eyJpc3MiOiJodHRwczovL2F1dGhvcml0eS51c3BhY2UuZXhhbXBsZS8iLCJzdWIiOiJvcGVyYXRvci1HRU8tMSIsImF1ZCI6InVzc3AtMSIsImlhdCI6MTc4OTk5OTk0MCwiZXhwIjoxNzkwMDAwNjAwLCJqdGkiOiJqdGktMDAwMSIsInNjb3BlIjoicmlkLnJlYWQgZmxpZ2h0cy53cml0ZSJ9.LvJYK2_PfkStXwzxDa0BqFKz64mhO9SyaA2S1OqyFSlknU_HI7CUBcnVgNqqgTFCgohfQRyMMr3U-ILPx6y0H8aa-rjrFCmhPB3AEZobNHABGoCJ_2xn9_LCj9j2bUL8vy0jbx68HNYQakfcVOgzkhm1uVDW_-qJ4SsBaM2tT6UGt9eK84zhshYk7QvRL8Ad21_ys0ZyrrI5vaXfuxXrSWkZkV7-ZEWZ9yBNraI0u1Kez2ts9pvf3TwH1L232IlwXyoQyrESD-iFA2XTlDpjMCiIH89i5-vWUrCkrTLl6lH_3HhDic-1fE8QHNKyoZB4oNIi_BTaKj5FAuWL0bjxqA",
+    "now_s": 1790000000
+   },
+   "expected": {
+    "accepted": false,
+    "reason": "rejected_algorithm",
+    "claim": "alg"
+   },
+   "why": "A valid RS512 signature by the right key is still not RS256: the algorithm is pinned, not negotiated."
+  },
+  {
+   "name": "refuse-tampered-payload",
+   "owner": [
+    "authority",
+    "cisp",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InVzcGFjZS12ZWN0b3ItMSJ9.eyJpc3MiOiJodHRwczovL2F1dGhvcml0eS51c3BhY2UuZXhhbXBsZS8iLCJzdWIiOiJvcGVyYXRvci1HRU8tMiIsImF1ZCI6InVzc3AtMSIsImlhdCI6MTc4OTk5OTk0MCwiZXhwIjoxNzkwMDAwNjAwLCJqdGkiOiJqdGktMDAwMSIsInNjb3BlIjoicmlkLnJlYWQgZmxpZ2h0cy53cml0ZSJ9.x8E2OI1TE3FxKs-D3V2RojOKd9HpcTcfMEJGGO7Ii_UbAYcMZxLZGI--RlfGuZMJh6G9XhWYan7SdoLFQ_7V_xxd0AuqVl_hfC4tXIRfBrjGZoMwBakU_JLExflrOsr46fLJ1uHe6xcZB47Hb9aTEAKs-yGMlUSztTKSdUpECyrhU4Fs7DfnejOCyjb1afHF4jpr1ClnydQcS-Wd_9GfJh7SBvdQG0Y-BdCYwpz1JcahUwNq3qFdCyzF4_bCgYTzmCtkTYSXgjVjvE3jHfs-Fi7p9WIAho66YoUs8MBsbGyEA9t-O5UlWfbFt7pZhSQyB_5c6xgizTlAwkkD3Zka3w",
+    "now_s": 1790000000
+   },
+   "expected": {
+    "accepted": false,
+    "reason": "rejected_signature",
+    "claim": "signature"
+   },
+   "why": "sub changed after signing: the signature no longer verifies."
+  },
+  {
+   "name": "refuse-missing-jti",
+   "owner": [
+    "authority",
+    "cisp",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InVzcGFjZS12ZWN0b3ItMSJ9.eyJpc3MiOiJodHRwczovL2F1dGhvcml0eS51c3BhY2UuZXhhbXBsZS8iLCJzdWIiOiJvcGVyYXRvci1HRU8tMSIsImF1ZCI6InVzc3AtMSIsImlhdCI6MTc4OTk5OTk0MCwiZXhwIjoxNzkwMDAwNjAwLCJzY29wZSI6InJpZC5yZWFkIGZsaWdodHMud3JpdGUifQ.tH8pmz3u0cqyyK7Dr6i8Y_PLVYS3uj9yz-NhYdsct-dc5lr88RrmCRt3efGj4L4cIvaAR53t0CprsdB1Ij_iCiMUCrzMA1eK4Zm5P_1sN9V69cBy_uhtm-xAGsav2ByD2UaP29G4Mm-0SE5E1blueCYu54Xt1Rkgd78ev2IrfXoDmbWu42BnaHfvQl-8jiVSbHLjLOhq2pydUsYrZIPS1b2dUJIiV2pJ1klLdRryKWSylrS0lbj-PKhusBQPnpjvYM3VZGg6saKCB5meIsR4sUALqwzr_kqbh4E6GazdDXMC7rGwPQ4hOGamTShM9SzYMlNWpcffovddmzOIfIgmdA",
+    "now_s": 1790000000
+   },
+   "expected": {
+    "accepted": false,
+    "reason": "rejected_claims",
+    "claim": "jti"
+   },
+   "why": "jti is required (00 section 6.2)."
+  },
+  {
+   "name": "refuse-missing-exp",
+   "owner": [
+    "authority",
+    "cisp",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InVzcGFjZS12ZWN0b3ItMSJ9.eyJpc3MiOiJodHRwczovL2F1dGhvcml0eS51c3BhY2UuZXhhbXBsZS8iLCJzdWIiOiJvcGVyYXRvci1HRU8tMSIsImF1ZCI6InVzc3AtMSIsImlhdCI6MTc4OTk5OTk0MCwianRpIjoianRpLTAwMDEiLCJzY29wZSI6InJpZC5yZWFkIGZsaWdodHMud3JpdGUifQ.hJOirpyoSpsQzONhR_zfWBclQ-1mV9YQsSVZolShtu0i4QpTDOiejHc9ljU5Ijfpd6XdPOe9mRYCb5X4gDEncatmSIvoa4ERn0Lo3iJE3Pq4FkQ6JikwrFKylauvW5u2pvCqua9e8y-6lB3GgdzuGBzEpABQYqC2WRUpFcDEEVqyKP9ECFrgpPHHgJoX8x-pL2TE2WFUVPccT2UtdoyULaDw6p1sjLr3UZDD7ERY9AO36d0DO1x3wfmY7T7WJsChoreutOYD22tzV9fFZc7V_WLejLnIJne2akJMkb7Zz1O_NL18LvRWgNyUCkJ0BESiVr92_iksG1xxqGBEX2JHDQ",
+    "now_s": 1790000000
+   },
+   "expected": {
+    "accepted": false,
+    "reason": "rejected_claims",
+    "claim": "exp"
+   },
+   "why": "exp is required: a token without expiry is never accepted."
+  },
+  {
+   "name": "accept-missing-scope-then-require-scope-refused",
+   "owner": [
+    "authority",
+    "cisp",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InVzcGFjZS12ZWN0b3ItMSJ9.eyJpc3MiOiJodHRwczovL2F1dGhvcml0eS51c3BhY2UuZXhhbXBsZS8iLCJzdWIiOiJvcGVyYXRvci1HRU8tMSIsImF1ZCI6InVzc3AtMSIsImlhdCI6MTc4OTk5OTk0MCwiZXhwIjoxNzkwMDAwNjAwLCJqdGkiOiJqdGktMDAwMSJ9.cqY3HSSydOgVH-WNxPJ8Zj22buuZ0DlVDfc_Divdl0J1_EPUdnc63mB2zjpOX8zOYS76AVQAna876jOd_p6fllwf29VimwNlbIHGE5GA1KwOrE6H-zwSNSUHel5XtBj1bi6J0wcBcEMjSx_xp4MiMFo0v2esKiubaIVQwvb7kFSDs68yz5VfI_qXnp78JquSkuVBcqmRGPZzij0zS4I3T-mU1NuFUuyX9Md87V8xrmsgyQWR4jrBXOtqulErsfxqDg_p2X059Bg1IzydPiY5DUtZwn9LQz1B-RJu4e5eBvsaMNG4KPlANGla501c81EHDwNfeU-RTTIJNkCP5uywAQ",
+    "now_s": 1790000000,
+    "require_scope": "rid.read"
+   },
+   "expected": {
+    "accepted": true,
+    "subject": "operator-GEO-1",
+    "require_scope_ok": false
+   },
+   "why": "A token without scope verifies but grants nothing: RequireScope refuses the endpoint (06 section 3)."
+  },
+  {
+   "name": "refuse-nbf-beyond-skew",
+   "owner": [
+    "authority",
+    "cisp",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InVzcGFjZS12ZWN0b3ItMSJ9.eyJpc3MiOiJodHRwczovL2F1dGhvcml0eS51c3BhY2UuZXhhbXBsZS8iLCJzdWIiOiJvcGVyYXRvci1HRU8tMSIsImF1ZCI6InVzc3AtMSIsImlhdCI6MTc4OTk5OTk0MCwiZXhwIjoxNzkwMDAwNjAwLCJqdGkiOiJqdGktMDAwMSIsInNjb3BlIjoicmlkLnJlYWQgZmxpZ2h0cy53cml0ZSIsIm5iZiI6MTc5MDAwMDAzMX0.JMCVdxwS1DKB_AePzYMGlwf3mC2jEHIJgEa1ODQNNtxPu3I1qP0wjJKBKD_-LJmPYp65VpRTpeyy9vOJFUrSFk9qmKOVQOdppdQPWgYZhW5jqF5e_9N5byq4cpyb3TrfpXQsxUnNQVtSJXQ4Q8VeX0uxoOunifnMPLfChSW6ji82HYiPoa2VzeDCD0xm8UMpyW7zK86MHxZUicrAEcq9leGQ15jnhip3OqVoFLyQdhfbrtdplRlKRpsnCctKvYYnHQu6oN-pQeO0113qVZpgZXwwOfzdH1XTYq1SIBOQqb7jXgKWiCq8XqlRttmRm6gEyNm2NZbWiOiaw3-yclpSEg",
+    "now_s": 1790000000
+   },
+   "expected": {
+    "accepted": false,
+    "reason": "rejected_not_yet_valid",
+    "claim": "nbf"
+   },
+   "why": "nbf 31 s in the future: beyond the skew."
+  },
+  {
+   "name": "accept-nbf-within-skew",
+   "owner": [
+    "authority",
+    "cisp",
+    "ussp",
+    "ansp"
+   ],
+   "input": {
+    "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InVzcGFjZS12ZWN0b3ItMSJ9.eyJpc3MiOiJodHRwczovL2F1dGhvcml0eS51c3BhY2UuZXhhbXBsZS8iLCJzdWIiOiJvcGVyYXRvci1HRU8tMSIsImF1ZCI6InVzc3AtMSIsImlhdCI6MTc4OTk5OTk0MCwiZXhwIjoxNzkwMDAwNjAwLCJqdGkiOiJqdGktMDAwMSIsInNjb3BlIjoicmlkLnJlYWQgZmxpZ2h0cy53cml0ZSIsIm5iZiI6MTc5MDAwMDAyOX0.i2_iSYS3qE-PgHnS8n_AmUXrlR31Qpib7BJTaAVBGON5OMmfsrQo7l6VdTXPIRSN3bUrXqYvIWVdX3TbMfgqUbDyXFnJW4srBBx-jsZ5qnjCymE6vDCttQDMF6RCxtjHGOBuXcRqnsfIzaRNdRdgHPJUqRcDtLN3kEeoV1q90Vd62gRMquexEaFkhsACMM-pNHr4T4v7oNoQg6st58164lRbmjXdk8cgr2fMpqoVa3vRikqAQDrC78Rcf8zzepwM9ewAqtVC6AMbEzJyn-B55h8aYRIYcTWzzBIpNCptvtxM06puiV2-WmDIavi4ztuiQSdYXrf23qJ3kRLywGKQdg",
+    "now_s": 1790000000
+   },
+   "expected": {
+    "accepted": true,
+    "subject": "operator-GEO-1",
+    "scopes": [
+     "rid.read",
+     "flights.write"
+    ]
+   },
+   "why": "nbf 29 s in the future: inside the skew."
+  }
+ ]
+}

@@ -1,5 +1,5 @@
 {
- "description": "One aircraft inside a zone horizontally (or none, for the height limit), judged vertically. Each limit is compared in its own reference and never converted with a single number: AMSL against AMSL altitude; AGL against AMSL minus the DEM ground under the aircraft; WGS84 against AMSL plus the geoid undulation. terrain: 'none' (not configured), 'unknown here', or ground_m. expected.raised is what one observation raises; counters show zone_checks_not_evaluated (silent, not judged) and zone_limits_not_judged (warned because AGL could not be judged).",
+ "description": "One aircraft inside a zone horizontally (or none, for the height limit), judged vertically. Each limit is compared in its own reference and never converted with a single number: AMSL against AMSL altitude; AGL against AMSL minus the DEM ground under the aircraft; WGS84 against AMSL plus the geoid undulation. terrain: 'none' (not configured), 'unknown here', or ground_m. conditional_severity is what a CONDITIONAL zone raises (info or warning). zone_type, when present, replaces the type the restriction maps to: USPACE is U-space airspace, which ED-269 cannot express (ED-318 carries it), so the feature's restriction is a placeholder and the raise names no restriction. expected.raised is what one observation raises; counters show zone_checks_not_evaluated (silent, not judged) and zone_limits_not_judged (warned because an AGL or WGS84 limit could not be judged). reasons is the set of what was missing whenever a zone was not evaluated, a limit was not judged or the height limit was not evaluated (no_terrain, ground_unknown, no_geoid), every one of them; empty otherwise. Its order is not significant.",
  "source": [
   "utm airspace/tests/test_monitor_geozones.py",
   "utm airspace/tests/test_pressure_altitude.py",
@@ -82,7 +82,8 @@
     "terrain": "none",
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [
@@ -101,7 +102,8 @@
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "PROHIBITED critical, REQ_AUTHORISATION warning, CONDITIONAL warning (policy may say info), NO_RESTRICTION nothing.",
    "source": "test_monitor_geozones.py::test_each_restriction_raises_its_severity"
@@ -166,7 +168,8 @@
     "terrain": "none",
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [
@@ -185,7 +188,8 @@
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "PROHIBITED critical, REQ_AUTHORISATION warning, CONDITIONAL warning (policy may say info), NO_RESTRICTION nothing.",
    "source": "test_monitor_geozones.py::test_each_restriction_raises_its_severity"
@@ -250,7 +254,8 @@
     "terrain": "none",
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [
@@ -269,7 +274,8 @@
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "PROHIBITED critical, REQ_AUTHORISATION warning, CONDITIONAL warning (policy may say info), NO_RESTRICTION nothing.",
    "source": "test_monitor_geozones.py::test_each_restriction_raises_its_severity"
@@ -334,14 +340,16 @@
     "terrain": "none",
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [],
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "PROHIBITED critical, REQ_AUTHORISATION warning, CONDITIONAL warning (policy may say info), NO_RESTRICTION nothing.",
    "source": "test_monitor_geozones.py::test_each_restriction_raises_its_severity"
@@ -408,14 +416,16 @@
     "terrain": "none",
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [],
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "AMSL limits against the AMSL altitude.",
    "source": "test_monitor_geozones.py::test_amsl_limits_are_judged_on_the_amsl_altitude"
@@ -482,7 +492,8 @@
     "terrain": "none",
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [
@@ -501,7 +512,8 @@
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "AMSL limits against the AMSL altitude.",
    "source": "test_monitor_geozones.py::test_amsl_limits_are_judged_on_the_amsl_altitude"
@@ -568,14 +580,16 @@
     "terrain": "none",
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [],
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "AMSL limits against the AMSL altitude.",
    "source": "test_monitor_geozones.py::test_amsl_limits_are_judged_on_the_amsl_altitude"
@@ -644,7 +658,8 @@
     },
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [
@@ -664,7 +679,8 @@
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "Ground 500 m: 600 m AMSL is 100 m AGL, inside 0-120 AGL. Reading the AGL limit as AMSL would put it far above.",
    "source": "test_monitor_geozones.py::test_agl_limits_are_judged_above_the_ground_not_above_sea_level"
@@ -733,14 +749,16 @@
     },
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [],
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "130 m AGL is above the ceiling.",
    "source": ""
@@ -808,14 +826,16 @@
     },
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [],
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "20 m AGL is below a 50 m AGL floor.",
    "source": "test_monitor_geozones.py::test_an_agl_floor_leaves_out_an_aircraft_below_it"
@@ -883,7 +903,8 @@
     },
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [
@@ -903,7 +924,8 @@
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "60 m AGL is above it.",
    "source": ""
@@ -969,7 +991,8 @@
     "terrain": "none",
     "geoid_undulation_m": 15.0,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [
@@ -989,7 +1012,8 @@
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "WGS84 = height above the ellipsoid: AMSL + N. 580 + 15 = 595 < 600.",
    "source": "test_monitor_geozones.py::test_wgs84_limits_go_through_the_geoid"
@@ -1055,14 +1079,16 @@
     "terrain": "none",
     "geoid_undulation_m": 15.0,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [],
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "590 + 15 = 605 > 600.",
    "source": ""
@@ -1128,7 +1154,8 @@
     "terrain": "none",
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [
@@ -1147,7 +1174,8 @@
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "2000 ft = 609.6 m (0.3048 exactly).",
    "source": "test_monitor_geozones.py::test_limits_in_feet_are_converted"
@@ -1213,14 +1241,16 @@
     "terrain": "none",
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [],
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "615 m is above 609.6 m.",
    "source": ""
@@ -1286,14 +1316,18 @@
     "terrain": "none",
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [],
     "counters": {
      "zone_checks_not_evaluated": 1,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": [
+     "no_terrain"
+    ]
    },
    "why": "A CONDITIONAL zone whose AGL limit cannot be judged is NOT evaluated: no alert, counted, an active one neither refreshed nor cleared.",
    "source": "test_monitor_geozones.py::test_a_limit_without_its_data_is_not_evaluated_and_counted"
@@ -1359,20 +1393,24 @@
     "terrain": "unknown here",
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [],
     "counters": {
      "zone_checks_not_evaluated": 1,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": [
+     "ground_unknown"
+    ]
    },
    "why": "Terrain configured but unknown here (cell never fetched, nodata, unreadable tile): the same. Unknown ground is never 0.",
    "source": ""
   },
   {
-   "name": "prohibited-wgs84-no-geoid-not-evaluated",
+   "name": "prohibited-wgs84-no-geoid-warns",
    "owner": [
     "authority",
     "ussp"
@@ -1432,16 +1470,554 @@
     "terrain": "none",
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
+   },
+   "expected": {
+    "raised": [
+     {
+      "kind": "zone",
+      "severity": "warning",
+      "aircraft": [
+       "A"
+      ],
+      "detail": {
+       "identifier": "P1",
+       "restriction": "PROHIBITED",
+       "vertical_known": false,
+       "limit_not_judged": true,
+       "not_judged": [
+        "WGS84"
+       ]
+      }
+     }
+    ],
+    "counters": {
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 1
+    },
+    "reasons": [
+     "no_geoid"
+    ]
+   },
+   "why": "S-37: a PROHIBITED zone whose WGS84 limit cannot be judged (no geoid) warns, with vertical_known false, limit_not_judged and reason no_geoid, as for an AGL limit without the DEM. A limit that cannot be judged is never silent here.",
+   "source": "",
+   "decision": "S-37, owner decision: a WGS84 limit with no geoid is treated like an AGL limit with no DEM (LESSONS Z-09). A PROHIBITED or REQ_AUTHORISATION zone warns with limit_not_judged and reason no_geoid; a limit that cannot be judged is never silent there. utm left the zone not evaluated."
+  },
+  {
+   "name": "req-authorisation-wgs84-no-geoid-warns",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "zone": {
+     "identifier": "P1",
+     "country": "GEO",
+     "type": "COMMON",
+     "restriction": "REQ_AUTHORISATION",
+     "applicability": [
+      {
+       "permanent": "YES"
+      }
+     ],
+     "zoneAuthority": [],
+     "geometry": [
+      {
+       "uomDimensions": "M",
+       "lowerVerticalReference": "AMSL",
+       "upperVerticalReference": "WGS84",
+       "horizontalProjection": {
+        "type": "Polygon",
+        "coordinates": [
+         [
+          [
+           44.8171,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7051
+          ]
+         ]
+        ]
+       },
+       "upperLimit": 600
+      }
+     ]
+    },
+    "aircraft": {
+     "alt_amsl_m": 550.0,
+     "alt_source": "geodetic"
+    },
+    "terrain": "none",
+    "geoid_undulation_m": null,
+    "max_height_agl_m": null,
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
+   },
+   "expected": {
+    "raised": [
+     {
+      "kind": "zone",
+      "severity": "warning",
+      "aircraft": [
+       "A"
+      ],
+      "detail": {
+       "identifier": "P1",
+       "restriction": "REQ_AUTHORISATION",
+       "vertical_known": false,
+       "limit_not_judged": true,
+       "not_judged": [
+        "WGS84"
+       ]
+      }
+     }
+    ],
+    "counters": {
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 1
+    },
+    "reasons": [
+     "no_geoid"
+    ]
+   },
+   "why": "S-37: the same for REQ_AUTHORISATION.",
+   "source": "",
+   "decision": "S-37, owner decision: a WGS84 limit with no geoid is treated like an AGL limit with no DEM (LESSONS Z-09). A PROHIBITED or REQ_AUTHORISATION zone warns with limit_not_judged and reason no_geoid; a limit that cannot be judged is never silent there. utm left the zone not evaluated."
+  },
+  {
+   "name": "prohibited-wgs84-with-geoid-own-severity",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "zone": {
+     "identifier": "P1",
+     "country": "GEO",
+     "type": "COMMON",
+     "restriction": "PROHIBITED",
+     "applicability": [
+      {
+       "permanent": "YES"
+      }
+     ],
+     "zoneAuthority": [],
+     "geometry": [
+      {
+       "uomDimensions": "M",
+       "lowerVerticalReference": "AMSL",
+       "upperVerticalReference": "WGS84",
+       "horizontalProjection": {
+        "type": "Polygon",
+        "coordinates": [
+         [
+          [
+           44.8171,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7051
+          ]
+         ]
+        ]
+       },
+       "upperLimit": 600
+      }
+     ]
+    },
+    "aircraft": {
+     "alt_amsl_m": 550.0,
+     "alt_source": "geodetic"
+    },
+    "terrain": "none",
+    "geoid_undulation_m": 15.0,
+    "max_height_agl_m": null,
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
+   },
+   "expected": {
+    "raised": [
+     {
+      "kind": "zone",
+      "severity": "critical",
+      "aircraft": [
+       "A"
+      ],
+      "detail": {
+       "identifier": "P1",
+       "restriction": "PROHIBITED",
+       "alt_hae_m": 565.0
+      }
+     }
+    ],
+    "counters": {
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    },
+    "reasons": []
+   },
+   "why": "The presence pair: with the geoid, 550 + 15 = 565 m HAE is inside the 600 m ceiling: critical, nothing flagged.",
+   "source": ""
+  },
+  {
+   "name": "prohibited-agl-and-wgs84-missing-warns-naming-both",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "zone": {
+     "identifier": "P6",
+     "country": "GEO",
+     "type": "COMMON",
+     "restriction": "PROHIBITED",
+     "applicability": [
+      {
+       "permanent": "YES"
+      }
+     ],
+     "zoneAuthority": [],
+     "geometry": [
+      {
+       "uomDimensions": "M",
+       "lowerVerticalReference": "AGL",
+       "upperVerticalReference": "WGS84",
+       "horizontalProjection": {
+        "type": "Polygon",
+        "coordinates": [
+         [
+          [
+           44.8171,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7051
+          ]
+         ]
+        ]
+       },
+       "lowerLimit": 50,
+       "upperLimit": 600
+      }
+     ]
+    },
+    "aircraft": {
+     "alt_amsl_m": 550.0,
+     "alt_source": "geodetic"
+    },
+    "terrain": "none",
+    "geoid_undulation_m": null,
+    "max_height_agl_m": null,
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
+   },
+   "expected": {
+    "raised": [
+     {
+      "kind": "zone",
+      "severity": "warning",
+      "aircraft": [
+       "A"
+      ],
+      "detail": {
+       "identifier": "P6",
+       "restriction": "PROHIBITED",
+       "vertical_known": false,
+       "limit_not_judged": true,
+       "not_judged": [
+        "AGL",
+        "WGS84"
+       ]
+      }
+     }
+    ],
+    "counters": {
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 1
+    },
+    "reasons": [
+     "no_terrain",
+     "no_geoid"
+    ]
+   },
+   "why": "S-37 with Z-09: no terrain and no geoid. The zone warns, names both references it could not judge, and reports both reasons.",
+   "source": "",
+   "decision": "S-37, owner decision: a WGS84 limit with no geoid is treated like an AGL limit with no DEM (LESSONS Z-09). A PROHIBITED or REQ_AUTHORISATION zone warns with limit_not_judged and reason no_geoid; a limit that cannot be judged is never silent there. utm left the zone not evaluated."
+  },
+  {
+   "name": "conditional-wgs84-no-geoid-not-evaluated",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "zone": {
+     "identifier": "C4",
+     "country": "GEO",
+     "type": "COMMON",
+     "restriction": "CONDITIONAL",
+     "applicability": [
+      {
+       "permanent": "YES"
+      }
+     ],
+     "zoneAuthority": [],
+     "geometry": [
+      {
+       "uomDimensions": "M",
+       "lowerVerticalReference": "AMSL",
+       "upperVerticalReference": "WGS84",
+       "horizontalProjection": {
+        "type": "Polygon",
+        "coordinates": [
+         [
+          [
+           44.8171,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7051
+          ]
+         ]
+        ]
+       },
+       "upperLimit": 600
+      }
+     ]
+    },
+    "aircraft": {
+     "alt_amsl_m": 550.0,
+     "alt_source": "geodetic"
+    },
+    "terrain": "none",
+    "geoid_undulation_m": null,
+    "max_height_agl_m": null,
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [],
     "counters": {
      "zone_checks_not_evaluated": 1,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": [
+     "no_geoid"
+    ]
    },
-   "why": "A WGS84 limit without the geoid is not evaluated, even for PROHIBITED (S-37 proposes a warning here; not built).",
+   "why": "The CONDITIONAL twin of prohibited-wgs84-no-geoid-warns: not evaluated, counted, reason no_geoid. A warning would exceed an info zone's own severity (Z-09).",
+   "source": ""
+  },
+  {
+   "name": "conditional-agl-and-wgs84-missing-both-reported",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "zone": {
+     "identifier": "C2",
+     "country": "GEO",
+     "type": "COMMON",
+     "restriction": "CONDITIONAL",
+     "applicability": [
+      {
+       "permanent": "YES"
+      }
+     ],
+     "zoneAuthority": [],
+     "geometry": [
+      {
+       "uomDimensions": "M",
+       "lowerVerticalReference": "AGL",
+       "upperVerticalReference": "WGS84",
+       "horizontalProjection": {
+        "type": "Polygon",
+        "coordinates": [
+         [
+          [
+           44.8171,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7051
+          ]
+         ]
+        ]
+       },
+       "lowerLimit": 50,
+       "upperLimit": 600
+      }
+     ]
+    },
+    "aircraft": {
+     "alt_amsl_m": 550.0,
+     "alt_source": "geodetic"
+    },
+    "terrain": "none",
+    "geoid_undulation_m": null,
+    "max_height_agl_m": null,
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
+   },
+   "expected": {
+    "raised": [],
+    "counters": {
+     "zone_checks_not_evaluated": 1,
+     "zone_limits_not_judged": 0
+    },
+    "reasons": [
+     "no_terrain",
+     "no_geoid"
+    ]
+   },
+   "why": "An AGL limit with no terrain and a WGS84 limit with no geoid: not evaluated, and the reasons name both, so that an operator fixing one is not surprised by the other.",
+   "source": ""
+  },
+  {
+   "name": "conditional-agl-ground-unknown-and-wgs84-missing-both-reported",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "zone": {
+     "identifier": "C3",
+     "country": "GEO",
+     "type": "COMMON",
+     "restriction": "CONDITIONAL",
+     "applicability": [
+      {
+       "permanent": "YES"
+      }
+     ],
+     "zoneAuthority": [],
+     "geometry": [
+      {
+       "uomDimensions": "M",
+       "lowerVerticalReference": "WGS84",
+       "upperVerticalReference": "AGL",
+       "horizontalProjection": {
+        "type": "Polygon",
+        "coordinates": [
+         [
+          [
+           44.8171,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7051
+          ]
+         ]
+        ]
+       },
+       "lowerLimit": 0,
+       "upperLimit": 120
+      }
+     ]
+    },
+    "aircraft": {
+     "alt_amsl_m": 550.0,
+     "alt_source": "geodetic"
+    },
+    "terrain": "unknown here",
+    "geoid_undulation_m": null,
+    "max_height_agl_m": null,
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
+   },
+   "expected": {
+    "raised": [],
+    "counters": {
+     "zone_checks_not_evaluated": 1,
+     "zone_limits_not_judged": 0
+    },
+    "reasons": [
+     "ground_unknown",
+     "no_geoid"
+    ]
+   },
+   "why": "Ground configured but unknown here, and no geoid: both reasons.",
    "source": ""
   },
   {
@@ -1506,7 +2082,8 @@
     "terrain": "none",
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [
@@ -1530,7 +2107,10 @@
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 1
-    }
+    },
+    "reasons": [
+     "no_terrain"
+    ]
    },
    "why": "U-03 review: a PROHIBITED/REQ_AUTHORISATION zone whose only unjudged limit is AGL raises a WARNING with vertical_known false and limit_not_judged: a false warning beats a missed critical.",
    "source": "test_monitor_geozones.py::test_an_agl_ceiling_without_the_ground_warns_that_it_was_not_judged"
@@ -1597,7 +2177,8 @@
     "terrain": "none",
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [
@@ -1621,7 +2202,10 @@
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 1
-    }
+    },
+    "reasons": [
+     "no_terrain"
+    ]
    },
    "why": "U-03 review: a PROHIBITED/REQ_AUTHORISATION zone whose only unjudged limit is AGL raises a WARNING with vertical_known false and limit_not_judged: a false warning beats a missed critical.",
    "source": "test_monitor_geozones.py::test_an_agl_ceiling_without_the_ground_warns_that_it_was_not_judged"
@@ -1690,7 +2274,8 @@
     },
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [
@@ -1710,7 +2295,8 @@
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "The presence pair: with the DEM, 50 m AGL is critical, nothing flagged.",
    "source": "test_monitor_geozones.py::test_the_same_agl_zone_with_the_ground_is_judged_at_its_own_severity"
@@ -1776,7 +2362,8 @@
     "terrain": "none",
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [
@@ -1800,7 +2387,10 @@
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 1
-    }
+    },
+    "reasons": [
+     "no_terrain"
+    ]
    },
    "why": "An AGL floor above 0 needs the ground too.",
    "source": "test_monitor_geozones.py::test_an_agl_floor_above_the_ground_also_needs_it"
@@ -1867,7 +2457,8 @@
     "terrain": "none",
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [
@@ -1886,7 +2477,8 @@
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "A lower AGL limit at or below 0 is met by any airborne aircraft: judged without terrain; the AMSL ceiling decides.",
    "source": "test_monitor_geozones.py::test_an_agl_floor_at_the_ground_is_met_without_terrain"
@@ -1953,14 +2545,16 @@
     "terrain": "none",
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [],
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "A judged limit that excludes the aircraft decides either way.",
    "source": ""
@@ -2029,7 +2623,8 @@
     },
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [
@@ -2051,7 +2646,8 @@
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "S-33, pressure altitude 100.0 m AGL against 0-120 m AGL: inside as indicated: the zone's own severity, flagged vertical_known false, within_band true.",
    "source": "test_monitor_geozones.py::test_a_pressure_track_against_an_agl_zone_is_widened_by_the_margin"
@@ -2120,7 +2716,8 @@
     },
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [
@@ -2142,7 +2739,8 @@
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "S-33, pressure altitude 300.0 m AGL against 0-120 m AGL: inside only the band widened by 250 m: a warning, within_band false.",
    "source": "test_monitor_geozones.py::test_a_pressure_track_against_an_agl_zone_is_widened_by_the_margin"
@@ -2211,14 +2809,16 @@
     },
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [],
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "S-33, pressure altitude 400.0 m AGL against 0-120 m AGL: beyond the widened band: nothing.",
    "source": "test_monitor_geozones.py::test_a_pressure_track_against_an_agl_zone_is_widened_by_the_margin"
@@ -2287,14 +2887,16 @@
     },
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [],
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "The same 300 m on a geodetic altitude raises nothing.",
    "source": ""
@@ -2360,7 +2962,8 @@
     "terrain": "none",
     "geoid_undulation_m": 15.0,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [
@@ -2382,7 +2985,8 @@
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "700 + 15 = 715 m HAE, 115 m above a 600 m WGS84 ceiling, inside the 250 m margin: warning, within_band false.",
    "source": "test_monitor_geozones.py::test_a_pressure_track_in_a_wgs84_zone_goes_through_the_geoid_and_the_margin"
@@ -2449,7 +3053,8 @@
     "terrain": "none",
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [
@@ -2473,7 +3078,10 @@
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 1
-    }
+    },
+    "reasons": [
+     "no_terrain"
+    ]
    },
    "why": "Both: warning, limit_not_judged and vertical_known false.",
    "source": "test_monitor_geozones.py::test_a_pressure_track_and_an_unjudged_agl_ceiling_carry_both_flags"
@@ -2538,7 +3146,8 @@
     "terrain": "none",
     "geoid_undulation_m": null,
     "max_height_agl_m": null,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [
@@ -2557,10 +3166,457 @@
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "A zone with no altitude limits is judged as for anyone: no margin, no flag.",
    "source": "test_pressure_altitude.py::test_a_zone_without_altitude_limits_is_judged_as_for_anyone"
+  },
+  {
+   "name": "conditional-info-pressure-inside-as-indicated-stays-info",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "zone": {
+     "identifier": "CI",
+     "country": "GEO",
+     "type": "COMMON",
+     "restriction": "CONDITIONAL",
+     "applicability": [
+      {
+       "permanent": "YES"
+      }
+     ],
+     "zoneAuthority": [],
+     "geometry": [
+      {
+       "uomDimensions": "M",
+       "lowerVerticalReference": "AGL",
+       "upperVerticalReference": "AGL",
+       "horizontalProjection": {
+        "type": "Polygon",
+        "coordinates": [
+         [
+          [
+           44.8171,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7051
+          ]
+         ]
+        ]
+       },
+       "lowerLimit": 0,
+       "upperLimit": 120
+      }
+     ]
+    },
+    "aircraft": {
+     "alt_amsl_m": 600.0,
+     "alt_source": "pressure"
+    },
+    "terrain": {
+     "ground_m": 500.0
+    },
+    "geoid_undulation_m": null,
+    "max_height_agl_m": null,
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "info"
+   },
+   "expected": {
+    "raised": [
+     {
+      "kind": "zone",
+      "severity": "info",
+      "aircraft": [
+       "A"
+      ],
+      "detail": {
+       "identifier": "CI",
+       "restriction": "CONDITIONAL",
+       "vertical_known": false,
+       "within_band": true,
+       "height_agl_m": 100.0
+      }
+     }
+    ],
+    "counters": {
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    },
+    "reasons": []
+   },
+   "why": "A CONDITIONAL zone the policy puts at info, pressure altitude 100 m AGL: inside as indicated, the zone's own severity (info), within_band true.",
+   "source": ""
+  },
+  {
+   "name": "conditional-info-pressure-in-widened-band-stays-info",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "zone": {
+     "identifier": "CI",
+     "country": "GEO",
+     "type": "COMMON",
+     "restriction": "CONDITIONAL",
+     "applicability": [
+      {
+       "permanent": "YES"
+      }
+     ],
+     "zoneAuthority": [],
+     "geometry": [
+      {
+       "uomDimensions": "M",
+       "lowerVerticalReference": "AGL",
+       "upperVerticalReference": "AGL",
+       "horizontalProjection": {
+        "type": "Polygon",
+        "coordinates": [
+         [
+          [
+           44.8171,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7051
+          ]
+         ]
+        ]
+       },
+       "lowerLimit": 0,
+       "upperLimit": 120
+      }
+     ]
+    },
+    "aircraft": {
+     "alt_amsl_m": 800.0,
+     "alt_source": "pressure"
+    },
+    "terrain": {
+     "ground_m": 500.0
+    },
+    "geoid_undulation_m": null,
+    "max_height_agl_m": null,
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "info"
+   },
+   "expected": {
+    "raised": [
+     {
+      "kind": "zone",
+      "severity": "info",
+      "aircraft": [
+       "A"
+      ],
+      "detail": {
+       "identifier": "CI",
+       "restriction": "CONDITIONAL",
+       "vertical_known": false,
+       "within_band": false,
+       "height_agl_m": 300.0
+      }
+     }
+    ],
+    "counters": {
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    },
+    "reasons": []
+   },
+   "why": "The same zone at 300 m AGL, inside only the band widened by 250 m: min(warning, info) is info. Being possibly inside never raises more than being definitely inside would.",
+   "source": "",
+   "decision": "A pressure altitude inside only the widened band raises min(warning, the zone's severity): an info zone stays info, since being possibly inside never raises more than being definitely inside (uspace-core PR #12, owner decision). utm raised warning."
+  },
+  {
+   "name": "uspace-zone-raises-info",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "zone": {
+     "identifier": "U1",
+     "country": "GEO",
+     "type": "COMMON",
+     "restriction": "NO_RESTRICTION",
+     "applicability": [
+      {
+       "permanent": "YES"
+      }
+     ],
+     "zoneAuthority": [],
+     "geometry": [
+      {
+       "uomDimensions": "M",
+       "lowerVerticalReference": "AMSL",
+       "upperVerticalReference": "AMSL",
+       "horizontalProjection": {
+        "type": "Polygon",
+        "coordinates": [
+         [
+          [
+           44.8171,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7051
+          ]
+         ]
+        ]
+       }
+      }
+     ]
+    },
+    "aircraft": {
+     "alt_amsl_m": 550.0,
+     "alt_source": "geodetic"
+    },
+    "terrain": "none",
+    "geoid_undulation_m": null,
+    "max_height_agl_m": null,
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning",
+    "zone_type": "USPACE"
+   },
+   "expected": {
+    "raised": [
+     {
+      "kind": "zone",
+      "severity": "info",
+      "aircraft": [
+       "A"
+      ],
+      "detail": {
+       "identifier": "U1"
+      }
+     }
+    ],
+    "counters": {
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    },
+    "reasons": []
+   },
+   "why": "U-space airspace (2021/664) is visible at the lowest severity. Whether the flight there is authorised is judged by the authorisation check, not here.",
+   "source": "",
+   "decision": "Being in U-space airspace raises info, the lowest severity, so that it is visible; whether the flight is authorised is judged elsewhere (uspace-core PR #12, owner decision). utm had no U-space zone type."
+  },
+  {
+   "name": "uspace-zone-judged-limit-excludes-clear",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "zone": {
+     "identifier": "U3",
+     "country": "GEO",
+     "type": "COMMON",
+     "restriction": "NO_RESTRICTION",
+     "applicability": [
+      {
+       "permanent": "YES"
+      }
+     ],
+     "zoneAuthority": [],
+     "geometry": [
+      {
+       "uomDimensions": "M",
+       "lowerVerticalReference": "AMSL",
+       "upperVerticalReference": "AMSL",
+       "horizontalProjection": {
+        "type": "Polygon",
+        "coordinates": [
+         [
+          [
+           44.8171,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7051
+          ]
+         ]
+        ]
+       },
+       "lowerLimit": 0,
+       "upperLimit": 500
+      }
+     ]
+    },
+    "aircraft": {
+     "alt_amsl_m": 550.0,
+     "alt_source": "geodetic"
+    },
+    "terrain": "none",
+    "geoid_undulation_m": null,
+    "max_height_agl_m": null,
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning",
+    "zone_type": "USPACE"
+   },
+   "expected": {
+    "raised": [],
+    "counters": {
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    },
+    "reasons": []
+   },
+   "why": "The absence twin: a U-space zone whose judged AMSL ceiling (500 m) is below the aircraft (550 m) raises nothing.",
+   "source": "",
+   "decision": "Being in U-space airspace raises info, the lowest severity, so that it is visible; whether the flight is authorised is judged elsewhere (uspace-core PR #12, owner decision). utm had no U-space zone type."
+  },
+  {
+   "name": "uspace-zone-pressure-in-widened-band-stays-info",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "zone": {
+     "identifier": "U2",
+     "country": "GEO",
+     "type": "COMMON",
+     "restriction": "NO_RESTRICTION",
+     "applicability": [
+      {
+       "permanent": "YES"
+      }
+     ],
+     "zoneAuthority": [],
+     "geometry": [
+      {
+       "uomDimensions": "M",
+       "lowerVerticalReference": "AGL",
+       "upperVerticalReference": "AGL",
+       "horizontalProjection": {
+        "type": "Polygon",
+        "coordinates": [
+         [
+          [
+           44.8171,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7051
+          ]
+         ]
+        ]
+       },
+       "lowerLimit": 0,
+       "upperLimit": 120
+      }
+     ]
+    },
+    "aircraft": {
+     "alt_amsl_m": 800.0,
+     "alt_source": "pressure"
+    },
+    "terrain": {
+     "ground_m": 500.0
+    },
+    "geoid_undulation_m": null,
+    "max_height_agl_m": null,
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning",
+    "zone_type": "USPACE"
+   },
+   "expected": {
+    "raised": [
+     {
+      "kind": "zone",
+      "severity": "info",
+      "aircraft": [
+       "A"
+      ],
+      "detail": {
+       "identifier": "U2",
+       "vertical_known": false,
+       "within_band": false,
+       "height_agl_m": 300.0
+      }
+     }
+    ],
+    "counters": {
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    },
+    "reasons": []
+   },
+   "why": "Pressure altitude inside only the widened band of a U-space zone: still info, within_band false.",
+   "source": "",
+   "decision": "Being in U-space airspace raises info, the lowest severity, so that it is visible; whether the flight is authorised is judged elsewhere (uspace-core PR #12, owner decision). utm had no U-space zone type."
   },
   {
    "name": "height-limit-120-at-619.0",
@@ -2579,14 +3635,16 @@
     },
     "geoid_undulation_m": null,
     "max_height_agl_m": 120.0,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [],
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "P5-19: AMSL minus DEM ground (500 m) over 120 m warns; exactly at the limit is allowed (strictly greater).",
    "source": "test_height_limit.py::test_the_limit_itself_is_allowed"
@@ -2608,14 +3666,16 @@
     },
     "geoid_undulation_m": null,
     "max_height_agl_m": 120.0,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [],
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "P5-19: AMSL minus DEM ground (500 m) over 120 m warns; exactly at the limit is allowed (strictly greater).",
    "source": "test_height_limit.py::test_the_limit_itself_is_allowed"
@@ -2637,7 +3697,8 @@
     },
     "geoid_undulation_m": null,
     "max_height_agl_m": 120.0,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [
@@ -2656,7 +3717,8 @@
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "P5-19: AMSL minus DEM ground (500 m) over 120 m warns; exactly at the limit is allowed (strictly greater).",
    "source": "test_height_limit.py::test_the_limit_itself_is_allowed"
@@ -2678,7 +3740,8 @@
     },
     "geoid_undulation_m": null,
     "max_height_agl_m": 120.0,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [
@@ -2697,7 +3760,8 @@
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "P5-19: AMSL minus DEM ground (500 m) over 120 m warns; exactly at the limit is allowed (strictly greater).",
    "source": "test_height_limit.py::test_the_limit_itself_is_allowed"
@@ -2717,14 +3781,18 @@
     "terrain": "unknown here",
     "geoid_undulation_m": null,
     "max_height_agl_m": 120.0,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [],
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": [
+     "ground_unknown"
+    ]
    },
    "why": "Unknown ground: the limit is not evaluated, never against 0.",
    "source": "test_height_limit.py::test_unknown_ground_is_not_evaluated_rather_than_taken_as_zero"
@@ -2744,14 +3812,18 @@
     "terrain": "none",
     "geoid_undulation_m": null,
     "max_height_agl_m": 120.0,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [],
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": [
+     "no_terrain"
+    ]
    },
    "why": "No terrain configured: not evaluated.",
    "source": "test_height_limit.py::test_without_terrain_or_without_a_limit_nothing_is_evaluated"
@@ -2773,7 +3845,8 @@
     },
     "geoid_undulation_m": null,
     "max_height_agl_m": 120.0,
-    "pressure_uncertainty_m": 250.0
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
    },
    "expected": {
     "raised": [
@@ -2793,7 +3866,8 @@
     "counters": {
      "zone_checks_not_evaluated": 0,
      "zone_limits_not_judged": 0
-    }
+    },
+    "reasons": []
    },
    "why": "On pressure altitude the height limit is judged on the indicated height and flagged vertical_known false.",
    "source": "test_pressure_altitude.py::test_on_pressure_the_height_limit_is_judged_as_indicated"

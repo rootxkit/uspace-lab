@@ -1,5 +1,5 @@
 {
- "description": "Alert raise/clear sequences through the airspace monitor. Each case is a list of steps on one monitor: observe (one aircraft message at wall time t_s), tick (no message), switch_source (U-15). expected.per_step[i] lists what step i raised and cleared (with the clear reason: resolved, stale, source_disabled). Aircraft fields: id, lat_deg/lon_deg (computed; north_m/east_m are how the case was built), alt_amsl_m (default 550), vn/ve/vd (m/s, vd down), flying (default true: armed for relay, airborne for Remote ID), captured_at_s (default t_s; the ingest's placement), rx_at_s (default captured_at_s), station_clock_offset_s (the station's own ts = captured_at_s + offset; default 0), backlog, source (relay | remote_id), station, alt_source, identification, transmitter, identified. Policy 60 s / 60 m / 20 m / 800 m; defaults clear_after_s 3, stale_after_s 15, neighbour_max_age_s 10, live_max_age_s 10, pressure_uncertainty_m 250. Zones are ED-269 features.",
+ "description": "Alert raise/clear sequences through the airspace monitor. Each case is a list of steps on one monitor: observe (one aircraft message at wall time t_s), tick (no message), switch_source (U-15). expected.per_step[i] lists what step i raised and cleared (with the clear reason: resolved, stale, source_disabled, landed). Aircraft fields: id, lat_deg/lon_deg (computed; north_m/east_m are how the case was built), alt_amsl_m (default 550), vn/ve/vd (m/s, vd down), flying (default true: armed for relay, airborne for Remote ID), captured_at_s (default t_s; the ingest's placement), rx_at_s (default captured_at_s), station_clock_offset_s (the station's own ts = captured_at_s + offset; default 0), backlog, source (relay | remote_id), station, alt_source, identification, transmitter, identified. An absent alt_source is geodetic: a vertical position, judged against the vertical minimum (utm read every altitude but 'pressure' that way). Policy 60 s / 60 m / 20 m / 800 m; defaults clear_after_s 3, stale_after_s 15, neighbour_max_age_s 10, live_max_age_s 10, pressure_uncertainty_m 250, ahead_tolerance_s 1, max_aircraft 50000, max_source_share 0.5. The source key of max_source_share is (source, station). Zones are ED-269 features. counters lists the counts the case pins; a refused sample is counted under its reason (rejected_older_than_held, rejected_placed_ahead, rejected_capacity, rejected_source_share, the last two also per source as <counter>/<source>/<station>) and judges nothing.",
  "source": [
   "utm airspace/tests/test_monitor.py",
   "utm airspace/tests/test_monitor_geozones.py",
@@ -661,7 +661,7 @@
    "source": "test_monitor.py::test_a_pair_on_the_ground_raises_nothing"
   },
   {
-   "name": "disarming-clears-as-stale",
+   "name": "disarming-clears-as-landed",
    "owner": [
     "authority",
     "ussp"
@@ -750,7 +750,7 @@
          "d_horizontal_now_m": 500.0,
          "vertical_separation_known": true
         },
-        "reason": "stale"
+        "reason": "landed"
        }
       ]
      }
@@ -765,8 +765,9 @@
      "zone_limits_not_judged": 0
     }
    },
-   "why": "A disarmed aircraft leaves the picture; its conflict clears as stale (S-25 proposes a 'landed' reason; not built).",
-   "source": "test_monitor.py::test_disarming_clears_the_conflict"
+   "why": "C-14: a disarmed aircraft leaves the picture and its conflict clears with reason landed. utm cleared it as stale (S-25), which reads as 'we lost it' when the aircraft is known to be on the ground.",
+   "source": "test_monitor.py::test_disarming_clears_the_conflict",
+   "decision": "A disarm or landing clears as landed (LESSONS C-14, PLAN section 11 gap 4, uspace-core PR #15, owner decision). utm cleared it as stale."
   },
   {
    "name": "hovering-inside-minima-stays-alerted",
@@ -4868,6 +4869,1025 @@
    },
    "why": "Two identified tracks on one address are two claims (a spoofer on its victim's address among them): judged like any pair.",
    "source": "test_monitor.py::test_two_serials_on_one_transmitter_address_are_a_conflict"
+  },
+  {
+   "name": "older-placement-from-another-station-is-refused",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {},
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 500,
+       "vn": -10,
+       "lat_deg": 41.719601756624705,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 490,
+       "vn": -10,
+       "station": "gs-2",
+       "lat_deg": 41.71951172149221,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1.0
+      }
+     },
+     {
+      "t_s": 2.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 5000,
+       "station": "gs-9",
+       "captured_at_s": -5.0,
+       "rx_at_s": 2.0,
+       "lat_deg": 41.76011756624707,
+       "lon_deg": 44.8271
+      }
+     },
+     {
+      "t_s": 14.0,
+      "op": "tick"
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     }
+    ],
+    "active_after": [
+     {
+      "kind": "conflict",
+      "severity": "critical",
+      "aircraft": [
+       "A",
+       "B"
+      ],
+      "detail": {
+       "t_cpa_s": 24.0,
+       "d_cpa_horizontal_m": 0.0,
+       "d_alt_at_cpa_m": 0.0,
+       "d_horizontal_now_m": 480.0,
+       "vertical_separation_known": true
+      }
+     }
+    ],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0,
+     "rejected_older_than_held": 1
+    }
+   },
+   "why": "T-13: B, held at 1 s, is heard through another station placed at -5 s, far away. utm took it and rewound B's track to -5 s, so the tick at 14 s dropped B as stale and cleared the conflict, though B was heard at 1 s. Refused and counted; the conflict stands.",
+   "source": "",
+   "decision": "A sample placed before the aircraft's latest one, from any source, is refused (rejected_older_than_held) and judges nothing (LESSONS T-06, T-13; uspace-core PR #15 review). utm took it from another station and rewound the track."
+  },
+  {
+   "name": "placement-ahead-of-tolerance-is-refused",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {},
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 500,
+       "vn": -10,
+       "lat_deg": 41.719601756624705,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 5000,
+       "captured_at_s": 6.0,
+       "rx_at_s": 1.0,
+       "station": "gs-2",
+       "lat_deg": 41.76011756624707,
+       "lon_deg": 44.8271
+      }
+     },
+     {
+      "t_s": 2.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 480,
+       "vn": -10,
+       "station": "gs-2",
+       "lat_deg": 41.719421686359716,
+       "lon_deg": 44.8271,
+       "captured_at_s": 2.0
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     }
+    ],
+    "active_after": [
+     {
+      "kind": "conflict",
+      "severity": "critical",
+      "aircraft": [
+       "A",
+       "B"
+      ],
+      "detail": {
+       "t_cpa_s": 23.0,
+       "d_cpa_horizontal_m": 0.0,
+       "d_alt_at_cpa_m": 0.0,
+       "d_horizontal_now_m": 460.0,
+       "vertical_separation_known": true
+      }
+     }
+    ],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0,
+     "rejected_placed_ahead": 1
+    }
+   },
+   "why": "T-13: a clear sample placed 5 s ahead of its own receipt (more than ahead_tolerance_s, 1 s). utm took it: the pair was shown clear at 6 s, more than the hysteresis after the last true reading, and the conflict resolved at once; the real sample at 2 s did not raise it again. Refused and counted; the real sample at 2 s still refreshes the conflict.",
+   "source": "",
+   "decision": "A sample placed ahead of its receipt, or received ahead of the wall clock, by more than ahead_tolerance_s is refused (rejected_placed_ahead) and buys no hysteresis (LESSONS T-13; uspace-core PR #15 review). utm took it."
+  },
+  {
+   "name": "placement-within-ahead-tolerance-is-admitted",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {},
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 500,
+       "vn": -10,
+       "lat_deg": 41.719601756624705,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 480,
+       "vn": -10,
+       "captured_at_s": 2.0,
+       "rx_at_s": 1.0,
+       "station": "gs-2",
+       "lat_deg": 41.719421686359716,
+       "lon_deg": 44.8271
+      }
+     },
+     {
+      "t_s": 14.0,
+      "op": "tick"
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     }
+    ],
+    "active_after": [
+     {
+      "kind": "conflict",
+      "severity": "critical",
+      "aircraft": [
+       "A",
+       "B"
+      ],
+      "detail": {
+       "t_cpa_s": 23.0,
+       "d_cpa_horizontal_m": 0.0,
+       "d_alt_at_cpa_m": 0.0,
+       "d_horizontal_now_m": 460.0,
+       "vertical_separation_known": true
+      }
+     }
+    ],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0,
+     "rejected_placed_ahead": 0
+    }
+   },
+   "why": "T-13, the presence twin: placed exactly ahead_tolerance_s (1.0 s) ahead of its receipt is still admitted and refreshes the conflict. The tolerance absorbs clock jitter; only more than it is refused.",
+   "source": ""
+  },
+  {
+   "name": "eviction-order-not-flying-first-and-the-evicted-is-gone",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {
+     "max_aircraft": 4
+    },
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 500,
+       "vn": -10,
+       "lat_deg": 41.719601756624705,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "C",
+       "north_m": 3000,
+       "station": "gs-3",
+       "lat_deg": 41.74211053974824,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.5,
+      "op": "observe",
+      "aircraft": {
+       "id": "D",
+       "north_m": 7000,
+       "station": "gs-4",
+       "flying": false,
+       "lat_deg": 41.77812459274589,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.5
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "E",
+       "north_m": 9000,
+       "station": "gs-5",
+       "lat_deg": 41.79613161924472,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1.0
+      }
+     },
+     {
+      "t_s": 1.5,
+      "op": "observe",
+      "aircraft": {
+       "id": "C",
+       "north_m": 3000,
+       "station": "gs-3",
+       "lat_deg": 41.74211053974824,
+       "lon_deg": 44.8271,
+       "captured_at_s": 1.5
+      }
+     },
+     {
+      "t_s": 2.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "D",
+       "north_m": 7000,
+       "station": "gs-4",
+       "flying": false,
+       "lat_deg": 41.77812459274589,
+       "lon_deg": 44.8271,
+       "captured_at_s": 2.0
+      }
+     },
+     {
+      "t_s": 2.5,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 25,
+       "vn": 10,
+       "lat_deg": 41.71532508783123,
+       "lon_deg": 44.8271,
+       "captured_at_s": 2.5
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     }
+    ],
+    "active_after": [
+     {
+      "kind": "conflict",
+      "severity": "critical",
+      "aircraft": [
+       "A",
+       "B"
+      ],
+      "detail": {
+       "t_cpa_s": 22.5,
+       "d_cpa_horizontal_m": 0.0,
+       "d_alt_at_cpa_m": 0.0,
+       "d_horizontal_now_m": 450.0,
+       "vertical_separation_known": true
+      }
+     }
+    ],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0,
+     "aircraft_evicted": 2
+    }
+   },
+   "why": "C-18: at the cap of 4 (A and B in conflict, C flying, D on the ground), E evicts D: an aircraft not flying goes first, although C was heard earlier. C's next sample is of an aircraft still held, so it evicts nothing. D's next sample is a new id, so D was gone: it evicts E, now the least recently heard aircraft without an alert. aircraft_evicted is 2; evicting C first would make it 3, and D still held would make it 1. The conflict is never touched.",
+   "source": "",
+   "decision": "Past max_aircraft only an aircraft without an active alert is evicted, and a new id is refused (rejected_capacity) when every aircraft held has one; eviction never clears an alert (LESSONS C-18; uspace-core PR #15 review). utm held every aircraft it heard."
+  },
+  {
+   "name": "full-of-alert-holders-refuses-new-ids",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {
+     "max_aircraft": 2
+    },
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 500,
+       "vn": -10,
+       "lat_deg": 41.719601756624705,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "C",
+       "north_m": 5000,
+       "station": "gs-3",
+       "lat_deg": 41.76011756624707,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.5,
+      "op": "observe",
+      "aircraft": {
+       "id": "C",
+       "north_m": 5000,
+       "station": "gs-3",
+       "lat_deg": 41.76011756624707,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.5
+      }
+     },
+     {
+      "t_s": 1.0,
+      "op": "tick"
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     }
+    ],
+    "active_after": [
+     {
+      "kind": "conflict",
+      "severity": "critical",
+      "aircraft": [
+       "A",
+       "B"
+      ],
+      "detail": {
+       "t_cpa_s": 25.0,
+       "d_cpa_horizontal_m": 0.0,
+       "d_alt_at_cpa_m": 0.0,
+       "d_horizontal_now_m": 500.0,
+       "vertical_separation_known": true
+      }
+     }
+    ],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0,
+     "rejected_capacity": 2,
+     "rejected_capacity/relay/gs-3": 2
+    }
+   },
+   "why": "C-18: the cap of 2 is held by A and B, both in conflict. A new id is refused and counted, per source too; nothing is evicted, so a flood of new ids can never clear a real conflict.",
+   "source": "",
+   "decision": "Past max_aircraft only an aircraft without an active alert is evicted, and a new id is refused (rejected_capacity) when every aircraft held has one; eviction never clears an alert (LESSONS C-18; uspace-core PR #15 review). utm held every aircraft it heard."
+  },
+  {
+   "name": "source-share-refuses-a-flooding-source",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {
+     "max_aircraft": 4,
+     "max_source_share": 0.5
+    },
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "vn": 10,
+       "source": "remote_id",
+       "station": "rx-1",
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 500,
+       "vn": -10,
+       "source": "remote_id",
+       "station": "rx-1",
+       "lat_deg": 41.719601756624705,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "C",
+       "north_m": 5000,
+       "source": "remote_id",
+       "station": "rx-1",
+       "lat_deg": 41.76011756624707,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "D",
+       "north_m": 30,
+       "station": "gs-1",
+       "lat_deg": 41.71537010539748,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "B"
+        ],
+        "detail": {
+         "t_cpa_s": 25.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 500.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "D"
+        ],
+        "detail": {
+         "t_cpa_s": 3.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 30.0,
+         "vertical_separation_known": true
+        }
+       },
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "B",
+         "D"
+        ],
+        "detail": {
+         "t_cpa_s": 47.0,
+         "d_cpa_horizontal_m": 0.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 470.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     }
+    ],
+    "active_after": [
+     {
+      "kind": "conflict",
+      "severity": "critical",
+      "aircraft": [
+       "A",
+       "B"
+      ],
+      "detail": {
+       "t_cpa_s": 25.0,
+       "d_cpa_horizontal_m": 0.0,
+       "d_alt_at_cpa_m": 0.0,
+       "d_horizontal_now_m": 500.0,
+       "vertical_separation_known": true
+      }
+     },
+     {
+      "kind": "conflict",
+      "severity": "critical",
+      "aircraft": [
+       "A",
+       "D"
+      ],
+      "detail": {
+       "t_cpa_s": 3.0,
+       "d_cpa_horizontal_m": 0.0,
+       "d_alt_at_cpa_m": 0.0,
+       "d_horizontal_now_m": 30.0,
+       "vertical_separation_known": true
+      }
+     },
+     {
+      "kind": "conflict",
+      "severity": "critical",
+      "aircraft": [
+       "B",
+       "D"
+      ],
+      "detail": {
+       "t_cpa_s": 47.0,
+       "d_cpa_horizontal_m": 0.0,
+       "d_alt_at_cpa_m": 0.0,
+       "d_horizontal_now_m": 470.0,
+       "vertical_separation_known": true
+      }
+     }
+    ],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0,
+     "rejected_source_share": 1,
+     "rejected_source_share/remote_id/rx-1": 1
+    }
+   },
+   "why": "C-18: receiver rx-1 already holds 2 aircraft with an alert, its share (0.5 of 4). A new id from it is refused (rejected_source_share), so one receiver flooding alert-raising ids cannot take the whole cap. Another source is still judged: D from a relay raises its conflict with A.",
+   "source": "",
+   "decision": "A new id is refused while its source holds max_source_share of max_aircraft in alert-holding aircraft (LESSONS C-18; uspace-core PR #15 review). utm had no cap and no share."
+  },
+  {
+   "name": "source-share-counts-alert-holders-only",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "config": {
+     "max_aircraft": 4,
+     "max_source_share": 0.5
+    },
+    "steps": [
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "A",
+       "north_m": 0,
+       "source": "remote_id",
+       "station": "rx-1",
+       "lat_deg": 41.7151,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "B",
+       "north_m": 5000,
+       "source": "remote_id",
+       "station": "rx-1",
+       "lat_deg": 41.76011756624707,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     },
+     {
+      "t_s": 0.0,
+      "op": "observe",
+      "aircraft": {
+       "id": "C",
+       "north_m": 30,
+       "source": "remote_id",
+       "station": "rx-1",
+       "lat_deg": 41.71537010539748,
+       "lon_deg": 44.8271,
+       "captured_at_s": 0.0
+      }
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [],
+      "cleared": []
+     },
+     {
+      "raised": [
+       {
+        "kind": "conflict",
+        "severity": "critical",
+        "aircraft": [
+         "A",
+         "C"
+        ],
+        "detail": {
+         "t_cpa_s": 0.0,
+         "d_cpa_horizontal_m": 30.0,
+         "d_alt_at_cpa_m": 0.0,
+         "d_horizontal_now_m": 30.0,
+         "vertical_separation_known": true
+        }
+       }
+      ],
+      "cleared": []
+     }
+    ],
+    "active_after": [
+     {
+      "kind": "conflict",
+      "severity": "critical",
+      "aircraft": [
+       "A",
+       "C"
+      ],
+      "detail": {
+       "t_cpa_s": 0.0,
+       "d_cpa_horizontal_m": 30.0,
+       "d_alt_at_cpa_m": 0.0,
+       "d_horizontal_now_m": 30.0,
+       "vertical_separation_known": true
+      }
+     }
+    ],
+    "counters": {
+     "rejected_backlog": 0,
+     "rejected_late": 0,
+     "rejected_out_of_order": 0,
+     "rejected_source_disabled": 0,
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0,
+     "rejected_source_share": 0,
+     "rejected_capacity": 0
+    }
+   },
+   "why": "C-18, the twin of source-share-refuses-a-flooding-source: rx-1 holds two aircraft, as many as its share, but neither has an alert. The share counts alert holders only, so a third id from rx-1 is admitted, judged, and raises its conflict with A.",
+   "source": ""
   }
  ]
 }

@@ -5088,6 +5088,236 @@
    "why": "The base feature (TST001) with one mutation is refused, naming the field path and the reason. Every problem path starts with features[0], so a report on a long file can be followed."
   },
   {
+   "name": "refuse-type-not-common-or-customized",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "STANDARD",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": false,
+    "problems": [
+     {
+      "field": "features[0].type",
+      "reason": "'STANDARD' is not one of COMMON, CUSTOMIZED"
+     }
+    ],
+    "must_include": {
+     "field_endswith": "type",
+     "reason_contains": "not one of"
+    }
+   },
+   "why": "ED-269's zone type is an enumeration (COMMON, CUSTOMIZED). A reader that accepts any string publishes a zone other readers refuse.",
+   "decision": "type is refused unless COMMON or CUSTOMIZED (uspace-core PR #7, owner decision). utm accepted any string; the problem text is uspace-core's, and only must_include binds."
+  },
+  {
+   "name": "type-customized-is-accepted",
+   "owner": [
+    "cisp"
+   ],
+   "input": {
+    "document": {
+     "features": [
+      {
+       "identifier": "TST001",
+       "country": "GEO",
+       "name": "Test prohibited square with a hole",
+       "type": "CUSTOMIZED",
+       "restriction": "PROHIBITED",
+       "reason": [
+        "SENSITIVE",
+        "AIR_TRAFFIC"
+       ],
+       "message": "Test zone, not a real restriction",
+       "applicability": [
+        {
+         "permanent": "YES"
+        }
+       ],
+       "zoneAuthority": [
+        {
+         "name": "Test authority",
+         "service": "Airspace",
+         "contactName": "Duty officer",
+         "siteURL": "https://example.invalid/zones",
+         "email": "zones@example.invalid",
+         "phone": "+995 32 000 0000",
+         "purpose": "AUTHORIZATION",
+         "intervalBefore": "P2D"
+        }
+       ],
+       "geometry": [
+        {
+         "uomDimensions": "M",
+         "lowerLimit": 0,
+         "lowerVerticalReference": "AGL",
+         "upperLimit": 120,
+         "upperVerticalReference": "AGL",
+         "horizontalProjection": {
+          "type": "Polygon",
+          "coordinates": [
+           [
+            [
+             44.8,
+             41.7
+            ],
+            [
+             44.82,
+             41.7
+            ],
+            [
+             44.82,
+             41.72
+            ],
+            [
+             44.8,
+             41.72
+            ],
+            [
+             44.8,
+             41.7
+            ]
+           ],
+           [
+            [
+             44.805,
+             41.705
+            ],
+            [
+             44.815,
+             41.705
+            ],
+            [
+             44.815,
+             41.715
+            ],
+            [
+             44.805,
+             41.715
+            ],
+            [
+             44.805,
+             41.705
+            ]
+           ]
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "accepted": true,
+    "zones": [
+     {
+      "identifier": "TST001",
+      "restriction": "PROHIBITED",
+      "lower_m": 0.0,
+      "lower_reference": "AGL",
+      "upper_m": 120.0,
+      "upper_reference": "AGL",
+      "shape": "Polygon",
+      "radius_m": null,
+      "periods": 1
+     }
+    ]
+   },
+   "why": "The presence pair: CUSTOMIZED, spelt with a Z as ED-269 publishes it, is the other accepted type."
+  },
+  {
    "name": "base-feature-is-accepted",
    "owner": [
     "cisp"

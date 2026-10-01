@@ -1,5 +1,5 @@
 {
- "description": "UAS serial numbers (ANSI/CTA-2063-A) and operator registration numbers (EU 2019/947 Art. 14), as U-01 validates them on registration and U-02 compares them on identification. Match `valid` exactly; `problem` is the old wording, `problem_contains` the part the old tests pinned.",
+ "description": "UAS serial numbers (ANSI/CTA-2063-A) and operator registration numbers (EU 2019/947 Art. 14), as U-01 validates them on registration and U-02 compares them on identification. Match `valid` exactly; `problem` is the old wording, `problem_contains` the part the old tests pinned. public_registration_number cases give the registration pattern the strip depends on (G-04): the secret part is stripped only after a number under it. kind serial_fold gives the key a case-insensitive serial lookup compares (G-05, G-12).",
  "source": [
   "utm common/tests/test_uas_identity.py",
   "utm common/uas_identity.py",
@@ -421,13 +421,14 @@
    ],
    "input": {
     "kind": "public_registration_number",
-    "value": "FIN87astrdge12k8-xyz"
+    "value": "FIN87astrdge12k8-xyz",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
    },
    "expected": {
     "public": "FIN87astrdge12k8",
     "compare_key": "FIN87ASTRDGE12K8"
    },
-   "why": "The EU number with its three secret characters. compare_key is what identification compares (public part, upper case)."
+   "why": "The EU number with its three secret characters. compare_key is what identification compares (public part, ASCII letters upper-cased)."
   },
   {
    "name": "public-part-FIN87astrdge12k8-XY1",
@@ -437,13 +438,14 @@
    ],
    "input": {
     "kind": "public_registration_number",
-    "value": " FIN87astrdge12k8-XY1 "
+    "value": " FIN87astrdge12k8-XY1 ",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
    },
    "expected": {
     "public": "FIN87astrdge12k8",
     "compare_key": "FIN87ASTRDGE12K8"
    },
-   "why": "Trimmed first, then stripped. compare_key is what identification compares (public part, upper case)."
+   "why": "Trimmed first, then stripped. compare_key is what identification compares (public part, ASCII letters upper-cased)."
   },
   {
    "name": "public-part-FIN87astrdge12k8",
@@ -453,13 +455,14 @@
    ],
    "input": {
     "kind": "public_registration_number",
-    "value": "FIN87astrdge12k8"
+    "value": "FIN87astrdge12k8",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
    },
    "expected": {
     "public": "FIN87astrdge12k8",
     "compare_key": "FIN87ASTRDGE12K8"
    },
-   "why": "No secret tail: unchanged. compare_key is what identification compares (public part, upper case)."
+   "why": "No secret tail: unchanged. compare_key is what identification compares (public part, ASCII letters upper-cased)."
   },
   {
    "name": "public-part-GEO-OP-SITL",
@@ -469,13 +472,14 @@
    ],
    "input": {
     "kind": "public_registration_number",
-    "value": "GEO-OP-SITL"
+    "value": "GEO-OP-SITL",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
    },
    "expected": {
     "public": "GEO-OP-SITL",
     "compare_key": "GEO-OP-SITL"
    },
-   "why": "A four-character tail is not a secret: unchanged. compare_key is what identification compares (public part, upper case)."
+   "why": "A four-character tail is not a secret: unchanged. compare_key is what identification compares (public part, ASCII letters upper-cased)."
   },
   {
    "name": "public-part-GEO-OP-ABC",
@@ -485,13 +489,15 @@
    ],
    "input": {
     "kind": "public_registration_number",
-    "value": "GEO-OP-ABC"
+    "value": "GEO-OP-ABC",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
    },
    "expected": {
-    "public": "GEO-OP",
-    "compare_key": "GEO-OP"
+    "public": "GEO-OP-ABC",
+    "compare_key": "GEO-OP-ABC"
    },
-   "why": "PITFALL: any 3-alphanumeric tail after the last hyphen is stripped, so a test identifier like GEO-OP-ABC becomes GEO-OP. Registered numbers may not contain '-', so this only affects what is broadcast. compare_key is what identification compares (public part, upper case)."
+   "why": "G-04: the secret part follows a registration number, and GEO-OP is none under the pattern, so nothing is stripped. utm stripped any three-character tail and compared GEO-OP. compare_key is what identification compares (public part, ASCII letters upper-cased).",
+   "decision": "Strip the secret part only after a registration number under the configured pattern, and upper-case ASCII letters only (LESSONS G-04, G-12; uspace-core PR #4 and #9). utm stripped any three-character tail and folded with str.upper()."
   },
   {
    "name": "public-part-FIN87astrdge12k8-",
@@ -501,13 +507,14 @@
    ],
    "input": {
     "kind": "public_registration_number",
-    "value": "FIN87astrdge12k8-"
+    "value": "FIN87astrdge12k8-",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
    },
    "expected": {
     "public": "FIN87astrdge12k8-",
     "compare_key": "FIN87ASTRDGE12K8-"
    },
-   "why": "An empty tail is not stripped. compare_key is what identification compares (public part, upper case)."
+   "why": "An empty tail is not stripped. compare_key is what identification compares (public part, ASCII letters upper-cased)."
   },
   {
    "name": "public-part--xyz",
@@ -517,13 +524,14 @@
    ],
    "input": {
     "kind": "public_registration_number",
-    "value": "-xyz"
+    "value": "-xyz",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
    },
    "expected": {
     "public": "-xyz",
     "compare_key": "-XYZ"
    },
-   "why": "Nothing before the hyphen: unchanged. compare_key is what identification compares (public part, upper case)."
+   "why": "Nothing before the hyphen: unchanged. compare_key is what identification compares (public part, ASCII letters upper-cased)."
   },
   {
    "name": "public-part-FIN87astrdge12k8-x!z",
@@ -533,13 +541,147 @@
    ],
    "input": {
     "kind": "public_registration_number",
-    "value": "FIN87astrdge12k8-x!z"
+    "value": "FIN87astrdge12k8-x!z",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
    },
    "expected": {
     "public": "FIN87astrdge12k8-x!z",
     "compare_key": "FIN87ASTRDGE12K8-X!Z"
    },
-   "why": "A non-alphanumeric tail is not a secret. compare_key is what identification compares (public part, upper case)."
+   "why": "A non-alphanumeric tail is not a secret. compare_key is what identification compares (public part, ASCII letters upper-cased)."
+  },
+  {
+   "name": "public-part-fin87astrdge12k8-xyz",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "public_registration_number",
+    "value": "fin87astrdge12k8-xyz",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
+   },
+   "expected": {
+    "public": "fin87astrdge12k8",
+    "compare_key": "FIN87ASTRDGE12K8"
+   },
+   "why": "A number broadcast in lower case still has its secret part stripped: the head is matched with its ASCII letters upper-cased. compare_key is what identification compares (public part, ASCII letters upper-cased)."
+  },
+  {
+   "name": "public-part-FIN87astrdge12k[long-s]",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "public_registration_number",
+    "value": "FIN87astrdge12kſ",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
+   },
+   "expected": {
+    "public": "FIN87astrdge12kſ",
+    "compare_key": "FIN87ASTRDGE12Kſ"
+   },
+   "why": "G-12: U+017F (long s) is not folded onto S: the compare key keeps it, so a look-alike never compares equal to FIN87ASTRDGE12KS. compare_key is what identification compares (public part, ASCII letters upper-cased).",
+   "decision": "Strip the secret part only after a registration number under the configured pattern, and upper-case ASCII letters only (LESSONS G-04, G-12; uspace-core PR #4 and #9). utm stripped any three-character tail and folded with str.upper()."
+  },
+  {
+   "name": "public-part-f[dotless-i]n87astrdge12k8-xyz",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "public_registration_number",
+    "value": "fın87astrdge12k8-xyz",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
+   },
+   "expected": {
+    "public": "fın87astrdge12k8-xyz",
+    "compare_key": "FıN87ASTRDGE12K8-XYZ"
+   },
+   "why": "G-12: U+0131 (dotless i) is not folded onto I, so the head is no registration number under the ASCII pattern and nothing is stripped. compare_key is what identification compares (public part, ASCII letters upper-cased).",
+   "decision": "Strip the secret part only after a registration number under the configured pattern, and upper-case ASCII letters only (LESSONS G-04, G-12; uspace-core PR #4 and #9). utm stripped any three-character tail and folded with str.upper()."
+  },
+  {
+   "name": "public-part-FIN87astrdge12k8-x[long-s]z",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "public_registration_number",
+    "value": "FIN87astrdge12k8-xſz",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
+   },
+   "expected": {
+    "public": "FIN87astrdge12k8-xſz",
+    "compare_key": "FIN87ASTRDGE12K8-XſZ"
+   },
+   "why": "A tail with a non-ASCII letter is not a secret part. compare_key is what identification compares (public part, ASCII letters upper-cased).",
+   "decision": "Strip the secret part only after a registration number under the configured pattern, and upper-case ASCII letters only (LESSONS G-04, G-12; uspace-core PR #4 and #9). utm stripped any three-character tail and folded with str.upper()."
+  },
+  {
+   "name": "serial-fold-sn-fleet",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "serial_fold",
+    "serial": "sn-fleet"
+   },
+   "expected": {
+    "fold_key": "SN-FLEET"
+   },
+   "why": "ASCII letters fold: the key of a lower-case spelling is the upper-case one. fold_key is what a case-insensitive serial lookup compares (G-05); an exact match still wins."
+  },
+  {
+   "name": "serial-fold-1581f5fkd229400a",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "serial_fold",
+    "serial": " 1581f5fkd229400a "
+   },
+   "expected": {
+    "fold_key": "1581F5FKD229400A"
+   },
+   "why": "Trimmed, then folded. fold_key is what a case-insensitive serial lookup compares (G-05); an exact match still wins."
+  },
+  {
+   "name": "serial-fold-[long-s]n-fleet",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "serial_fold",
+    "serial": "ſn-fleet"
+   },
+   "expected": {
+    "fold_key": "ſN-FLEET"
+   },
+   "why": "G-12: U+017F (long s) is kept, so it never folds onto SN-FLEET. fold_key is what a case-insensitive serial lookup compares (G-05); an exact match still wins.",
+   "decision": "Serials fold ASCII letters only (LESSONS G-12, uspace-core PR #9 review). utm's str.upper() folds look-alikes onto ASCII."
+  },
+  {
+   "name": "serial-fold-sn-k[dotless-i]lo",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "serial_fold",
+    "serial": "sn-kılo"
+   },
+   "expected": {
+    "fold_key": "SN-KıLO"
+   },
+   "why": "G-12: U+0131 (dotless i) is kept, so it never folds onto SN-KILO. fold_key is what a case-insensitive serial lookup compares (G-05); an exact match still wins.",
+   "decision": "Serials fold ASCII letters only (LESSONS G-12, uspace-core PR #9 review). utm's str.upper() folds look-alikes onto ASCII."
   }
  ]
 }
