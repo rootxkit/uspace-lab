@@ -2348,7 +2348,7 @@ def gen_cpa() -> None:
 # alert_lifecycle.json and zones_vertical.json (the monitor)
 # =================================================================================
 
-LETTER = {"A": UUID(int=1), "B": UUID(int=2), "C": UUID(int=3), "D": UUID(int=4)}
+LETTER = {"A": UUID(int=1), "B": UUID(int=2), "C": UUID(int=3), "D": UUID(int=4), "E": UUID(int=5)}
 BY_UUID = {v: k for k, v in LETTER.items()}
 DETAIL_KEYS = (
     "t_cpa_s",
@@ -2880,6 +2880,17 @@ def gen_lifecycle() -> None:
             "took it."
         ),
     )
+    seq(
+        "placement-within-ahead-tolerance-is-admitted",
+        {},
+        head_on
+        + [
+            {"t_s": 1.0, "op": "observe", "aircraft": {"id": "B", "north_m": 480, "vn": -10, "captured_at_s": 2.0, "rx_at_s": 1.0, "station": "gs-2"}},
+            {"t_s": 14.0, "op": "tick"},
+        ],
+        "T-13, the presence twin: placed exactly ahead_tolerance_s (1.0 s) ahead of its receipt is still admitted and refreshes the conflict. The tolerance absorbs clock jitter; only more than it is refused.",
+        counters={"rejected_placed_ahead": 0},
+    )
     cap = (
         "Past max_aircraft only an aircraft without an active alert is evicted, "
         "and a new id is refused (rejected_capacity) when every aircraft held has "
@@ -2887,16 +2898,19 @@ def gen_lifecycle() -> None:
         "review). utm held every aircraft it heard."
     )
     seq(
-        "eviction-takes-an-aircraft-without-an-alert",
-        {"max_aircraft": 3},
+        "eviction-order-not-flying-first-and-the-evicted-is-gone",
+        {"max_aircraft": 4},
         head_on
         + [
-            obs(0.0, id="C", north_m=5000, station="gs-3"),
-            obs(0.0, id="D", north_m=9000, station="gs-4"),
-            obs(1.0, id="A", north_m=10, vn=10),
+            obs(0.0, id="C", north_m=3000, station="gs-3"),
+            obs(0.5, id="D", north_m=7000, station="gs-4", flying=False),
+            obs(1.0, id="E", north_m=9000, station="gs-5"),
+            obs(1.5, id="C", north_m=3000, station="gs-3"),
+            obs(2.0, id="D", north_m=7000, station="gs-4", flying=False),
+            obs(2.5, id="A", north_m=25, vn=10),
         ],
-        "C-18: at the cap of 3, a new aircraft D evicts C, the one aircraft that holds no alert. The conflict between A and B is neither cleared nor touched, and refreshes at 1 s.",
-        counters={"aircraft_evicted": 1},
+        "C-18: at the cap of 4 (A and B in conflict, C flying, D on the ground), E evicts D: an aircraft not flying goes first, although C was heard earlier. C's next sample is of an aircraft still held, so it evicts nothing. D's next sample is a new id, so D was gone: it evicts E, now the least recently heard aircraft without an alert. aircraft_evicted is 2; evicting C first would make it 3, and D still held would make it 1. The conflict is never touched.",
+        counters={"aircraft_evicted": 2},
         decision=cap,
         not_in_utm=True,
     )
