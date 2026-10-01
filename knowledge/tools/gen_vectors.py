@@ -3062,6 +3062,47 @@ def gen_zones_vertical() -> None:
                 "U-space zone type.",
             )
             expected["raised"] = new_raised
+        elif (
+            zone
+            and zone["restriction"] in ("PROHIBITED", "REQ_AUTHORISATION")
+            and counters["zone_checks_not_evaluated"]
+            and "no_geoid" in expected["reasons"]
+        ):
+            # S-37, owner decision: a WGS84 limit with no geoid is treated as
+            # an AGL limit with no DEM (Z-09). The zone warns, flags
+            # limit_not_judged and names every reference it could not judge.
+            volume = zone["geometry"][0]
+            refs = []
+            for key, ref_key, lower in (("lowerLimit", "lowerVerticalReference", True), ("upperLimit", "upperVerticalReference", False)):
+                if key in volume and missing({**zone, "geometry": [{key: volume[key], ref_key: volume[ref_key]}]}, ground_m, undulation, None):
+                    refs.append(volume[ref_key])
+            new_raised = [
+                {
+                    "kind": "zone",
+                    "severity": "warning",
+                    "aircraft": ["A"],
+                    "detail": {
+                        "identifier": zone["identifier"],
+                        "restriction": zone["restriction"],
+                        "vertical_known": False,
+                        "limit_not_judged": True,
+                        "not_judged": refs,
+                    },
+                }
+            ]
+            new_counters = {"zone_checks_not_evaluated": 0, "zone_limits_not_judged": 1}
+            extra["decision"] = decided(
+                file,
+                name,
+                {"raised": raised, "counters": counters},
+                {"raised": new_raised, "counters": new_counters},
+                "S-37, owner decision: a WGS84 limit with no geoid is treated like "
+                "an AGL limit with no DEM (LESSONS Z-09). A PROHIBITED or "
+                "REQ_AUTHORISATION zone warns with limit_not_judged and reason "
+                "no_geoid; a limit that cannot be judged is never silent there. "
+                "utm left the zone not evaluated.",
+            )
+            expected["raised"], expected["counters"] = new_raised, new_counters
         elif conditional_severity == "info" and any(r["severity"] == "warning" and r["detail"].get("within_band") is False for r in raised):
             new_raised = [{**r, "severity": "info"} for r in raised]
             extra["decision"] = decided(
@@ -3098,7 +3139,10 @@ def gen_zones_vertical() -> None:
     one("feet-converted-outside", feet, 615.0, "615 m is above 609.6 m.")
     one("conditional-agl-no-terrain-not-evaluated", zone_feature("C1", "CONDITIONAL", upper=(120, "AGL")), 550.0, "A CONDITIONAL zone whose AGL limit cannot be judged is NOT evaluated: no alert, counted, an active one neither refreshed nor cleared.", source=G + "test_a_limit_without_its_data_is_not_evaluated_and_counted")
     one("conditional-agl-ground-unknown-not-evaluated", zone_feature("C1", "CONDITIONAL", upper=(120, "AGL")), 550.0, "Terrain configured but unknown here (cell never fetched, nodata, unreadable tile): the same. Unknown ground is never 0.", ground_m=None)
-    one("prohibited-wgs84-no-geoid-not-evaluated", zone_feature("P1", upper=(600, "WGS84")), 550.0, "A WGS84 limit without the geoid is not evaluated, even for PROHIBITED, with reason no_geoid (Z-09). S-37 proposes a warning here, as for an AGL limit without the DEM; that is still open, and this case pins today's rule.")
+    one("prohibited-wgs84-no-geoid-warns", zone_feature("P1", upper=(600, "WGS84")), 550.0, "S-37: a PROHIBITED zone whose WGS84 limit cannot be judged (no geoid) warns, with vertical_known false, limit_not_judged and reason no_geoid, as for an AGL limit without the DEM. A limit that cannot be judged is never silent here.")
+    one("req-authorisation-wgs84-no-geoid-warns", zone_feature("P1", "REQ_AUTHORISATION", upper=(600, "WGS84")), 550.0, "S-37: the same for REQ_AUTHORISATION.")
+    one("prohibited-wgs84-with-geoid-own-severity", zone_feature("P1", upper=(600, "WGS84")), 550.0, "The presence pair: with the geoid, 550 + 15 = 565 m HAE is inside the 600 m ceiling: critical, nothing flagged.", undulation=n_m)
+    one("prohibited-agl-and-wgs84-missing-warns-naming-both", zone_feature("P6", lower=(50, "AGL"), upper=(600, "WGS84")), 550.0, "S-37 with Z-09: no terrain and no geoid. The zone warns, names both references it could not judge, and reports both reasons.")
     one(
         "conditional-agl-and-wgs84-missing-both-reported",
         zone_feature("C2", "CONDITIONAL", lower=(50, "AGL"), upper=(600, "WGS84")),
@@ -3182,7 +3226,8 @@ def gen_zones_vertical() -> None:
             "is a placeholder and the raise names no restriction. "
             "expected.raised is what one observation raises; counters show "
             "zone_checks_not_evaluated (silent, not judged) and "
-            "zone_limits_not_judged (warned because AGL could not be judged). "
+            "zone_limits_not_judged (warned because an AGL or WGS84 limit "
+            "could not be judged). "
             "reasons is the set of what was missing whenever a zone was not "
             "evaluated, a limit was not judged or the height limit was not "
             "evaluated (no_terrain, ground_unknown, no_geoid), every one of "

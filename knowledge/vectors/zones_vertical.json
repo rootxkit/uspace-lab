@@ -1,5 +1,5 @@
 {
- "description": "One aircraft inside a zone horizontally (or none, for the height limit), judged vertically. Each limit is compared in its own reference and never converted with a single number: AMSL against AMSL altitude; AGL against AMSL minus the DEM ground under the aircraft; WGS84 against AMSL plus the geoid undulation. terrain: 'none' (not configured), 'unknown here', or ground_m. conditional_severity is what a CONDITIONAL zone raises (info or warning). zone_type, when present, replaces the type the restriction maps to: USPACE is U-space airspace, which ED-269 cannot express (ED-318 carries it), so the feature's restriction is a placeholder and the raise names no restriction. expected.raised is what one observation raises; counters show zone_checks_not_evaluated (silent, not judged) and zone_limits_not_judged (warned because AGL could not be judged). reasons is the set of what was missing whenever a zone was not evaluated, a limit was not judged or the height limit was not evaluated (no_terrain, ground_unknown, no_geoid), every one of them; empty otherwise. Its order is not significant.",
+ "description": "One aircraft inside a zone horizontally (or none, for the height limit), judged vertically. Each limit is compared in its own reference and never converted with a single number: AMSL against AMSL altitude; AGL against AMSL minus the DEM ground under the aircraft; WGS84 against AMSL plus the geoid undulation. terrain: 'none' (not configured), 'unknown here', or ground_m. conditional_severity is what a CONDITIONAL zone raises (info or warning). zone_type, when present, replaces the type the restriction maps to: USPACE is U-space airspace, which ED-269 cannot express (ED-318 carries it), so the feature's restriction is a placeholder and the raise names no restriction. expected.raised is what one observation raises; counters show zone_checks_not_evaluated (silent, not judged) and zone_limits_not_judged (warned because an AGL or WGS84 limit could not be judged). reasons is the set of what was missing whenever a zone was not evaluated, a limit was not judged or the height limit was not evaluated (no_terrain, ground_unknown, no_geoid), every one of them; empty otherwise. Its order is not significant.",
  "source": [
   "utm airspace/tests/test_monitor_geozones.py",
   "utm airspace/tests/test_pressure_altitude.py",
@@ -1410,7 +1410,7 @@
    "source": ""
   },
   {
-   "name": "prohibited-wgs84-no-geoid-not-evaluated",
+   "name": "prohibited-wgs84-no-geoid-warns",
    "owner": [
     "authority",
     "ussp"
@@ -1474,17 +1474,316 @@
     "conditional_severity": "warning"
    },
    "expected": {
-    "raised": [],
+    "raised": [
+     {
+      "kind": "zone",
+      "severity": "warning",
+      "aircraft": [
+       "A"
+      ],
+      "detail": {
+       "identifier": "P1",
+       "restriction": "PROHIBITED",
+       "vertical_known": false,
+       "limit_not_judged": true,
+       "not_judged": [
+        "WGS84"
+       ]
+      }
+     }
+    ],
     "counters": {
-     "zone_checks_not_evaluated": 1,
-     "zone_limits_not_judged": 0
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 1
     },
     "reasons": [
      "no_geoid"
     ]
    },
-   "why": "A WGS84 limit without the geoid is not evaluated, even for PROHIBITED, with reason no_geoid (Z-09). S-37 proposes a warning here, as for an AGL limit without the DEM; that is still open, and this case pins today's rule.",
+   "why": "S-37: a PROHIBITED zone whose WGS84 limit cannot be judged (no geoid) warns, with vertical_known false, limit_not_judged and reason no_geoid, as for an AGL limit without the DEM. A limit that cannot be judged is never silent here.",
+   "source": "",
+   "decision": "S-37, owner decision: a WGS84 limit with no geoid is treated like an AGL limit with no DEM (LESSONS Z-09). A PROHIBITED or REQ_AUTHORISATION zone warns with limit_not_judged and reason no_geoid; a limit that cannot be judged is never silent there. utm left the zone not evaluated."
+  },
+  {
+   "name": "req-authorisation-wgs84-no-geoid-warns",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "zone": {
+     "identifier": "P1",
+     "country": "GEO",
+     "type": "COMMON",
+     "restriction": "REQ_AUTHORISATION",
+     "applicability": [
+      {
+       "permanent": "YES"
+      }
+     ],
+     "zoneAuthority": [],
+     "geometry": [
+      {
+       "uomDimensions": "M",
+       "lowerVerticalReference": "AMSL",
+       "upperVerticalReference": "WGS84",
+       "horizontalProjection": {
+        "type": "Polygon",
+        "coordinates": [
+         [
+          [
+           44.8171,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7051
+          ]
+         ]
+        ]
+       },
+       "upperLimit": 600
+      }
+     ]
+    },
+    "aircraft": {
+     "alt_amsl_m": 550.0,
+     "alt_source": "geodetic"
+    },
+    "terrain": "none",
+    "geoid_undulation_m": null,
+    "max_height_agl_m": null,
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
+   },
+   "expected": {
+    "raised": [
+     {
+      "kind": "zone",
+      "severity": "warning",
+      "aircraft": [
+       "A"
+      ],
+      "detail": {
+       "identifier": "P1",
+       "restriction": "REQ_AUTHORISATION",
+       "vertical_known": false,
+       "limit_not_judged": true,
+       "not_judged": [
+        "WGS84"
+       ]
+      }
+     }
+    ],
+    "counters": {
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 1
+    },
+    "reasons": [
+     "no_geoid"
+    ]
+   },
+   "why": "S-37: the same for REQ_AUTHORISATION.",
+   "source": "",
+   "decision": "S-37, owner decision: a WGS84 limit with no geoid is treated like an AGL limit with no DEM (LESSONS Z-09). A PROHIBITED or REQ_AUTHORISATION zone warns with limit_not_judged and reason no_geoid; a limit that cannot be judged is never silent there. utm left the zone not evaluated."
+  },
+  {
+   "name": "prohibited-wgs84-with-geoid-own-severity",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "zone": {
+     "identifier": "P1",
+     "country": "GEO",
+     "type": "COMMON",
+     "restriction": "PROHIBITED",
+     "applicability": [
+      {
+       "permanent": "YES"
+      }
+     ],
+     "zoneAuthority": [],
+     "geometry": [
+      {
+       "uomDimensions": "M",
+       "lowerVerticalReference": "AMSL",
+       "upperVerticalReference": "WGS84",
+       "horizontalProjection": {
+        "type": "Polygon",
+        "coordinates": [
+         [
+          [
+           44.8171,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7051
+          ]
+         ]
+        ]
+       },
+       "upperLimit": 600
+      }
+     ]
+    },
+    "aircraft": {
+     "alt_amsl_m": 550.0,
+     "alt_source": "geodetic"
+    },
+    "terrain": "none",
+    "geoid_undulation_m": 15.0,
+    "max_height_agl_m": null,
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
+   },
+   "expected": {
+    "raised": [
+     {
+      "kind": "zone",
+      "severity": "critical",
+      "aircraft": [
+       "A"
+      ],
+      "detail": {
+       "identifier": "P1",
+       "restriction": "PROHIBITED",
+       "alt_hae_m": 565.0
+      }
+     }
+    ],
+    "counters": {
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 0
+    },
+    "reasons": []
+   },
+   "why": "The presence pair: with the geoid, 550 + 15 = 565 m HAE is inside the 600 m ceiling: critical, nothing flagged.",
    "source": ""
+  },
+  {
+   "name": "prohibited-agl-and-wgs84-missing-warns-naming-both",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "zone": {
+     "identifier": "P6",
+     "country": "GEO",
+     "type": "COMMON",
+     "restriction": "PROHIBITED",
+     "applicability": [
+      {
+       "permanent": "YES"
+      }
+     ],
+     "zoneAuthority": [],
+     "geometry": [
+      {
+       "uomDimensions": "M",
+       "lowerVerticalReference": "AGL",
+       "upperVerticalReference": "WGS84",
+       "horizontalProjection": {
+        "type": "Polygon",
+        "coordinates": [
+         [
+          [
+           44.8171,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7051
+          ],
+          [
+           44.8371,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7251
+          ],
+          [
+           44.8171,
+           41.7051
+          ]
+         ]
+        ]
+       },
+       "lowerLimit": 50,
+       "upperLimit": 600
+      }
+     ]
+    },
+    "aircraft": {
+     "alt_amsl_m": 550.0,
+     "alt_source": "geodetic"
+    },
+    "terrain": "none",
+    "geoid_undulation_m": null,
+    "max_height_agl_m": null,
+    "pressure_uncertainty_m": 250.0,
+    "conditional_severity": "warning"
+   },
+   "expected": {
+    "raised": [
+     {
+      "kind": "zone",
+      "severity": "warning",
+      "aircraft": [
+       "A"
+      ],
+      "detail": {
+       "identifier": "P6",
+       "restriction": "PROHIBITED",
+       "vertical_known": false,
+       "limit_not_judged": true,
+       "not_judged": [
+        "AGL",
+        "WGS84"
+       ]
+      }
+     }
+    ],
+    "counters": {
+     "zone_checks_not_evaluated": 0,
+     "zone_limits_not_judged": 1
+    },
+    "reasons": [
+     "no_terrain",
+     "no_geoid"
+    ]
+   },
+   "why": "S-37 with Z-09: no terrain and no geoid. The zone warns, names both references it could not judge, and reports both reasons.",
+   "source": "",
+   "decision": "S-37, owner decision: a WGS84 limit with no geoid is treated like an AGL limit with no DEM (LESSONS Z-09). A PROHIBITED or REQ_AUTHORISATION zone warns with limit_not_judged and reason no_geoid; a limit that cannot be judged is never silent there. utm left the zone not evaluated."
   },
   {
    "name": "conditional-agl-and-wgs84-missing-both-reported",

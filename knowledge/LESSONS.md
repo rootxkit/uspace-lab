@@ -1087,21 +1087,24 @@ be judged decide.**
 
 **Z-09. When a limit cannot be judged, warn for the zones that matter.**
 - Rule:
-  - A PROHIBITED or REQ_AUTHORISATION zone whose only unjudged limit is
-    AGL raises a warning with `vertical_known: false` and
-    `limit_not_judged: true`.
-  - Otherwise (CONDITIONAL, or a WGS84 limit without the geoid) the zone
-    is not evaluated: no alert, counted, logged once per zone and
-    aircraft. An active alert is neither refreshed nor cleared.
-  - While any PROHIBITED zone needs terrain and none is configured, the
-    startup log and every status line are at error level.
-- Why: U-03 review. A false warning beats a missed critical. S-37 (open)
-  proposes the same warning for a WGS84 limit with no geoid. Until the
-  owner decides it, the rule above stands: uspace-core (PR #12) and
-  `zones_vertical.json#prohibited-wgs84-no-geoid-not-evaluated` pin "not
-  evaluated" with reason `no_geoid`. Every missing reference is reported,
-  not only the first (`#*-both-reported`).
-  `zones_vertical.json#*-no-terrain-*`.
+  - A PROHIBITED or REQ_AUTHORISATION zone with a limit it cannot judge
+    (AGL with no DEM or unknown ground, WGS84 with no geoid) raises a
+    warning with `vertical_known: false`, `limit_not_judged: true` and
+    `not_judged` naming each such reference, and reports every reason
+    (`no_terrain`, `ground_unknown`, `no_geoid`). A judged limit that
+    excludes the aircraft still decides (Z-08).
+  - A CONDITIONAL zone with such a limit is not evaluated: no alert,
+    counted with its reasons, logged once per zone and aircraft. An
+    active alert is neither refreshed nor cleared.
+  - While any PROHIBITED zone needs terrain or the geoid and none is
+    configured, the startup log and every status line are at error level.
+- Why: U-03 review. A false warning beats a missed critical. S-37 asked
+  for the same warning for a WGS84 limit with no geoid; the owner decided
+  it (2026-10-01): a limit that cannot be judged is never silent in a
+  zone that matters. utm left such a zone not evaluated.
+  `zones_vertical.json#*-no-terrain-*`, `#*-wgs84-no-geoid-warns`,
+  `#prohibited-agl-and-wgs84-missing-warns-naming-both`, and the
+  CONDITIONAL `#*-both-reported`.
 - Applies to: authority, ussp.
 
 **Z-10. Map each restriction to a severity, and nothing lifts a
