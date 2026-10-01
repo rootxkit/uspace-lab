@@ -7,7 +7,7 @@ Python:
 | Path | What it is |
 |---|---|
 | [`LESSONS.md`](LESSONS.md) | 129 lessons, grouped by area, each with its rule, the failure that taught it and the repository that owns it, plus 14 lessons deliberately **not carried over** |
-| [`vectors/`](vectors/) | 17 JSON files, 651 test cases a Go implementation must pass |
+| [`vectors/`](vectors/) | 17 JSON files, 660 test cases a Go implementation must pass |
 | [`scenarios.md`](scenarios.md) | 22 end-to-end scenarios that depend on processes, clocks or a flying simulator, so they cannot be vectors |
 | [`tools/gen_vectors.py`](tools/gen_vectors.py) | The script that computed every expected value by running the old code |
 
@@ -65,10 +65,10 @@ Every file has the same shape:
 | `rid_receiver_auth.json` | 14 | authority | HMAC-SHA256 receiver signatures, skew window, nonce replay |
 | `identification_status.json` | 43 | authority, ussp | The U-02 truth table: four statuses, reasons (spec 04 §3.2 codes), mismatch, EU secret suffix, session bindings, look-alike serials, duplicate serials, unrecognised statuses |
 | `serials_and_registration.json` | 41 | authority, ussp | CTA-2063-A serials by class; operator registration numbers; public part and compare key; the serial fold key; Unicode look-alikes |
-| `fleet_match.json` | 13 | authority, ussp | The spoofing guard: withhold, speak for ours, conflict; history rows ignored; unusable thresholds withhold |
-| `cpa.json` | 33 | ussp, authority | Head-on, crossing, overtaking, parallel, hovering inside the minima, diverging, vertical, stale and advanced neighbours, pressure tracks; loss of separation over the window and its start; invalid policy |
-| `alert_lifecycle.json` | 33 | authority, ussp, cisp | Raise and clear sequences with hysteresis and reasons (resolved, stale, source_disabled, landed), backlog, lateness, identification alerts; placements behind or ahead refused; eviction, capacity and per-source share |
-| `zones_vertical.json` | 47 | authority, ussp | AMSL, AGL and WGS84 limits with and without terrain or geoid, with every missing reason; the unjudged-limit warning for AGL and WGS84 (S-37); pressure margin and `within_band` capped at the zone's severity; U-space at info; height limit |
+| `fleet_match.json` | 14 | authority, ussp | The spoofing guard: withhold, speak for ours, conflict; history rows ignored; unusable thresholds withhold |
+| `cpa.json` | 37 | ussp, authority | Head-on, crossing, overtaking, parallel, hovering inside the minima, diverging, vertical, stale and advanced neighbours, pressure tracks; loss of separation over the window and its start; invalid policy |
+| `alert_lifecycle.json` | 35 | authority, ussp, cisp | Raise and clear sequences with hysteresis and reasons (resolved, stale, source_disabled, landed), backlog, lateness, identification alerts; placements behind or ahead refused; eviction, capacity and per-source share |
+| `zones_vertical.json` | 49 | authority, ussp | AMSL, AGL and WGS84 limits with and without terrain or geoid, with every missing reason; the unjudged-limit warning for AGL and WGS84 (S-37); pressure margin and `within_band` capped at the zone's severity; U-space at info; height limit |
 | `zones_applicability.json` | 32 | cisp, authority, ussp | ED-269 windows, weekly schedules, overnight, midnight UTC, offsets, boundaries |
 | `ed269_parse.json` | 54 | cisp | A valid file round-trips unchanged; 40 single-field mutations and 9 document-level refusals, each with its path and reason; the zone type enumeration |
 | `geodesy.json` | 17 | cisp, authority, ussp | Vincenty reference distances; points in circles on the ellipsoid; polygons with holes; tangent plane; antimeridian |
