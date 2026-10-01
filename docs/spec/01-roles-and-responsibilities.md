@@ -31,6 +31,7 @@ Every obligation below is implemented in Go (`00 §6`): the safety judgements (A
 - Release operator PII except as 947 Art. 14 and national law allow (registry validity answers are status-only; see `06-security.md`).
 - Turn an occurrence report into a violation or use it against the reporter or the persons named in it (376 Art. 16(6)–(7)). Violations rest on the authority's own evidence.
 - Keep Display Provider data beyond the F3411 limit: its F3411 DP cache is disposed of within 24 h (`NetDpMaxDataRetentionPeriod`); recorded traffic data for oversight is obtained from USSP records under Art. 18(b) and from its own receivers.
+- Assume a USSP is `uspace-ussp`: USSPs are discovered through the DSS and the CIS USSP list, and every USSP-facing interface is the standard one or a published national OpenAPI contract (`00 §7`).
 
 ### Users and authentication
 
@@ -46,7 +47,7 @@ Every obligation below is implemented in Go (`00 §6`): the safety judgements (A
 
 Operators, UAS, remote pilots and competencies; geo-zones and U-space designations with their Art. 3(4) requirements (master copy; the CISP publishes them); USSP/CISP certificates and operating status; violations; occurrence reports (segregated); Remote ID receiver fleet and its raw observations; audit log.
 
-## 2. `uspace-cisp` — single Common Information Service Provider
+## 2. `uspace-cisp` — single Common Information Service Provider (state-run, decided)
 
 ### MUST
 
@@ -106,6 +107,7 @@ The publication log: every version of every published feature, who published it,
 - Hide traffic: a source that fails is shown as stale or unavailable, never removed silently.
 - Require a flight authorisation for operations outside the scope of 2021/664 (A1 with C0 or privately built < 250 g UA, Art. 1(3)); it may accept them voluntarily.
 - Keep peer data (other USSPs' intents, flights) longer than 24 h (F3548 `ExternalDataMaxRetentionTimeHours`), except inside its own ≥ 30-day service record where the peer data was part of a decision.
+- Assume the CISP or a peer USSP is ours: the CISP of record comes from deployment configuration and the airspace designation, peers from the DSS; only standard and published contracts are used (`00 §7`).
 
 ### Users and authentication
 

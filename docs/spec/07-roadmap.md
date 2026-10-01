@@ -1,6 +1,6 @@
 # 07 — Roadmap
 
-Build order: knowledge transfer → cisp → authority → ussp → ansp → lab → courier client. The lab's scaffolding (SITL, schema vectors, scenario runner) starts in phase 0 because every later milestone's done-when needs it; its full load and demo work comes last.
+Build order: knowledge transfer → `uspace-core` → cisp (with `uspace-ui`) → authority → ussp → ansp → lab (conformance suite, load, demo) → courier client. `uspace-core` comes first because the knowledge vectors are ported as its tests and every system compiles it in; `uspace-ui` starts with the CISP, the first Next.js app. The lab's scaffolding (SITL, schema vectors, scenario runner) starts in phase 0 because every later milestone's done-when needs it; its conformance suite, load and demo work comes last.
 
 ## 1. Phases and milestones
 
@@ -9,19 +9,28 @@ Build order: knowledge transfer → cisp → authority → ussp → ansp → lab
 | Milestone | Done when |
 |---|---|
 | KT-1 Spec accepted | this `docs/spec/` reviewed by the owner; open questions sent to GCAA/ministry |
-| KT-2 Shared contracts | `uspace-lab/schemas/` holds JSON Schemas for the catalogue of `04` with generated Go structs and, Go → TypeScript, the client types; the behaviour vectors already in `knowledge/vectors/` (identification, RID identity and time, zones applicability and vertical, CPA, alert lifecycle, pressure altitude, terrain/geoid, geodesy, ODID decode, ED-269 parse, fleet match, serials, source control, receiver auth) gain an ED-318 round trip; `uspace-core` (the shared Go packages) passes them all with a vector runner that is itself a Go test |
-| KT-3 Repo skeletons | `uspace-core` (shared Go packages, tagged) plus five system repos with the same layout: `cmd/<process>/`, `internal/`, `migrations/{relational,timeseries}/`, `api/openapi.yaml`, `schemas/`, `web/` (Next.js), `deploy/`; CI: Go lint, vet, test, vectors; Next.js lint, build, generated types up to date, no-geometry-import and no-server-side-business-logic rules; gitleaks everywhere; Caddy entries for the five `uspace-*.chikox.net` names |
+| KT-2 Shared contracts | `uspace-lab/schemas/` holds JSON Schemas for the catalogue of `04` with generated Go structs and, Go → TypeScript, the client types; `uspace-lab/api/` aggregates the OpenAPI files of every system (`00 §7`) |
+| KT-3 Repo skeletons | `uspace-core` and `uspace-ui` (already created) plus five system repos with the same layout: `cmd/<process>/`, `internal/`, `migrations/{relational,timeseries}/`, `api/openapi.yaml`, `schemas/`, `web/` (Next.js), `deploy/`; CI: Go lint, vet, test, vectors; Next.js lint, build, generated types up to date, no-geometry-import and no-server-side-business-logic rules; gitleaks everywhere; Caddy entries for the five `uspace-*.chikox.net` names |
 | KT-4 SITL baseline | `uspace-lab` runs N ArduCopter SITL instances and a MAVLink → operator-telemetry bridge and a MAVLink → ODID bridge (predecessor U-16), both receive-only |
 
-### Phase 1 — `uspace-cisp`
+### Phase 1 — `uspace-core`
+
+| Milestone | Done when |
+|---|---|
+| **G-M1 Vectors as tests** (first tag `v0.1.0`) | every file in `uspace-lab/knowledge/vectors/` is loaded by the `vectors` harness and passes against its package (`odid`, `geodesy`, `terrain`/`geoid`, `ed269`/`ed318`, `regnum`/`serial`, `identify`, `zones`, `cpa`, `timeplace`, `sources`, `auth`); `go test ./...` is the whole proof; a failing vector fails the tag |
+| G-M2 Standards types | `f3411` and `f3548` types generated from `uas_standards` with round-trip tests; `ed318` parse / validate with the ED-269 mapping and an ED-318 round-trip vector added to the knowledge set |
+| G-M3 Policy | `CHANGELOG`, semver rules of `00 §6.3` enforced in CI (a changed vector without a major bump fails), `jwt_verify` vector added, `v1.0.0` tagged |
+
+### Phase 2 — `uspace-cisp` and `uspace-ui`
 
 | Milestone | Done when |
 |---|---|
 | **C-M1 Publish and read** (first demo) | the authority-role test client publishes an ED-318 zone set and a U-space airspace with its Art. 3(4) requirements, adjacency and USSP list with terms; `GET /v1/zones?bbox=` returns them with `ETag` and `updateDateTime`; a second publication yields a diff in `/v1/changes`; a webhook subscriber receives the signed change within 1 s and the public map shows the zones; an ED-269 file round-trips through the import mapping |
 | C-M2 Restrictions | ANSP-role client activates a restriction; subscribers notified within 1 s; the same restriction appears as an F3548 constraint in the lab DSS; `ended` and `cancelled` lifecycle; history by version and `at=` |
 | C-M3 Hardening | 60 s reconciliation pull proven by killing the subscriber during a change; delivery log; rate-limited public API; CISP console (publications, subscriptions, deliveries) |
+| **U-M1 `uspace-ui` first release** (with C-M1) | shadcn/ui theme and tokens, MapLibre map with the zone symbology, `ka`/`en` with Noto Sans Georgian, BFF session helpers; the CISP public map and console are built on it and nothing else |
 
-### Phase 2 — `uspace-authority`
+### Phase 3 — `uspace-authority`
 
 | Milestone | Done when |
 |---|---|
@@ -31,7 +40,7 @@ Build order: knowledge transfer → cisp → authority → ussp → ansp → lab
 | A-M4 Ecosystem token service and F3411 Display Provider | clients registered from certificates; JWKS; the authority discovers the lab USSP's ISAs through the lab DSS, polls `/uss/flights` per view and shows flights as `trust: provider`; the DP cache is proven empty of data older than 24 h; USSP start-of-operations notice recorded; police realm with purpose-logged queries |
 | A-M5 Replace the predecessor | `utm.chikox.net` and `ingest.chikox.net` retired; the authority holds the registry and the picture |
 
-### Phase 3 — `uspace-ussp`
+### Phase 4 — `uspace-ussp`
 
 | Milestone | Done when |
 |---|---|
@@ -41,22 +50,23 @@ Build order: knowledge transfer → cisp → authority → ussp → ansp → lab
 | S-M4 DSS and peers | InterUSS DSS in the lab; intents written as F3548 references with ovn; a second lab USSP's intent conflicts are detected and notified within 1 s; `pending_dss` behaviour when the DSS is down; peer flights via F3411 as `provider`; a lab constraint from the ANSP triggers `restriction_activated` and an authorisation update; peer data purged at 24 h |
 | S-M5 Records and occurrences | per-flight records (≥ 30 days) fetched by the authority; an airprox occurrence posted within 72 h of awareness; start / cease notices; USSP console (flights, alerts, DSS state, degraded inputs, emergency workflow) |
 
-### Phase 4 — `uspace-ansp`
+### Phase 5 — `uspace-ansp`
 
 | Milestone | Done when |
 |---|---|
 | **N-M1 Restrictions and manned feed** (first demo) | a supervisor activates a restriction over a SITL aircraft: the CISP publishes within 1 s and the DSS constraint is written, the USSP raises `restriction_activated` on the affected intent within one tick, the authority shows it; a recorded ADS-B file streams as manned traffic to the USSP and the authority (ATS.OR.127) |
 | N-M2 Coordination | Annex V inbox receives intents touching the restricted volume and non-conformance notices and acknowledges them (Art. 13(2)); degraded direct path to USSPs when the CISP is down |
 
-### Phase 5 — `uspace-lab` (full)
+### Phase 6 — `uspace-lab` (conformance suite, load, demo)
 
 | Milestone | Done when |
 |---|---|
 | **L-M1 Scenario suite** (first demo) | `make demo` on a clean checkout brings up all four systems, N SITL aircraft, a receiver, an ANSP feed and a peer USSP, and produces every planned event (zone alert, conformance breach, proximity, unregistered broadcast, restriction activation, 120 m violation) |
 | L-M2 Load | the `05 §7` report at 100 and 1000 drones with every pass criterion met; 5000 attempted and the format decision revisited |
 | L-M3 Chaos | each failure domain of `05 §6` exercised with the expected degraded behaviour recorded |
+| L-M4 Conformance suite | `uspace-lab/conformance/` runs InterUSS `uss_qualifier` (F3411 SP/DP, F3548) against `uspace-ussp` and the lab DSS, the national OpenAPI contract tests against every system, and the ED-318 publication tests against `uspace-cisp`; a third-party onboarding procedure is documented and rehearsed with the lab's simulated peer USSP as the candidate; the signed report format is agreed with GCAA (Q7) |
 
-### Phase 6 — `courier` as a USSP client
+### Phase 7 — `courier` as a USSP client
 
 | Milestone | Done when |
 |---|---|

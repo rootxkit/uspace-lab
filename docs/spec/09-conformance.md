@@ -237,13 +237,25 @@ Provisions checked: GDPR — 8 rows.
 | Generated bindings Go → TypeScript only | JSON Schema and OpenAPI → client types | all `web` | `04 §1`; `07` KT-2 | met | |
 | One JWT verifier (`uspace-core/auth`) | JWKS, `kid`, RS256 only, `aud`, scope | all | `00 §6.2`; `06 §3` | met | |
 | Data: PostgreSQL/PostGIS, TimescaleDB, NATS JetStream; Python only in `uspace-lab` | | all | `03`; `05 §3` | met | |
+| Shared libraries: `rootxkit/uspace-core` (Go, compiled in, semver-pinned, vector harness) and `rootxkit/uspace-ui` (npm, shadcn/ui theme, MapLibre, symbology, ka/en, BFF auth helpers) | package list, versioning and compatibility policy; each system upgrades on its own schedule | all | `00 §6.3`; `07` Phase 1 | met | |
+
+### 1.10 Interoperability with third-party systems (`00 §7`)
+
+| Source and clause | Requirement | Owning system | Spec section | Status | Note |
+|---|---|---|---|---|---|
+| 2021/664 Art. 5(5), 7(5)(b), Annex II(3), Annex V(4) | open, non-discriminatory, interoperable protocols; any certified USSP or CISP may interoperate | all | `00 §7`; `02 §1` | met | standards first; national APIs published as OpenAPI |
+| National API publication | every non-standard API in versioned OpenAPI 3.1, owned per repo, aggregated in `uspace-lab/api/` | all | `00 §7`; `02 §1` | met | |
+| Discovery through the DSS and the CIS USSP list, never a configured address of our USSP | | authority, ussp | `00 §7`; `02 F7` | met | |
+| Conformance suite: InterUSS `uss_qualifier` (F3411, F3548) plus national API and ED-318 tests; onboarding procedure | | lab | `00 §7`; `07` Phase 6 | met | as a certification condition: national choice (Q7) |
+| Compatibility policy: additive within a major; breaking changes as a new major with ≥ 12 months deprecation | | all | `00 §7`; `02 §1`; `04 §4` | met | |
 
 ## 2. Deliberate national choices
 
 | Choice | Where the source leaves it open | Justification |
 |---|---|---|
 | The authority runs the ecosystem token issuer | F3411 / F3548 and the InterUSS DSS require only a trusted OAuth2 issuer with the standard scopes; 2021/664 names none | the authority already holds the certificate register that defines who may hold a client; one issuer keeps `aud` / scope policy auditable |
-| The single CISP is state-run (`uspace-cisp`) with the DSS hosted beside it | 2021/664 Art. 5(6)–(7) allows a single designated CISP, which must be certified; no regulation assigns the DSS | neutrality towards USSPs; one operations team at the start; the DSS is a neutral broker like the CIS |
+| The single CISP is state-run (`uspace-cisp`) — **decided by the owner**; the DSS hosted beside it — still a national choice | 2021/664 Art. 5(6)–(7) allows a single designated CISP, which must be certified; no regulation assigns the DSS | neutrality towards USSPs; one operations team at the start; the DSS is a neutral broker like the CIS; a third-party CISP can replace ours behind the same contracts |
+| The conformance suite as a condition of USSP / CISP certification | 2021/664 Art. 15(1)(a)–(b) require demonstrated capability and interoperable systems; the means is the authority's | an objective, repeatable demonstration; proposed to GCAA (Q7) |
 | Retention: 90 days online / 2 years archive at the authority, 1 year at USSPs, 5 years alerts and intents, 10 years audit, incidents and occurrences indefinite | floor: 30 days (2021/664 Art. 15(1)(g)); ceiling: storage limitation; F3411 / F3548 caps of 24 h apply only to DP and peer caches and are respected | oversight and investigation needs; to be fixed by the DPO (Q8) |
 | 120 m open-category check at the authority only; height conformance at the USSP against the authorised volume | 2019/947 Art. 18(k) gives detection to the authority; 2021/664 Art. 13(1) gives conformance to the USSP against the authorisation and the Art. 6(1) conditions | no duplication: inside U-space airspace the authorised volume is capped by the airspace constraints, so the USSP's conformance alert already covers a height ceiling; outside it only the authority detects |
 | 1 Hz for network identification and traffic information | 2021/664 Art. 8(3), 11(3)(b): the competent authority determines | equals the F3411 minimum; one figure across the ecosystem |
