@@ -1,0 +1,82 @@
+# uspace-lab developer targets. CI (.github/workflows/) runs the same
+# commands. One target block per work package (docs/PLAN.md §2). On
+# Windows set GOROOT and GO, for example:
+#   make test GO=/c/Users/<you>/AppData/Local/anaconda3/go/bin/go
+GO   ?= go
+PKGS ?= ./...
+
+# Linter versions pinned to uspace-core's and to what CI runs (docs/PLAN.md
+# §6). Change the Makefile and the workflow together. `make tools`
+# installs them into $(go env GOPATH)/bin.
+GOLANGCI_LINT_VERSION ?= v2.14.0
+STATICCHECK_VERSION   ?= v0.8.1
+
+.PHONY: build vet fmt fmt-check tools staticcheck lint test tidy
+
+build:
+	$(GO) build $(PKGS)
+
+vet:
+	$(GO) vet $(PKGS)
+
+fmt:
+	gofmt -w .
+
+fmt-check:
+	@out="$$(gofmt -l .)"; if [ -n "$$out" ]; then echo "gofmt needed:"; echo "$$out"; exit 1; fi
+
+tools:
+	$(GO) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	$(GO) install honnef.co/go/tools/cmd/staticcheck@$(STATICCHECK_VERSION)
+
+staticcheck:
+	$(GO) run honnef.co/go/tools/cmd/staticcheck@$(STATICCHECK_VERSION) $(PKGS)
+
+# Refuses a golangci-lint other than the pinned one: a different version
+# enables different checks and would pass locally but fail in CI.
+lint: fmt-check vet staticcheck
+	@v="v$$(golangci-lint version --short 2>/dev/null)"; \
+	if [ "$$v" != "$(GOLANGCI_LINT_VERSION)" ]; then \
+	  echo "golangci-lint $$v found, CI runs $(GOLANGCI_LINT_VERSION): run 'make tools'"; exit 1; fi
+	golangci-lint run $(PKGS)
+
+# -race needs cgo (a C compiler); CI runs it on Linux.
+test:
+	$(GO) test -race -count=1 -shuffle=on $(PKGS)
+
+tidy:
+	$(GO) mod tidy
+	git diff --exit-code -- go.mod go.sum
+
+# --- WP-L1 contracts aggregate (schemas/, api/) ------------------------------
+.PHONY: examples mirrors layout index clients contracts scripts-test
+
+# Every schemas/common example both ways (offline).
+examples:
+	GO=$(GO) scripts/validate-examples.sh
+
+# Every mirror re-fetched at its pinned commit (online; REQUIRE_MIRRORS=1
+# turns "unverified" into a failure).
+mirrors:
+	GO=$(GO) scripts/check-mirrors.sh
+
+# KT-3 skeleton layout of every pinned system (online).
+layout:
+	GO=$(GO) scripts/check-layout.sh
+
+# Regenerate api/index.md from the mirrors.
+index:
+	$(GO) run ./scripts/contracts index
+
+# Regenerate the Go and TypeScript clients of every pinned system.
+clients:
+	GO=$(GO) scripts/gen-clients.sh
+
+# pin.sh, check-mirrors.sh and check-layout.sh against a local fixture
+# repository, both ways (offline).
+scripts-test:
+	GO=$(GO) scripts/test-scripts.sh
+
+# What the contracts CI job runs, offline part.
+contracts: examples scripts-test
+	$(GO) run ./scripts/contracts index -check

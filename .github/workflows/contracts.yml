@@ -1,0 +1,124 @@
+name: contracts
+
+# The KT-2 contracts aggregate (docs/WORKPACKAGES/WP-L1.md): the Go checks
+# and the schema, mirror and layout checks. Runs only when something they
+# read changes.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "schemas/**"
+      - "api/**"
+      - "scripts/**"
+      - "internal/**"
+      - "**.go"
+      - "go.mod"
+      - "go.sum"
+      - "Makefile"
+      - ".golangci.yml"
+      - "docs/spec/02-interfaces.md"
+      - ".github/workflows/contracts.yml"
+  pull_request:
+    paths:
+      - "schemas/**"
+      - "api/**"
+      - "scripts/**"
+      - "internal/**"
+      - "**.go"
+      - "go.mod"
+      - "go.sum"
+      - "Makefile"
+      - ".golangci.yml"
+      - "docs/spec/02-interfaces.md"
+      - ".github/workflows/contracts.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: contracts-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GOFLAGS: -mod=mod
+  GOTOOLCHAIN: local
+
+jobs:
+  go:
+    name: go lint and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: gofmt
+        run: |
+          out="$(gofmt -l .)"
+          if [ -n "$out" ]; then echo "gofmt needed:"; echo "$out"; exit 1; fi
+      - run: go vet ./...
+      - name: go mod tidy is clean
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+      # Pinned like uspace-core (and the Makefile); bump all together.
+      - name: staticcheck
+        run: go run honnef.co/go/tools/cmd/staticcheck@v0.8.1 ./...
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.14.0
+      - name: go test -race
+        run: go test -race -count=1 -shuffle=on ./...
+
+  contracts:
+    name: examples, enumerations, mirrors, layout
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: every example both ways
+        run: scripts/validate-examples.sh -v
+      - name: enumerations equal uspace-core at the pinned tag
+        # The PENDING lines (schema values core has not released yet) go
+        # to the job summary so they stay visible on every run.
+        run: |
+          set -o pipefail
+          go test -count=1 -run 'TestEnumerationsEqualCore' -v ./schemas | tee enums.log
+          { echo '### Enumerations against uspace-core'; grep -E 'reading|PENDING|ok ' enums.log | sed 's/^ *schemas_test.go:[0-9]*: /- /'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: api/index.md is current
+        run: go run ./scripts/contracts index -check
+      - name: generated clients are current
+        run: |
+          scripts/gen-clients.sh
+          if [ -n "$(git status --porcelain -- api/)" ]; then
+            git status --porcelain -- api/; echo "regenerate with make clients"; exit 1
+          fi
+      - name: pin, mirror and layout scripts against a fixture, both ways
+        run: scripts/test-scripts.sh
+      - name: mirrors match their pinned commits
+        # Online: required on main, best-effort on pull requests (an
+        # unreachable repository is "unverified", never "ok").
+        env:
+          REQUIRE_MIRRORS: ${{ github.ref == 'refs/heads/main' && '1' || '0' }}
+        run: scripts/check-mirrors.sh
+      - name: skeleton layout of every pinned system (KT-3)
+        env:
+          REQUIRE_MIRRORS: ${{ github.ref == 'refs/heads/main' && '1' || '0' }}
+        run: scripts/check-layout.sh
+      - name: pin.sh dry run against uspace-core
+        # Proves the fetch and the SOURCE write against a real repository,
+        # then checks the result with check-mirrors.sh.
+        run: |
+          out="$RUNNER_TEMP/pin-dry-run"
+          scripts/pin.sh --out "$out" --repo https://github.com/rootxkit/uspace-core.git \
+            --schemas-path vectors/testdata/VERSION --api-path core/enums.go core v1.0.0
+          cat "$out/api/core/SOURCE"
+          REQUIRE_MIRRORS=1 scripts/check-mirrors.sh --root "$out"
