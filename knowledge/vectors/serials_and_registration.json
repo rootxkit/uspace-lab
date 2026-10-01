@@ -1,5 +1,5 @@
 {
- "description": "UAS serial numbers (ANSI/CTA-2063-A) and operator registration numbers (EU 2019/947 Art. 14), as U-01 validates them on registration and U-02 compares them on identification. Match `valid` exactly; `problem` is the old wording, `problem_contains` the part the old tests pinned. kind serial_fold gives the key a case-insensitive serial lookup compares (G-05, G-12).",
+ "description": "UAS serial numbers (ANSI/CTA-2063-A) and operator registration numbers (EU 2019/947 Art. 14), as U-01 validates them on registration and U-02 compares them on identification. Match `valid` exactly; `problem` is the old wording, `problem_contains` the part the old tests pinned. public_registration_number cases give the registration pattern the strip depends on (G-04): the secret part is stripped only after a number under it. kind serial_fold gives the key a case-insensitive serial lookup compares (G-05, G-12).",
  "source": [
   "utm common/tests/test_uas_identity.py",
   "utm common/uas_identity.py",
@@ -421,7 +421,8 @@
    ],
    "input": {
     "kind": "public_registration_number",
-    "value": "FIN87astrdge12k8-xyz"
+    "value": "FIN87astrdge12k8-xyz",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
    },
    "expected": {
     "public": "FIN87astrdge12k8",
@@ -437,7 +438,8 @@
    ],
    "input": {
     "kind": "public_registration_number",
-    "value": " FIN87astrdge12k8-XY1 "
+    "value": " FIN87astrdge12k8-XY1 ",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
    },
    "expected": {
     "public": "FIN87astrdge12k8",
@@ -453,7 +455,8 @@
    ],
    "input": {
     "kind": "public_registration_number",
-    "value": "FIN87astrdge12k8"
+    "value": "FIN87astrdge12k8",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
    },
    "expected": {
     "public": "FIN87astrdge12k8",
@@ -469,7 +472,8 @@
    ],
    "input": {
     "kind": "public_registration_number",
-    "value": "GEO-OP-SITL"
+    "value": "GEO-OP-SITL",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
    },
    "expected": {
     "public": "GEO-OP-SITL",
@@ -485,7 +489,8 @@
    ],
    "input": {
     "kind": "public_registration_number",
-    "value": "GEO-OP-ABC"
+    "value": "GEO-OP-ABC",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
    },
    "expected": {
     "public": "GEO-OP-ABC",
@@ -502,7 +507,8 @@
    ],
    "input": {
     "kind": "public_registration_number",
-    "value": "FIN87astrdge12k8-"
+    "value": "FIN87astrdge12k8-",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
    },
    "expected": {
     "public": "FIN87astrdge12k8-",
@@ -518,7 +524,8 @@
    ],
    "input": {
     "kind": "public_registration_number",
-    "value": "-xyz"
+    "value": "-xyz",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
    },
    "expected": {
     "public": "-xyz",
@@ -534,7 +541,8 @@
    ],
    "input": {
     "kind": "public_registration_number",
-    "value": "FIN87astrdge12k8-x!z"
+    "value": "FIN87astrdge12k8-x!z",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
    },
    "expected": {
     "public": "FIN87astrdge12k8-x!z",
@@ -550,7 +558,8 @@
    ],
    "input": {
     "kind": "public_registration_number",
-    "value": "fin87astrdge12k8-xyz"
+    "value": "fin87astrdge12k8-xyz",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
    },
    "expected": {
     "public": "fin87astrdge12k8",
@@ -566,7 +575,8 @@
    ],
    "input": {
     "kind": "public_registration_number",
-    "value": "FIN87astrdge12kſ"
+    "value": "FIN87astrdge12kſ",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
    },
    "expected": {
     "public": "FIN87astrdge12kſ",
@@ -583,7 +593,8 @@
    ],
    "input": {
     "kind": "public_registration_number",
-    "value": "fın87astrdge12k8-xyz"
+    "value": "fın87astrdge12k8-xyz",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
    },
    "expected": {
     "public": "fın87astrdge12k8-xyz",
@@ -600,7 +611,8 @@
    ],
    "input": {
     "kind": "public_registration_number",
-    "value": "FIN87astrdge12k8-xſz"
+    "value": "FIN87astrdge12k8-xſz",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
    },
    "expected": {
     "public": "FIN87astrdge12k8-xſz",

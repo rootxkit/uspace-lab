@@ -1842,7 +1842,7 @@ def gen_identification() -> None:
             case(
                 name,
                 ["authority", "ussp"],
-                {"kind": "public_registration_number", "value": given},
+                {"kind": "public_registration_number", "value": given, "pattern": eu.pattern},
                 new,
                 why + " compare_key is what identification compares (public part, ASCII letters upper-cased).",
                 **extra,
@@ -1884,7 +1884,10 @@ def gen_identification() -> None:
             "numbers (EU 2019/947 Art. 14), as U-01 validates them on "
             "registration and U-02 compares them on identification. Match "
             "`valid` exactly; `problem` is the old wording, `problem_contains` "
-            "the part the old tests pinned. kind serial_fold gives the key a "
+            "the part the old tests pinned. public_registration_number cases "
+            "give the registration pattern the strip depends on (G-04): the "
+            "secret part is stripped only after a number under it. kind "
+            "serial_fold gives the key a "
             "case-insensitive serial lookup compares (G-05, G-12).",
             [
                 "utm common/tests/test_uas_identity.py",
