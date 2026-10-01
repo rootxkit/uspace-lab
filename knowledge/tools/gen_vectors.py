@@ -2593,6 +2593,11 @@ def gen_lifecycle() -> None:
             old = NOT_IN_UTM if not_in_utm else {k: expected[k] for k in events}
             extra["decision"] = decided(file, name, old, {k: new[k] for k in events}, decision)
             expected = new
+        elif counters:
+            # Counts utm never kept, pinned at what utm's own run implies
+            # (a presence twin: nothing was refused).
+            assert not set(counters) & set(expected["counters"]), name
+            expected["counters"] = {**expected["counters"], **counters}
         cases.append(
             case(
                 name,
@@ -2928,6 +2933,17 @@ def gen_lifecycle() -> None:
             "PR #15 review). utm had no cap and no share."
         ),
         not_in_utm=True,
+    )
+    seq(
+        "source-share-counts-alert-holders-only",
+        {"max_aircraft": 4, "max_source_share": 0.5},
+        [
+            obs(0.0, id="A", north_m=0, source="remote_id", station="rx-1"),
+            obs(0.0, id="B", north_m=5000, source="remote_id", station="rx-1"),
+            obs(0.0, id="C", north_m=30, source="remote_id", station="rx-1"),
+        ],
+        "C-18, the twin of source-share-refuses-a-flooding-source: rx-1 holds two aircraft, as many as its share, but neither has an alert. The share counts alert holders only, so a third id from rx-1 is admitted, judged, and raises its conflict with A.",
+        counters={"rejected_source_share": 0, "rejected_capacity": 0},
     )
     write(
         "alert_lifecycle.json",
