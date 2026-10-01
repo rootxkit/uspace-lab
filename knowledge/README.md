@@ -7,7 +7,7 @@ Python:
 | Path | What it is |
 |---|---|
 | [`LESSONS.md`](LESSONS.md) | 129 lessons, grouped by area, each with its rule, the failure that taught it and the repository that owns it, plus 15 lessons deliberately **not carried over** |
-| [`vectors/`](vectors/) | 17 JSON files, 660 test cases a Go implementation must pass |
+| [`vectors/`](vectors/) | 18 JSON files, 682 test cases a Go implementation must pass |
 | [`scenarios.md`](scenarios.md) | 22 end-to-end scenarios that depend on processes, clocks or a flying simulator, so they cannot be vectors |
 | [`tools/gen_vectors.py`](tools/gen_vectors.py) | The script that computed every expected value by running the old code |
 
@@ -75,6 +75,7 @@ Every file has the same shape:
 | `terrain_geoid.json` | 48 | authority, ussp | DEM cell names, bilinear and edge rules, nodata; geoid grid layout; GeographicLib reference undulations |
 | `source_control.json` | 8 | authority, ussp, ansp | Type and instance switches, default deny |
 | `jwt_verify.json` | 16 | authority, cisp, ussp, ansp | Ecosystem JWTs (spec 00 §6.2, 06 §3): RS256 only, `kid` from the allow-listed issuer's JWKS, `aud`, `exp`/`nbf` with 30 s skew, `jti`, scopes. Not from utm (see below) |
+| `ed318_roundtrip.json` | 22 | authority, cisp, ussp, ansp | ED-318 UASZone collections (EUROCAE ED-318 JSON schema, spec 02 F1-F3, 04 §3.4): parse and validate on receipt, never repair; export equal by value; the ED-269 mapping both ways with what each side cannot hold refused by name; applicability with the daylight events BMCT, SR, SS and EECT. Not from utm (see below) |
 
 ### What the vectors are not
 
@@ -261,6 +262,17 @@ discarded; only the public JWKS is in the file. It is copied here byte
 for byte, the generator leaves it alone, and it carries the same
 `utm_commit` as the others so that a sync checks one pin. To change it,
 regenerate it in uspace-core and copy it again.
+
+`ed318_roundtrip.json` is the second exception: utm has no ED-318 model.
+It is written by `rootxkit/uspace-core`'s `ed318/internal/genvectors`
+(WP-12, milestone G-M2) from two hand-written files, an
+authority-authored base collection and a source file holding the cases,
+a daylight table and every expected value. Nothing in it is computed by
+the code under test: each refusal is the accepted base with one
+JSON-patch change, and each expectation is written by hand. It is copied
+here byte for byte, the generator leaves it alone, and it carries the
+same `utm_commit` as the others. To change it, regenerate it in
+uspace-core and copy it again.
 
 ```sh
 # From the uspace-lab root, with a read-only utm checkout beside it.

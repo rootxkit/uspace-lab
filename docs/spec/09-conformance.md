@@ -232,7 +232,7 @@ Provisions checked: GDPR — 8 rows.
 |---|---|---|---|---|---|
 | Rule: Go is the entire backend of every system (hot path and control plane; all of `uspace-cisp`) | every API, ingest, engine, workflow and the token service in Go | all | `00 §6.1`; `02 §3`; `05 §2` | met | |
 | Rule: Next.js for every web UI, render only | public and internal UIs, BFF cookie layer only | all `web` | `00 §6.1`; `06 §3` | met | no DB / NATS access from `web` |
-| Hard rule: safety logic once, in Go packages, pinned by `knowledge/vectors/` | identification, zone judging, CPA, conformance, strategic deconfliction | `uspace-core` packages used by every system | `00 §6`; `04 §1`; `06` T12; `07` KT-2 | met | vectors present in this repo (16 files) after merging `main` |
+| Hard rule: safety logic once, in Go packages, pinned by `knowledge/vectors/` | identification, zone judging, CPA, conformance, strategic deconfliction | `uspace-core` packages used by every system | `00 §6`; `04 §1`; `06` T12; `07` KT-2 | met | vectors present in this repo (18 files, 682 cases) after merging `main` |
 | Process decomposition: hot-path and control-plane processes of one Go module, shared `internal/`, NATS only where it decouples | | authority, cisp, ussp, ansp | `00 §6.1`–`6.2`; `05 §2`, `§6` | met | judgements are package calls, not internal hops |
 | Generated bindings Go → TypeScript only | JSON Schema and OpenAPI → client types | all `web` | `04 §1`; `07` KT-2 | met | |
 | One JWT verifier (`uspace-core/auth`) | JWKS, `kid`, RS256 only, `aud`, scope | all | `00 §6.2`; `06 §3` | met | |
