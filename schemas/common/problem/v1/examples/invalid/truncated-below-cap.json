@@ -1,0 +1,18 @@
+{
+  "type": "https://schemas.uspace.ge/problems/validation",
+  "title": "The request body is not valid",
+  "status": 422,
+  "detail": "2 fields refused",
+  "instance": "/v1/intents",
+  "errors": [
+    {
+      "field": "volumes[0].volume.altitude_upper.value",
+      "reason": "below altitude_lower"
+    },
+    {
+      "field": "uas_serial",
+      "reason": "not an ANSI/CTA-2063-A serial number"
+    }
+  ],
+  "truncated": true
+}

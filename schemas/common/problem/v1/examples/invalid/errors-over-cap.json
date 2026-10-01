@@ -1,0 +1,414 @@
+{
+  "type": "https://schemas.uspace.ge/problems/invalid_collection",
+  "title": "The ED-318 collection is not valid",
+  "status": 400,
+  "detail": "more than 100 problems; the first 100 are listed",
+  "instance": "/v1/publications/zones",
+  "errors": [
+    {
+      "field": "features[0].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[1].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[2].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[3].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[4].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[5].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[6].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[7].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[8].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[9].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[10].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[11].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[12].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[13].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[14].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[15].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[16].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[17].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[18].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[19].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[20].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[21].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[22].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[23].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[24].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[25].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[26].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[27].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[28].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[29].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[30].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[31].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[32].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[33].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[34].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[35].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[36].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[37].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[38].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[39].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[40].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[41].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[42].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[43].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[44].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[45].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[46].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[47].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[48].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[49].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[50].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[51].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[52].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[53].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[54].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[55].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[56].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[57].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[58].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[59].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[60].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[61].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[62].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[63].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[64].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[65].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[66].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[67].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[68].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[69].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[70].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[71].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[72].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[73].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[74].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[75].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[76].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[77].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[78].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[79].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[80].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[81].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[82].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[83].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[84].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[85].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[86].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[87].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[88].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[89].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[90].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[91].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[92].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[93].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[94].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[95].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[96].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[97].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[98].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[99].properties.identifier",
+      "reason": "longer than 7 characters"
+    },
+    {
+      "field": "features[100]",
+      "reason": "x"
+    }
+  ],
+  "truncated": true
+}

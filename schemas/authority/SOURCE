@@ -1,0 +1,8 @@
+# Read-only mirror. Written by scripts/pin.sh; never edited by hand.
+# An empty commit means uspace-authority has not published this file yet:
+# the directory holds no copy and scripts/check-mirrors.sh reports it
+# as unpinned.
+repo = https://github.com/rootxkit/uspace-authority.git
+commit =
+path = schemas
+fetched_at =
