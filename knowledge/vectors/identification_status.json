@@ -820,7 +820,7 @@
     "drone_id": "00000000-0000-0000-0000-000000000021"
    },
    "why": "G-03: a registration status the resolver does not know is never active and never suspended (suspended raises no identification incident). The row exists, but nothing says it is a valid registration: unknown_operator, not_in_registry.",
-   "decision": "An unrecognised registration status fails safe as an incident-raising status (uspace-core PR #9, coordinator answer). utm's RegistrationStatus cannot hold one."
+   "decision": "An unrecognised registration status fails safe as an incident-raising status (owner decision 2026-10-01, uspace-core PR #9 review). utm's RegistrationStatus cannot hold one."
   },
   {
    "name": "unrecognised-owner-status-is-owner-unknown",
@@ -861,7 +861,7 @@
     "drone_id": "00000000-0000-0000-0000-000000000022"
    },
    "why": "The owner's status is not one the resolver knows: nothing says the owner is in good standing, so unknown_operator, owner_unknown.",
-   "decision": "An unrecognised registration status fails safe as an incident-raising status (uspace-core PR #9, coordinator answer). utm's RegistrationStatus cannot hold one."
+   "decision": "An unrecognised registration status fails safe as an incident-raising status (owner decision 2026-10-01, uspace-core PR #9 review). utm's RegistrationStatus cannot hold one."
   },
   {
    "name": "remote-id-block-registered",

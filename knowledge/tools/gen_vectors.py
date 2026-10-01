@@ -1607,8 +1607,9 @@ def gen_identification() -> None:
                     NOT_IN_UTM,
                     new_found,
                     "An unrecognised registration status fails safe as an "
-                    "incident-raising status (uspace-core PR #9, coordinator "
-                    "answer). utm's RegistrationStatus cannot hold one.",
+                    "incident-raising status (owner decision 2026-10-01, "
+                    "uspace-core PR #9 review). utm's RegistrationStatus "
+                    "cannot hold one.",
                 ),
             )
         )
