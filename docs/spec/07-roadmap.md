@@ -9,7 +9,7 @@ Build order: knowledge transfer → `uspace-core` → cisp (with `uspace-ui`) �
 | Milestone | Done when |
 |---|---|
 | KT-1 Spec accepted | this `docs/spec/` reviewed by the owner; open questions sent to GCAA/ministry |
-| KT-2 Shared contracts | `uspace-lab/schemas/` holds JSON Schemas for the catalogue of `04` with generated Go structs and, Go → TypeScript, the client types; `uspace-lab/api/` aggregates the OpenAPI files of every system (`00 §7`) |
+| KT-2 Shared contracts | each producing repo owns its JSON Schemas under `schemas/` (`04 §1`); `uspace-lab/schemas/` is the read-only aggregate from which the Go structs and, Go → TypeScript, the client types are generated and checked; `uspace-lab/api/` aggregates the OpenAPI files of every system (`00 §7`) |
 | KT-3 Repo skeletons | `uspace-core` and `uspace-ui` (already created) plus five system repos with the same layout: `cmd/<process>/`, `internal/`, `migrations/{relational,timeseries}/`, `api/openapi.yaml`, `schemas/`, `web/` (Next.js), `deploy/`; CI: Go lint, vet, test, vectors; Next.js lint, build, generated types up to date, no-geometry-import and no-server-side-business-logic rules; gitleaks everywhere; Caddy entries for the five `uspace-*.chikox.net` names |
 | KT-4 SITL baseline | `uspace-lab` runs N ArduCopter SITL instances and a MAVLink → operator-telemetry bridge and a MAVLink → ODID bridge (predecessor U-16), both receive-only |
 

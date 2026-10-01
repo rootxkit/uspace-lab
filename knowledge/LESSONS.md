@@ -1244,13 +1244,17 @@ one.**
   SC-21).
 - Applies to: ussp, authority, lab.
 
-**C-11. Advice must be deterministic.**
-- Rule: the same conflict evaluated twice gives the same advice. Order by
-  aircraft id: the lower id holds course, the higher descends 20 m or
-  loiters 45 s. Never "whoever the server contacts first". The pair's
-  alert is described identically from both aircraft's messages.
-- Why: ARCHITECTURE §6.2, P5-08. Advice that is not reproducible cannot be
-  audited, and two operators must be told compatible things.
+**C-11. Resolution advice is not a U-space service; what is kept is the
+rule that both sides of a pair are told the same thing.**
+- Rule: the USSP informs, it does not resolve (2021/664 Art. 11(4): the
+  operator acts to avoid collision). A proximity alert is described
+  identically from both aircraft's messages, from the same evaluation, so
+  the two operators see one conflict, not two.
+- Why: utm's deterministic advice ("lower id holds, higher descends 20 m
+  or loiters 45 s", P5-08) was correct engineering for a fleet dispatcher
+  and is dropped with it (`07 §2`, X-15). Advice from a service provider
+  would need a regulatory basis the regulation does not give. What made
+  it auditable, one deterministic description per pair, stays.
 - Applies to: ussp.
 
 **C-12. Alert text must not claim a loss that has not happened.**
@@ -1508,6 +1512,7 @@ principle generalises, its general form is above.
 | X-12 | `courier_*` database and volume names, rename runbook (S-14) | Naming debt of the old deployment. |
 | X-13 | Windows ground-PC relay with SITL in WSL2, mirrored networking (P0-08) | No relay on a pilot laptop. lab chooses its own SITL host. |
 | X-14 | `TERRAIN_REPORT` as a height source | Ruled out anyway (D-06). Nothing carries it over. |
+| X-15 | Deterministic resolution advice: lower id holds course, higher descends 20 m or loiters 45 s (P5-08, P5-09, P5-16) | The USSP informs and never resolves (`07 §2`, 2021/664 Art. 11(4)). The one-description-per-pair rule survives as C-11. |
 
 ---
 
@@ -1525,4 +1530,4 @@ principle generalises, its general form is above.
 | Zones and ED-269 | Z-01 to Z-13 |
 | CPA and alerting | C-01 to C-19 |
 | Ingest reliability | B-01 to B-16 |
-| Not carried over | X-01 to X-14 |
+| Not carried over | X-01 to X-15 |
