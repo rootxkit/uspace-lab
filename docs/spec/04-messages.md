@@ -8,13 +8,16 @@
 |---|---|---|
 | External standards (F3411, F3548, ED-318, GeoJSON) | native JSON; one representation end to end, no transcoding at the boundary | transcoding layer at every boundary, two sources of truth |
 | Language-neutral test vectors | plain files, diffable, readable in review | binary or text-proto; needs tooling to read |
-| Volume at 1000 drones (`05`) | 1000 msg/s × ~600 B = 0.6 MB/s; NATS and Go `encoding/json` handle this on one core with margin | 3–5× smaller, faster; the gain is not needed below ~5000 drones |
+| Volume at 1000 drones (`05`) | 1000 msg/s × ~600 B = 0.6 MB/s; NATS and Go `encoding/json` handle this on one core with margin; the NestJS side sees only low-rate subjects | 3–5× smaller, faster; the gain is not needed below ~5000 drones |
+| Two languages on one bus | one JSON Schema generates the Go structs (`go-jsonschema`) and the TypeScript types (`json-schema-to-typescript`); both validate against the same schema in CI | two generated bindings as well, plus a `.proto` as a third source |
 | Evolution | additive fields, `$id` versioning, `additionalProperties` ignored by consumers | field numbers; equally good |
 | Debuggability in production | `nats sub` readable | needs decoder |
 
 Re-evaluate at the 5000-drone load test: if hot-path CPU on the partitioned consumers exceeds 50 % of budget, adopt Protobuf **for the internal track subject only**, generated from the same schema, and keep JSON at every external boundary. The test-vector files stay JSON either way.
 
-Schema rules: `$id` = `https://schemas.uspace.ge/<family>/<name>/v<major>.json`; every message carries `"schema": "<name>/v<major>"`; minor additions never break consumers; a major change is a new subject suffix and a parallel period. Schemas live in each producing repo under `schemas/` and are mirrored read-only in `uspace-lab/schemas/` with the vectors that pin them.
+Schema rules: `$id` = `https://schemas.uspace.ge/<family>/<name>/v<major>.json`; every message carries `"schema": "<name>/v<major>"`; minor additions never break consumers; a major change is a new subject suffix and a parallel period. Schemas live in each producing repo under `schemas/` and are mirrored read-only in `uspace-lab/schemas/`; the behaviour vectors that pin the Go engines live in `knowledge/vectors/` of this repo.
+
+Engine request-reply messages (`00 §6.2`), internal, NATS request-reply with a 2 s deadline: `eng/deconflict/request/v1` (`intent/request/v1` body plus `intent_id`, `cis_version_hint`) → `eng/deconflict/reply/v1` (`decision`, `conflicts[]`, `dss_ref {id, ovn, version}`, `cis_version_checked`, `suggested_thresholds`, `policy_version`); `eng/identify/request/v1` (`serial`, `operator_reg`, `basis`) → the identification block of `§3.2`; `eng/judge_zone/request/v1` (track samples, zone versions, `at`) → `zone/applicable/v1` plus per-sample verdicts. Replies are deterministic for a given input and `policy_version`, which is what the vectors assert.
 
 ## 2. Common envelope fields
 
@@ -116,4 +119,4 @@ Alert policy (CPA 60 s / 60 m / 20 m / 800 m search radius; zone severities; hys
 | Minor is additive | new optional fields only; consumers ignore unknown fields; a vector that passes on v1.3 passes on v1.4. |
 | Deprecation | a field is marked `deprecated: true` in the schema for at least one minor before removal in the next major. |
 | Standards | F3411 v22a, F3548 v21 and ED-318 as published by `uas_standards`; a standard version bump is handled as a major on our side with dual support. Our own messages extend, never redefine, a standard object: F3548 states beyond the four DSS states live in `local_state`; ED-318 extras live in `extendedProperties` (its own extension mechanism, Annex V(2)(e)). |
-| Pinning | `uspace-lab/schemas/vectors/<name>/vN/*.json` holds input/expected pairs; a producing repo's CI runs them; a change that breaks a vector fails unless the vector is changed in the same PR with a reason. |
+| Pinning | `knowledge/vectors/<name>.json` in this repo holds input/expected pairs for the safety behaviours; `uspace-lab/schemas/vectors/<name>/vN/*.json` holds message-shape examples; each Go engine's CI runs the behaviour vectors, every repo's CI runs the schema examples (Go and TypeScript bindings); a change that breaks a vector fails unless the vector is changed in the same PR with a reason. |

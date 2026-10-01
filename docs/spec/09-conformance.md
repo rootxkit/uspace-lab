@@ -226,6 +226,18 @@ Provisions checked: 376/2014 — 13 rows (Art. 4–7, 13, 15, 16).
 
 Provisions checked: GDPR — 8 rows.
 
+### 1.9 Owner's technology rule (`00 §6`)
+
+| Source and clause | Requirement | Owning system | Spec section | Status | Note |
+|---|---|---|---|---|---|
+| Rule: Go for fast data exchange and high load | hot paths in Go | authority, ussp, ansp engines | `00 §6.1`; `05 §2` | met | CISP has no hot path |
+| Rule: NestJS for business logic and human-driven parts | records, workflow, accounts, certificates, intake | all apps; CISP entirely | `00 §6.1`; `02 §3` | met | |
+| Rule: Next.js for every web UI, render only | public and internal UIs, BFF cookie layer only | all `web` | `00 §6.1`; `06 §3` | met | no DB / NATS access from `web` |
+| Hard rule: safety logic only in Go, pinned by `knowledge/vectors/` | identification, zone judging, CPA, conformance, strategic deconfliction | engines | `00 §6`; `04 §1`; `06` T12; `07` KT-2 | met | USSP `app` delegates `Deconflict` to the engine; authority `app` never re-judges |
+| Boundary: NestJS calls Go over NATS or REST | request-reply subjects, KV projections, JetStream events | authority, ussp, ansp | `00 §6.2`; `04 §1` | met | |
+| One JWT verified identically in both languages | JWKS, `kid`, RS256 only, `aud`, scope; shared vector | all | `00 §6.2`; `06` T13 | met | `jwt_verify.json` to be added in KT-2 |
+| Data: PostgreSQL/PostGIS, TimescaleDB, NATS JetStream; Python only in `uspace-lab` | | all | `03`; `05 §3` | met | |
+
 ## 2. Deliberate national choices
 
 | Choice | Where the source leaves it open | Justification |

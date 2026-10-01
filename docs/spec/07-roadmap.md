@@ -9,8 +9,8 @@ Build order: knowledge transfer → cisp → authority → ussp → ansp → lab
 | Milestone | Done when |
 |---|---|
 | KT-1 Spec accepted | this `docs/spec/` reviewed by the owner; open questions sent to GCAA/ministry |
-| KT-2 Shared contracts | `uspace-lab/schemas/` holds JSON Schemas for the catalogue of `04` and first vectors: identification resolution (predecessor `gateway/identification.py` table), time placement (`ts`/`rx_ts`/`captured_at`/`backlog`), CPA, zone evaluation per vertical reference, pressure-altitude widening, ED-318 round trip; a Go and a Python runner both pass them |
-| KT-3 Repo skeletons | five repos with the same layout (`cmd/`, `internal/`, `api/openapi.yaml`, `schemas/`, `console/`, `migrations/{relational,timeseries}/`, `deploy/`), CI (lint, vet, test, gitleaks, vectors), Caddy entries for the five `uspace-*.chikox.net` names |
+| KT-2 Shared contracts | `uspace-lab/schemas/` holds JSON Schemas for the catalogue of `04` with generated Go structs and TypeScript types; the behaviour vectors already in `knowledge/vectors/` (identification, RID identity and time, zones applicability and vertical, CPA, alert lifecycle, pressure altitude, terrain/geoid, geodesy, ODID decode, ED-269 parse, fleet match, serials, source control, receiver auth) gain an ED-318 round trip and `jwt_verify`; a Go vector runner passes them all; the NestJS CI job runs only `jwt_verify` and the schema validation |
+| KT-3 Repo skeletons | five repos with the same layout: `engine/` (Go: `cmd/`, `internal/`, `migrations/timeseries/`), `app/` (NestJS: `src/`, `prisma/` or `migrations/relational/`), `web/` (Next.js), `api/openapi.yaml`, `schemas/`, `deploy/`; the CISP has no `engine/`; CI per part (Go: lint, vet, test, vectors; NestJS: lint, test, schema types up to date, no-geometry-import rule; Next.js: lint, build, no server-side business logic rule), gitleaks everywhere; Caddy entries for the five `uspace-*.chikox.net` names |
 | KT-4 SITL baseline | `uspace-lab` runs N ArduCopter SITL instances and a MAVLink → operator-telemetry bridge and a MAVLink → ODID bridge (predecessor U-16), both receive-only |
 
 ### Phase 1 — `uspace-cisp`

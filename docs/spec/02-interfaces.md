@@ -131,60 +131,64 @@ The lab speaks only the public contracts above: simulated operators on F5, simul
 
 ## 3. API surfaces per system (endpoint groups)
 
+One origin per system; Caddy routes each group to the service that serves it (`00 §6`): `engine` = Go, `app` = NestJS, `web` = Next.js (BFF routes only, under `/_bff/*`).
+
 ### authority
 
-| Group | Purpose | Consumers |
+| Group | Service | Purpose | Consumers |
+|---|---|---|---|
+| `/v1/registry/*` | app | operators, UAS, pilots, competencies; CRUD for registrars, public validity check, status change feed, uas.gov.ge import | registrars, USSPs (validate only), portal |
+| `/v1/zones/*`, `/v1/uspace/*` | app | ED-318 authoring, versioning, publication to CISP, airspace.gov.ge import rules | inspectors, CISP |
+| `/v1/certificates/*` | app | USSP / CISP certificates, public register (Art. 18(a)), operating status (Art. 7(6), 16(2)), USSP list publication | admins, CISP, USSPs (status), public (register) |
+| `/v1/rid/receivers/*` | app | receiver fleet, keys, config | admins |
+| `/v1/rid/observations`, `/v1/rid/frames/*` | engine | observation ingest, raw frame retrieval | receivers, incident officers |
+| `/v1/picture/*` | engine | the authority's own traffic picture: F3411 DP views (ISA discovery via DSS, SP polls) and direct-RID tracks with identification status, trust class, age; WS by viewport; DP data disposed of within 24 h | console, police |
+| `/v1/violations/*` | engine (detect, open, close) / app (review, status) | detection rules (120 m, zones, unregistered, no authorisation) | inspectors |
+| `/v1/incidents/*` | app | incidents opened from the authority's own evidence, evidence packs (track excerpts requested from the engine) | inspectors, incident officers |
+| `/v1/occurrences/*` | app | 376/2014 intake (mandatory and voluntary), independent handling, safety risk classification (376 Art. 7(2)), de-identified ECCAIRS/ADREP export; segregated from violations | incident officers, USSPs, ANSP, operators |
+| `/v1/police/*` | app (identity) + engine (`/v1/picture` queries) | lawful queries with purpose | police realm |
+| `/v1/sources/*` | app (writes KV; engine applies) | enable/disable receivers, USSP feeds, ANSP feed (by type and instance), audited | admins |
+| `/v1/audit/*` | app | append-only events, views and exports included | admins, auditors |
+| `/oauth/*`, `/.well-known/jwks.json` | app | ecosystem token service | all systems |
+
+### cisp (entirely NestJS)
+
+| Group | Service | Purpose |
 |---|---|---|
-| `/v1/registry/*` | operators, UAS, pilots, competencies; CRUD for registrars, public validity check, status change feed, uas.gov.ge import | registrars, USSPs (validate only), portal |
-| `/v1/zones/*`, `/v1/uspace/*` | ED-318 authoring, versioning, publication to CISP, airspace.gov.ge import rules | inspectors, CISP |
-| `/v1/certificates/*` | USSP / CISP certificates, public register (Art. 18(a)), operating status (Art. 7(6), 16(2)), USSP list publication | admins, CISP, USSPs (status), public (register) |
-| `/v1/rid/*` | receiver fleet, keys, observation ingest, raw frame retrieval | receivers, incident officers |
-| `/v1/picture/*` | the authority's own traffic picture: F3411 DP views (ISA discovery via DSS, SP polls) and direct-RID tracks with identification status, trust class, age; WS by viewport; DP data disposed of within 24 h | console, police |
-| `/v1/violations/*`, `/v1/incidents/*` | detection rules (120 m, zones, unregistered, no authorisation), incidents opened from the authority's own evidence, evidence packs | inspectors, incident officers |
-| `/v1/occurrences/*` | 376/2014 intake (mandatory and voluntary), independent handling, safety risk classification (376 Art. 7(2)), de-identified ECCAIRS/ADREP export; segregated from violations | incident officers, USSPs, ANSP, operators |
-| `/v1/police/*` | lawful queries with purpose | police realm |
-| `/v1/sources/*` | enable/disable receivers, USSP feeds, ANSP feed (by type and instance), audited | admins |
-| `/v1/audit/*` | append-only events, views and exports included | admins, auditors |
-| `/oauth/*`, `/.well-known/jwks.json` | ecosystem token service | all systems |
-
-### cisp
-
-| Group | Purpose |
-|---|---|
-| `/v1/publications/*` | authority and ANSP publish; version, sign, diff |
-| `/v1/restrictions/*` | ANSP dynamic restrictions lifecycle |
-| `/v1/zones`, `/v1/uspace_airspace`, `/v1/ussp_list`, `/v1/{dataset}/versions/*`, `/v1/changes` | ED-318 read, history, change feed, bbox and time filters |
-| `/v1/subscriptions/*` | webhook registration and delivery log |
-| `/v1/stream` | WS change stream for consoles and the public map |
-| `/public/*` | unauthenticated read subset, cacheable |
+| `/v1/publications/*` | app | authority and ANSP publish; version, sign, diff |
+| `/v1/restrictions/*` | app | ANSP dynamic restrictions lifecycle |
+| `/v1/zones`, `/v1/uspace_airspace`, `/v1/ussp_list`, `/v1/{dataset}/versions/*`, `/v1/changes` | app | ED-318 read, history, change feed, bbox and time filters; versioned snapshots with `ETag`, `Cache-Control`, served from a materialised current-version table |
+| `/v1/subscriptions/*` | app | webhook registration and delivery log |
+| `/v1/stream` | app | WS change stream for consoles and the public map (change events only, low rate) |
+| `/public/*` | app, cached by Caddy | unauthenticated read subset |
 
 ### ussp
 
-| Group | Purpose |
-|---|---|
-| `/v1/intents/*` | operational intents: create, activate, modify, end; decisions and conflicts |
-| `/v1/telemetry` | network ID ingest (WS, batch) |
-| `/v1/traffic/*` | traffic information stream and snapshot |
-| `/v1/geo/*` | geo-awareness from the CIS cache |
-| `/v1/alerts/*` | conformance, proximity, restriction alerts; acknowledgements |
-| `/v1/registry/validate` | proxy to the authority with cache |
-| `GET /uss/flights`, `GET /uss/flights/{id}/details`, `GET`/`POST /uss/identification_service_areas/{id}` | F3411-22a Net-RID Service Provider (and DP-side ISA notification receiver for its own peer views) |
-| `GET /uss/v1/operational_intents/{entityid}`, `GET .../telemetry`, `POST /uss/v1/operational_intents`, `GET /uss/v1/constraints/{entityid}`, `POST /uss/v1/constraints`, `POST /uss/v1/reports`, `GET /uss/v1/log_sets/{log_set_id}` | F3548-21 USS endpoints |
-| `/v1/records/*` | records for the authority (Art. 15(1)(g), 18(b)), occurrence delivery status |
-| `/v1/authority/flights` | **optional national extension**: 1 Hz flight push to the authority; never a substitute for the F3411 SP interface |
-| `/v1/weather/*` | optional weather information (Art. 12 minimum content) |
-| `/v1/accounts/*`, `/oidc/*` | operator accounts and clients |
+| Group | Service | Purpose |
+|---|---|---|
+| `/v1/intents/*` | app (intake, validation, record, authorisation number) → engine `Deconflict` | operational intents: create, activate, modify, end; decisions and conflicts |
+| `/v1/telemetry` | engine | network ID ingest (WS, batch) |
+| `/v1/traffic/*` | engine | traffic information stream and snapshot |
+| `/v1/geo/*` | engine | geo-awareness from the CIS cache |
+| `/v1/alerts/*` | engine (raise, clear, stream) / app (ack record) | conformance, proximity, restriction alerts; acknowledgements |
+| `/v1/registry/validate` | app | proxy to the authority with cache; projected to the engine via KV |
+| `GET /uss/flights`, `GET /uss/flights/{id}/details`, `GET`/`POST /uss/identification_service_areas/{id}` | engine | F3411-22a Net-RID Service Provider (and DP-side ISA notification receiver for its own peer views) |
+| `GET /uss/v1/operational_intents/{entityid}`, `GET .../telemetry`, `POST /uss/v1/operational_intents`, `GET /uss/v1/constraints/{entityid}`, `POST /uss/v1/constraints`, `POST /uss/v1/reports`, `GET /uss/v1/log_sets/{log_set_id}` | engine | F3548-21 USS endpoints |
+| `/v1/records/*` | app | records for the authority (Art. 15(1)(g), 18(b)), occurrence delivery status |
+| `/v1/authority/flights` | engine | **optional national extension**: 1 Hz flight push to the authority; never a substitute for the F3411 SP interface |
+| `/v1/weather/*` | app | optional weather information (Art. 12 minimum content) |
+| `/v1/accounts/*`, `/oidc/*` | app | operator accounts and clients |
 
 ### ansp
 
-| Group | Purpose |
-|---|---|
-| `/v1/restrictions/*` | plan, activate, extend, end dynamic restrictions (ATS.TR.237); publish to CISP and as F3548 constraints to the DSS |
-| `/v1/restriction-requests` | inbound requests from the authority |
-| `/v1/manned-traffic/*` | stream and snapshot for USSPs and the authority (ATS.OR.127) |
-| `/v1/coordination/*` | inbound Annex V data from USSPs: intents touching controlled airspace, non-conformance notices with acknowledgement (Art. 13(2)) |
-| `/v1/adapters/*` | status of surveillance adapters |
+| Group | Service | Purpose |
+|---|---|---|
+| `/v1/restrictions/*` | app | plan, activate, extend, end dynamic restrictions (ATS.TR.237); publish to CISP and as F3548 constraints to the DSS |
+| `/v1/restriction-requests` | app | inbound requests from the authority |
+| `/v1/manned-traffic/*` | engine | stream and snapshot for USSPs and the authority (ATS.OR.127) |
+| `/v1/coordination/*` | app | inbound Annex V data from USSPs: intents touching controlled airspace, non-conformance notices with acknowledgement (Art. 13(2)) |
+| `/v1/adapters/*` | app (status from engine via `src.v1.*`) | status of surveillance adapters |
 
 ### lab
 
-No production API. `make` targets and a scenario runner; a results API for CI dashboards only.
+No production API. `make` targets and a Python scenario runner; Go simulators; a results API for CI dashboards only.

@@ -22,14 +22,16 @@ CPA at 5000 is the first thing that breaks a naive design: it is quadratic withi
 
 ## 2. Hot path vs control plane
 
-| System | Hot path (stateless ingest, partitioned consumers, sub-second) | Control plane (transactional, seconds, PostgreSQL) |
+The split is also the language split (`00 §6`): hot path = Go `engine`, control plane = NestJS `app`, UI = Next.js `web`.
+
+| System | Hot path — Go engine (stateless ingest, partitioned consumers, sub-second) | Control plane — NestJS app (transactional, seconds, PostgreSQL) |
 |---|---|---|
-| authority | RID observation decode and time placement; F3411 DP poller (ISA discovery, SP polls, 24 h cache); ANSP manned ingest; identification resolution from a registry projection; violation detectors (120 m, zones, unregistered, no authorisation); picture WS by viewport | registry, zones, certificates, incidents, occurrence reports, evidence, source control, audit, token service |
-| cisp | change notification fan-out; bbox reads from a materialised current-version table; public map | publications, versions, subscriptions, delivery log |
-| ussp | telemetry ingest; conformance per flight; CPA / traffic information per cell; geo-awareness evaluation; alert state machine; F3411 SP serving; traffic WS | intents, DSS interaction, registry validation, accounts, records, occurrences |
+| authority | RID observation decode and time placement; F3411 DP poller (ISA discovery, SP polls, 24 h cache); ANSP manned ingest; identification resolution from a registry projection; violation detectors (120 m, zones, unregistered, no authorisation); TimescaleDB writer; picture WS by viewport | registry, zones, certificates, incidents, occurrence reports, evidence, source control, audit, token service |
+| cisp | none — the whole system is the NestJS app; change fan-out and bbox reads are served from a materialised current-version table with `ETag` and cache | publications, versions, subscriptions, delivery log |
+| ussp | telemetry ingest; conformance per flight; CPA / traffic information per cell; geo-awareness evaluation; deconfliction engine and DSS / F3548 client; alert state machine; F3411 SP serving; traffic WS | intent intake and records, registry validation, accounts, records, occurrences, weather |
 | ansp | manned feed normalisation and fan-out | restrictions lifecycle, coordination inbox, adapters |
 
-Rules: ingest processes hold no per-aircraft state beyond a short dedupe window and never touch the relational database; they publish to NATS and write to TimescaleDB through a batching writer. State needed on the hot path (registry validity, policy, zones, source switches) is projected into memory from a NATS KV bucket or the time-series database and refreshed by push plus periodic re-read; a failed refresh keeps the last state and logs.
+Rules: ingest processes hold no per-aircraft state beyond a short dedupe window and never touch the relational database; they publish to NATS and write to TimescaleDB through a batching writer. State needed on the hot path (registry validity, policy, zones, source switches) is projected into memory from a NATS KV bucket or the time-series database and refreshed by push plus periodic re-read; a failed refresh keeps the last state and logs. The app is horizontally stateless behind Caddy (sessions in cookies, jobs in JetStream work queues); it is never on the per-sample path.
 
 ## 3. Partitioning and NATS subject design
 
@@ -87,6 +89,8 @@ Capacity on the single staging droplet: at 100 drones every system together writ
 | Domain | Fails alone | Everyone else |
 |---|---|---|
 | One ingest adapter instance | its connections reconnect to a peer; dedupe window absorbs replays | unaffected |
+| NestJS app (one system) | no new intents, accounts, records or publications; the Go engine keeps every live service running on its KV projections (telemetry, network ID, traffic, conformance, picture) with projection age shown; queued engine → app events wait in JetStream | unaffected |
+| Go engine (one system) | live services stop for that system and are shown as down; the app refuses new authorisations with `engine_unavailable`; the CISP has no engine and is unaffected by this class | other systems unaffected |
 | One source type or instance (disabled or dead) | its tracks age out as `source_disabled` / `stale`, counted | other sources unaffected; consoles show state |
 | NATS (one system) | ingest spills to local disk queue for 5 min; consumers hold last state; consoles freeze with age shown | other systems unaffected (no cross-system NATS) |
 | TimescaleDB (one system) | live picture continues from NATS; records queue in JetStream mirror; replay later | unaffected |
@@ -98,7 +102,7 @@ Capacity on the single staging droplet: at 100 drones every system together writ
 | Token service | tokens valid for their TTL (≤ 1 h), JWKS cached 24 h; new tokens fail → systems alarm; a second issuer instance is the first scaling step | — |
 | The whole droplet (staging) | everything; flights are unaffected because nothing commands them | — |
 
-Deployment (staging): one DigitalOcean droplet, Caddy terminating TLS for `uspace-authority.chikox.net`, `uspace-cisp.chikox.net`, `uspace-ussp.chikox.net`, `uspace-ansp.chikox.net`, `uspace-lab.chikox.net`; `courier.chikox.net` is the operator. The old `utm.chikox.net` and `ingest.chikox.net` stay with the predecessor until the new authority replaces it. Each system runs its own docker-compose project (API, workers, console, PostgreSQL+PostGIS, TimescaleDB, NATS) on an isolated network; the only shared component is Caddy. Production domains will be state-owned; nothing in a repo may hardcode a hostname.
+Deployment (staging): one DigitalOcean droplet, Caddy terminating TLS for `uspace-authority.chikox.net`, `uspace-cisp.chikox.net`, `uspace-ussp.chikox.net`, `uspace-ansp.chikox.net`, `uspace-lab.chikox.net`; `courier.chikox.net` is the operator. The old `utm.chikox.net` and `ingest.chikox.net` stay with the predecessor until the new authority replaces it. Each system runs its own docker-compose project (`engine` Go binaries — ingest, workers, API —, `app` NestJS, `web` Next.js, PostgreSQL+PostGIS, TimescaleDB, NATS; the CISP has no `engine`) on an isolated network; the only shared component is Caddy. Production domains will be state-owned; nothing in a repo may hardcode a hostname.
 
 ## 7. What a load test must prove
 
@@ -118,4 +122,4 @@ Run from `uspace-lab` against the staging images with simulated operators, recei
 | Partition | kill NATS of one system for 60 s: ingest spills and replays; other systems show nothing |
 | Cross-system outage | CISP, authority, DSS, ANSP each taken down for 5 min: the degraded behaviours of `02` observed, nothing hidden, everything flagged with age |
 | Memory | no monotonic growth over the soak |
-| Vectors | all language-neutral vectors pass on every image under test |
+| Vectors | all `knowledge/vectors/` behaviour vectors pass on every Go engine image under test; `jwt_verify` passes on every engine and app image; schema examples pass everywhere |
