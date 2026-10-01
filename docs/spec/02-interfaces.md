@@ -52,7 +52,7 @@ Every cross-system flow. Internal messaging (NATS) never crosses a system bounda
 
 | Item | Value |
 |---|---|
-| Data | `manned_track.v1`: ICAO 24-bit address or callsign, position, altitude (barometric `pressure_alt_m` and geometric `alt_wgs84_m` when known), ground speed, track, vertical rate, emergency / SPI flag when known (Art. 10(10), 11(3)(a)), source class (`ads_b`, `mode_s`, `ssr`, `atm_feed`, `ads_l`), `ts`, quality. Only tracks relevant to U-space airspace plus a configurable margin (default 5 km, 1500 m above). Scope: ATS.OR.127 obliges the ANSP only for U-space airspace **in controlled airspace**; for U-space airspace outside ATC service, manned aircraft make themselves conspicuous to the USSP directly (SERA.6005(c)), so the USSP MUST run or contract an e-conspicuity receiver (ADS-B 1090 MHz; ADS-L per Q14) there — it is a required input, not a fallback. |
+| Data | `track/manned/v1`: ICAO 24-bit address or callsign, position, altitude (barometric `alt_pressure_m` and geometric `alt_wgs84_m` when known), ground speed, track, vertical rate, emergency / SPI flag when known (Art. 10(10), 11(3)(a)), source class (`ads_b`, `mode_s`, `ssr`, `atm_feed`, `ads_l`), `ts`, quality. Only tracks relevant to U-space airspace plus a configurable margin (default 5 km, 1500 m above). Scope: ATS.OR.127 obliges the ANSP only for U-space airspace **in controlled airspace**; for U-space airspace outside ATC service, manned aircraft make themselves conspicuous to the USSP directly (SERA.6005(c)), so the USSP MUST run or contract an e-conspicuity receiver (ADS-B 1090 MHz; ADS-L per Q14) there — it is a required input, not a fallback. |
 | API | `WS /v1/manned-traffic/stream?bbox=` (newline-delimited JSON frames, 1 Hz per aircraft), `GET /v1/manned-traffic/snapshot?bbox=` for bootstrap. |
 | Transport / auth | WebSocket over TLS, ecosystem token with scope `ansp.traffic`, mTLS mandatory. |
 | Frequency / volume | 1 Hz × N manned aircraft (tens, not thousands); independent of drone count. |
@@ -195,3 +195,9 @@ One origin per system; Caddy routes each group to the Go process that serves it 
 ### lab
 
 No production API. `make` targets and a Python scenario runner; Go simulators; a results API for CI dashboards only.
+
+## Errata
+
+| Date | Where | Change | Source |
+|---|---|---|---|
+| 2026-10-02 | F4, `Data` row | The message is `track/manned/v1` (the `04 §3` name, which every plan uses), not `manned_track.v1`; the barometric altitude field is `alt_pressure_m` (the `03` column name and the E-13 unit-suffix convention), not `pressure_alt_m`. | `docs/decisions/2026-10-02-cross-plan.md` §1.1 (note after M13), ansp gap 14 |

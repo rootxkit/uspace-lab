@@ -50,6 +50,8 @@ Subjects (one NATS cluster per system; JetStream for durable subjects, core NATS
 | `ctl.sources` + KV `source_control` | KV + push | source switches (predecessor U-15) |
 | `ctl.policy` + KV `policy` | KV + push | thresholds |
 | `src.v1.<type>.<instance>` | core | adapter status every 2 s |
+
+The table is the reference shape, not a contract: NATS never crosses a system (`02 §1`), so each system's plan may deviate internally and does (see Errata, M30). The one rule kept is that a subject carrying an `04` message carries the `04 §2` envelope.
 | `ingest.v1.<cell3>` | JetStream work queue, 10 min | raw ingest handoff when the ingest tier must shed to a durable queue under backpressure |
 
 Consumer scaling: CPA / conformance / detector workers form a JetStream consumer group per `cell3` at small scale (12 workers cover the country) and per `cell5` group at 5000 drones; ownership is a config map in KV, rebalanced by an operator action, not by auto-discovery (predictability over elegance). Consoles subscribe only to the `cell5`s intersecting their viewport plus a margin, and are throttled server-side to ≤ 2 Hz per track when a viewport holds > 200 tracks.
@@ -123,3 +125,9 @@ Run from `uspace-lab` against the staging images with simulated operators, recei
 | Cross-system outage | CISP, authority, DSS, ANSP each taken down for 5 min: the degraded behaviours of `02` observed, nothing hidden, everything flagged with age |
 | Memory | no monotonic growth over the soak |
 | Vectors | all `knowledge/vectors/` behaviour vectors pass against the packages in every image under test; schema examples pass everywhere |
+
+## Errata
+
+| Date | Where | Change | Source |
+|---|---|---|---|
+| 2026-10-02 | §3, subjects table | Accepted internal deviations: the ANSP uses `man.v1.<adapter>.<icao24>` with no cells (tens of aircraft); the authority adds `tsw.v1.<table>`, `zones.v1.changed`, `registry.v1.changed`; the USSP adds `conf.v1`, `peer.v1`, `traffic.product.v1`; the CISP uses `cis.v1.change.<dataset>` internally while consumers see `cis.v1.<dataset>`. No cross-plan conflict. | `docs/decisions/2026-10-02-cross-plan.md` M30 |
