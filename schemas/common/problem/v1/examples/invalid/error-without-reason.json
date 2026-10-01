@@ -1,0 +1,12 @@
+{
+  "type": "https://schemas.uspace.ge/problems/validation",
+  "title": "The request body is not valid",
+  "status": 422,
+  "detail": "2 fields refused",
+  "instance": "/v1/intents",
+  "errors": [
+    {
+      "field": "uas_serial"
+    }
+  ]
+}

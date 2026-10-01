@@ -1,0 +1,19 @@
+{
+  "schema": "zone/applicable/v1",
+  "msg_id": "01K6QY77ZXYYK596NGYA1DQ91K",
+  "producer": "authority/detect",
+  "ts": "2026-10-02T09:15:00.000Z",
+  "rx_ts": "2026-10-02T09:15:00.000Z",
+  "captured_at": "2026-10-02T09:15:00.000Z",
+  "time_source": "system",
+  "backlog": false,
+  "body": {
+    "identifier": "GE-R12",
+    "type": "REQ_AUTHORIZATION",
+    "applies": false,
+    "cis_applicability": "not_applicable",
+    "version": "3",
+    "valid_from": null,
+    "valid_to": null
+  }
+}

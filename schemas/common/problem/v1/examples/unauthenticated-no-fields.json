@@ -1,0 +1,8 @@
+{
+  "type": "https://schemas.uspace.ge/problems/unauthenticated",
+  "title": "Authentication required",
+  "status": 401,
+  "detail": null,
+  "instance": null,
+  "errors": []
+}

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.uspace.ge/zone/applicable/v1.json",
+  "title": "zone/applicable/v1",
+  "description": "One ED-318 zone as judged applicable at `at` by a system's CIS cache (spec 04 §3.4), in the common envelope. Produced by several systems (decision record M14). `cis_applicability` is the CISP's `?applies_at=` annotation (M17); `applies` is this system's judgement.",
+  "allOf": [{ "$ref": "https://schemas.uspace.ge/envelope/v1.json" }],
+  "properties": {
+    "schema": { "const": "zone/applicable/v1" },
+    "body": { "$ref": "#/$defs/body" }
+  },
+  "$defs": {
+    "nullable_timestamp": {
+      "oneOf": [
+        { "$ref": "https://schemas.uspace.ge/envelope/v1.json#/$defs/timestamp" },
+        { "type": "null" }
+      ]
+    },
+    "body": {
+      "type": "object",
+      "required": ["identifier", "type", "applies", "cis_applicability", "version", "valid_from", "valid_to"],
+      "properties": {
+        "identifier": {
+          "description": "ED-318 `identifier`, at most 7 characters (uspace-core `ed318`; decision record M10).",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 7
+        },
+        "type": {
+          "description": "ED-318 `CodeZoneType`, ED-318 spelling. Pinned to uspace-core `core.ZoneType`.",
+          "enum": ["PROHIBITED", "REQ_AUTHORIZATION", "CONDITIONAL", "NO_RESTRICTION", "USPACE"]
+        },
+        "applies": {
+          "description": "Whether this system judges the zone applicable at `at`.",
+          "type": "boolean"
+        },
+        "cis_applicability": {
+          "description": "`extendedProperties.cis_applicability` of the CISP read API with `?applies_at=` (decision record M17).",
+          "enum": ["applies", "not_applicable", "unknown"]
+        },
+        "version": {
+          "description": "The zone's version as published in the CIS.",
+          "type": "string",
+          "minLength": 1
+        },
+        "valid_from": { "$ref": "#/$defs/nullable_timestamp" },
+        "valid_to": { "$ref": "#/$defs/nullable_timestamp" },
+        "at": {
+          "description": "The instant the applicability was evaluated (04 §3.4).",
+          "$ref": "https://schemas.uspace.ge/envelope/v1.json#/$defs/timestamp"
+        },
+        "cis_version": {
+          "description": "The CIS dataset version the judgement used (04 §3.4).",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
