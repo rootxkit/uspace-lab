@@ -6,7 +6,7 @@ Python:
 
 | Path | What it is |
 |---|---|
-| [`LESSONS.md`](LESSONS.md) | 129 lessons, grouped by area, each with its rule, the failure that taught it and the repository that owns it, plus 14 lessons deliberately **not carried over** |
+| [`LESSONS.md`](LESSONS.md) | 129 lessons, grouped by area, each with its rule, the failure that taught it and the repository that owns it, plus 15 lessons deliberately **not carried over** |
 | [`vectors/`](vectors/) | 17 JSON files, 660 test cases a Go implementation must pass |
 | [`scenarios.md`](scenarios.md) | 22 end-to-end scenarios that depend on processes, clocks or a flying simulator, so they cannot be vectors |
 | [`tools/gen_vectors.py`](tools/gen_vectors.py) | The script that computed every expected value by running the old code |
@@ -93,10 +93,15 @@ Every file has the same shape:
 
 ## Using them from Go
 
-Copy `knowledge/vectors/` into each repository's `testdata/vectors/` at
-a pinned commit of uspace-lab. Do not reference the files across
-repositories: a vector changing under a repository must be a reviewed
-change there. Then load them with a small generic helper, for example:
+The judgements live once, in `rootxkit/uspace-core`, and so does the
+copy of these files: `uspace-core/vectors/testdata/` is vendored from
+`knowledge/vectors/` at a pinned commit of uspace-lab (`VERSION`,
+`SHA256SUMS`, checked in CI). A system compiles the library in by tag and
+does not copy the vectors again; it runs the cases that name it through
+the harness's `RunOwned` against its own adapters. Do not reference the
+files across repositories at run time: a vector changing under a
+repository must be a reviewed change there. The harness is the shape
+below, for example:
 
 ```go
 // Package vectortest loads uspace-lab knowledge vectors.
@@ -311,7 +316,7 @@ The following are described in `scenarios.md` instead:
 | [Zones and ED-269](LESSONS.md#7-zones-and-ed-269) | Z-01 to Z-13 | 13 |
 | [CPA and alerting](LESSONS.md#8-cpa-and-alerting) | C-01 to C-19 | 19 |
 | [Ingest reliability and backpressure](LESSONS.md#9-ingest-reliability-and-backpressure) | B-01 to B-16 | 16 |
-| [Not carried over](LESSONS.md#10-not-carried-over) | X-01 to X-14 | 14 |
+| [Not carried over](LESSONS.md#10-not-carried-over) | X-01 to X-15 | 15 |
 
 The four engineering rules every repository's own `CLAUDE.md` or
 contributing guide should copy are E-01 (test presence, not only

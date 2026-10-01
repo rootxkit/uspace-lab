@@ -105,7 +105,7 @@ Every cross-system flow. Internal messaging (NATS) never crosses a system bounda
 |---|---|
 | Data | `rid_observation.v1`: receiver id, transmitter address (BT/Wi-Fi MAC), raw ODID message or pack as hex, `rssi_dbm`, receiver `rx_ts`, receiver position. Decoding (Basic ID, Location, System, Operator ID, Auth), HAE → AMSL via geoid, pressure-altitude fallback, time placement and identity-per-transmitter rules are the authority's (`03`, `04`). |
 | API | `POST /v1/rid/observations` batches of ≤ 1 s; `GET /v1/rid/receivers/{id}/config`; receiver heartbeat every 10 s. |
-| Auth | Per-receiver bearer key plus HMAC-SHA256 over the body with a per-receiver secret (defence against key reuse from a captured device); keys revocable from the console; receivers disabled per instance or per type, audited (predecessor U-15). |
+| Auth | Per-receiver bearer key plus HMAC-SHA256 over the exact body bytes with a per-receiver secret (defence against key reuse from a captured device); the body carries `sent_at_ms` (30 s window) and a unique `nonce` (LESSONS R-06; pinned by `rid_receiver_auth.json`); keys revocable from the console; receivers disabled per instance or per type, audited (predecessor U-15). |
 | Frequency / volume | A receiver hears ≤ tens of aircraft; 1–3 msg/s per heard aircraft (BT4 legacy sends Basic ID and Location separately). 50 receivers × 20 aircraft × 3 = 3000 msg/s worst case; 60 B raw frame + 200 B envelope. |
 | Failure | Authority ingest down: receivers buffer in RAM/flash (minutes), replay with original `rx_ts` and `backlog=true`. Receiver down: shown `silent since T`; a receiver disabled by an admin is shown `disabled by <who>`, never merely silent. |
 

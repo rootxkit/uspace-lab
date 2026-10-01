@@ -169,7 +169,7 @@ Where the same package appears in two systems, it lives once in the shared Go mo
 | `alerting` | the alert state machine of a monitor: admission, raise, refresh, hysteresis, clear reasons, the aircraft cap | `alert_lifecycle` |
 | `auth` | JWT / JWKS verification (`§6.2`), scope checks, token issuance helpers; Remote ID receiver HMAC signatures | `jwt_verify`, `rid_receiver_auth` |
 | `sources` | source-control model (type / instance switches, version and epoch) | `source_control` |
-| `vectors` | the test harness: loads `uspace-lab/knowledge/vectors/*.json`, runs each file against the package it names, used as `go test` in `uspace-core` and in every system's CI | all |
+| `vectors` | the test harness: the knowledge vectors vendored from `uspace-lab/knowledge/vectors/` at a pinned commit (`VERSION`, `SHA256SUMS`, checked against the lab in CI), run as `go test` against every package in `uspace-core`; a system runs the cases that name it (`RunOwned`) against its own adapters, never a second copy of the judgement | all |
 
 Versioning and compatibility: semver tags `vMAJOR.MINOR.PATCH`; within a major, only additive changes (new functions, new optional fields, new vector cases that existing behaviour already passes); a behavioural change to a judgement is a **major** even if the Go signature is unchanged, and ships with the changed vector and a `CHANGELOG` entry naming the regulation or standard clause behind it; two majors are maintained in parallel for six months. Each system upgrades on its own schedule by bumping the tag; a system on an old major still passes the vectors of that major. `uspace-core` depends on nothing from the systems; the systems never import each other.
 
