@@ -1,0 +1,9 @@
+# Text files are committed and checked out with LF on every platform,
+# whatever core.autocrlf says. uspace-core vendors knowledge/vectors/ by
+# copying a checkout and pins each file's SHA-256: a CRLF working copy
+# breaks the pin. Every file in the index is already LF. Same rules as
+# uspace-core's .gitattributes.
+* text=auto eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.py text eol=lf
