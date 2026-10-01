@@ -2042,6 +2042,15 @@ def gen_fleet_match() -> None:
         problem="spoof_distance_m",
     )
     judged(
+        "negative-spoof-distance-withholds",
+        "E-15: a negative spoof distance makes every distance a conflict, so our own broadcast 50 m from the relay was split off as a spoof.",
+        relay=[{"heard_at_s": 0.0, "lat_deg": near[0], "lon_deg": near[1]}],
+        broadcast=north(50),
+        now_s=1.0,
+        spoof_distance_m=-300.0,
+        problem="spoof_distance_m",
+    )
+    judged(
         "negative-live-window-withholds",
         "E-15: a negative window is no window either.",
         relay=[{"heard_at_s": 0.0, "lat_deg": near[0], "lon_deg": near[1]}],
@@ -2167,7 +2176,8 @@ def gen_cpa() -> None:
         owner: Any = None,
         policy: dict[str, float] | None = None,
     ) -> None:
-        pol = POLICY if policy is None else SeparationPolicy(**policy)
+        # JSON has no NaN: a policy value given as the string "NaN" is one.
+        pol = POLICY if policy is None else SeparationPolicy(**{k: float(v) for k, v in policy.items()})
         judged = abs(a[1].captured_at_s - b[1].captured_at_s) <= max_age_s
         expected: dict[str, Any] = {"judged": judged}
         extra: dict[str, Any] = {}
@@ -2194,7 +2204,7 @@ def gen_cpa() -> None:
                     "los_start_s": los_start_s,
                 }
             )
-            invalid = pol.d_horizontal_min_m <= 0 or pol.d_vertical_min_m <= 0
+            invalid = not (pol.d_horizontal_min_m > 0 and pol.d_vertical_min_m > 0)
             if conflict != old_conflict and not invalid:
                 extra["decision"] = decided(
                     "cpa.json",
@@ -2301,15 +2311,17 @@ def gen_cpa() -> None:
         track_spec(2, 30, vd=0.5, alt=599.95),
         "The presence twin: from 49.95 m the gap reaches 20 m at 59.9 s, inside the window: a conflict with los_start_s 59.9. utm judged the gap at t_cpa (0 s, 49.95 m) and said clear.",
     )
-    for which, policy in (
-        ("horizontal", {**POLICY_JSON, "d_horizontal_min_m": 0}),
-        ("vertical", {**POLICY_JSON, "d_vertical_min_m": 0}),
+    for name, policy, what in (
+        ("zero-horizontal", {**POLICY_JSON, "d_horizontal_min_m": 0}, "a zero horizontal minimum makes every pair clear"),
+        ("zero-vertical", {**POLICY_JSON, "d_vertical_min_m": 0}, "a zero vertical minimum makes every pair clear"),
+        ("negative-horizontal", {**POLICY_JSON, "d_horizontal_min_m": -60}, "a negative horizontal minimum makes every pair clear"),
+        ("nan-vertical", {**POLICY_JSON, "d_vertical_min_m": "NaN"}, "a NaN vertical minimum fails every comparison, so every pair is clear"),
     ):
         pair(
-            f"zero-{which}-minimum-is-invalid-policy",
+            f"{name}-minimum-is-invalid-policy",
             track_spec(1, 0, vn=10),
             track_spec(2, 1000, vn=-10),
-            f"E-15: a zero {which} minimum makes every pair clear, which silently disarms the check. The policy is refused (invalid_policy) and nothing is judged, never judged clear. The pair is the head-on one, a conflict under the real policy.",
+            f"E-15: {what}, which silently disarms the check. The policy is refused (invalid_policy) and nothing is judged, never judged clear. The pair is the head-on one, a conflict under the real policy.",
             policy=policy,
         )
     write(
@@ -2334,7 +2346,9 @@ def gen_cpa() -> None:
             "overlap (0 when inside now), null when there is no conflict. A "
             "pair not judged gives not_judged: stale_neighbour, or "
             "invalid_policy for a case whose input.policy (which replaces the "
-            "header policy) has a minimum that is not above zero. "
+            "header policy) has a minimum that is not a finite number above "
+            "zero. JSON has no NaN: a policy value given as the string \"NaN\" "
+            "is IEEE NaN. "
             "described_as is how the case was built (metres from 41.7151N "
             "44.8271E); the inputs are lat/lon.",
             [

@@ -266,8 +266,9 @@ bound.**
   field holds. A spoofing guard with `live_for_s` 0 took every row as
   history and let the broadcast speak for our aircraft; with
   `spoof_distance_m` 0 any distance was a spoof. A separation minimum of
-  0 makes every pair clear. `fleet_match.json#zero-*`,
-  `cpa.json#zero-*-minimum-is-invalid-policy`.
+  0 or below, or NaN, makes every pair clear. `fleet_match.json#zero-*`,
+  `#negative-*`,
+  `cpa.json#*-minimum-is-invalid-policy`.
 - Applies to: all.
 
 ---

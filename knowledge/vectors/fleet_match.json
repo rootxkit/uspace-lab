@@ -392,6 +392,38 @@
    "decision": "A live_for_s or spoof_distance_m that is not a finite number above zero withholds, naming the threshold, and is never as_ours or conflict (LESSONS E-15, uspace-core PR #9 review). utm judged with it."
   },
   {
+   "name": "negative-spoof-distance-withholds",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "serial_is_ours": true,
+    "relay_rows": [
+     {
+      "heard_at_s": 0.0,
+      "lat_deg": 41.7151,
+      "lon_deg": 44.8271
+     }
+    ],
+    "broadcast_position": [
+     41.71554966050632,
+     44.8271
+    ],
+    "now_s": 1.0,
+    "live_for_s": 5.0,
+    "spoof_distance_m": -300.0
+   },
+   "expected": {
+    "verdict": "withhold",
+    "apart_m": null,
+    "ignored_history_rows": 0,
+    "problem": "spoof_distance_m"
+   },
+   "why": "E-15: a negative spoof distance makes every distance a conflict, so our own broadcast 50 m from the relay was split off as a spoof.",
+   "decision": "A live_for_s or spoof_distance_m that is not a finite number above zero withholds, naming the threshold, and is never as_ours or conflict (LESSONS E-15, uspace-core PR #9 review). utm judged with it."
+  },
+  {
    "name": "negative-live-window-withholds",
    "owner": [
     "authority",
