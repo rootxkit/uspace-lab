@@ -11,6 +11,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"os"
@@ -25,12 +26,18 @@ func main() {
 
 func run(args []string) int {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: contracts examples ...")
+		fmt.Fprintln(os.Stderr, "usage: contracts examples|index|openapi|groups ...")
 		return 2
 	}
 	switch args[0] {
 	case "examples":
 		return examples(args[1:])
+	case "index":
+		return index(args[1:])
+	case "openapi":
+		return openapi(args[1:])
+	case "groups":
+		return groups(args[1:])
 	}
 	fmt.Fprintf(os.Stderr, "unknown subcommand %q\n", args[0])
 	return 2
@@ -85,4 +92,80 @@ func examples(args []string) int {
 		return 1
 	}
 	return 0
+}
+
+func index(args []string) int {
+	fs := flag.NewFlagSet("index", flag.ContinueOnError)
+	check := fs.Bool("check", false, "fail if api/index.md differs from what would be generated")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	got, err := contracts.RenderIndex(".")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		return 1
+	}
+	if *check {
+		cur, err := os.ReadFile(contracts.IndexPath)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "error:", err)
+			return 1
+		}
+		if !bytes.Equal(cur, []byte(got)) {
+			fmt.Fprintf(os.Stderr, "%s is out of date: run go run ./scripts/contracts index\n", contracts.IndexPath)
+			return 1
+		}
+		fmt.Printf("ok: %s is current\n", contracts.IndexPath)
+		return 0
+	}
+	if err := os.WriteFile(contracts.IndexPath, []byte(got), 0o600); err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		return 1
+	}
+	fmt.Printf("wrote %s\n", contracts.IndexPath)
+	return 0
+}
+
+func openapi(args []string) int {
+	rc := 0
+	for _, f := range args {
+		o, err := contracts.ReadOpenAPI(f)
+		if err != nil {
+			fmt.Printf("FAIL %s: %v\n", f, err)
+			rc = 1
+			continue
+		}
+		fmt.Printf("ok   %s: OpenAPI %s, info.version %s, %d paths\n", f, o.Version, o.InfoVersion, len(o.Paths))
+	}
+	fmt.Printf("%d OpenAPI files checked\n", len(args))
+	return rc
+}
+
+func groups(args []string) int {
+	if len(args) != 2 {
+		fmt.Fprintln(os.Stderr, "usage: contracts groups SYSTEM FILE")
+		return 2
+	}
+	o, err := contracts.ReadOpenAPI(args[1])
+	if err != nil {
+		fmt.Printf("FAIL %s: %v\n", args[1], err)
+		return 1
+	}
+	rc := 0
+	gs := contracts.GroupsFor(args[0])
+	for _, g := range gs {
+		switch missing := g.Missing(o.Paths); {
+		case g.Standard:
+			fmt.Printf("skip %s (standard endpoints, defined by uas_standards)\n", g.Row)
+		case len(missing) == 0:
+			fmt.Printf("ok   %s\n", g.Row)
+		case g.Optional:
+			fmt.Printf("note %s: optional group absent: %v\n", g.Row, missing)
+		default:
+			fmt.Printf("FAIL %s: no path for %v\n", g.Row, missing)
+			rc = 1
+		}
+	}
+	fmt.Printf("%d endpoint groups of 02 §3 checked for %s\n", len(gs), args[0])
+	return rc
 }
