@@ -1,0 +1,565 @@
+{
+ "description": "Distances and containment on WGS-84. vincenty_inverse is the geodesic used for circular zones; published_reference_m is an independent published value the old code reproduces to 1 mm. in_circle/in_polygon are zone containment as the monitor judges it.",
+ "source": [
+  "utm airspace/tests/test_geodesy.py",
+  "utm airspace/tests/test_zones.py",
+  "utm airspace/tests/test_cpa.py",
+  "utm airspace/geodesy.py",
+  "utm airspace/zones.py"
+ ],
+ "units": {
+  "positions": "[lat_deg, lon_deg] except rings_lon_lat (GeoJSON [lon, lat])",
+  "distances": "metres"
+ },
+ "tolerance": {
+  "vincenty distance_m": 0.001,
+  "other distances": 1e-06,
+  "inside": "exact"
+ },
+ "owners": [
+  "cisp",
+  "authority",
+  "ussp"
+ ],
+ "generated": "Expected values computed by knowledge/tools/gen_vectors.py, which runs the old Python implementation (rootxkit/utm @ 484cd228035f) on these inputs. Regenerate rather than edit.",
+ "utm_commit": "484cd228035f2f424530e233ce72100d0fc1842a",
+ "ellipsoid": {
+  "a_m": 6378137.0,
+  "f": "1/298.257223563"
+ },
+ "cases": [
+  {
+   "name": "flinders-peak-to-buninyong",
+   "owner": [
+    "cisp",
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "vincenty_inverse",
+    "from": [
+     -37.95103341666667,
+     144.42486788888888
+    ],
+    "to": [
+     -37.65282113888889,
+     143.92649552777777
+    ]
+   },
+   "expected": {
+    "distance_m": 54972.27113865979,
+    "published_reference_m": 54972.271
+   },
+   "why": "Geoscience Australia's worked example (GRS80; differs from WGS-84 in the 10th digit of the flattening): 54,972.271 m."
+  },
+  {
+   "name": "one-degree-longitude-on-equator",
+   "owner": [
+    "cisp",
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "vincenty_inverse",
+    "from": [
+     0.0,
+     0.0
+    ],
+    "to": [
+     0.0,
+     1.0
+    ]
+   },
+   "expected": {
+    "distance_m": 111319.4907932264,
+    "published_reference_m": 111319.49079327358
+   },
+   "why": "Equal to the semi-major axis arc a*pi/180; cos2_alpha = 0 on the equator must not divide by zero."
+  },
+  {
+   "name": "quarter-meridian",
+   "owner": [
+    "cisp",
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "vincenty_inverse",
+    "from": [
+     0.0,
+     0.0
+    ],
+    "to": [
+     90.0,
+     0.0
+    ]
+   },
+   "expected": {
+    "distance_m": 10001965.729311792,
+    "published_reference_m": 10001965.729
+   },
+   "why": "Equator to pole on WGS-84: 10,001,965.729 m."
+  },
+  {
+   "name": "same-point",
+   "owner": [
+    "cisp",
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "vincenty_inverse",
+    "from": [
+     41.7,
+     44.8
+    ],
+    "to": [
+     41.7,
+     44.8
+    ]
+   },
+   "expected": {
+    "distance_m": 0.0
+   },
+   "why": "Zero, without iterating."
+  },
+  {
+   "name": "tbilisi-short-there",
+   "owner": [
+    "cisp",
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "vincenty_inverse",
+    "from": [
+     41.7151,
+     44.8271
+    ],
+    "to": [
+     41.7239,
+     44.8401
+    ]
+   },
+   "expected": {
+    "distance_m": 1457.9253925459684
+   },
+   "why": "Short distances are symmetric."
+  },
+  {
+   "name": "tbilisi-short-back",
+   "owner": [
+    "cisp",
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "vincenty_inverse",
+    "from": [
+     41.7239,
+     44.8401
+    ],
+    "to": [
+     41.7151,
+     44.8271
+    ]
+   },
+   "expected": {
+    "distance_m": 1457.925392545552
+   },
+   "why": "Short distances are symmetric."
+  },
+  {
+   "name": "ellipsoid-versus-sphere-1km-north-at-tbilisi",
+   "owner": [
+    "cisp",
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "compare",
+    "from": [
+     41.7151,
+     44.8271
+    ],
+    "to": [
+     41.72410470946305,
+     44.8271
+    ]
+   },
+   "expected": {
+    "vincenty_m": 1000.1336471052762,
+    "haversine_mean_radius_m": 1001.2793912234812,
+    "difference_m": -1.145744118205016
+   },
+   "why": "On the mean-radius sphere this 1 km is 1.15 m longer than on the ellipsoid here; the error grows with latitude and direction (up to about 0.5 %, 5 m at the edge of a 1 km circle). Circular zones must be judged on the ellipsoid, as PostGIS geography buffers draw them. (The old test docstring said ~3 m; the computed value is 1.15 m.)"
+  },
+  {
+   "name": "circle-500m-inside-at-499m",
+   "owner": [
+    "cisp",
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "in_circle",
+    "center": [
+     41.71,
+     44.81
+    ],
+    "radius": 500.0,
+    "radius_unit": "m",
+    "point": [
+     41.71448761185305,
+     44.81
+    ]
+   },
+   "expected": {
+    "inside": true,
+    "distance_m": 498.4287233780669
+   },
+   "why": "Judged by geodesic distance from the centre, not against the inscribed polygon a database stores for drawing."
+  },
+  {
+   "name": "circle-500m-outside-at-501m",
+   "owner": [
+    "cisp",
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "in_circle",
+    "center": [
+     41.71,
+     44.81
+    ],
+    "radius": 500.0,
+    "radius_unit": "m",
+    "point": [
+     41.714505598273306,
+     44.81
+    ]
+   },
+   "expected": {
+    "inside": false,
+    "distance_m": 500.4264344778979
+   },
+   "why": "Just outside."
+  },
+  {
+   "name": "circle-1000ft-outside-at-320m",
+   "owner": [
+    "cisp",
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "in_circle",
+    "center": [
+     41.71,
+     44.81
+    ],
+    "radius": 304.8,
+    "radius_unit": "m",
+    "point": [
+     41.71287782724043,
+     44.81
+    ]
+   },
+   "expected": {
+    "inside": false,
+    "distance_m": 319.63360533675416
+   },
+   "why": "Radius in feet: 304.8 m."
+  },
+  {
+   "name": "circle-1000ft-inside-at-300m",
+   "owner": [
+    "cisp",
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "in_circle",
+    "center": [
+     41.71,
+     44.81
+    ],
+    "radius": 304.8,
+    "radius_unit": "m",
+    "point": [
+     41.712697963037904,
+     44.81
+    ]
+   },
+   "expected": {
+    "inside": true,
+    "distance_m": 299.6565002972076
+   },
+   "why": "Inside 304.8 m."
+  },
+  {
+   "name": "polygon-hole-is-outside",
+   "owner": [
+    "cisp",
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "in_polygon",
+    "rings_lon_lat": [
+     [
+      [
+       44.8,
+       41.7
+      ],
+      [
+       44.82,
+       41.7
+      ],
+      [
+       44.82,
+       41.72
+      ],
+      [
+       44.8,
+       41.72
+      ],
+      [
+       44.8,
+       41.7
+      ]
+     ],
+     [
+      [
+       44.805,
+       41.705
+      ],
+      [
+       44.815,
+       41.705
+      ],
+      [
+       44.815,
+       41.715
+      ],
+      [
+       44.805,
+       41.715
+      ],
+      [
+       44.805,
+       41.705
+      ]
+     ]
+    ],
+    "point": [
+     41.71,
+     44.81
+    ]
+   },
+   "expected": {
+    "inside": false
+   },
+   "why": "Interior rings (holes) are honoured. Ray casting on lon/lat with straight edges in degrees: metres of error for zones kilometres across."
+  },
+  {
+   "name": "polygon-between-hole-and-edge-is-inside",
+   "owner": [
+    "cisp",
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "in_polygon",
+    "rings_lon_lat": [
+     [
+      [
+       44.8,
+       41.7
+      ],
+      [
+       44.82,
+       41.7
+      ],
+      [
+       44.82,
+       41.72
+      ],
+      [
+       44.8,
+       41.72
+      ],
+      [
+       44.8,
+       41.7
+      ]
+     ],
+     [
+      [
+       44.805,
+       41.705
+      ],
+      [
+       44.815,
+       41.705
+      ],
+      [
+       44.815,
+       41.715
+      ],
+      [
+       44.805,
+       41.715
+      ],
+      [
+       44.805,
+       41.705
+      ]
+     ]
+    ],
+    "point": [
+     41.702,
+     44.802
+    ]
+   },
+   "expected": {
+    "inside": true
+   },
+   "why": "Inside the exterior, outside the hole. Ray casting on lon/lat with straight edges in degrees: metres of error for zones kilometres across."
+  },
+  {
+   "name": "polygon-outside-north",
+   "owner": [
+    "cisp",
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "in_polygon",
+    "rings_lon_lat": [
+     [
+      [
+       44.8,
+       41.7
+      ],
+      [
+       44.82,
+       41.7
+      ],
+      [
+       44.82,
+       41.72
+      ],
+      [
+       44.8,
+       41.72
+      ],
+      [
+       44.8,
+       41.7
+      ]
+     ],
+     [
+      [
+       44.805,
+       41.705
+      ],
+      [
+       44.815,
+       41.705
+      ],
+      [
+       44.815,
+       41.715
+      ],
+      [
+       44.805,
+       41.715
+      ],
+      [
+       44.805,
+       41.705
+      ]
+     ]
+    ],
+    "point": [
+     41.73,
+     44.81
+    ]
+   },
+   "expected": {
+    "inside": false
+   },
+   "why": "Outside. Ray casting on lon/lat with straight edges in degrees: metres of error for zones kilometres across."
+  },
+  {
+   "name": "tangent-plane-0.01-deg-latitude",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "function": "local_offset_m",
+    "origin": [
+     41.7151,
+     44.8271
+    ],
+    "point": [
+     41.7251,
+     44.8271
+    ]
+   },
+   "expected": {
+    "north_m": 1110.6775458650322,
+    "east_m": 0.0
+   },
+   "why": "The CPA projection: 0.01 deg of latitude at 41.7 N is 1,110.7 m with the WGS-84 meridional radius at the origin."
+  },
+  {
+   "name": "tangent-plane-across-antimeridian",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "function": "local_offset_m",
+    "origin": [
+     0.0,
+     179.999
+    ],
+    "point": [
+     0.0,
+     -179.999
+    ]
+   },
+   "expected": {
+    "north_m": 0.0,
+    "east_m": 222.6389815876102
+   },
+   "why": "Longitude differences are wrapped into (-180, 180]: a pair straddling the antimeridian is 223 m apart, not 40,000 km."
+  },
+  {
+   "name": "haversine-spoof-distance",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "haversine_6371008.8",
+    "from": [
+     41.7151,
+     44.8271
+    ],
+    "to": [
+     41.7177979630379,
+     44.8271
+    ]
+   },
+   "expected": {
+    "distance_m": 300.00021646671865
+   },
+   "why": "The S-10 spoof distance uses a sphere: fine against a 300 m threshold, wrong for zone edges. Know which one you are using."
+  }
+ ]
+}

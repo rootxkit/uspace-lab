@@ -1,0 +1,573 @@
+{
+ "description": "Choosing the AMSL altitude of a Remote ID observation (S-33): the geodetic altitude through the geoid, or the pressure altitude when the geodetic one is missing or flagged poor. alt_source says which. A pressure altitude is referenced to 1013.25 hPa, not QNH (about 8 m per hPa, ~160 m on a 20 hPa day): downstream it is a vertical position of unknown accuracy (see cpa.json and zones_vertical.json).",
+ "source": [
+  "utm gateway/tests/test_remote_id_altitude.py",
+  "utm gateway/remote_id.py amsl(), geodetic_usable(), RemoteIdTracker"
+ ],
+ "units": {
+  "alt_*_m": "metres",
+  "vert_accuracy_code": "MAV_ODID_VER_ACC: 0 unknown, 1 <150 m, 2 <45 m, 3 <25 m, 4 <10 m, 5 <3 m, 6 <1 m",
+  "now_s": "seconds, tracker clock"
+ },
+ "tolerance": {
+  "alt_amsl_m": 1e-09
+ },
+ "owners": [
+  "authority",
+  "ussp"
+ ],
+ "generated": "Expected values computed by knowledge/tools/gen_vectors.py, which runs the old Python implementation (rootxkit/utm @ 484cd228035f) on these inputs. Regenerate rather than edit.",
+ "utm_commit": "484cd228035f2f424530e233ce72100d0fc1842a",
+ "cases": [
+  {
+   "name": "good-geodetic-is-used",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "alt_hae_m": 520.0,
+    "alt_pressure_m": 507.5,
+    "vert_accuracy_code": 4,
+    "geoid_undulation_m": 20.0,
+    "min_vertical_accuracy": 2,
+    "hold_pressure": false
+   },
+   "expected": {
+    "alt_amsl_m": 500.0,
+    "alt_source": "geodetic"
+   },
+   "why": "HAE 520 m minus N 20 m is 500 m AMSL."
+  },
+  {
+   "name": "missing-geodetic-falls-back-to-pressure",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "alt_hae_m": null,
+    "alt_pressure_m": 507.5,
+    "vert_accuracy_code": 4,
+    "geoid_undulation_m": 20.0,
+    "min_vertical_accuracy": 2,
+    "hold_pressure": false
+   },
+   "expected": {
+    "alt_amsl_m": 507.5,
+    "alt_source": "pressure"
+   },
+   "why": "The broadcast's unknown HAE (-1000 m on the wire) is null; pressure altitude replaces it, marked alt_source pressure."
+  },
+  {
+   "name": "vertical-accuracy-code-1",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "alt_hae_m": 520.0,
+    "alt_pressure_m": 507.5,
+    "vert_accuracy_code": 1,
+    "geoid_undulation_m": 20.0,
+    "min_vertical_accuracy": 2,
+    "hold_pressure": false
+   },
+   "expected": {
+    "alt_amsl_m": 507.5,
+    "alt_source": "pressure"
+   },
+   "why": "Code 1 (<150 m) is below the threshold 2 (<45 m): flagged poor, pressure used."
+  },
+  {
+   "name": "vertical-accuracy-code-2",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "alt_hae_m": 520.0,
+    "alt_pressure_m": 507.5,
+    "vert_accuracy_code": 2,
+    "geoid_undulation_m": 20.0,
+    "min_vertical_accuracy": 2,
+    "hold_pressure": false
+   },
+   "expected": {
+    "alt_amsl_m": 500.0,
+    "alt_source": "geodetic"
+   },
+   "why": "Code 2 (<45 m) meets the threshold: geodetic used."
+  },
+  {
+   "name": "vertical-accuracy-code-6",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "alt_hae_m": 520.0,
+    "alt_pressure_m": 507.5,
+    "vert_accuracy_code": 6,
+    "geoid_undulation_m": 20.0,
+    "min_vertical_accuracy": 2,
+    "hold_pressure": false
+   },
+   "expected": {
+    "alt_amsl_m": 500.0,
+    "alt_source": "geodetic"
+   },
+   "why": "Code 6 (<1 m): geodetic used."
+  },
+  {
+   "name": "vertical-accuracy-code-0",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "alt_hae_m": 520.0,
+    "alt_pressure_m": 507.5,
+    "vert_accuracy_code": 0,
+    "geoid_undulation_m": 20.0,
+    "min_vertical_accuracy": 2,
+    "hold_pressure": false
+   },
+   "expected": {
+    "alt_amsl_m": 500.0,
+    "alt_source": "geodetic"
+   },
+   "why": "Code 0 is 'unknown', which is not a flag: the geodetic altitude stays."
+  },
+  {
+   "name": "threshold-is-configurable",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "alt_hae_m": 520.0,
+    "alt_pressure_m": 507.5,
+    "vert_accuracy_code": 4,
+    "geoid_undulation_m": 20.0,
+    "min_vertical_accuracy": 5,
+    "hold_pressure": false
+   },
+   "expected": {
+    "alt_amsl_m": 507.5,
+    "alt_source": "pressure"
+   },
+   "why": "With a minimum of 5 (<3 m), code 4 (<10 m) is poor."
+  },
+  {
+   "name": "neither-altitude",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "alt_hae_m": null,
+    "alt_pressure_m": null,
+    "vert_accuracy_code": 4,
+    "geoid_undulation_m": 20.0,
+    "min_vertical_accuracy": 2,
+    "hold_pressure": false
+   },
+   "expected": {
+    "alt_amsl_m": null,
+    "alt_source": null
+   },
+   "why": "No AMSL altitude at all: null, not 0."
+  },
+  {
+   "name": "flagged-geodetic-without-pressure-is-not-used",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "alt_hae_m": 520.0,
+    "alt_pressure_m": null,
+    "vert_accuracy_code": 1,
+    "geoid_undulation_m": 20.0,
+    "min_vertical_accuracy": 2,
+    "hold_pressure": false
+   },
+   "expected": {
+    "alt_amsl_m": null,
+    "alt_source": null
+   },
+   "why": "A poor geodetic altitude with no pressure altitude gives no AMSL altitude; it is not used 'because it is all there is'."
+  },
+  {
+   "name": "pressure-is-not-a-substitute-for-a-missing-geoid",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "alt_hae_m": 520.0,
+    "alt_pressure_m": 507.5,
+    "vert_accuracy_code": 4,
+    "geoid_undulation_m": null,
+    "min_vertical_accuracy": 2,
+    "hold_pressure": false
+   },
+   "expected": {
+    "alt_amsl_m": null,
+    "alt_source": null
+   },
+   "why": "Without a geoid a good HAE gives no AMSL (16-23 m off over Georgia); pressure replaces a poor geodetic altitude, never a missing geoid."
+  },
+  {
+   "name": "hold-keeps-pressure-even-when-geodetic-is-good",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "alt_hae_m": 520.0,
+    "alt_pressure_m": 507.5,
+    "vert_accuracy_code": 4,
+    "geoid_undulation_m": 20.0,
+    "min_vertical_accuracy": 2,
+    "hold_pressure": true
+   },
+   "expected": {
+    "alt_amsl_m": 507.5,
+    "alt_source": "pressure"
+   },
+   "why": "During the hold the tracker passes hold_pressure and pressure is used."
+  },
+  {
+   "name": "hold-needs-a-pressure-altitude",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "alt_hae_m": 520.0,
+    "alt_pressure_m": null,
+    "vert_accuracy_code": 4,
+    "geoid_undulation_m": 20.0,
+    "min_vertical_accuracy": 2,
+    "hold_pressure": true
+   },
+   "expected": {
+    "alt_amsl_m": 500.0,
+    "alt_source": "geodetic"
+   },
+   "why": "Holding with no pressure altitude falls through to geodetic."
+  },
+  {
+   "name": "accuracy-at-threshold-does-not-flip-the-source",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "pressure_hold_s": 10.0,
+    "alt_hae_m": 520.0,
+    "geoid_undulation_m": 20.0,
+    "steps": [
+     {
+      "now_s": 0.0,
+      "vert_accuracy_code": 1,
+      "alt_pressure_m": 507.5
+     },
+     {
+      "now_s": 1.0,
+      "vert_accuracy_code": 2,
+      "alt_pressure_m": 507.5
+     },
+     {
+      "now_s": 2.0,
+      "vert_accuracy_code": 1,
+      "alt_pressure_m": 507.5
+     },
+     {
+      "now_s": 3.0,
+      "vert_accuracy_code": 2,
+      "alt_pressure_m": 507.5
+     },
+     {
+      "now_s": 4.0,
+      "vert_accuracy_code": 1,
+      "alt_pressure_m": 507.5
+     },
+     {
+      "now_s": 5.0,
+      "vert_accuracy_code": 2,
+      "alt_pressure_m": 507.5
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "alt_source": "pressure",
+      "alt_amsl_m": 507.5
+     },
+     {
+      "alt_source": "pressure",
+      "alt_amsl_m": 507.5
+     },
+     {
+      "alt_source": "pressure",
+      "alt_amsl_m": 507.5
+     },
+     {
+      "alt_source": "pressure",
+      "alt_amsl_m": 507.5
+     },
+     {
+      "alt_source": "pressure",
+      "alt_amsl_m": 507.5
+     },
+     {
+      "alt_source": "pressure",
+      "alt_amsl_m": 507.5
+     }
+    ]
+   },
+   "why": "S-33 hysteresis: accuracy alternating <150 m / <45 m stays on pressure for 10 s after the last poor fix, so the monitor's alerts do not flip every message."
+  },
+  {
+   "name": "without-hold-it-flips-every-message",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "pressure_hold_s": 0.0,
+    "alt_hae_m": 520.0,
+    "geoid_undulation_m": 20.0,
+    "steps": [
+     {
+      "now_s": 0.0,
+      "vert_accuracy_code": 1,
+      "alt_pressure_m": 507.5
+     },
+     {
+      "now_s": 1.0,
+      "vert_accuracy_code": 2,
+      "alt_pressure_m": 507.5
+     },
+     {
+      "now_s": 2.0,
+      "vert_accuracy_code": 1,
+      "alt_pressure_m": 507.5
+     },
+     {
+      "now_s": 3.0,
+      "vert_accuracy_code": 2,
+      "alt_pressure_m": 507.5
+     },
+     {
+      "now_s": 4.0,
+      "vert_accuracy_code": 1,
+      "alt_pressure_m": 507.5
+     },
+     {
+      "now_s": 5.0,
+      "vert_accuracy_code": 2,
+      "alt_pressure_m": 507.5
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "alt_source": "pressure",
+      "alt_amsl_m": 507.5
+     },
+     {
+      "alt_source": "geodetic",
+      "alt_amsl_m": 500.0
+     },
+     {
+      "alt_source": "pressure",
+      "alt_amsl_m": 507.5
+     },
+     {
+      "alt_source": "geodetic",
+      "alt_amsl_m": 500.0
+     },
+     {
+      "alt_source": "pressure",
+      "alt_amsl_m": 507.5
+     },
+     {
+      "alt_source": "geodetic",
+      "alt_amsl_m": 500.0
+     }
+    ]
+   },
+   "why": "The presence pair: no hold, the source flips each message."
+  },
+  {
+   "name": "hold-ends-after-last-poor-geodetic",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "pressure_hold_s": 10.0,
+    "alt_hae_m": 520.0,
+    "geoid_undulation_m": 20.0,
+    "steps": [
+     {
+      "now_s": 0.0,
+      "vert_accuracy_code": 1,
+      "alt_pressure_m": 507.5
+     },
+     {
+      "now_s": 1.0,
+      "vert_accuracy_code": 4,
+      "alt_pressure_m": 507.5
+     },
+     {
+      "now_s": 2.0,
+      "vert_accuracy_code": 4,
+      "alt_pressure_m": 507.5
+     },
+     {
+      "now_s": 3.0,
+      "vert_accuracy_code": 4,
+      "alt_pressure_m": 507.5
+     },
+     {
+      "now_s": 4.0,
+      "vert_accuracy_code": 4,
+      "alt_pressure_m": 507.5
+     },
+     {
+      "now_s": 5.0,
+      "vert_accuracy_code": 4,
+      "alt_pressure_m": 507.5
+     },
+     {
+      "now_s": 6.0,
+      "vert_accuracy_code": 4,
+      "alt_pressure_m": 507.5
+     },
+     {
+      "now_s": 7.0,
+      "vert_accuracy_code": 4,
+      "alt_pressure_m": 507.5
+     },
+     {
+      "now_s": 8.0,
+      "vert_accuracy_code": 4,
+      "alt_pressure_m": 507.5
+     },
+     {
+      "now_s": 9.0,
+      "vert_accuracy_code": 4,
+      "alt_pressure_m": 507.5
+     },
+     {
+      "now_s": 9.9,
+      "vert_accuracy_code": 4,
+      "alt_pressure_m": 507.5
+     },
+     {
+      "now_s": 10.1,
+      "vert_accuracy_code": 4,
+      "alt_pressure_m": 507.5
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "alt_source": "pressure",
+      "alt_amsl_m": 507.5
+     },
+     {
+      "alt_source": "pressure",
+      "alt_amsl_m": 507.5
+     },
+     {
+      "alt_source": "pressure",
+      "alt_amsl_m": 507.5
+     },
+     {
+      "alt_source": "pressure",
+      "alt_amsl_m": 507.5
+     },
+     {
+      "alt_source": "pressure",
+      "alt_amsl_m": 507.5
+     },
+     {
+      "alt_source": "pressure",
+      "alt_amsl_m": 507.5
+     },
+     {
+      "alt_source": "pressure",
+      "alt_amsl_m": 507.5
+     },
+     {
+      "alt_source": "pressure",
+      "alt_amsl_m": 507.5
+     },
+     {
+      "alt_source": "pressure",
+      "alt_amsl_m": 507.5
+     },
+     {
+      "alt_source": "pressure",
+      "alt_amsl_m": 507.5
+     },
+     {
+      "alt_source": "pressure",
+      "alt_amsl_m": 507.5
+     },
+     {
+      "alt_source": "geodetic",
+      "alt_amsl_m": 500.0
+     }
+    ]
+   },
+   "why": "Last poor fix at 0 s; pressure until 10 s, geodetic from 10.1 s."
+  },
+  {
+   "name": "hold-needs-a-pressure-altitude-to-hold",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "pressure_hold_s": 10.0,
+    "alt_hae_m": 520.0,
+    "geoid_undulation_m": 20.0,
+    "steps": [
+     {
+      "now_s": 0.0,
+      "vert_accuracy_code": 1,
+      "alt_pressure_m": 507.5
+     },
+     {
+      "now_s": 1.0,
+      "vert_accuracy_code": 4,
+      "alt_pressure_m": null
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "alt_source": "pressure",
+      "alt_amsl_m": 507.5
+     },
+     {
+      "alt_source": "geodetic",
+      "alt_amsl_m": 500.0
+     }
+    ]
+   },
+   "why": "Inside the hold, but no pressure altitude in this message: geodetic."
+  }
+ ]
+}

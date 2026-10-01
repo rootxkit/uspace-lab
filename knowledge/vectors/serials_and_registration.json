@@ -1,0 +1,545 @@
+{
+ "description": "UAS serial numbers (ANSI/CTA-2063-A) and operator registration numbers (EU 2019/947 Art. 14), as U-01 validates them on registration and U-02 compares them on identification. Match `valid` exactly; `problem` is the old wording, `problem_contains` the part the old tests pinned.",
+ "source": [
+  "utm common/tests/test_uas_identity.py",
+  "utm common/uas_identity.py",
+  "utm gateway/registry_projection.py operator_key"
+ ],
+ "units": {},
+ "tolerance": {
+  "all fields": "exact"
+ },
+ "owners": [
+  "authority",
+  "ussp"
+ ],
+ "generated": "Expected values computed by knowledge/tools/gen_vectors.py, which runs the old Python implementation (rootxkit/utm @ 484cd228035f) on these inputs. Regenerate rather than edit.",
+ "utm_commit": "484cd228035f2f424530e233ce72100d0fc1842a",
+ "cta2063_rule": "4 chars manufacturer code + 1 length char (1-9, A-F = 10-15) + exactly that many chars; alphabet 0-9 A-Z without O and I; at most 20",
+ "cases": [
+  {
+   "name": "cta-valid-1A2B1X",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "cta2063",
+    "serial": "1A2B1X"
+   },
+   "expected": {
+    "valid": true,
+    "problem": null
+   },
+   "why": "Length character 1, one character follows."
+  },
+  {
+   "name": "cta-valid-1A2B9123456789",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "cta2063",
+    "serial": "1A2B9123456789"
+   },
+   "expected": {
+    "valid": true,
+    "problem": null
+   },
+   "why": "Length 9."
+  },
+  {
+   "name": "cta-valid-1A2BF123456789ABCDEF",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "cta2063",
+    "serial": "1A2BF123456789ABCDEF"
+   },
+   "expected": {
+    "valid": true,
+    "problem": null
+   },
+   "why": "Length F = 15; 20 characters in all, the maximum."
+  },
+  {
+   "name": "cta-valid-1581A1234567890",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "cta2063",
+    "serial": "1581A1234567890"
+   },
+   "expected": {
+    "valid": true,
+    "problem": null
+   },
+   "why": "Length A = 10."
+  },
+  {
+   "name": "cta-invalid-1A2B3AB",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "cta2063",
+    "serial": "1A2B3AB"
+   },
+   "expected": {
+    "valid": false,
+    "problem": "not a CTA-2063-A serial: the length character says 3 characters follow, and 2 do",
+    "problem_contains": "says 3"
+   },
+   "why": "Length says 3, 2 follow."
+  },
+  {
+   "name": "cta-invalid-1A2B2ABC",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "cta2063",
+    "serial": "1A2B2ABC"
+   },
+   "expected": {
+    "valid": false,
+    "problem": "not a CTA-2063-A serial: the length character says 2 characters follow, and 3 do",
+    "problem_contains": "says 2"
+   },
+   "why": "Length says 2, 3 follow."
+  },
+  {
+   "name": "cta-invalid-1O2B1X",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "cta2063",
+    "serial": "1O2B1X"
+   },
+   "expected": {
+    "valid": false,
+    "problem": "not a CTA-2063-A serial: 4-character manufacturer code, a length character (1-9, A-F), then that many characters; digits and upper-case letters without O and I",
+    "problem_contains": "not a CTA"
+   },
+   "why": "O is excluded (reads as 0)."
+  },
+  {
+   "name": "cta-invalid-1A2B1I",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "cta2063",
+    "serial": "1A2B1I"
+   },
+   "expected": {
+    "valid": false,
+    "problem": "not a CTA-2063-A serial: 4-character manufacturer code, a length character (1-9, A-F), then that many characters; digits and upper-case letters without O and I",
+    "problem_contains": "not a CTA"
+   },
+   "why": "I is excluded (reads as 1)."
+  },
+  {
+   "name": "cta-invalid-1a2b1x",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "cta2063",
+    "serial": "1a2b1x"
+   },
+   "expected": {
+    "valid": false,
+    "problem": "not a CTA-2063-A serial: 4-character manufacturer code, a length character (1-9, A-F), then that many characters; digits and upper-case letters without O and I",
+    "problem_contains": "not a CTA"
+   },
+   "why": "Lower case is not CTA-2063-A."
+  },
+  {
+   "name": "cta-invalid-1A2B0X",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "cta2063",
+    "serial": "1A2B0X"
+   },
+   "expected": {
+    "valid": false,
+    "problem": "not a CTA-2063-A serial: 4-character manufacturer code, a length character (1-9, A-F), then that many characters; digits and upper-case letters without O and I",
+    "problem_contains": "not a CTA"
+   },
+   "why": "Length 0 does not exist."
+  },
+  {
+   "name": "cta-invalid-1A2BG123456789ABCDEFG",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "cta2063",
+    "serial": "1A2BG123456789ABCDEFG"
+   },
+   "expected": {
+    "valid": false,
+    "problem": "not a CTA-2063-A serial: 4-character manufacturer code, a length character (1-9, A-F), then that many characters; digits and upper-case letters without O and I",
+    "problem_contains": "not a CTA"
+   },
+   "why": "G is not a length character."
+  },
+  {
+   "name": "cta-invalid-empty",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "cta2063",
+    "serial": ""
+   },
+   "expected": {
+    "valid": false,
+    "problem": "not a CTA-2063-A serial: 4-character manufacturer code, a length character (1-9, A-F), then that many characters; digits and upper-case letters without O and I",
+    "problem_contains": "not a CTA"
+   },
+   "why": "Empty."
+  },
+  {
+   "name": "class-C1-legacy-serial",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "serial_for_class",
+    "serial": "DJI-0042",
+    "class_label": "C1"
+   },
+   "expected": {
+    "valid": false,
+    "problem": "class C1 requires a CTA-2063-A serial; not a CTA-2063-A serial: 4-character manufacturer code, a length character (1-9, A-F), then that many characters; digits and upper-case letters without O and I"
+   },
+   "why": "2019/945 requires a CTA-2063-A serial of C1, C2, C3, C5 and C6 (the classes that must broadcast direct Remote ID); C0, C4 and unlabelled aircraft keep whatever serial the maker printed."
+  },
+  {
+   "name": "class-C2-legacy-serial",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "serial_for_class",
+    "serial": "DJI-0042",
+    "class_label": "C2"
+   },
+   "expected": {
+    "valid": false,
+    "problem": "class C2 requires a CTA-2063-A serial; not a CTA-2063-A serial: 4-character manufacturer code, a length character (1-9, A-F), then that many characters; digits and upper-case letters without O and I"
+   },
+   "why": "2019/945 requires a CTA-2063-A serial of C1, C2, C3, C5 and C6 (the classes that must broadcast direct Remote ID); C0, C4 and unlabelled aircraft keep whatever serial the maker printed."
+  },
+  {
+   "name": "class-C3-legacy-serial",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "serial_for_class",
+    "serial": "DJI-0042",
+    "class_label": "C3"
+   },
+   "expected": {
+    "valid": false,
+    "problem": "class C3 requires a CTA-2063-A serial; not a CTA-2063-A serial: 4-character manufacturer code, a length character (1-9, A-F), then that many characters; digits and upper-case letters without O and I"
+   },
+   "why": "2019/945 requires a CTA-2063-A serial of C1, C2, C3, C5 and C6 (the classes that must broadcast direct Remote ID); C0, C4 and unlabelled aircraft keep whatever serial the maker printed."
+  },
+  {
+   "name": "class-C5-legacy-serial",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "serial_for_class",
+    "serial": "DJI-0042",
+    "class_label": "C5"
+   },
+   "expected": {
+    "valid": false,
+    "problem": "class C5 requires a CTA-2063-A serial; not a CTA-2063-A serial: 4-character manufacturer code, a length character (1-9, A-F), then that many characters; digits and upper-case letters without O and I"
+   },
+   "why": "2019/945 requires a CTA-2063-A serial of C1, C2, C3, C5 and C6 (the classes that must broadcast direct Remote ID); C0, C4 and unlabelled aircraft keep whatever serial the maker printed."
+  },
+  {
+   "name": "class-C6-legacy-serial",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "serial_for_class",
+    "serial": "DJI-0042",
+    "class_label": "C6"
+   },
+   "expected": {
+    "valid": false,
+    "problem": "class C6 requires a CTA-2063-A serial; not a CTA-2063-A serial: 4-character manufacturer code, a length character (1-9, A-F), then that many characters; digits and upper-case letters without O and I"
+   },
+   "why": "2019/945 requires a CTA-2063-A serial of C1, C2, C3, C5 and C6 (the classes that must broadcast direct Remote ID); C0, C4 and unlabelled aircraft keep whatever serial the maker printed."
+  },
+  {
+   "name": "class-C0-legacy-serial",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "serial_for_class",
+    "serial": "DJI-0042",
+    "class_label": "C0"
+   },
+   "expected": {
+    "valid": true,
+    "problem": null
+   },
+   "why": "2019/945 requires a CTA-2063-A serial of C1, C2, C3, C5 and C6 (the classes that must broadcast direct Remote ID); C0, C4 and unlabelled aircraft keep whatever serial the maker printed."
+  },
+  {
+   "name": "class-C4-legacy-serial",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "serial_for_class",
+    "serial": "DJI-0042",
+    "class_label": "C4"
+   },
+   "expected": {
+    "valid": true,
+    "problem": null
+   },
+   "why": "2019/945 requires a CTA-2063-A serial of C1, C2, C3, C5 and C6 (the classes that must broadcast direct Remote ID); C0, C4 and unlabelled aircraft keep whatever serial the maker printed."
+  },
+  {
+   "name": "class-none-legacy-serial",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "serial_for_class",
+    "serial": "DJI-0042",
+    "class_label": null
+   },
+   "expected": {
+    "valid": true,
+    "problem": null
+   },
+   "why": "2019/945 requires a CTA-2063-A serial of C1, C2, C3, C5 and C6 (the classes that must broadcast direct Remote ID); C0, C4 and unlabelled aircraft keep whatever serial the maker printed."
+  },
+  {
+   "name": "class-none-empty-serial",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "serial_for_class",
+    "serial": "",
+    "class_label": null
+   },
+   "expected": {
+    "valid": false,
+    "problem": "a serial number is required"
+   },
+   "why": "An empty serial is refused for every class."
+  },
+  {
+   "name": "registration-FIN87astrdge12k8",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "registration_number",
+    "value": "FIN87astrdge12k8",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
+   },
+   "expected": {
+    "valid": true,
+    "problem": null
+   },
+   "why": "The EU shape: country code then alphanumerics. The pattern is configuration (UAS_OPERATOR_REGISTRATION_PATTERN): Georgia's exact shape is unconfirmed."
+  },
+  {
+   "name": "registration-FIN87astrdge12k8-xyz",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "registration_number",
+    "value": "FIN87astrdge12k8-xyz",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
+   },
+   "expected": {
+    "valid": false,
+    "problem": "only the public part of the registration number is registered; leave out the hyphen and the secret characters after it"
+   },
+   "why": "Only the public part is registered; the hyphen and secret characters are refused. The pattern is configuration (UAS_OPERATOR_REGISTRATION_PATTERN): Georgia's exact shape is unconfirmed."
+  },
+  {
+   "name": "registration-fin87astrdge12k8",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "registration_number",
+    "value": "fin87astrdge12k8",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
+   },
+   "expected": {
+    "valid": false,
+    "problem": "does not match the configured format ^[A-Z]{3}[A-Za-z0-9]{8,16}$"
+   },
+   "why": "The default pattern wants an upper-case country code. The pattern is configuration (UAS_OPERATOR_REGISTRATION_PATTERN): Georgia's exact shape is unconfirmed."
+  },
+  {
+   "name": "registration-FIN87",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "kind": "registration_number",
+    "value": "FIN87",
+    "pattern": "^[A-Z]{3}[A-Za-z0-9]{8,16}$"
+   },
+   "expected": {
+    "valid": false,
+    "problem": "does not match the configured format ^[A-Z]{3}[A-Za-z0-9]{8,16}$"
+   },
+   "why": "Too short for the pattern. The pattern is configuration (UAS_OPERATOR_REGISTRATION_PATTERN): Georgia's exact shape is unconfirmed."
+  },
+  {
+   "name": "public-part-FIN87astrdge12k8-xyz",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "public_registration_number",
+    "value": "FIN87astrdge12k8-xyz"
+   },
+   "expected": {
+    "public": "FIN87astrdge12k8",
+    "compare_key": "FIN87ASTRDGE12K8"
+   },
+   "why": "The EU number with its three secret characters. compare_key is what identification compares (public part, upper case)."
+  },
+  {
+   "name": "public-part-FIN87astrdge12k8-XY1",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "public_registration_number",
+    "value": " FIN87astrdge12k8-XY1 "
+   },
+   "expected": {
+    "public": "FIN87astrdge12k8",
+    "compare_key": "FIN87ASTRDGE12K8"
+   },
+   "why": "Trimmed first, then stripped. compare_key is what identification compares (public part, upper case)."
+  },
+  {
+   "name": "public-part-FIN87astrdge12k8",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "public_registration_number",
+    "value": "FIN87astrdge12k8"
+   },
+   "expected": {
+    "public": "FIN87astrdge12k8",
+    "compare_key": "FIN87ASTRDGE12K8"
+   },
+   "why": "No secret tail: unchanged. compare_key is what identification compares (public part, upper case)."
+  },
+  {
+   "name": "public-part-GEO-OP-SITL",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "public_registration_number",
+    "value": "GEO-OP-SITL"
+   },
+   "expected": {
+    "public": "GEO-OP-SITL",
+    "compare_key": "GEO-OP-SITL"
+   },
+   "why": "A four-character tail is not a secret: unchanged. compare_key is what identification compares (public part, upper case)."
+  },
+  {
+   "name": "public-part-GEO-OP-ABC",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "public_registration_number",
+    "value": "GEO-OP-ABC"
+   },
+   "expected": {
+    "public": "GEO-OP",
+    "compare_key": "GEO-OP"
+   },
+   "why": "PITFALL: any 3-alphanumeric tail after the last hyphen is stripped, so a test identifier like GEO-OP-ABC becomes GEO-OP. Registered numbers may not contain '-', so this only affects what is broadcast. compare_key is what identification compares (public part, upper case)."
+  },
+  {
+   "name": "public-part-FIN87astrdge12k8-",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "public_registration_number",
+    "value": "FIN87astrdge12k8-"
+   },
+   "expected": {
+    "public": "FIN87astrdge12k8-",
+    "compare_key": "FIN87ASTRDGE12K8-"
+   },
+   "why": "An empty tail is not stripped. compare_key is what identification compares (public part, upper case)."
+  },
+  {
+   "name": "public-part--xyz",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "public_registration_number",
+    "value": "-xyz"
+   },
+   "expected": {
+    "public": "-xyz",
+    "compare_key": "-XYZ"
+   },
+   "why": "Nothing before the hyphen: unchanged. compare_key is what identification compares (public part, upper case)."
+  },
+  {
+   "name": "public-part-FIN87astrdge12k8-x!z",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "kind": "public_registration_number",
+    "value": "FIN87astrdge12k8-x!z"
+   },
+   "expected": {
+    "public": "FIN87astrdge12k8-x!z",
+    "compare_key": "FIN87ASTRDGE12K8-X!Z"
+   },
+   "why": "A non-alphanumeric tail is not a secret. compare_key is what identification compares (public part, upper case)."
+  }
+ ]
+}

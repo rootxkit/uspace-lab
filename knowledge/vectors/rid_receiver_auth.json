@@ -1,0 +1,399 @@
+{
+ "description": "Authenticating Remote ID receivers (P1-15). The broadcast can never be authenticated; the receiver that says it heard it can. HMAC-SHA256 per receiver key, a +-30 s window on sent_at_ms and a per-receiver nonce. Error texts are the old ones; match on accepted.",
+ "source": [
+  "utm gateway/tests/test_remote_id_auth.py",
+  "utm gateway/remote_id_auth.py"
+ ],
+ "units": {
+  "now_s": "epoch seconds on the ingest's clock",
+  "sent_at_ms": "epoch milliseconds, receiver's clock"
+ },
+ "tolerance": {
+  "accepted": "exact",
+  "signature_hex": "exact"
+ },
+ "owners": [
+  "authority"
+ ],
+ "generated": "Expected values computed by knowledge/tools/gen_vectors.py, which runs the old Python implementation (rootxkit/utm @ 484cd228035f) on these inputs. Regenerate rather than edit.",
+ "utm_commit": "484cd228035f2f424530e233ce72100d0fc1842a",
+ "cases": [
+  {
+   "name": "signature-is-hmac-sha256-hex-of-report-bytes",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "key_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "report_utf8": "{\"receiver_id\": \"rx-1\", \"transmitter\": \"AA:BB:CC:00:00:01\", \"payload_hex\": \"00\", \"sent_at_ms\": 1790000000000, \"nonce\": \"n-1\"}"
+   },
+   "expected": {
+    "datagram_utf8": "{\"receiver_id\": \"rx-1\", \"transmitter\": \"AA:BB:CC:00:00:01\", \"payload_hex\": \"00\", \"sent_at_ms\": 1790000000000, \"nonce\": \"n-1\"}\nsig=8552d45fba4475805af3d579ece6f23f68cf2c8aac7273590850984f60caf7d1",
+    "signature_hex": "8552d45fba4475805af3d579ece6f23f68cf2c8aac7273590850984f60caf7d1"
+   },
+   "why": "The signature covers the exact report bytes: no JSON canonicalisation, so an ESP32 can sign with its SDK HMAC. Datagram = report + '\\nsig=' + hex."
+  },
+  {
+   "name": "accept-signed-known-receiver",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "keys_hex": {
+     "rx-1": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+    },
+    "max_skew_s": 30.0,
+    "datagrams": [
+     {
+      "utf8": "{\"receiver_id\": \"rx-1\", \"transmitter\": \"AA:BB:CC:00:00:01\", \"payload_hex\": \"00\", \"sent_at_ms\": 1790000000000, \"nonce\": \"n-1\"}\nsig=8552d45fba4475805af3d579ece6f23f68cf2c8aac7273590850984f60caf7d1",
+      "now_s": 1790000000.0
+     }
+    ]
+   },
+   "expected": {
+    "per_datagram": [
+     {
+      "accepted": true
+     }
+    ]
+   },
+   "why": "Signed, known, current, new nonce: accepted."
+  },
+  {
+   "name": "refuse-unsigned",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "keys_hex": {
+     "rx-1": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+    },
+    "max_skew_s": 30.0,
+    "datagrams": [
+     {
+      "utf8": "{\"receiver_id\": \"rx-1\", \"transmitter\": \"AA:BB:CC:00:00:01\", \"payload_hex\": \"00\", \"sent_at_ms\": 1790000000000, \"nonce\": \"n-1\"}",
+      "now_s": 1790000000.0
+     }
+    ]
+   },
+   "expected": {
+    "per_datagram": [
+     {
+      "accepted": false,
+      "error": "not signed"
+     }
+    ]
+   },
+   "why": "With keys configured an unsigned datagram is refused (without keys the ingest may only bind to loopback)."
+  },
+  {
+   "name": "refuse-unknown-receiver",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "keys_hex": {
+     "rx-1": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+    },
+    "max_skew_s": 30.0,
+    "datagrams": [
+     {
+      "utf8": "{\"receiver_id\": \"rx-2\", \"transmitter\": \"AA:BB:CC:00:00:01\", \"payload_hex\": \"00\", \"sent_at_ms\": 1790000000000, \"nonce\": \"n-1\"}\nsig=0349ecc3600fc5d6142a793d067f6224707cac70cf352660c3bccc3d50068943",
+      "now_s": 1790000000.0
+     }
+    ]
+   },
+   "expected": {
+    "per_datagram": [
+     {
+      "accepted": false,
+      "error": "unknown receiver 'rx-2'"
+     }
+    ]
+   },
+   "why": "Unknown receiver id."
+  },
+  {
+   "name": "refuse-wrong-key",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "keys_hex": {
+     "rx-1": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+    },
+    "max_skew_s": 30.0,
+    "datagrams": [
+     {
+      "utf8": "{\"receiver_id\": \"rx-1\", \"transmitter\": \"AA:BB:CC:00:00:01\", \"payload_hex\": \"00\", \"sent_at_ms\": 1790000000000, \"nonce\": \"n-1\"}\nsig=7261afee8658d863367c6028bd5634b3a5b208415a7c4e3669068ad2040fadbd",
+      "now_s": 1790000000.0
+     }
+    ]
+   },
+   "expected": {
+    "per_datagram": [
+     {
+      "accepted": false,
+      "error": "bad signature from rx-1"
+     }
+    ]
+   },
+   "why": "Signature from another key."
+  },
+  {
+   "name": "refuse-tampered",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "keys_hex": {
+     "rx-1": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+    },
+    "max_skew_s": 30.0,
+    "datagrams": [
+     {
+      "utf8": "{\"receiver_id\": \"rx-1\", \"transmitter\": \"AA:BB:CC:00:00:01\", \"payload_hex\": \"01\", \"sent_at_ms\": 1790000000000, \"nonce\": \"n-1\"}\nsig=8552d45fba4475805af3d579ece6f23f68cf2c8aac7273590850984f60caf7d1",
+      "now_s": 1790000000.0
+     }
+    ]
+   },
+   "expected": {
+    "per_datagram": [
+     {
+      "accepted": false,
+      "error": "bad signature from rx-1"
+     }
+    ]
+   },
+   "why": "One byte of the payload changed after signing."
+  },
+  {
+   "name": "refuse-31s-old",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "keys_hex": {
+     "rx-1": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+    },
+    "max_skew_s": 30.0,
+    "datagrams": [
+     {
+      "utf8": "{\"receiver_id\": \"rx-1\", \"transmitter\": \"AA:BB:CC:00:00:01\", \"payload_hex\": \"00\", \"sent_at_ms\": 1789999969000, \"nonce\": \"n-1\"}\nsig=084b3b3ccbab2fb87ff2b7698492390768368ca396449acb23080b83aef5b664",
+      "now_s": 1790000000.0
+     }
+    ]
+   },
+   "expected": {
+    "per_datagram": [
+     {
+      "accepted": false,
+      "error": "sent 31 s from now, more than 30 s"
+     }
+    ]
+   },
+   "why": "More than 30 s from our clock: a captured datagram replayed later. Receivers need NTP."
+  },
+  {
+   "name": "refuse-31s-ahead",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "keys_hex": {
+     "rx-1": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+    },
+    "max_skew_s": 30.0,
+    "datagrams": [
+     {
+      "utf8": "{\"receiver_id\": \"rx-1\", \"transmitter\": \"AA:BB:CC:00:00:01\", \"payload_hex\": \"00\", \"sent_at_ms\": 1790000031000, \"nonce\": \"n-1\"}\nsig=39c07fb468c20866ae9467decf4ca0f9ca40aa2dfe2d85c29cd175a71d05cb6c",
+      "now_s": 1790000000.0
+     }
+    ]
+   },
+   "expected": {
+    "per_datagram": [
+     {
+      "accepted": false,
+      "error": "sent 31 s from now, more than 30 s"
+     }
+    ]
+   },
+   "why": "Ahead by more than the window, too."
+  },
+  {
+   "name": "refuse-time-not-integer",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "keys_hex": {
+     "rx-1": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+    },
+    "max_skew_s": 30.0,
+    "datagrams": [
+     {
+      "utf8": "{\"receiver_id\": \"rx-1\", \"transmitter\": \"AA:BB:CC:00:00:01\", \"payload_hex\": \"00\", \"sent_at_ms\": \"now\", \"nonce\": \"n-1\"}\nsig=cc90228299aeb16800bbf01f1f44e696247b7be09f7a65a14c738d4f7ad97302",
+      "now_s": 1790000000.0
+     }
+    ]
+   },
+   "expected": {
+    "per_datagram": [
+     {
+      "accepted": false,
+      "error": "sent_at_ms is not an integer"
+     }
+    ]
+   },
+   "why": "sent_at_ms must be an integer (a boolean is not)."
+  },
+  {
+   "name": "refuse-no-nonce",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "keys_hex": {
+     "rx-1": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+    },
+    "max_skew_s": 30.0,
+    "datagrams": [
+     {
+      "utf8": "{\"receiver_id\": \"rx-1\", \"transmitter\": \"AA:BB:CC:00:00:01\", \"payload_hex\": \"00\", \"sent_at_ms\": 1790000000000, \"nonce\": \"\"}\nsig=eaeec21501cfcd444d5311db7ed5f4719e6118e7b15574577bc5f37be8f70025",
+      "now_s": 1790000000.0
+     }
+    ]
+   },
+   "expected": {
+    "per_datagram": [
+     {
+      "accepted": false,
+      "error": "no nonce"
+     }
+    ]
+   },
+   "why": "An empty nonce."
+  },
+  {
+   "name": "refuse-not-an-object",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "keys_hex": {
+     "rx-1": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+    },
+    "max_skew_s": 30.0,
+    "datagrams": [
+     {
+      "utf8": "[1]\nsig=00bc5c4387eab2c18880343f217900f6e99a2d40190586f8fd60060b1afce107",
+      "now_s": 1790000000.0
+     }
+    ]
+   },
+   "expected": {
+    "per_datagram": [
+     {
+      "accepted": false,
+      "error": "the signed report is not a JSON object"
+     }
+    ]
+   },
+   "why": "The signed report must be a JSON object."
+  },
+  {
+   "name": "accept-29.9s-old",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "keys_hex": {
+     "rx-1": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+    },
+    "max_skew_s": 30.0,
+    "datagrams": [
+     {
+      "utf8": "{\"receiver_id\": \"rx-1\", \"transmitter\": \"AA:BB:CC:00:00:01\", \"payload_hex\": \"00\", \"sent_at_ms\": 1789999970100, \"nonce\": \"e0\"}\nsig=bbf991f7897bcc61ee14d267f5bbebcdf96ef5ee19751b6b6aff378818330018",
+      "now_s": 1790000000.0
+     }
+    ]
+   },
+   "expected": {
+    "per_datagram": [
+     {
+      "accepted": true
+     }
+    ]
+   },
+   "why": "Just inside the window."
+  },
+  {
+   "name": "accept-29.9s-ahead",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "keys_hex": {
+     "rx-1": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+    },
+    "max_skew_s": 30.0,
+    "datagrams": [
+     {
+      "utf8": "{\"receiver_id\": \"rx-1\", \"transmitter\": \"AA:BB:CC:00:00:01\", \"payload_hex\": \"00\", \"sent_at_ms\": 1790000029900, \"nonce\": \"e1\"}\nsig=f88391810f6a96b53027add36aa0e60e8975c7e5ee326d99b6b41ffaefbc49f2",
+      "now_s": 1790000000.0
+     }
+    ]
+   },
+   "expected": {
+    "per_datagram": [
+     {
+      "accepted": true
+     }
+    ]
+   },
+   "why": "Just inside, ahead."
+  },
+  {
+   "name": "refuse-replayed-nonce-accept-new-nonce",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "keys_hex": {
+     "rx-1": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+    },
+    "max_skew_s": 30.0,
+    "datagrams": [
+     {
+      "utf8": "{\"receiver_id\": \"rx-1\", \"transmitter\": \"AA:BB:CC:00:00:01\", \"payload_hex\": \"00\", \"sent_at_ms\": 1790000000000, \"nonce\": \"n-1\"}\nsig=8552d45fba4475805af3d579ece6f23f68cf2c8aac7273590850984f60caf7d1",
+      "now_s": 1790000000.0
+     },
+     {
+      "utf8": "{\"receiver_id\": \"rx-1\", \"transmitter\": \"AA:BB:CC:00:00:01\", \"payload_hex\": \"00\", \"sent_at_ms\": 1790000000000, \"nonce\": \"n-1\"}\nsig=8552d45fba4475805af3d579ece6f23f68cf2c8aac7273590850984f60caf7d1",
+      "now_s": 1790000001.0
+     },
+     {
+      "utf8": "{\"receiver_id\": \"rx-1\", \"transmitter\": \"AA:BB:CC:00:00:01\", \"payload_hex\": \"00\", \"sent_at_ms\": 1790000000000, \"nonce\": \"n-2\"}\nsig=2d2f65438235158630f7c701f0afaa26c98af850cf9c3cc759708aabe1882fe7",
+      "now_s": 1790000001.0
+     }
+    ]
+   },
+   "expected": {
+    "per_datagram": [
+     {
+      "accepted": true
+     },
+     {
+      "accepted": false,
+      "error": "nonce repeated by rx-1"
+     },
+     {
+      "accepted": true
+     }
+    ]
+   },
+   "why": "A datagram replayed at once inside the window is refused by its nonce; a new nonce is accepted. Nonces are remembered for twice the window (either side of now)."
+  }
+ ]
+}
