@@ -33,7 +33,7 @@ Key: **O** owned (source of truth), **P** projected or cached from another syste
 |---|---|---|---|
 | `cis_cache` P | CISP (F3) | datasets + version + fetched_at | webhook + 60 s |
 | `ussp_flights` P (TSDB) | USSPs via F3411 DP views (F7); the optional national push feeds the same table | `RIDFlight` / `RIDFlightDetails` as received, `ussp_id`, `isa_id`, `rx_ts` | 1 Hz per DP view; **retention 24 h** (F3411 `NetDpMaxDataRetentionPeriodSeconds`); longer history comes from USSP records (F7) and `violations.evidence_excerpt` |
-| `manned_tracks` P (TSDB) | ANSP (F4) | `manned_track.v1` | 1 Hz stream |
+| `manned_tracks` P (TSDB) | ANSP (F4) | `track/manned/v1` | 1 Hz stream |
 | `terrain` P | DEM (SRTM/Copernicus, Q10) | raster tiles | static |
 | `geoid` P | EGM2008 2.5' grid | raster | static |
 
@@ -112,3 +112,9 @@ Owns no production entity. Holds: `test_vectors/` (JSON inputs and expected outp
 | Incident / occurrence id | ULID | authority (occurrence `report_ref` from the reporter) | authority, reporter |
 | Receiver id | slug | authority | receivers |
 | Client id | `sys-name-nn` | authority token service | all |
+
+## Errata
+
+| Date | Where | Change | Source |
+|---|---|---|---|
+| 2026-10-02 | §1 authority, `manned_tracks` row | Projected message named `track/manned/v1`, not `manned_track.v1`. | `docs/decisions/2026-10-02-cross-plan.md` §1.1 (note after M13) |
