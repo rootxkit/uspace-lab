@@ -1095,7 +1095,10 @@ be judged decide.**
     excludes the aircraft still decides (Z-08).
   - A CONDITIONAL zone with such a limit is not evaluated: no alert,
     counted with its reasons, logged once per zone and aircraft. An
-    active alert is neither refreshed nor cleared.
+    active alert is neither refreshed nor cleared. A warning there would
+    exceed the zone's own severity when policy puts CONDITIONAL at info,
+    against the widened-band cap (a possible inside never raises more
+    than a definite one).
   - While any PROHIBITED zone needs terrain or the geoid and none is
     configured, the startup log and every status line are at error level.
 - Why: U-03 review. A false warning beats a missed critical. S-37 asked
