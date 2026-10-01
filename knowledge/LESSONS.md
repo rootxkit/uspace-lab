@@ -1317,10 +1317,12 @@ detection.**
 
 **C-19. Judge loss of separation over the whole window, not only at
 `t_cpa`.**
-- Rule: a pair is in conflict when it is inside both minima at any time
-  in `[0, t_cpa_max_s]`: the interval where the horizontal distance is
+- Rule: a pair is in conflict when it comes inside both minima at a time
+  in `[0, t_cpa_max_s)`: the interval where the horizontal distance is
   below its minimum overlaps the interval where the vertical gap is below
-  its minimum. With the vertical unknown the horizontal interval alone
+  its minimum, and the overlap starts before the window ends. The window
+  is half-open: a loss of separation starting exactly at `t_cpa_max_s`
+  is not yet a conflict. With the vertical unknown the horizontal interval alone
   decides. Report when the loss of separation starts, and rank conflicts
   by it.
 - Why: uspace-core PR #10. The vertical gap at the horizontal `t_cpa` is
@@ -1328,7 +1330,8 @@ detection.**
   under 20 m three seconds before it; and a pair whose `t_cpa` (64 s) lay
   beyond the 60 s window entered the minima at 58 s. utm judged both
   clear. `cpa.json#vertical-gap-under-minimum-before-t-cpa`,
-  `#enters-minima-before-window-end-t-cpa-beyond`.
+  `#enters-minima-before-window-end-t-cpa-beyond`,
+  `#loss-starting-exactly-at-window-end-is-clear`.
 - Applies to: ussp, authority.
 
 ---

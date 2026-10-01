@@ -1,5 +1,5 @@
 {
- "description": "Closest point of approach and the conflict test (ARCHITECTURE §6.2, P5-07, S-11, S-33). Positions are projected onto a local tangent plane about the pair's mid latitude with WGS-84 meridional and prime-vertical radii (local_offset_m); the older sample is advanced to the newer one's time first. t_cpa from the horizontal motion only, clamped to >= 0; vertical separation evaluated at t_cpa (the reported numbers). conflict is a loss of separation at any time in [0, t_cpa_max_s] (C-19): the open interval where the horizontal distance is below d_h_min overlaps the open interval where the vertical gap is below d_v_min (with the vertical unknown, the horizontal interval alone), and that overlap starts before t_cpa_max_s. This contains utm's criterion, (d_h_now < d_h_min AND (vertical unknown OR d_alt_now < d_v_min)) OR (t_cpa < t_max AND d_cpa_h < d_h_min AND (vertical unknown OR d_alt_at_cpa < d_v_min)). los_start_s is the start of the overlap (0 when inside now), null when there is no conflict. A pair not judged gives not_judged: stale_neighbour, or invalid_policy for a case whose input.policy (which replaces the header policy) has a minimum that is not above zero. described_as is how the case was built (metres from 41.7151N 44.8271E); the inputs are lat/lon.",
+ "description": "Closest point of approach and the conflict test (ARCHITECTURE §6.2, P5-07, S-11, S-33). Positions are projected onto a local tangent plane about the pair's mid latitude with WGS-84 meridional and prime-vertical radii (local_offset_m); the older sample is advanced to the newer one's time first. t_cpa from the horizontal motion only, clamped to >= 0; vertical separation evaluated at t_cpa (the reported numbers). conflict is a loss of separation that starts in [0, t_cpa_max_s), half-open: one starting exactly at t_cpa_max_s is not yet a conflict (C-19). The open interval where the horizontal distance is below d_h_min overlaps the open interval where the vertical gap is below d_v_min (with the vertical unknown, the horizontal interval alone), and that overlap starts before t_cpa_max_s. This contains utm's criterion, (d_h_now < d_h_min AND (vertical unknown OR d_alt_now < d_v_min)) OR (t_cpa < t_max AND d_cpa_h < d_h_min AND (vertical unknown OR d_alt_at_cpa < d_v_min)). los_start_s is the start of the overlap (0 when inside now), null when there is no conflict. A pair not judged gives not_judged: stale_neighbour, or invalid_policy for a case whose input.policy (which replaces the header policy) has a minimum that is not above zero. described_as is how the case was built (metres from 41.7151N 44.8271E); the inputs are lat/lon.",
  "source": [
   "utm airspace/tests/test_cpa.py",
   "utm airspace/tests/test_monitor.py (neighbour age)",
@@ -1575,6 +1575,107 @@
     "los_start_s": null
    },
    "why": "The absence pair: from 680 m the pair enters the minima at 62 s, after the window. Not yet a conflict."
+  },
+  {
+   "name": "loss-starting-exactly-at-window-end-is-clear",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550,
+     "vn_ms": 0.0,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.71537010539748,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 600,
+     "vn_ms": 0.0,
+     "ve_ms": 0.0,
+     "vd_ms": 0.5,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 30,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 0.0,
+    "d_cpa_horizontal_m": 30.000000707665826,
+    "d_alt_at_cpa_m": 50.0,
+    "d_horizontal_now_m": 30.000000707665826,
+    "d_alt_now_m": 50,
+    "vertical_known": true,
+    "conflict": false,
+    "los_start_s": null
+   },
+   "why": "C-19, the boundary: 30 m apart horizontally and staying so, B descending 0.5 m/s from 50 m above A. The vertical gap reaches 20 m at exactly 60 s (exact in binary), so the loss of separation would start at t_cpa_max_s. The window is half-open, [0, 60): clear."
+  },
+  {
+   "name": "loss-starting-just-before-window-end-is-conflict",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550,
+     "vn_ms": 0.0,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.71537010539748,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 599.95,
+     "vn_ms": 0.0,
+     "ve_ms": 0.0,
+     "vd_ms": 0.5,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 30,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 0.0,
+    "d_cpa_horizontal_m": 30.000000707665826,
+    "d_alt_at_cpa_m": 49.950000000000045,
+    "d_horizontal_now_m": 30.000000707665826,
+    "d_alt_now_m": 49.950000000000045,
+    "vertical_known": true,
+    "conflict": true,
+    "los_start_s": 59.90000000000009
+   },
+   "why": "The presence twin: from 49.95 m the gap reaches 20 m at 59.9 s, inside the window: a conflict with los_start_s 59.9. utm judged the gap at t_cpa (0 s, 49.95 m) and said clear.",
+   "decision": "A conflict is a loss of separation at any time in the window, not only at the horizontal t_cpa (LESSONS C-19, uspace-core PR #10, owner decision). utm judged now and at t_cpa only."
   },
   {
    "name": "zero-horizontal-minimum-is-invalid-policy",

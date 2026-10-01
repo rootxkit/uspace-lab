@@ -2113,7 +2113,7 @@ def loss_of_separation(a: Track, b: Track, policy: SeparationPolicy) -> float | 
     """When the pair is first inside both minima within the window, or None.
 
     Decided in uspace-core PR #10 (owner): a conflict is a loss of
-    separation at any time in [0, t_cpa_max_s], not only at the horizontal
+    separation starting at any time in [0, t_cpa_max_s), not only at the horizontal
     t_cpa (LESSONS C-19). The pair is put in utm's frame (the older sample
     advanced, the tangent plane about the mid latitude), then the open
     interval where the horizontal distance is below its minimum (a
@@ -2289,6 +2289,18 @@ def gen_cpa() -> None:
         track_spec(2, 680, vn=-5),
         "The absence pair: from 680 m the pair enters the minima at 62 s, after the window. Not yet a conflict.",
     )
+    pair(
+        "loss-starting-exactly-at-window-end-is-clear",
+        track_spec(1, 0, alt=550),
+        track_spec(2, 30, vd=0.5, alt=600),
+        "C-19, the boundary: 30 m apart horizontally and staying so, B descending 0.5 m/s from 50 m above A. The vertical gap reaches 20 m at exactly 60 s (exact in binary), so the loss of separation would start at t_cpa_max_s. The window is half-open, [0, 60): clear.",
+    )
+    pair(
+        "loss-starting-just-before-window-end-is-conflict",
+        track_spec(1, 0, alt=550),
+        track_spec(2, 30, vd=0.5, alt=599.95),
+        "The presence twin: from 49.95 m the gap reaches 20 m at 59.9 s, inside the window: a conflict with los_start_s 59.9. utm judged the gap at t_cpa (0 s, 49.95 m) and said clear.",
+    )
     for which, policy in (
         ("horizontal", {**POLICY_JSON, "d_horizontal_min_m": 0}),
         ("vertical", {**POLICY_JSON, "d_vertical_min_m": 0}),
@@ -2309,8 +2321,9 @@ def gen_cpa() -> None:
             "prime-vertical radii (local_offset_m); the older sample is advanced "
             "to the newer one's time first. t_cpa from the horizontal motion "
             "only, clamped to >= 0; vertical separation evaluated at t_cpa "
-            "(the reported numbers). conflict is a loss of separation at any "
-            "time in [0, t_cpa_max_s] (C-19): the open interval where the "
+            "(the reported numbers). conflict is a loss of separation that "
+            "starts in [0, t_cpa_max_s), half-open: one starting exactly at "
+            "t_cpa_max_s is not yet a conflict (C-19). The open interval where the "
             "horizontal distance is below d_h_min overlaps the open interval "
             "where the vertical gap is below d_v_min (with the vertical "
             "unknown, the horizontal interval alone), and that overlap starts "
