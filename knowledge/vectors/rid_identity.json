@@ -1,0 +1,4006 @@
+{
+ "description": "Joining Remote ID Basic ID and Location by transmitter address, and when an identity is fresh enough to use (S-32). Each case is a sequence of frames fed to one tracker; expected.per_step[i] is the observation published by step i (null: nothing published), and expected.counters the tracker's counts after the last step. Default settings: identity_ttl_s 15, max_gap_s 3, identify_within_s 4. Location fields not given are the defaults of the generator's location_with(); only identity matters here. drone_id is uuid5 of namespace 6f1c7d52-4a0b-5c1e-9d3a-2b8e41f07a65 with '<id_type>:<ua_id>' (identified) or 'transmitter:<address>' (unidentified); a Go implementation may choose its own ids but must keep the rule that the same serial is always the same id, across receivers and restarts.",
+ "source": [
+  "utm gateway/tests/test_remote_id_identity.py",
+  "utm gateway/tests/test_remote_id.py",
+  "utm gateway/remote_id.py RemoteIdTracker"
+ ],
+ "units": {
+  "now_s": "seconds on the tracker's monotonic clock",
+  "lat_deg": "degrees"
+ },
+ "tolerance": {
+  "lat_deg": 1e-09,
+  "everything else": "exact"
+ },
+ "owners": [
+  "authority"
+ ],
+ "generated": "Expected values computed by knowledge/tools/gen_vectors.py, which runs the old Python implementation (rootxkit/utm @ 484cd228035f) on these inputs. Regenerate rather than edit.",
+ "utm_commit": "484cd228035f2f424530e233ce72100d0fc1842a",
+ "defaults": {
+  "receiver": "rx-1",
+  "transmitter": "AA:BB:CC:00:00:01"
+ },
+ "cases": [
+  {
+   "name": "different-basic-id-expires-the-identity",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {},
+    "steps": [
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 1.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-NEW-0002"
+       }
+      ]
+     },
+     {
+      "now_s": 2.0,
+      "messages": [
+       {
+        "type": "location",
+        "lat_deg": 41.7161
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:00+00:00"
+     },
+     null,
+     {
+      "drone_id": "8d0666de-18da-5914-b218-3fd588febc82",
+      "label": "SN-NEW-0002",
+      "identified": true,
+      "ua_id": "SN-NEW-0002",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7161,
+      "rx_ts": "2026-09-29T12:00:02+00:00"
+     }
+    ],
+    "counters": {
+     "identity_changes": 1,
+     "silences": 0,
+     "unidentified": 0,
+     "address_conflicts": 1
+    }
+   },
+   "why": "S-32: a new serial on an address drops everything the address said before. The Basic ID alone publishes nothing: the old aircraft's Location is not the new one's.",
+   "source": "test_remote_id_identity.py::test_a_different_basic_id_expires_the_identity"
+  },
+  {
+   "name": "a-change-drops-the-previous-operator",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {},
+    "steps": [
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       },
+       {
+        "type": "operator_id",
+        "operator_id": "GEO-OP-OLD"
+       }
+      ]
+     },
+     {
+      "now_s": 1.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-NEW-0002"
+       },
+       {
+        "type": "location"
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": "GEO-OP-OLD",
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:00+00:00"
+     },
+     {
+      "drone_id": "8d0666de-18da-5914-b218-3fd588febc82",
+      "label": "SN-NEW-0002",
+      "identified": true,
+      "ua_id": "SN-NEW-0002",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:01+00:00"
+     }
+    ],
+    "counters": {
+     "identity_changes": 1,
+     "silences": 0,
+     "unidentified": 0,
+     "address_conflicts": 1
+    }
+   },
+   "why": "System and Operator ID go with the identity they came with.",
+   "source": "test_remote_id_identity.py::test_a_change_drops_the_previous_operator"
+  },
+  {
+   "name": "same-basic-id-again-is-not-a-change",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {},
+    "steps": [
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 1.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       }
+      ]
+     },
+     {
+      "now_s": 2.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:00+00:00"
+     },
+     null,
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:02+00:00"
+     }
+    ],
+    "counters": {
+     "identity_changes": 0,
+     "silences": 0,
+     "unidentified": 0,
+     "address_conflicts": 0
+    }
+   },
+   "why": "Repeating the same Basic ID refreshes it; it does not count as a change.",
+   "source": "test_remote_id_identity.py::test_the_same_basic_id_again_is_not_a_change"
+  },
+  {
+   "name": "second-id-type-is-another-identity",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {},
+    "steps": [
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 1.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 2,
+        "ua_id": "GEO-REG-1"
+       }
+      ]
+     },
+     {
+      "now_s": 2.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:00+00:00"
+     },
+     null,
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:02+00:00"
+     }
+    ],
+    "counters": {
+     "identity_changes": 0,
+     "silences": 0,
+     "unidentified": 0,
+     "address_conflicts": 0
+    }
+   },
+   "why": "A module may send a serial and a CAA registration; both are kept, the serial preferred.",
+   "source": "test_remote_id_identity.py::test_a_second_id_type_is_another_identity_not_a_change"
+  },
+  {
+   "name": "silence-longer-than-max-gap-forgets-the-serial",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {
+     "max_gap_s": 3.0,
+     "identify_within_s": 4.0
+    },
+    "steps": [
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 5.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 6.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 7.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 8.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 9.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:00+00:00"
+     },
+     null,
+     null,
+     null,
+     null,
+     {
+      "drone_id": "924c95fb-b97c-549d-bc63-8711f666d129",
+      "label": "AA:BB:CC:00:00:01",
+      "identified": false,
+      "ua_id": "",
+      "id_type": 0,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:09+00:00"
+     }
+    ],
+    "counters": {
+     "identity_changes": 0,
+     "silences": 1,
+     "unidentified": 1,
+     "address_conflicts": 0
+    }
+   },
+   "why": "5 s of silence is a reboot or another aircraft. Locations are held for identify_within_s, then published unidentified; never under the old serial (the U-16 drop-rate run stored 2 rows under the wrong one).",
+   "source": "test_remote_id_identity.py::test_after_a_silence_a_location_is_not_attached_to_the_old_serial"
+  },
+  {
+   "name": "silence-just-under-max-gap-keeps-the-serial",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {
+     "max_gap_s": 3.0
+    },
+    "steps": [
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 2.9,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:00+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:02.900000+00:00"
+     }
+    ],
+    "counters": {
+     "identity_changes": 0,
+     "silences": 0,
+     "unidentified": 0,
+     "address_conflicts": 0
+    }
+   },
+   "why": "The presence pair: 2.9 s of silence is within the gap.",
+   "source": "test_remote_id_identity.py::test_within_the_gap_the_identity_is_kept"
+  },
+  {
+   "name": "basic-id-after-silence-identifies-the-held-location",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {
+     "max_gap_s": 3.0
+    },
+    "steps": [
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 5.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 6.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-NEW-0002"
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:00+00:00"
+     },
+     null,
+     {
+      "drone_id": "8d0666de-18da-5914-b218-3fd588febc82",
+      "label": "SN-NEW-0002",
+      "identified": true,
+      "ua_id": "SN-NEW-0002",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:05+00:00"
+     }
+    ],
+    "counters": {
+     "identity_changes": 0,
+     "silences": 1,
+     "unidentified": 0,
+     "address_conflicts": 0
+    }
+   },
+   "why": "The held Location is published when its Basic ID arrives, under the new serial, and placed by the frame that carried the Location (rx_ts of step 2), not the Basic ID's.",
+   "source": "test_remote_id_identity.py::test_a_basic_id_after_the_silence_identifies_the_held_location"
+  },
+  {
+   "name": "identity-older-than-ttl-is-not-used",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {
+     "identity_ttl_s": 15.0,
+     "identify_within_s": 4.0,
+     "max_gap_s": 3.0
+    },
+    "steps": [
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 1.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 2.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 3.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 4.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 5.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 6.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 7.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 8.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 9.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 10.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 11.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 12.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 13.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 14.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 15.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 16.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 17.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 18.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 19.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 20.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:00+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:01+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:02+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:03+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:04+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:05+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:06+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:07+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:08+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:09+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:10+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:11+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:12+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:13+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:14+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:15+00:00"
+     },
+     null,
+     null,
+     null,
+     {
+      "drone_id": "924c95fb-b97c-549d-bc63-8711f666d129",
+      "label": "AA:BB:CC:00:00:01",
+      "identified": false,
+      "ua_id": "",
+      "id_type": 0,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:19+00:00"
+     },
+     {
+      "drone_id": "924c95fb-b97c-549d-bc63-8711f666d129",
+      "label": "AA:BB:CC:00:00:01",
+      "identified": false,
+      "ua_id": "",
+      "id_type": 0,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:20+00:00"
+     }
+    ],
+    "counters": {
+     "identity_changes": 0,
+     "silences": 0,
+     "unidentified": 2,
+     "address_conflicts": 0
+    }
+   },
+   "why": "Identity TTL 15 s (five 3 s static periods). From 16 s the identity is stale; Locations are held 4 s, then published unidentified from 19 s.",
+   "source": "test_remote_id_identity.py::test_an_identity_older_than_its_ttl_is_not_used"
+  },
+  {
+   "name": "identity-ttl-is-configurable",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {
+     "identity_ttl_s": 60.0,
+     "max_gap_s": 3.0
+    },
+    "steps": [
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 1.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 2.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 3.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 4.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 5.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 6.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 7.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 8.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 9.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 10.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 11.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 12.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 13.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 14.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 15.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 16.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 17.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 18.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 19.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 20.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 21.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 22.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 23.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 24.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 25.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 26.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 27.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 28.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 29.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 30.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 31.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 32.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 33.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 34.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 35.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 36.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 37.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 38.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 39.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 40.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:00+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:01+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:02+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:03+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:04+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:05+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:06+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:07+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:08+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:09+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:10+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:11+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:12+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:13+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:14+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:15+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:16+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:17+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:18+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:19+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:20+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:21+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:22+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:23+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:24+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:25+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:26+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:27+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:28+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:29+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:30+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:31+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:32+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:33+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:34+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:35+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:36+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:37+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:38+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:39+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:40+00:00"
+     }
+    ],
+    "counters": {
+     "identity_changes": 0,
+     "silences": 0,
+     "unidentified": 0,
+     "address_conflicts": 0
+    }
+   },
+   "why": "With a 60 s TTL the serial holds for 40 s of Locations.",
+   "source": "test_remote_id_identity.py::test_the_identity_ttl_is_configurable"
+  },
+  {
+   "name": "never-identified-is-published-unidentified",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {
+     "identify_within_s": 4.0
+    },
+    "steps": [
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 1.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 2.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 3.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 4.0,
+      "messages": [
+       {
+        "type": "location",
+        "lat_deg": 41.7161
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     null,
+     null,
+     null,
+     null,
+     {
+      "drone_id": "924c95fb-b97c-549d-bc63-8711f666d129",
+      "label": "AA:BB:CC:00:00:01",
+      "identified": false,
+      "ua_id": "",
+      "id_type": 0,
+      "operator_id": null,
+      "lat_deg": 41.7161,
+      "rx_ts": "2026-09-29T12:00:04+00:00"
+     }
+    ],
+    "counters": {
+     "identity_changes": 0,
+     "silences": 0,
+     "unidentified": 1,
+     "address_conflicts": 0
+    }
+   },
+   "why": "A transmitter that never sends a Basic ID is shown after 4 s as an unidentified track: id derived from the address (uuid5 of 'transmitter:<address>'), labelled with the address, empty UAS ID, ID type 0.",
+   "source": "test_remote_id_identity.py::test_a_transmitter_never_identified_is_published_as_unidentified"
+  },
+  {
+   "name": "unidentified-heard-by-two-receivers-is-one-id",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {
+     "identify_within_s": 0.0
+    },
+    "steps": [
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-1"
+     },
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-2"
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "drone_id": "924c95fb-b97c-549d-bc63-8711f666d129",
+      "label": "AA:BB:CC:00:00:01",
+      "identified": false,
+      "ua_id": "",
+      "id_type": 0,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:00+00:00"
+     },
+     {
+      "drone_id": "924c95fb-b97c-549d-bc63-8711f666d129",
+      "label": "AA:BB:CC:00:00:01",
+      "identified": false,
+      "ua_id": "",
+      "id_type": 0,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:00+00:00"
+     }
+    ],
+    "counters": {
+     "identity_changes": 0,
+     "silences": 0,
+     "unidentified": 2,
+     "address_conflicts": 0
+    }
+   },
+   "why": "The unidentified id is per transmitter, not per receiver.",
+   "source": "test_remote_id_identity.py::test_one_unidentified_transmitter_heard_by_two_receivers_is_one_id"
+  },
+  {
+   "name": "receiver-hearing-only-locations-borrows-a-fresh-identity",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {
+     "identify_within_s": 4.0
+    },
+    "steps": [
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 0.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 1.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 1.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 2.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 2.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 3.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 3.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 4.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 4.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 5.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 5.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 6.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 6.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 7.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 7.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 8.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 8.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 9.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 9.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:00+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:00.500000+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:01+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:01.500000+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:02+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:02.500000+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:03+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:03.500000+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:04+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:04.500000+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:05+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:05.500000+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:06+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:06.500000+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:07+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:07.500000+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:08+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:08.500000+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:09+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:09.500000+00:00"
+     }
+    ],
+    "counters": {
+     "identity_changes": 0,
+     "silences": 0,
+     "unidentified": 0,
+     "address_conflicts": 0
+    }
+   },
+   "why": "Receiver A hears the Basic ID, B only Locations: B's Locations take A's fresh identity. One identified track, not one beside an unidentified one.",
+   "source": "test_remote_id_identity.py::test_a_receiver_hearing_only_locations_takes_anothers_identity"
+  },
+  {
+   "name": "receiver-alone-without-identity-is-unidentified",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {
+     "identify_within_s": 4.0
+    },
+    "steps": [
+     {
+      "now_s": 0.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 1.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 2.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 3.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 4.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 5.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 6.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 7.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 8.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 9.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     null,
+     null,
+     null,
+     null,
+     {
+      "drone_id": "924c95fb-b97c-549d-bc63-8711f666d129",
+      "label": "AA:BB:CC:00:00:01",
+      "identified": false,
+      "ua_id": "",
+      "id_type": 0,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:04.500000+00:00"
+     },
+     {
+      "drone_id": "924c95fb-b97c-549d-bc63-8711f666d129",
+      "label": "AA:BB:CC:00:00:01",
+      "identified": false,
+      "ua_id": "",
+      "id_type": 0,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:05.500000+00:00"
+     },
+     {
+      "drone_id": "924c95fb-b97c-549d-bc63-8711f666d129",
+      "label": "AA:BB:CC:00:00:01",
+      "identified": false,
+      "ua_id": "",
+      "id_type": 0,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:06.500000+00:00"
+     },
+     {
+      "drone_id": "924c95fb-b97c-549d-bc63-8711f666d129",
+      "label": "AA:BB:CC:00:00:01",
+      "identified": false,
+      "ua_id": "",
+      "id_type": 0,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:07.500000+00:00"
+     },
+     {
+      "drone_id": "924c95fb-b97c-549d-bc63-8711f666d129",
+      "label": "AA:BB:CC:00:00:01",
+      "identified": false,
+      "ua_id": "",
+      "id_type": 0,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:08.500000+00:00"
+     },
+     {
+      "drone_id": "924c95fb-b97c-549d-bc63-8711f666d129",
+      "label": "AA:BB:CC:00:00:01",
+      "identified": false,
+      "ua_id": "",
+      "id_type": 0,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:09.500000+00:00"
+     }
+    ],
+    "counters": {
+     "identity_changes": 0,
+     "silences": 0,
+     "unidentified": 6,
+     "address_conflicts": 0
+    }
+   },
+   "why": "The presence pair: B alone, same frames, unidentified after 4 s.",
+   "source": "test_remote_id_identity.py::test_without_the_other_receiver_it_is_unidentified"
+  },
+  {
+   "name": "borrowed-identity-must-be-fresh-too",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {
+     "identity_ttl_s": 15.0,
+     "identify_within_s": 4.0
+    },
+    "steps": [
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 1.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 1.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 2.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 2.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 3.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 3.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 4.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 4.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 5.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 5.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 6.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 6.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 7.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 7.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 8.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 8.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 9.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 9.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 10.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 10.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 11.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 11.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 12.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 12.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 13.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 13.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 14.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 14.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 15.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 15.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 16.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 16.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 17.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 17.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 18.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 18.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 19.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 19.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     },
+     {
+      "now_s": 20.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 20.5,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:00+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:01+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:01.500000+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:02+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:02.500000+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:03+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:03.500000+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:04+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:04.500000+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:05+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:05.500000+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:06+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:06.500000+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:07+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:07.500000+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:08+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:08.500000+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:09+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:09.500000+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:10+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:10.500000+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:11+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:11.500000+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:12+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:12.500000+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:13+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:13.500000+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:14+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:14.500000+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:15+00:00"
+     },
+     {
+      "drone_id": "924c95fb-b97c-549d-bc63-8711f666d129",
+      "label": "AA:BB:CC:00:00:01",
+      "identified": false,
+      "ua_id": "",
+      "id_type": 0,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:15.500000+00:00"
+     },
+     null,
+     {
+      "drone_id": "924c95fb-b97c-549d-bc63-8711f666d129",
+      "label": "AA:BB:CC:00:00:01",
+      "identified": false,
+      "ua_id": "",
+      "id_type": 0,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:16.500000+00:00"
+     },
+     null,
+     {
+      "drone_id": "924c95fb-b97c-549d-bc63-8711f666d129",
+      "label": "AA:BB:CC:00:00:01",
+      "identified": false,
+      "ua_id": "",
+      "id_type": 0,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:17.500000+00:00"
+     },
+     null,
+     {
+      "drone_id": "924c95fb-b97c-549d-bc63-8711f666d129",
+      "label": "AA:BB:CC:00:00:01",
+      "identified": false,
+      "ua_id": "",
+      "id_type": 0,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:18.500000+00:00"
+     },
+     {
+      "drone_id": "924c95fb-b97c-549d-bc63-8711f666d129",
+      "label": "AA:BB:CC:00:00:01",
+      "identified": false,
+      "ua_id": "",
+      "id_type": 0,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:19+00:00"
+     },
+     {
+      "drone_id": "924c95fb-b97c-549d-bc63-8711f666d129",
+      "label": "AA:BB:CC:00:00:01",
+      "identified": false,
+      "ua_id": "",
+      "id_type": 0,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:19.500000+00:00"
+     },
+     {
+      "drone_id": "924c95fb-b97c-549d-bc63-8711f666d129",
+      "label": "AA:BB:CC:00:00:01",
+      "identified": false,
+      "ua_id": "",
+      "id_type": 0,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:20+00:00"
+     },
+     {
+      "drone_id": "924c95fb-b97c-549d-bc63-8711f666d129",
+      "label": "AA:BB:CC:00:00:01",
+      "identified": false,
+      "ua_id": "",
+      "id_type": 0,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:20.500000+00:00"
+     }
+    ],
+    "counters": {
+     "identity_changes": 0,
+     "silences": 0,
+     "unidentified": 8,
+     "address_conflicts": 0
+    }
+   },
+   "why": "Another receiver's identity follows the same TTL: borrowing does not extend it.",
+   "source": "test_remote_id_identity.py::test_another_receivers_identity_must_be_fresh_too"
+  },
+  {
+   "name": "two-serials-alternating-on-one-address-are-an-anomaly",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {},
+    "steps": [
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 1.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-NEW-0002"
+       },
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 2.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 3.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-NEW-0002"
+       },
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 4.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 5.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-NEW-0002"
+       },
+       {
+        "type": "location"
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:00+00:00"
+     },
+     {
+      "drone_id": "8d0666de-18da-5914-b218-3fd588febc82",
+      "label": "SN-NEW-0002",
+      "identified": true,
+      "ua_id": "SN-NEW-0002",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:01+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:02+00:00"
+     },
+     {
+      "drone_id": "8d0666de-18da-5914-b218-3fd588febc82",
+      "label": "SN-NEW-0002",
+      "identified": true,
+      "ua_id": "SN-NEW-0002",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:03+00:00"
+     },
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:04+00:00"
+     },
+     {
+      "drone_id": "8d0666de-18da-5914-b218-3fd588febc82",
+      "label": "SN-NEW-0002",
+      "identified": true,
+      "ua_id": "SN-NEW-0002",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:05+00:00"
+     }
+    ],
+    "counters": {
+     "identity_changes": 5,
+     "silences": 0,
+     "unidentified": 0,
+     "address_conflicts": 5
+    }
+   },
+   "why": "One transmitter, two fresh identities of one ID type: two radios on one address or a spoofer. Counted every time (5), logged once per interval so a spoofer cannot fill the log.",
+   "source": "test_remote_id_identity.py::test_two_serials_alternating_on_one_address_are_an_anomaly"
+  },
+  {
+   "name": "two-receivers-two-serials-one-address-is-an-anomaly",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {},
+    "steps": [
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-a"
+     },
+     {
+      "now_s": 1.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-NEW-0002"
+       },
+       {
+        "type": "location"
+       }
+      ],
+      "receiver": "rx-b"
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:00+00:00"
+     },
+     {
+      "drone_id": "8d0666de-18da-5914-b218-3fd588febc82",
+      "label": "SN-NEW-0002",
+      "identified": true,
+      "ua_id": "SN-NEW-0002",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:01+00:00"
+     }
+    ],
+    "counters": {
+     "identity_changes": 0,
+     "silences": 0,
+     "unidentified": 0,
+     "address_conflicts": 1
+    }
+   },
+   "why": "The anomaly is per address across receivers.",
+   "source": "test_remote_id_identity.py::test_two_receivers_hearing_two_serials_on_one_address_are_an_anomaly"
+  },
+  {
+   "name": "serial-after-silence-is-not-an-anomaly",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {
+     "max_gap_s": 3.0
+    },
+    "steps": [
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-OLD-0001"
+       },
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 5.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-NEW-0002"
+       },
+       {
+        "type": "location"
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "drone_id": "47505d6b-9788-58d9-9201-6551ff4396b9",
+      "label": "SN-OLD-0001",
+      "identified": true,
+      "ua_id": "SN-OLD-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:00+00:00"
+     },
+     {
+      "drone_id": "8d0666de-18da-5914-b218-3fd588febc82",
+      "label": "SN-NEW-0002",
+      "identified": true,
+      "ua_id": "SN-NEW-0002",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:05+00:00"
+     }
+    ],
+    "counters": {
+     "identity_changes": 0,
+     "silences": 1,
+     "unidentified": 0,
+     "address_conflicts": 0
+    }
+   },
+   "why": "The absence pair: a restart falls silent first, so it is not two identities at once.",
+   "source": "test_remote_id_identity.py::test_a_serial_after_a_silence_is_not_an_anomaly"
+  },
+  {
+   "name": "location-waits-for-identity-then-is-published",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {},
+    "steps": [
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 0.5,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-RID-0001"
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     null,
+     {
+      "drone_id": "7475e325-2906-50e6-b213-d672e694bae7",
+      "label": "SN-RID-0001",
+      "identified": true,
+      "ua_id": "SN-RID-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:00+00:00"
+     }
+    ],
+    "counters": {
+     "identity_changes": 0,
+     "silences": 0,
+     "unidentified": 0,
+     "address_conflicts": 0
+    }
+   },
+   "why": "Bluetooth 4 sends Basic ID and Location separately; the address joins them. The held Location is published when the identity comes.",
+   "source": "test_remote_id.py::test_a_location_waits_for_an_identity_then_is_published"
+  },
+  {
+   "name": "identity-from-another-transmitter-does-not-complete-it",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {},
+    "steps": [
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ],
+      "transmitter": "AA:00:00:00:00:01"
+     },
+     {
+      "now_s": 0.5,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-RID-0001"
+       }
+      ],
+      "transmitter": "AA:00:00:00:00:02"
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     null,
+     null
+    ],
+    "counters": {
+     "identity_changes": 0,
+     "silences": 0,
+     "unidentified": 0,
+     "address_conflicts": 0
+    }
+   },
+   "why": "Joining is by transmitter address only.",
+   "source": "test_remote_id.py::test_an_identity_from_another_transmitter_does_not_complete_it"
+  },
+  {
+   "name": "repeated-identity-alone-does-not-republish",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {},
+    "steps": [
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-RID-0001"
+       },
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 0.5,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-RID-0001"
+       }
+      ]
+     },
+     {
+      "now_s": 0.6,
+      "messages": [
+       {
+        "type": "operator_id",
+        "operator_id": "GEO-OP-1"
+       }
+      ]
+     },
+     {
+      "now_s": 1.0,
+      "messages": [
+       {
+        "type": "location",
+        "lat_deg": 41.7161
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     {
+      "drone_id": "7475e325-2906-50e6-b213-d672e694bae7",
+      "label": "SN-RID-0001",
+      "identified": true,
+      "ua_id": "SN-RID-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:00+00:00"
+     },
+     null,
+     null,
+     {
+      "drone_id": "7475e325-2906-50e6-b213-d672e694bae7",
+      "label": "SN-RID-0001",
+      "identified": true,
+      "ua_id": "SN-RID-0001",
+      "id_type": 1,
+      "operator_id": "GEO-OP-1",
+      "lat_deg": 41.7161,
+      "rx_ts": "2026-09-29T12:00:01+00:00"
+     }
+    ],
+    "counters": {
+     "identity_changes": 0,
+     "silences": 0,
+     "unidentified": 0,
+     "address_conflicts": 0
+    }
+   },
+   "why": "Each Location is published once. A static message (Basic ID, Operator ID) does not republish a stale position as if new.",
+   "source": "test_remote_id.py::test_a_repeated_identity_alone_does_not_republish_a_position"
+  },
+  {
+   "name": "forgotten-transmitter-does-not-lend-its-position",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {
+     "max_gap_s": 3.0
+    },
+    "steps": [
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 3.5,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-RID-0001"
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     null,
+     null
+    ],
+    "counters": {
+     "identity_changes": 0,
+     "silences": 1,
+     "unidentified": 0,
+     "address_conflicts": 0
+    }
+   },
+   "why": "A Location from before a silence is not completed by a Basic ID after it.",
+   "source": "test_remote_id.py::test_a_forgotten_transmitter_does_not_lend_its_position"
+  },
+  {
+   "name": "forgotten-transmitter-pair-within-gap",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {
+     "max_gap_s": 3.0
+    },
+    "steps": [
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 2.9,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-RID-0001"
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     null,
+     {
+      "drone_id": "7475e325-2906-50e6-b213-d672e694bae7",
+      "label": "SN-RID-0001",
+      "identified": true,
+      "ua_id": "SN-RID-0001",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:00+00:00"
+     }
+    ],
+    "counters": {
+     "identity_changes": 0,
+     "silences": 0,
+     "unidentified": 0,
+     "address_conflicts": 0
+    }
+   },
+   "why": "The presence pair: 2.9 s later the held Location is completed.",
+   "source": "test_remote_id.py::test_a_forgotten_transmitter_does_not_lend_its_position"
+  },
+  {
+   "name": "serial-wins-over-registration-id",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {},
+    "steps": [
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 2,
+        "ua_id": "GEO-OP-77"
+       }
+      ]
+     },
+     {
+      "now_s": 0.5,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-9"
+       },
+       {
+        "type": "location"
+       }
+      ]
+     },
+     {
+      "now_s": 1.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 2,
+        "ua_id": "GEO-OP-77"
+       },
+       {
+        "type": "location"
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     null,
+     {
+      "drone_id": "a43454d8-d5f5-5b50-9f5a-b5f748cce8fb",
+      "label": "SN-9",
+      "identified": true,
+      "ua_id": "SN-9",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:00.500000+00:00"
+     },
+     {
+      "drone_id": "a43454d8-d5f5-5b50-9f5a-b5f748cce8fb",
+      "label": "SN-9",
+      "identified": true,
+      "ua_id": "SN-9",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:01+00:00"
+     }
+    ],
+    "counters": {
+     "identity_changes": 0,
+     "silences": 0,
+     "unidentified": 0,
+     "address_conflicts": 0
+    }
+   },
+   "why": "The serial is fixed to the airframe; a registration can move between airframes. With both fresh, the track is the serial.",
+   "source": "test_remote_id.py::test_the_serial_wins_over_a_registration_id"
+  },
+  {
+   "name": "empty-identity-does-not-replace-a-serial",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "settings": {},
+    "steps": [
+     {
+      "now_s": 0.0,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 1,
+        "ua_id": "SN-1"
+       }
+      ]
+     },
+     {
+      "now_s": 0.5,
+      "messages": [
+       {
+        "type": "basic_id",
+        "id_type": 0,
+        "ua_id": ""
+       },
+       {
+        "type": "location"
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "per_step": [
+     null,
+     {
+      "drone_id": "90eb981d-e119-531d-bdcf-e74d4560887a",
+      "label": "SN-1",
+      "identified": true,
+      "ua_id": "SN-1",
+      "id_type": 1,
+      "operator_id": null,
+      "lat_deg": 41.7151,
+      "rx_ts": "2026-09-29T12:00:00.500000+00:00"
+     }
+    ],
+    "counters": {
+     "identity_changes": 0,
+     "silences": 0,
+     "unidentified": 0,
+     "address_conflicts": 0
+    }
+   },
+   "why": "ID type 0 with an empty UAS ID is 'no identity', not a new one.",
+   "source": "test_remote_id.py::test_an_empty_identity_does_not_replace_a_serial"
+  }
+ ]
+}

@@ -1,0 +1,1350 @@
+{
+ "description": "Closest point of approach and the conflict test (ARCHITECTURE §6.2, P5-07, S-11, S-33). Positions are projected onto a local tangent plane about the pair's mid latitude with WGS-84 meridional and prime-vertical radii (local_offset_m); the older sample is advanced to the newer one's time first. t_cpa from the horizontal motion only, clamped to >= 0; vertical separation evaluated at t_cpa. conflict = (d_h_now < d_h_min AND (vertical unknown OR d_alt_now < d_v_min)) OR (t_cpa < t_max AND d_cpa_h < d_h_min AND (vertical unknown OR d_alt_at_cpa < d_v_min)). described_as is how the case was built (metres from 41.7151N 44.8271E); the inputs are lat/lon.",
+ "source": [
+  "utm airspace/tests/test_cpa.py",
+  "utm airspace/tests/test_monitor.py (neighbour age)",
+  "utm airspace/tests/test_pressure_altitude.py",
+  "utm airspace/cpa.py"
+ ],
+ "units": {
+  "lat_deg/lon_deg": "degrees WGS84",
+  "alt_amsl_m": "metres AMSL (separation is judged in AMSL, never AGL)",
+  "vn/ve/vd_ms": "m/s north, east, DOWN (MAVLink GLOBAL_POSITION_INT convention)",
+  "captured_at_s": "seconds, one clock for all aircraft"
+ },
+ "tolerance": {
+  "t_cpa_s": 0.01,
+  "distances_m": 0.01,
+  "booleans": "exact"
+ },
+ "owners": [
+  "ussp",
+  "authority"
+ ],
+ "generated": "Expected values computed by knowledge/tools/gen_vectors.py, which runs the old Python implementation (rootxkit/utm @ 484cd228035f) on these inputs. Regenerate rather than edit.",
+ "utm_commit": "484cd228035f2f424530e233ce72100d0fc1842a",
+ "policy": {
+  "t_cpa_max_s": 60,
+  "d_horizontal_min_m": 60,
+  "d_vertical_min_m": 20,
+  "neighbour_radius_m": 800
+ },
+ "cases": [
+  {
+   "name": "head-on",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.72410351324941,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": -10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 1000,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 50.00003930649373,
+    "d_cpa_horizontal_m": 0.0,
+    "d_alt_at_cpa_m": 0.0,
+    "d_horizontal_now_m": 1000.0007861298747,
+    "d_alt_now_m": 0.0,
+    "vertical_known": true,
+    "conflict": true
+   },
+   "why": "1 km apart closing at 20 m/s: CPA 0 m in 50 s, inside the 60 s window."
+  },
+  {
+   "name": "crossing-right-angles",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.712398946025175,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": -300,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8307049332064,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 0.0,
+     "ve_ms": -10,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 300
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 30.000310463056714,
+    "d_cpa_horizontal_m": 0.004490666012695356,
+    "d_alt_at_cpa_m": 0.0,
+    "d_horizontal_now_m": 424.2684593463484,
+    "d_alt_now_m": 0.0,
+    "vertical_known": true,
+    "conflict": true
+   },
+   "why": "Both reach the same point in 30 s."
+  },
+  {
+   "name": "crossing-that-misses",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.712398946025175,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": -300,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.833108222010665,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 0.0,
+     "ve_ms": -10,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 500
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 40.00051979687353,
+    "d_cpa_horizontal_m": 141.42880733055034,
+    "d_alt_at_cpa_m": 0.0,
+    "d_horizontal_now_m": 583.1041282197857,
+    "d_alt_now_m": 0.0,
+    "vertical_known": true,
+    "conflict": false
+   },
+   "why": "B 20 s late: they pass 200/sqrt(2) = 141 m apart; no conflict."
+  },
+  {
+   "name": "overtaking",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.71690070264988,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 200,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 15,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 40.000006289025585,
+    "d_cpa_horizontal_m": 2.842170943040401e-14,
+    "d_alt_at_cpa_m": 0.0,
+    "d_horizontal_now_m": 200.00003144512795,
+    "d_alt_now_m": 0.0,
+    "vertical_known": true,
+    "conflict": true
+   },
+   "why": "Same track, 5 m/s faster from 200 m behind: caught up in 40 s."
+  },
+  {
+   "name": "parallel-same-speed",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.827640739980964,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 45
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 0.0,
+    "d_cpa_horizontal_m": 45.00000000123144,
+    "d_alt_at_cpa_m": 0.0,
+    "d_horizontal_now_m": 45.00000000123144,
+    "d_alt_now_m": 0.0,
+    "vertical_known": true,
+    "conflict": true
+   },
+   "why": "Zero relative velocity: every time is equally close, t_cpa is 0 (no division by zero), 45 m apart and staying so is a conflict."
+  },
+  {
+   "name": "both-hovering",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 0.0,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.71537010539748,
+     "lon_deg": 44.827580657760855,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 0.0,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 30,
+      "east_m": 40
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 0.0,
+    "d_cpa_horizontal_m": 49.999933436241115,
+    "d_alt_at_cpa_m": 0.0,
+    "d_horizontal_now_m": 49.999933436241115,
+    "d_alt_now_m": 0.0,
+    "vertical_known": true,
+    "conflict": true
+   },
+   "why": "The same degenerate case at rest: 50 m now."
+  },
+  {
+   "name": "diverging-far",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": -10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.71600035132494,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 100,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 0.0,
+    "d_cpa_horizontal_m": 100.00000786173413,
+    "d_alt_at_cpa_m": 0.0,
+    "d_horizontal_now_m": 100.00000786173413,
+    "d_alt_now_m": 0.0,
+    "vertical_known": true,
+    "conflict": false
+   },
+   "why": "Closest approach in the past: t_cpa reported as 0 and distances as now. A negative t_cpa would read as 'already happened, safe'."
+  },
+  {
+   "name": "diverging-but-already-too-close",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": -1,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.715190035132494,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 1,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 10,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 0.0,
+    "d_cpa_horizontal_m": 10.000000078664515,
+    "d_alt_at_cpa_m": 0.0,
+    "d_horizontal_now_m": 10.000000078664515,
+    "d_alt_now_m": 0.0,
+    "vertical_known": true,
+    "conflict": true
+   },
+   "why": "Diverging is not a pass while 10 m apart: inside the minima now is a conflict."
+  },
+  {
+   "name": "vertical-separation-at-cpa",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.72410351324941,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 600,
+     "vn_ms": -10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 1000,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 50.00003930649373,
+    "d_cpa_horizontal_m": 0.0,
+    "d_alt_at_cpa_m": 50.0,
+    "d_horizontal_now_m": 1000.0007861298747,
+    "d_alt_now_m": 50,
+    "vertical_known": true,
+    "conflict": false
+   },
+   "why": "Head-on horizontally but 50 m apart vertically: no conflict. Horizontal and vertical are separate; a single 3-D CPA would let a climb hide a head-on."
+  },
+  {
+   "name": "climb-closes-vertical-gap",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": -1.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.72410351324941,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 600,
+     "vn_ms": -10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 1000,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 50.00003930649373,
+    "d_cpa_horizontal_m": 0.0,
+    "d_alt_at_cpa_m": 3.930649370431638e-05,
+    "d_horizontal_now_m": 1000.0007861298747,
+    "d_alt_now_m": 50,
+    "vertical_known": true,
+    "conflict": true
+   },
+   "why": "vd is positive DOWN (MAVLink): climbing 1 m/s closes 50 m in 50 s. The vertical gap is evaluated at t_cpa."
+  },
+  {
+   "name": "conflict-beyond-window",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 5,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.72410351324941,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": -5,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 1000,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 100.00007861298747,
+    "d_cpa_horizontal_m": 0.0,
+    "d_alt_at_cpa_m": 0.0,
+    "d_horizontal_now_m": 1000.0007861298747,
+    "d_alt_now_m": 0.0,
+    "vertical_known": true,
+    "conflict": false
+   },
+   "why": "Meeting in 100 s is beyond the 60 s window: not yet."
+  },
+  {
+   "name": "order-a-b",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.712398946025175,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": -300,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.833108222010665,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 0.0,
+     "ve_ms": -10,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 500
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 40.00051979687353,
+    "d_cpa_horizontal_m": 141.42880733055034,
+    "d_alt_at_cpa_m": 0.0,
+    "d_horizontal_now_m": 583.1041282197857,
+    "d_alt_now_m": 0.0,
+    "vertical_known": true,
+    "conflict": false
+   },
+   "why": "The result does not depend on which aircraft is first."
+  },
+  {
+   "name": "order-b-a",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.833108222010665,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 0.0,
+     "ve_ms": -10,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 500
+     }
+    },
+    "b": {
+     "lat_deg": 41.712398946025175,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": -300,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 40.00051979687353,
+    "d_cpa_horizontal_m": 141.42880733055034,
+    "d_alt_at_cpa_m": 0.0,
+    "d_horizontal_now_m": 583.1041282197857,
+    "d_alt_now_m": 0.0,
+    "vertical_known": true,
+    "conflict": false
+   },
+   "why": "The result does not depend on which aircraft is first."
+  },
+  {
+   "name": "hovering-inside-minima-with-velocity-noise",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 0.0,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.71537010539748,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": -0.01,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 30,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 3000.000070766582,
+    "d_cpa_horizontal_m": 3.552713678800501e-15,
+    "d_alt_at_cpa_m": 0.0,
+    "d_horizontal_now_m": 30.000000707665826,
+    "d_alt_now_m": 0.0,
+    "vertical_known": true,
+    "conflict": true
+   },
+   "why": "Found in SITL (P5-07, 2026-09-29): 30 m apart, hovering, 1 cm/s GPS noise puts the CPA 3000 s away, outside the window. §6.2's three-part test alone cleared the alert as resolved while they were still 30 m apart. Inside the minima NOW is a conflict whatever t_cpa says."
+  },
+  {
+   "name": "hovering-outside-minima-with-noise",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 0.0,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.715820281059955,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": -0.01,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 80,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 8000.000503159285,
+    "d_cpa_horizontal_m": 0.0,
+    "d_alt_at_cpa_m": 0.0,
+    "d_horizontal_now_m": 80.00000503159285,
+    "d_alt_now_m": 0.0,
+    "vertical_known": true,
+    "conflict": false
+   },
+   "why": "The absence pair: 80 m apart with the same noise is not a conflict."
+  },
+  {
+   "name": "opening-from-40m",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 0.0,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.71546014052998,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 40,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 0.0,
+    "d_cpa_horizontal_m": 40.000001258002705,
+    "d_alt_at_cpa_m": 0.0,
+    "d_horizontal_now_m": 40.000001258002705,
+    "d_alt_now_m": 0.0,
+    "vertical_known": true,
+    "conflict": true
+   },
+   "why": "A diverging pair stays a conflict until it is actually past the 60 m minimum (60 m is not < 60)."
+  },
+  {
+   "name": "opening-from-50m",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 0.0,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.71555017566247,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 50,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 0.0,
+    "d_cpa_horizontal_m": 50.00000196556382,
+    "d_alt_at_cpa_m": 0.0,
+    "d_horizontal_now_m": 50.00000196556382,
+    "d_alt_now_m": 0.0,
+    "vertical_known": true,
+    "conflict": true
+   },
+   "why": "A diverging pair stays a conflict until it is actually past the 60 m minimum (60 m is not < 60)."
+  },
+  {
+   "name": "opening-from-60m",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 0.0,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.715640210794966,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 60,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 0.0,
+    "d_cpa_horizontal_m": 60.00000283034918,
+    "d_alt_at_cpa_m": 0.0,
+    "d_horizontal_now_m": 60.00000283034918,
+    "d_alt_now_m": 0.0,
+    "vertical_known": true,
+    "conflict": false
+   },
+   "why": "A diverging pair stays a conflict until it is actually past the 60 m minimum (60 m is not < 60)."
+  },
+  {
+   "name": "stacked-30m-vertically",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 500,
+     "vn_ms": 0.0,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.71537010539748,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 530,
+     "vn_ms": 0.0,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 30,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 0.0,
+    "d_cpa_horizontal_m": 30.000000707665826,
+    "d_alt_at_cpa_m": 30.0,
+    "d_horizontal_now_m": 30.000000707665826,
+    "d_alt_now_m": 30,
+    "vertical_known": true,
+    "conflict": false
+   },
+   "why": "Inside horizontally but 30 m apart vertically now: not a conflict."
+  },
+  {
+   "name": "older-sample-advanced-a-stale",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.71464982433753,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": -50,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.72410351324941,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": -10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 5,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 1000,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 50.000039109986965,
+    "d_cpa_horizontal_m": 0.0,
+    "d_alt_at_cpa_m": 0.0,
+    "d_horizontal_now_m": 1000.0007821997393,
+    "d_alt_now_m": 0.0,
+    "vertical_known": true,
+    "conflict": true
+   },
+   "why": "S-11: A's sample is 5 s older, taken 50 m back down its track. It is advanced along its velocity to B's time first: the answer is 50 s, as with fresh samples, not 52.5 s. A 5 s old sample at 15 m/s is 75 m wrong against a 60 m minimum."
+  },
+  {
+   "name": "older-sample-advanced-b-first",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.72410351324941,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": -10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 5,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 1000,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.71464982433753,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": -50,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 50.000039109986965,
+    "d_cpa_horizontal_m": 0.0,
+    "d_alt_at_cpa_m": 0.0,
+    "d_horizontal_now_m": 1000.0007821997393,
+    "d_alt_now_m": 0.0,
+    "vertical_known": true,
+    "conflict": true
+   },
+   "why": "Same, other order."
+  },
+  {
+   "name": "stale-neighbour-not-judged",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 11,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.719601756624705,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": -10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 500,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": false
+   },
+   "why": "B's sample is 11 s older than A's, beyond neighbour_max_age_s (10 s): too old to advance along a straight line with meaning. The pair is not judged by this message: neither raised, nor refreshed, nor shown clear (silence is not evidence)."
+  },
+  {
+   "name": "neighbour-at-max-age-is-judged",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 10,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.72050210794965,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 550.0,
+     "vn_ms": -10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 600,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 25.000014543399757,
+    "d_cpa_horizontal_m": 5.684341886080802e-14,
+    "d_alt_at_cpa_m": 0.0,
+    "d_horizontal_now_m": 500.0002908679951,
+    "d_alt_now_m": 0.0,
+    "vertical_known": true,
+    "conflict": true
+   },
+   "why": "Exactly 10 s apart is still judged (<=), after advancing B."
+  },
+  {
+   "name": "pressure-tracks-100m-apart-vertically-still-conflict",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 500,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": false,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.719601756624705,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 600,
+     "vn_ms": -10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": false,
+     "described_as": {
+      "north_m": 500,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 25.000009826601946,
+    "d_cpa_horizontal_m": 0.0,
+    "d_alt_at_cpa_m": null,
+    "d_horizontal_now_m": 500.0001965320389,
+    "d_alt_now_m": null,
+    "vertical_known": false,
+    "conflict": true
+   },
+   "why": "S-33: pressure altitudes are not vertical positions (QNH can move them 160 m). The vertical minimum is treated as not met: judged on the horizontal alone; d_alt is null, never a number."
+  },
+  {
+   "name": "same-pair-geodetic-no-conflict",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 500,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.719601756624705,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 600,
+     "vn_ms": -10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 500,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 25.000009826601946,
+    "d_cpa_horizontal_m": 0.0,
+    "d_alt_at_cpa_m": 100.0,
+    "d_horizontal_now_m": 500.0001965320389,
+    "d_alt_now_m": 100,
+    "vertical_known": true,
+    "conflict": false
+   },
+   "why": "The presence pair: on geodetic altitudes 100 m apart they do not conflict."
+  },
+  {
+   "name": "one-pressure-track-makes-the-pair-unknown",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 500,
+     "vn_ms": 10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": true,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.719601756624705,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 600,
+     "vn_ms": -10,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": false,
+     "described_as": {
+      "north_m": 500,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 25.000009826601946,
+    "d_cpa_horizontal_m": 0.0,
+    "d_alt_at_cpa_m": null,
+    "d_horizontal_now_m": 500.0001965320389,
+    "d_alt_now_m": null,
+    "vertical_known": false,
+    "conflict": true
+   },
+   "why": "One unknown makes the pair's vertical unknown."
+  },
+  {
+   "name": "horizontally-clear-pressure-tracks",
+   "owner": [
+    "ussp",
+    "authority"
+   ],
+   "input": {
+    "a": {
+     "lat_deg": 41.7151,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 500,
+     "vn_ms": 0.0,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": false,
+     "described_as": {
+      "north_m": 0,
+      "east_m": 0.0
+     }
+    },
+    "b": {
+     "lat_deg": 41.719601756624705,
+     "lon_deg": 44.8271,
+     "alt_amsl_m": 500,
+     "vn_ms": 0.0,
+     "ve_ms": 0.0,
+     "vd_ms": 0.0,
+     "captured_at_s": 0.0,
+     "vertical_known": false,
+     "described_as": {
+      "north_m": 500,
+      "east_m": 0.0
+     }
+    },
+    "neighbour_max_age_s": 10.0
+   },
+   "expected": {
+    "judged": true,
+    "t_cpa_s": 0.0,
+    "d_cpa_horizontal_m": 500.0001965320389,
+    "d_alt_at_cpa_m": null,
+    "d_horizontal_now_m": 500.0001965320389,
+    "d_alt_now_m": null,
+    "vertical_known": false,
+    "conflict": false
+   },
+   "why": "Unknown vertically is not a conflict by itself."
+  }
+ ]
+}

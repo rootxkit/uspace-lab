@@ -1,0 +1,866 @@
+{
+ "description": "Ground elevation (Copernicus DEM tiles) and geoid undulation (GeographicLib PGM grids). synthetic geoid grid: 36 x 19 samples at 10 deg, Offset -100, Scale 0.01, sample(row, col) = 1000 + 100*row + col, row 0 = 90N, col 0 = 0E. synthetic terrain tile: 5 x 5 at 0.25 deg, first sample 42.0N 44.0E, rows south, elevation = 400 + 10*row + col, sample (1,1) nodata, stored as (m + 500) / 0.2 in uint16 big-endian, 65535 nodata. A cell absent from the index is unknown (null), a 'sea' cell is 0 m.",
+ "source": [
+  "utm common/tests/test_geoid.py",
+  "utm common/tests/test_terrain.py",
+  "utm common/geoid.py",
+  "utm common/terrain.py"
+ ],
+ "units": {
+  "elevation_m/undulation_m": "metres (DEM orthometric on EGM2008)"
+ },
+ "tolerance": {
+  "synthetic": 1e-09,
+  "geographiclib references": 1e-09
+ },
+ "owners": [
+  "authority",
+  "ussp"
+ ],
+ "generated": "Expected values computed by knowledge/tools/gen_vectors.py, which runs the old Python implementation (rootxkit/utm @ 484cd228035f) on these inputs. Regenerate rather than edit.",
+ "utm_commit": "484cd228035f2f424530e233ce72100d0fc1842a",
+ "cases": [
+  {
+   "name": "cell-name-41.7151-44.8271",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "cell_name",
+    "lat_deg": 41.7151,
+    "lon_deg": 44.8271
+   },
+   "expected": {
+    "cell": "N41E044"
+   },
+   "why": "1x1 degree cells are named after their south-west corner (floor, not truncate): -0.5 is S01W001."
+  },
+  {
+   "name": "cell-name--0.5--0.5",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "cell_name",
+    "lat_deg": -0.5,
+    "lon_deg": -0.5
+   },
+   "expected": {
+    "cell": "S01W001"
+   },
+   "why": "1x1 degree cells are named after their south-west corner (floor, not truncate): -0.5 is S01W001."
+  },
+  {
+   "name": "cell-name-0.0-0.0",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "cell_name",
+    "lat_deg": 0.0,
+    "lon_deg": 0.0
+   },
+   "expected": {
+    "cell": "N00E000"
+   },
+   "why": "1x1 degree cells are named after their south-west corner (floor, not truncate): -0.5 is S01W001."
+  },
+  {
+   "name": "cell-name--33.9-151.2",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "cell_name",
+    "lat_deg": -33.9,
+    "lon_deg": 151.2
+   },
+   "expected": {
+    "cell": "S34E151"
+   },
+   "why": "1x1 degree cells are named after their south-west corner (floor, not truncate): -0.5 is S01W001."
+  },
+  {
+   "name": "geoid-synthetic-90.0-0.0",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "synthetic",
+    "lat_deg": 90.0,
+    "lon_deg": 0.0
+   },
+   "expected": {
+    "undulation_m": -90.0
+   },
+   "why": "Row 0 is latitude +90. Pins the GeographicLib PGM layout without the real file."
+  },
+  {
+   "name": "geoid-synthetic-0.0-0.0",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "synthetic",
+    "lat_deg": 0.0,
+    "lon_deg": 0.0
+   },
+   "expected": {
+    "undulation_m": -81.0
+   },
+   "why": "The equator is the middle row (odd row count). Pins the GeographicLib PGM layout without the real file."
+  },
+  {
+   "name": "geoid-synthetic--90.0-0.0",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "synthetic",
+    "lat_deg": -90.0,
+    "lon_deg": 0.0
+   },
+   "expected": {
+    "undulation_m": -72.0
+   },
+   "why": "The last row is -90. Pins the GeographicLib PGM layout without the real file."
+  },
+  {
+   "name": "geoid-synthetic-0.0-10.0",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "synthetic",
+    "lat_deg": 0.0,
+    "lon_deg": 10.0
+   },
+   "expected": {
+    "undulation_m": -80.99
+   },
+   "why": "Column 0 is longitude 0, columns run east. Pins the GeographicLib PGM layout without the real file."
+  },
+  {
+   "name": "geoid-synthetic-5.0-5.0",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "synthetic",
+    "lat_deg": 5.0,
+    "lon_deg": 5.0
+   },
+   "expected": {
+    "undulation_m": -81.495
+   },
+   "why": "Bilinear between samples. Pins the GeographicLib PGM layout without the real file."
+  },
+  {
+   "name": "geoid-synthetic-2.5-7.5",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "synthetic",
+    "lat_deg": 2.5,
+    "lon_deg": 7.5
+   },
+   "expected": {
+    "undulation_m": -81.2425
+   },
+   "why": "Bilinear, unequal weights. Pins the GeographicLib PGM layout without the real file."
+  },
+  {
+   "name": "geoid-synthetic-0.0-355.0",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "synthetic",
+    "lat_deg": 0.0,
+    "lon_deg": 355.0
+   },
+   "expected": {
+    "undulation_m": -80.825
+   },
+   "why": "Longitude wraps past the last column (360 = 0). Pins the GeographicLib PGM layout without the real file."
+  },
+  {
+   "name": "geoid-synthetic-0.0--5.0",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "synthetic",
+    "lat_deg": 0.0,
+    "lon_deg": -5.0
+   },
+   "expected": {
+    "undulation_m": -80.825
+   },
+   "why": "Negative longitude is the same as 355. Pins the GeographicLib PGM layout without the real file."
+  },
+  {
+   "name": "geoid-egm2008-2_5-41.7151-44.8271",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm2008-2_5",
+    "lat_deg": 41.7151,
+    "lon_deg": 44.8271
+   },
+   "expected": {
+    "undulation_m": 15.91675223807998
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm2008-2_5-41.6168-41.6367",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm2008-2_5",
+    "lat_deg": 41.6168,
+    "lon_deg": 41.6367
+   },
+   "expected": {
+    "undulation_m": 22.49029864704002
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm2008-2_5-42.2679-42.7181",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm2008-2_5",
+    "lat_deg": 42.2679,
+    "lon_deg": 42.7181
+   },
+   "expected": {
+    "undulation_m": 19.52587767360002
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm2008-2_5-0.0-0.0",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm2008-2_5",
+    "lat_deg": 0.0,
+    "lon_deg": 0.0
+   },
+   "expected": {
+    "undulation_m": 17.226
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm2008-2_5-90.0-0.0",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm2008-2_5",
+    "lat_deg": 90.0,
+    "lon_deg": 0.0
+   },
+   "expected": {
+    "undulation_m": 14.897999999999996
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm2008-2_5--90.0-0.0",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm2008-2_5",
+    "lat_deg": -90.0,
+    "lon_deg": 0.0
+   },
+   "expected": {
+    "undulation_m": -30.14999999999999
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm2008-2_5-38.628155-269.779155",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm2008-2_5",
+    "lat_deg": 38.628155,
+    "lon_deg": 269.779155
+   },
+   "expected": {
+    "undulation_m": -31.701901320000005
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm2008-2_5--14.621217-305.021114",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm2008-2_5",
+    "lat_deg": -14.621217,
+    "lon_deg": 305.021114
+   },
+   "expected": {
+    "undulation_m": -3.207358824000025
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm2008-2_5-46.874319-102.448729",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm2008-2_5",
+    "lat_deg": 46.874319,
+    "lon_deg": 102.448729
+   },
+   "expected": {
+    "undulation_m": -44.413105103999996
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm2008-2_5-38.625473-359.9995",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm2008-2_5",
+    "lat_deg": 38.625473,
+    "lon_deg": 359.9995
+   },
+   "expected": {
+    "undulation_m": 50.20121632934399
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm2008-2_5-27.9881-86.925",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm2008-2_5",
+    "lat_deg": 27.9881,
+    "lon_deg": 86.925
+   },
+   "expected": {
+    "undulation_m": -28.426240800000045
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm2008-2_5-51.5--0.12",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm2008-2_5",
+    "lat_deg": 51.5,
+    "lon_deg": -0.12
+   },
+   "expected": {
+    "undulation_m": 46.06788
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm2008-2_5--45.0-170.0",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm2008-2_5",
+    "lat_deg": -45.0,
+    "lon_deg": 170.0
+   },
+   "expected": {
+    "undulation_m": 8.706000000000003
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm2008-2_5-64.1--21.9",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm2008-2_5",
+    "lat_deg": 64.1,
+    "lon_deg": -21.9
+   },
+   "expected": {
+    "undulation_m": 66.48936
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm2008-2_5-10.0--84.0",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm2008-2_5",
+    "lat_deg": 10.0,
+    "lon_deg": -84.0
+   },
+   "expected": {
+    "undulation_m": 14.409000000000006
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm96-15-41.7151-44.8271",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm96-15",
+    "lat_deg": 41.7151,
+    "lon_deg": 44.8271
+   },
+   "expected": {
+    "undulation_m": 14.704748902079984
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm96-15-41.6168-41.6367",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm96-15",
+    "lat_deg": 41.6168,
+    "lon_deg": 41.6367
+   },
+   "expected": {
+    "undulation_m": 20.90734338432
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm96-15-42.2679-42.7181",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm96-15",
+    "lat_deg": 42.2679,
+    "lon_deg": 42.7181
+   },
+   "expected": {
+    "undulation_m": 18.797618669280013
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm96-15-0.0-0.0",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm96-15",
+    "lat_deg": 0.0,
+    "lon_deg": 0.0
+   },
+   "expected": {
+    "undulation_m": 17.162999999999997
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm96-15-90.0-0.0",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm96-15",
+    "lat_deg": 90.0,
+    "lon_deg": 0.0
+   },
+   "expected": {
+    "undulation_m": 13.605000000000004
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm96-15--90.0-0.0",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm96-15",
+    "lat_deg": -90.0,
+    "lon_deg": 0.0
+   },
+   "expected": {
+    "undulation_m": -29.534999999999997
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm96-15-38.628155-269.779155",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm96-15",
+    "lat_deg": 38.628155,
+    "lon_deg": 269.779155
+   },
+   "expected": {
+    "undulation_m": -31.608751617201605
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm96-15--14.621217-305.021114",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm96-15",
+    "lat_deg": -14.621217,
+    "lon_deg": 305.021114
+   },
+   "expected": {
+    "undulation_m": -2.965733418956461
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm96-15-46.874319-102.448729",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm96-15",
+    "lat_deg": 46.874319,
+    "lon_deg": 102.448729
+   },
+   "expected": {
+    "undulation_m": -43.616532163106015
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm96-15-38.625473-359.9995",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm96-15",
+    "lat_deg": 38.625473,
+    "lon_deg": 359.9995
+   },
+   "expected": {
+    "undulation_m": 50.03627239202399
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm96-15-27.9881-86.925",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm96-15",
+    "lat_deg": 27.9881,
+    "lon_deg": 86.925
+   },
+   "expected": {
+    "undulation_m": -28.866312480000005
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm96-15-51.5--0.12",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm96-15",
+    "lat_deg": 51.5,
+    "lon_deg": -0.12
+   },
+   "expected": {
+    "undulation_m": 45.951480000000004
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm96-15--45.0-170.0",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm96-15",
+    "lat_deg": -45.0,
+    "lon_deg": 170.0
+   },
+   "expected": {
+    "undulation_m": 7.695000000000007
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm96-15-64.1--21.9",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm96-15",
+    "lat_deg": 64.1,
+    "lon_deg": -21.9
+   },
+   "expected": {
+    "undulation_m": 66.39000000000001
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "geoid-egm96-15-10.0--84.0",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "geoid_undulation",
+    "grid": "egm96-15",
+    "lat_deg": 10.0,
+    "lon_deg": -84.0
+   },
+   "expected": {
+    "undulation_m": 13.704000000000008
+   },
+   "why": "Computed by GeographicLib's own Geoid class (bilinear) from the installed grid; copied from the old test, not recomputed here. Needs the real grid file; EGM2008 is the default (the DEM is on it; EGM96 differs by -2.3 to +4.7 m over Georgia).",
+   "computed_by": "GeographicLib (external reference), not gen_vectors.py"
+  },
+  {
+   "name": "terrain-synthetic-41.5000-44.7500",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "terrain_tile_elevation",
+    "tile": "synthetic",
+    "lat_deg": 41.5,
+    "lon_deg": 44.75
+   },
+   "expected": {
+    "elevation_m": 423.0
+   },
+   "why": "A sample centre gives its own value (400 + 10*row + col)."
+  },
+  {
+   "name": "terrain-synthetic-41.6250-44.5625",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "terrain_tile_elevation",
+    "tile": "synthetic",
+    "lat_deg": 41.625,
+    "lon_deg": 44.5625
+   },
+   "expected": {
+    "elevation_m": 417.25
+   },
+   "why": "Bilinear between samples."
+  },
+  {
+   "name": "terrain-synthetic-40.9000-45.3000",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "terrain_tile_elevation",
+    "tile": "synthetic",
+    "lat_deg": 40.9,
+    "lon_deg": 45.3
+   },
+   "expected": {
+    "elevation_m": 444.0
+   },
+   "why": "Past the last sample the edge sample is used (Copernicus drops each tile's shared east/south edge)."
+  },
+  {
+   "name": "terrain-synthetic-42.2000-43.9000",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "terrain_tile_elevation",
+    "tile": "synthetic",
+    "lat_deg": 42.2,
+    "lon_deg": 43.9
+   },
+   "expected": {
+    "elevation_m": null
+   },
+   "why": "Before the first sample, clamped to it."
+  },
+  {
+   "name": "terrain-synthetic-41.8750-44.1250",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "terrain_tile_elevation",
+    "tile": "synthetic",
+    "lat_deg": 41.875,
+    "lon_deg": 44.125
+   },
+   "expected": {
+    "elevation_m": null
+   },
+   "why": "A nodata sample among the four corners: unknown (null), never 0."
+  },
+  {
+   "name": "terrain-synthetic-41.1250-44.8750",
+   "owner": [
+    "authority",
+    "ussp"
+   ],
+   "input": {
+    "function": "terrain_tile_elevation",
+    "tile": "synthetic",
+    "lat_deg": 41.125,
+    "lon_deg": 44.875
+   },
+   "expected": {
+    "elevation_m": 438.5
+   },
+   "why": "Away from the nodata sample: known."
+  }
+ ]
+}

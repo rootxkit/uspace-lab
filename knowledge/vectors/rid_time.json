@@ -1,0 +1,523 @@
+{
+ "description": "Placing a Remote ID position in time (S-27). Direct Remote ID carries only tenths of a second after the UTC hour; the hour is reconstructed from the receive time. `captured_at` is where the aircraft is placed; `ts` is what the broadcast claims. Network Remote ID cases place an SP flight state using the response timestamp so the provider's clock skew cancels; expected null means the state is not shown.",
+ "source": [
+  "utm gateway/tests/test_remote_id_time.py",
+  "utm gateway/remote_id.py place(), broadcast_time()",
+  "utm gateway/network_rid.py place()"
+ ],
+ "units": {
+  "timestamp_tenths": "uint16 as on the wire; 65535 = unknown",
+  "ts_accuracy_code": "MAV_ODID_TIME_ACC: 0 unknown, k = k/10 s",
+  "times": "ISO 8601, UTC",
+  "*_s": "seconds"
+ },
+ "tolerance": {
+  "times": "exact to the microsecond"
+ },
+ "owners": [
+  "authority",
+  "ussp"
+ ],
+ "generated": "Expected values computed by knowledge/tools/gen_vectors.py, which runs the old Python implementation (rootxkit/utm @ 484cd228035f) on these inputs. Regenerate rather than edit.",
+ "utm_commit": "484cd228035f2f424530e233ce72100d0fc1842a",
+ "rule": "moment = latest instant at seconds_after_hour into some hour that is not after received_at + tolerance + accuracy; age = received_at - moment; age > 1800 s -> clock_ahead (ts = moment + 1 h); age > max_latency + accuracy -> too_old; else broadcast.",
+ "cases": [
+  {
+   "name": "hour-taken-from-receive-time",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "timestamp_tenths": 20963,
+    "ts_accuracy_code": 0,
+    "received_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": {
+    "ts": "2026-10-01T12:34:56.300000+00:00",
+    "captured_at": "2026-10-01T12:34:56.300000+00:00",
+    "time_source": "broadcast",
+    "fallback": null
+   },
+   "why": "The broadcast carries only tenths after the hour; the hour is the receiver's. 0.4 s of latency places it 0.4 s before receipt."
+  },
+  {
+   "name": "rollover-broadcast-before-the-hour-heard-after",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "timestamp_tenths": 35999,
+    "ts_accuracy_code": 0,
+    "received_at": "2026-10-01T13:00:00.200000+00:00",
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": {
+    "ts": "2026-10-01T12:59:59.900000+00:00",
+    "captured_at": "2026-10-01T12:59:59.900000+00:00",
+    "time_source": "broadcast",
+    "fallback": null
+   },
+   "why": "xx:59:59.9 heard at (xx+1):00:00.2 is in hour xx. Taking the receiver's hour naively would place the aircraft 59 minutes in the future."
+  },
+  {
+   "name": "rollover-broadcast-after-the-hour-heard-before",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "timestamp_tenths": 5,
+    "ts_accuracy_code": 0,
+    "received_at": "2026-10-01T12:59:59.900000+00:00",
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": {
+    "ts": "2026-10-01T13:00:00.500000+00:00",
+    "captured_at": "2026-10-01T13:00:00.500000+00:00",
+    "time_source": "broadcast",
+    "fallback": null
+   },
+   "why": "The aircraft's clock is 0.6 s ahead of ours across the hour: within the 1 s tolerance, so it is the next hour, not 59 min 59 s ago."
+  },
+  {
+   "name": "late-broadcast-placed-at-its-own-time",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "timestamp_tenths": 20947,
+    "ts_accuracy_code": 0,
+    "received_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": {
+    "ts": "2026-10-01T12:34:54.700000+00:00",
+    "captured_at": "2026-10-01T12:34:54.700000+00:00",
+    "time_source": "broadcast",
+    "fallback": null
+   },
+   "why": "S-27: 2 s of receiver latency. Placing at receipt would put a 15 m/s aircraft 30 m from where it was, against a 60 m minimum."
+  },
+  {
+   "name": "within-latency-bound",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "timestamp_tenths": 20918,
+    "ts_accuracy_code": 0,
+    "received_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": {
+    "ts": "2026-10-01T12:34:51.800000+00:00",
+    "captured_at": "2026-10-01T12:34:51.800000+00:00",
+    "time_source": "broadcast",
+    "fallback": null
+   },
+   "why": "4.9 s old with a 5 s bound: still the broadcast's own time."
+  },
+  {
+   "name": "beyond-latency-bound-too-old",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "timestamp_tenths": 20915,
+    "ts_accuracy_code": 0,
+    "received_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": {
+    "ts": "2026-10-01T12:34:51.500000+00:00",
+    "captured_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_source": "receiver",
+    "fallback": "too_old"
+   },
+   "why": "5.2 s old: more than a receiver can plausibly hold a broadcast; placed on arrival, `ts` still what the broadcast said, counted as too_old."
+  },
+  {
+   "name": "latency-bound-exactly",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "timestamp_tenths": 20917,
+    "ts_accuracy_code": 0,
+    "received_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": {
+    "ts": "2026-10-01T12:34:51.700000+00:00",
+    "captured_at": "2026-10-01T12:34:51.700000+00:00",
+    "time_source": "broadcast",
+    "fallback": null
+   },
+   "why": "Exactly at the bound is inside (the comparison is strictly greater)."
+  },
+  {
+   "name": "declared-accuracy-widens-the-latency-bound",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "timestamp_tenths": 20912,
+    "ts_accuracy_code": 10,
+    "received_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": {
+    "ts": "2026-10-01T12:34:51.200000+00:00",
+    "captured_at": "2026-10-01T12:34:51.200000+00:00",
+    "time_source": "broadcast",
+    "fallback": null
+   },
+   "why": "Accuracy code 10 = 1.0 s; 5.5 s late is within 5 s + 1 s."
+  },
+  {
+   "name": "small-declared-accuracy-does-not-widen-enough",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "timestamp_tenths": 20912,
+    "ts_accuracy_code": 1,
+    "received_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": {
+    "ts": "2026-10-01T12:34:51.200000+00:00",
+    "captured_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_source": "receiver",
+    "fallback": "too_old"
+   },
+   "why": "Accuracy code 1 = 0.1 s; 5.5 s late is beyond 5.1 s: too_old. The presence pair of the case above."
+  },
+  {
+   "name": "clock-ahead-within-tolerance",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "timestamp_tenths": 20975,
+    "ts_accuracy_code": 0,
+    "received_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": {
+    "ts": "2026-10-01T12:34:57.500000+00:00",
+    "captured_at": "2026-10-01T12:34:57.500000+00:00",
+    "time_source": "broadcast",
+    "fallback": null
+   },
+   "why": "0.8 s ahead of the receiver with a 1 s tolerance: believed (GPS time and NTP differ; the field truncates to tenths)."
+  },
+  {
+   "name": "clock-ahead-exactly-at-tolerance",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "timestamp_tenths": 20977,
+    "ts_accuracy_code": 0,
+    "received_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": {
+    "ts": "2026-10-01T12:34:57.700000+00:00",
+    "captured_at": "2026-10-01T12:34:57.700000+00:00",
+    "time_source": "broadcast",
+    "fallback": null
+   },
+   "why": "Exactly 1.0 s ahead is the latest instant allowed: believed."
+  },
+  {
+   "name": "clock-ahead-beyond-tolerance",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "timestamp_tenths": 20997,
+    "ts_accuracy_code": 0,
+    "received_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": {
+    "ts": "2026-10-01T12:34:59.700000+00:00",
+    "captured_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_source": "receiver",
+    "fallback": "clock_ahead"
+   },
+   "why": "3 s ahead: the hour choice puts it 59:57 in the past. Anything more than half an hour old is read as 'clock ahead', not as old: placed on arrival, and `ts` is the time the broadcast claims (an hour later)."
+  },
+  {
+   "name": "ahead-and-old-told-apart-ahead-2s",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "timestamp_tenths": 20987,
+    "ts_accuracy_code": 0,
+    "received_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": {
+    "ts": "2026-10-01T12:34:58.700000+00:00",
+    "captured_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_source": "receiver",
+    "fallback": "clock_ahead"
+   },
+   "why": "Up to half an hour either side of the receiver is told apart: ahead is clock_ahead, behind beyond the latency bound is too_old. A steady clock_ahead count usually means the receiving host's own clock is behind."
+  },
+  {
+   "name": "ahead-and-old-told-apart-ahead-29min",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "timestamp_tenths": 2367,
+    "ts_accuracy_code": 0,
+    "received_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": {
+    "ts": "2026-10-01T13:03:56.700000+00:00",
+    "captured_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_source": "receiver",
+    "fallback": "clock_ahead"
+   },
+   "why": "Up to half an hour either side of the receiver is told apart: ahead is clock_ahead, behind beyond the latency bound is too_old. A steady clock_ahead count usually means the receiving host's own clock is behind."
+  },
+  {
+   "name": "ahead-and-old-told-apart-behind-10s",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "timestamp_tenths": 20867,
+    "ts_accuracy_code": 0,
+    "received_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": {
+    "ts": "2026-10-01T12:34:46.700000+00:00",
+    "captured_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_source": "receiver",
+    "fallback": "too_old"
+   },
+   "why": "Up to half an hour either side of the receiver is told apart: ahead is clock_ahead, behind beyond the latency bound is too_old. A steady clock_ahead count usually means the receiving host's own clock is behind."
+  },
+  {
+   "name": "ahead-and-old-told-apart-behind-29min",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "timestamp_tenths": 3567,
+    "ts_accuracy_code": 0,
+    "received_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": {
+    "ts": "2026-10-01T12:05:56.700000+00:00",
+    "captured_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_source": "receiver",
+    "fallback": "too_old"
+   },
+   "why": "Up to half an hour either side of the receiver is told apart: ahead is clock_ahead, behind beyond the latency bound is too_old. A steady clock_ahead count usually means the receiving host's own clock is behind."
+  },
+  {
+   "name": "unknown-timestamp-0xffff",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "timestamp_tenths": 65535,
+    "ts_accuracy_code": 0,
+    "received_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": {
+    "ts": "2026-10-01T12:34:56.700000+00:00",
+    "captured_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_source": "receiver",
+    "fallback": "unknown"
+   },
+   "why": "0xFFFF is the standard's 'unknown': placed on arrival, counted as unknown."
+  },
+  {
+   "name": "timestamp-past-the-hour-is-invalid",
+   "owner": [
+    "authority"
+   ],
+   "input": {
+    "timestamp_tenths": 36000,
+    "ts_accuracy_code": 0,
+    "received_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": {
+    "ts": "2026-10-01T12:34:56.700000+00:00",
+    "captured_at": "2026-10-01T12:34:56.700000+00:00",
+    "time_source": "receiver",
+    "fallback": "invalid"
+   },
+   "why": "36000 tenths (3600.0 s) fits the field but is not inside any hour."
+  },
+  {
+   "name": "network-behind-response-placed-on-our-clock",
+   "owner": [
+    "ussp"
+   ],
+   "input": {
+    "state_timestamp": "2026-10-01T12:04:58+00:00",
+    "response_timestamp": "2026-10-01T12:05:00+00:00",
+    "received_at": "2026-10-01T12:00:10+00:00",
+    "max_age_s": 60.0,
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": {
+    "ts": "2026-10-01T12:04:58+00:00",
+    "captured_at": "2026-10-01T12:00:08+00:00",
+    "time_source": "broadcast",
+    "note": null
+   },
+   "why": "The provider's clock is 5 minutes off ours. The state is 2 s behind the response's own timestamp, so it is placed 2 s before our receive time: the provider's skew cancels inside the response."
+  },
+  {
+   "name": "network-ahead-of-its-response",
+   "owner": [
+    "ussp"
+   ],
+   "input": {
+    "state_timestamp": "2026-10-01T12:05:01+00:00",
+    "response_timestamp": "2026-10-01T12:05:00+00:00",
+    "received_at": "2026-10-01T12:00:10+00:00",
+    "max_age_s": 60.0,
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": {
+    "ts": "2026-10-01T12:05:01+00:00",
+    "captured_at": "2026-10-01T12:00:10+00:00",
+    "time_source": "receiver",
+    "note": "ahead_of_response"
+   },
+   "why": "A state newer than the response that carries it is impossible on one clock: placed at receipt and noted."
+  },
+  {
+   "name": "network-older-than-max-age-dropped",
+   "owner": [
+    "ussp"
+   ],
+   "input": {
+    "state_timestamp": "2026-10-01T12:03:59+00:00",
+    "response_timestamp": "2026-10-01T12:05:00+00:00",
+    "received_at": "2026-10-01T12:00:10+00:00",
+    "max_age_s": 60.0,
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": null,
+   "why": "More than 60 s behind its response: not shown as current at all (null)."
+  },
+  {
+   "name": "network-no-response-time-recent",
+   "owner": [
+    "ussp"
+   ],
+   "input": {
+    "state_timestamp": "2026-10-01T12:00:07+00:00",
+    "response_timestamp": null,
+    "received_at": "2026-10-01T12:00:10+00:00",
+    "max_age_s": 60.0,
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": {
+    "ts": "2026-10-01T12:00:07+00:00",
+    "captured_at": "2026-10-01T12:00:07+00:00",
+    "time_source": "broadcast",
+    "note": null
+   },
+   "why": "Without a response timestamp the state's own time is compared with ours, with the same tolerance and latency bounds as a broadcast."
+  },
+  {
+   "name": "network-no-response-time-clock-ahead",
+   "owner": [
+    "ussp"
+   ],
+   "input": {
+    "state_timestamp": "2026-10-01T12:00:12+00:00",
+    "response_timestamp": null,
+    "received_at": "2026-10-01T12:00:10+00:00",
+    "max_age_s": 60.0,
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": {
+    "ts": "2026-10-01T12:00:12+00:00",
+    "captured_at": "2026-10-01T12:00:10+00:00",
+    "time_source": "receiver",
+    "note": "clock_ahead"
+   },
+   "why": "2 s ahead of our clock without a response time: placed at receipt."
+  },
+  {
+   "name": "network-no-response-time-too-old",
+   "owner": [
+    "ussp"
+   ],
+   "input": {
+    "state_timestamp": "2026-10-01T12:00:03+00:00",
+    "response_timestamp": null,
+    "received_at": "2026-10-01T12:00:10+00:00",
+    "max_age_s": 60.0,
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": {
+    "ts": "2026-10-01T12:00:03+00:00",
+    "captured_at": "2026-10-01T12:00:10+00:00",
+    "time_source": "receiver",
+    "note": "too_old"
+   },
+   "why": "7 s old: shown, but placed at receipt and noted too_old."
+  },
+  {
+   "name": "network-no-response-time-older-than-max-age",
+   "owner": [
+    "ussp"
+   ],
+   "input": {
+    "state_timestamp": "2026-10-01T11:59:09+00:00",
+    "response_timestamp": null,
+    "received_at": "2026-10-01T12:00:10+00:00",
+    "max_age_s": 60.0,
+    "time_tolerance_s": 1.0,
+    "max_latency_s": 5.0
+   },
+   "expected": null,
+   "why": "61 s old: dropped."
+  }
+ ]
+}
