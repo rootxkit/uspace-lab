@@ -80,14 +80,17 @@ services:
     image: *dss_image
     entrypoint: ["/usr/bin/core-service"]
     # Accepted audiences (decision record M18): the compose service name
-    # `dss` and DSS_PUBLIC_HOST. Trusted key: the lab issuer's public key
-    # file (-public_key_files; the DSS reads it once at start, which is
-    # why the issuer keeps its key across restarts). -dump_requests is
-    # left off: it would log every bearer token.
+    # `dss` and DSS_PUBLIC_HOST. Trusted keys (-public_key_files, read
+    # once at start, which is why the issuer keeps its key across
+    # restarts): the lab issuer's public key by default, or the
+    # comma-separated DSS_PUBLIC_KEY_FILES under the same mounted
+    # directory, so the ecosystem issuer's key (the authority's token
+    # service) can be trusted beside it. -dump_requests is left off: it
+    # would log every bearer token.
     command:
       - -datastore_host=dss-crdb
       - -addr=:8082
-      - -public_key_files=/var/lab-issuer/issuer-public.pem
+      - -public_key_files=${DSS_PUBLIC_KEY_FILES:-/var/lab-issuer/issuer-public.pem}
       - -accepted_jwt_audiences=dss,${DSS_PUBLIC_HOST:?set DSS_PUBLIC_HOST in deploy/.env}
       - -enable_scd
       - -allow_http_base_urls=${DSS_ALLOW_HTTP_BASE_URLS:?set DSS_ALLOW_HTTP_BASE_URLS in deploy/.env}
