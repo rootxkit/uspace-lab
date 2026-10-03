@@ -112,12 +112,15 @@ func (r *run) intentRequest(a *scenario.Aircraft) (simop.IntentRequest, error) {
 }
 
 func (r *run) startOperators(ctx, simCtx context.Context, wg *sync.WaitGroup) error {
-	base, _, _ := r.usspEndpoint()
 	for i := range r.sc.Aircraft {
 		a := &r.sc.Aircraft[i]
 		if a.Operator == nil {
 			continue
 		}
+		if r.tg.Mode != ModeReference && r.tg.USSP == nil {
+			return fmt.Errorf("aircraft %s streams to a USSP and the targets file has no ussp", a.Name)
+		}
+		base, _, _ := r.usspEndpoint()
 		tokens, err := r.operatorTokens(a)
 		if err != nil {
 			return err
@@ -180,7 +183,7 @@ func (r *run) startOperators(ctx, simCtx context.Context, wg *sync.WaitGroup) er
 // uspace-ussp WP-7 runbook, step 2): the owed runs follow each other on
 // one USSP.
 func (r *run) endIntents(ctx context.Context, res *Result) {
-	if res == nil {
+	if res == nil || (r.tg.Mode != ModeReference && r.tg.USSP == nil) {
 		return
 	}
 	base, _, _ := r.usspEndpoint()

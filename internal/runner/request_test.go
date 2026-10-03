@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/rootxkit/uspace-lab/internal/scenario"
@@ -109,4 +110,20 @@ func TestRunEndsTheIntentsItLeftOpen(t *testing.T) {
 	if res.Intents[0].Ended != "ended" || res.Intents[1].Ended != "" || res.Intents[2].Ended != "ended" {
 		t.Fatalf("%+v", res.Intents)
 	}
+}
+
+// A systems targets file without a USSP runs a scenario that streams to
+// none (SC-22, the authority alone) instead of panicking on the missing
+// USSP, and refuses, by name, one whose aircraft streams to a USSP.
+func TestOperatorsWithoutAUSSPInTheTargets(t *testing.T) {
+	r := &run{tg: &Targets{Mode: ModeSystems}, sc: &scenario.Scenario{Aircraft: []scenario.Aircraft{{Name: "a"}}}}
+	if err := r.startOperators(context.Background(), context.Background(), nil); err != nil {
+		t.Fatalf("no operator aircraft: %v", err)
+	}
+	r.sc.Aircraft[0].Operator = &scenario.Operator{System: scenario.SystemUSSP}
+	err := r.startOperators(context.Background(), context.Background(), nil)
+	if err == nil || !strings.Contains(err.Error(), "has no ussp") {
+		t.Fatalf("an operator aircraft: %v", err)
+	}
+	r.endIntents(context.Background(), &Result{Intents: []IntentRecord{{Aircraft: "a", IntentID: "i", State: "activated"}}})
 }
