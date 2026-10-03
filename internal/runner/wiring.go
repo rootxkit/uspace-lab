@@ -3,6 +3,7 @@ package runner
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -92,7 +93,7 @@ func (r *run) intentRequest(a *scenario.Aircraft) (simop.IntentRequest, error) {
 		return v
 	}
 	return simop.IntentRequest{
-		ClientRef: r.opt.Run + "-" + r.sc.ID + "-" + a.Name, UASSerial: a.Serial,
+		ClientRef: clientRef(r.opt.Run, r.sc.ID, a.Name, r.t0), UASSerial: a.Serial,
 		Mode: pick(in.Mode, "VLOS"), FlightType: "normal", Category: pick(in.Category, "open"),
 		Subcategory: in.Subcategory, ClassLabel: in.ClassLabel,
 		Volumes: []simop.Volume4D{{
@@ -110,6 +111,23 @@ func (r *run) intentRequest(a *scenario.Aircraft) (simop.IntentRequest, error) {
 		Contingency: simop.IntentContingency{Procedure: "land at the take-off point"}, EmergencyContactRef: "lab-" + r.sc.ID,
 	}, nil
 }
+
+// clientRef is an intent's idempotency reference (intent/request/v1
+// client_ref, ^[A-Za-z0-9._:-]{1,64}$): one per execution. A USSP
+// answers a reference it has seen with a different body 409, and a
+// scenario run again under the same run id (into the same results
+// directory) files a different body, its times being new; t0 makes the
+// reference new with them. A long one is shortened to a digest.
+func clientRef(runID, scenarioID, aircraft string, t0 time.Time) string {
+	ref := fmt.Sprintf("%s-%s-%s-%d", runID, scenarioID, aircraft, t0.Unix())
+	if len(ref) <= 64 && clientRefPattern.MatchString(ref) {
+		return ref
+	}
+	sum := sha256.Sum256([]byte(ref))
+	return fmt.Sprintf("lab-%x-%d", sum[:12], t0.Unix())
+}
+
+var clientRefPattern = regexp.MustCompile(`^[A-Za-z0-9._:-]{1,64}$`)
 
 func (r *run) startOperators(ctx, simCtx context.Context, wg *sync.WaitGroup) error {
 	for i := range r.sc.Aircraft {

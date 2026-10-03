@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/rootxkit/uspace-lab/internal/scenario"
 )
@@ -126,4 +127,23 @@ func TestOperatorsWithoutAUSSPInTheTargets(t *testing.T) {
 		t.Fatalf("an operator aircraft: %v", err)
 	}
 	r.endIntents(context.Background(), &Result{Intents: []IntentRecord{{Aircraft: "a", IntentID: "i", State: "activated"}}})
+}
+
+// An intent's client_ref is new per execution and always valid: the
+// same run id again (the same results directory) must not reuse one,
+// which a USSP answers 409 idempotency_conflict (found re-running
+// ussp-wp10-conformance under its run id on the WP-L6 systems stack).
+func TestClientRefIsNewPerExecutionAndValid(t *testing.T) {
+	t0 := time.Unix(1_791_100_000, 0)
+	a := clientRef("20261004-systems", "ussp-wp10-conformance", "a", t0)
+	b := clientRef("20261004-systems", "ussp-wp10-conformance", "a", t0.Add(400*time.Second))
+	if a == b {
+		t.Fatalf("one reference for two executions: %s", a)
+	}
+	long := clientRef(strings.Repeat("r", 40), strings.Repeat("s", 40), "a", t0)
+	for _, ref := range []string{a, b, long} {
+		if len(ref) > 64 || !clientRefPattern.MatchString(ref) {
+			t.Errorf("invalid client_ref %q", ref)
+		}
+	}
 }
