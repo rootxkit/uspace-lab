@@ -9,10 +9,15 @@ import (
 
 // The lab clients file: the six clients of the brief, dp.observe on
 // lab-01 only, every issuable national scope on lab-01, and ${VAR}
-// entries expanded into the hosts of the environment.
+// entries expanded into the hosts of the environment. The USSP's id is
+// the one the USSP itself asks with: uspace-ussp internal/auth
+// ClientIDFor is "ussp-" + the lower-cased code + "-01" (M24), so for
+// USSP_SYSTEM_ID USSP-DEV it is ussp-ussp-dev-01; the issuer's ids are
+// case-sensitive, and an upper-case entry refused every token the USSP
+// asked for (found by the WP-L6 systems run: 401 on every CIS pull).
 func TestLabClientsFile(t *testing.T) {
 	r := labRegistry(t)
-	want := []string{"lab-01", "authority-01", "cisp-01", "ansp-01", "ussp-USSP-DEV-01", "sim-ussp-01"}
+	want := []string{"lab-01", "authority-01", "cisp-01", "ansp-01", "ussp-ussp-dev-01", "sim-ussp-01"}
 	if !slices.Equal(r.IDs(), want) {
 		t.Fatalf("clients %v, want %v", r.IDs(), want)
 	}
