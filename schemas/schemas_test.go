@@ -66,9 +66,7 @@ func TestExamplesBothWays(t *testing.T) {
 // pinned tag, with the release that adds them. The test fails when core
 // gains one (the entry must then be removed) and logs each one, so the
 // difference is visible on every run rather than hidden in a diff.
-var pendingCore = map[string]map[string]string{
-	"IdentBasis": {"provider": "uspace-core v1.1.0 core.BasisProvider (core WP-16; decision record Q-A8)"},
-}
+var pendingCore = map[string]map[string]string{}
 
 type enumPin struct {
 	schema   string

@@ -1,0 +1,8 @@
+scenario sc-22-missing-inputs-visible (20261003-sitl-reference, sitl vehicles, reference targets): PASS
+  observed alerts (3):
+    authority degraded                          on terrain_unavailable raised +-15.0s
+    authority degraded                          on registry_projection_absent raised +-15.0s
+    authority degraded                          on source_control_unknown raised +-15.0s
+  missed 0, false 0
+  receiver lab-rx-1: observed 90, sent 90 = accepted 90 + duplicates 0 + refused 0 (balanced true)
+  result: results\20261003-sitl-reference\sc-22-missing-inputs-visible.json

@@ -125,6 +125,53 @@ the stack runs, restart the DSS too (`make dss-down && make dss-up`).
 For a stable staging key, set `LAB_ISSUER_KEY_FILE` to a PEM path (and
 `LAB_ISSUER_KID` if the PEM has no `Kid` header). Never commit a key.
 
+## `make sim-ussp-up`: the peer USSP against this DSS
+
+WP-L5's `cmd/sim-ussp` runs in the profile `sim` (image
+`deploy/sim-ussp/Dockerfile`) on the lab network, as the issuer client
+`sim-ussp-01`:
+
+- DSS-bound tokens: `utm.strategic_coordination` and
+  `rid.service_provider`, audience `dss`, from
+  `http://lab-issuer:8080/oauth/token`; the secret is read from
+  `client-secrets.json` in the state directory (mounted read only).
+- Incoming tokens: issuer `LAB_ISSUER_URL`, audience `sim-ussp`, keys
+  from `public/jwks.json` (static, for the HTTPS-only JWKS fetch rule
+  above).
+- Writes: an ISA over `SIM_USSP_ISA`
+  (`PUT /rid/v2/dss/identification_service_areas/{id}`, answered 200)
+  and one operational intent reference over `SIM_USSP_INTENT`
+  (`PUT /dss/v1/operational_intent_references/{id}`, answered 201),
+  `uss_base_url` `http://sim-ussp:8093`. Its key holds the OVNs the DSS
+  returns for the references already in that volume, and the ids are
+  new on each start, so a restart is not refused with 409 (both were
+  found running against this DSS; the WP-L5 double had answered 200
+  and modelled neither). Then it serves `/uss/flights` and
+  `/uss/v1/operational_intents/{id}`, vehicles on `sim-ussp:15562/udp`.
+
+`deploy/sim-ussp-up.sh` starts the stack with the profile (and the DSS
+and issuer, if they are not up), then succeeds only if sim-ussp logged
+both writes with the id, version and OVN the DSS returned, is still
+serving, and a search of the DSS by the issuer's probe over the
+`SIM_USSP_INTENT` area finds at least one reference there. It adds the
+`SIM_USSP_*` and `LAB_SIM_USSP_IMAGE` variables to an existing
+`deploy/.env` from `.env.example` when they are missing. Run of
+2026-10-03 (Docker Desktop 28.5.1, Windows 11), on a fresh datastore,
+then again with sim-ussp restarted; a deliberately invalid intent
+(lower altitude above upper) made it exit 1 with the DSS's 400:
+
+```
+sim-ussp-up: {"msg":"ISA written","id":"f31f6e42-2040-464b-9c9c-cf5139ef0d18","version":"1hmoi44ls6jr8",...}
+sim-ussp-up: {"msg":"operational intent reference written","id":"6ae4bb08-35a4-4dce-9830-a83f9686ce2c","ovn":"bdvt7nUXcZOd7W2DaJHcWfj5YolMQT12z8FpZA1CLPU_",...}
+ok     POST /dss/v1/operational_intent_references/query as sim-ussp-01, aud dss, scope utm.strategic_coordination -> HTTP 200 (want 200), 1 operational intent references
+sim-ussp-up: the DSS holds 1 operational intent reference(s) in the SIM_USSP_INTENT area; ...
+(restarted) ... 200 (want 200), 2 operational intent references
+```
+
+A reference of another USS in the same volume is still refused (409,
+`missing_operational_intents`): the DSS gives its OVN only to its
+manager, and sim-ussp does not fetch it from that USS.
+
 ## Using it from a system or the droplet
 
 - Token URL `http://lab-issuer:8080/oauth/token`, issuer

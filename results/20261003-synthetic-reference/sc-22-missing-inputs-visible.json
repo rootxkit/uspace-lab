@@ -1,0 +1,294 @@
+{
+  "format": "result/v1",
+  "run": "ci-reference",
+  "scenario": "sc-22-missing-inputs-visible",
+  "title": "SC-22: a data source that does not exist yet must not be silence",
+  "source": "knowledge/scenarios.md SC-22 (design check); LESSONS E-02, D-04, Z-09",
+  "owners": [
+    "authority",
+    "ussp"
+  ],
+  "started_at": "2026-10-03T07:31:25.435218Z",
+  "ended_at": "2026-10-03T07:32:25.8580845Z",
+  "t0": "2026-10-03T07:31:31Z",
+  "mode": {
+    "vehicles": "synthetic",
+    "targets": "reference",
+    "targets_name": "reference"
+  },
+  "evidence": "runner self-check: judged by the lab's reference target (uspace-core alerting under the scenario's policy); never evidence for a system",
+  "commits": {
+    "lab": "14f7ce9904f7602f0adedb13c050af774366a1e5",
+    "lab_dirty": true,
+    "core": "v1.3.0",
+    "go": "go1.27.1"
+  },
+  "policy_version": 1,
+  "policy": {
+    "policy_version": 1,
+    "source": "docs/PLAN.md §7.1 L-Q4 (owner-only, open; GCAA answers); knowledge/scenarios.md conventions",
+    "deviation": {
+      "h_m": 50,
+      "v_m": 15,
+      "t_s": 60
+    },
+    "telemetry_lost_s": 5,
+    "lost_link_s": 15,
+    "nonconformance_nearby_radius_m": 2000,
+    "cpa": {
+      "t_cpa_max_s": 60,
+      "d_horizontal_min_m": 60,
+      "d_vertical_min_m": 20,
+      "neighbour_radius_m": 800,
+      "neighbour_max_age_s": 10
+    },
+    "height_limit_agl_m": 120,
+    "monitor": {
+      "clear_after_s": 3,
+      "stale_after_s": 15,
+      "live_max_age_s": 10,
+      "pressure_uncertainty_m": 250,
+      "conditional_severity": "warning"
+    }
+  },
+  "lab": {
+    "file": "sim\\sitl.env.example",
+    "origin_lat_deg": 41.7151,
+    "origin_lon_deg": 44.8271,
+    "origin_alt_amsl_m": 605,
+    "spacing_m": 25
+  },
+  "geoid": "constant N = 15.9 m",
+  "marks": {
+    "climb": "2026-10-03T07:31:38.956561326Z",
+    "climb.start": "2026-10-03T07:31:31.006441354Z",
+    "down": "2026-10-03T07:32:22.507233619Z",
+    "down.start": "2026-10-03T07:32:09.107027053Z",
+    "hover": "2026-10-03T07:32:09.00702691Z",
+    "hover.start": "2026-10-03T07:31:39.006565332Z",
+    "t0": "2026-10-03T07:31:31Z"
+  },
+  "steps": [
+    {
+      "sysid": 1,
+      "step": 0,
+      "action": "arm",
+      "state": "started",
+      "at_unix_s": 1791012691.0064414
+    },
+    {
+      "sysid": 1,
+      "step": 0,
+      "action": "arm",
+      "state": "confirmed",
+      "at_unix_s": 1791012691.0064414,
+      "observed": {
+        "alt_rel_m": 0,
+        "armed": true,
+        "lat_deg": 41.7151,
+        "lon_deg": 44.8271
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 1,
+      "action": "takeoff",
+      "state": "started",
+      "at_unix_s": 1791012691.1064415
+    },
+    {
+      "sysid": 1,
+      "step": 1,
+      "action": "takeoff",
+      "state": "confirmed",
+      "at_unix_s": 1791012698.9565613,
+      "observed": {
+        "alt_rel_m": 19.1128002500722,
+        "armed": true,
+        "lat_deg": 41.7151,
+        "lon_deg": 44.8271
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 2,
+      "action": "hold",
+      "state": "started",
+      "at_unix_s": 1791012699.0065653
+    },
+    {
+      "sysid": 1,
+      "step": 2,
+      "action": "hold",
+      "state": "confirmed",
+      "at_unix_s": 1791012729.007027,
+      "observed": {
+        "alt_rel_m": 19.87530219984405,
+        "armed": true,
+        "lat_deg": 41.7151,
+        "lon_deg": 44.8271
+      },
+      "max_drift_m": 0
+    },
+    {
+      "sysid": 1,
+      "step": 3,
+      "action": "land",
+      "state": "started",
+      "at_unix_s": 1791012729.107027
+    },
+    {
+      "sysid": 1,
+      "step": 3,
+      "action": "land",
+      "state": "confirmed",
+      "at_unix_s": 1791012742.5072336,
+      "observed": {
+        "alt_rel_m": 0,
+        "armed": false,
+        "lat_deg": 41.7151,
+        "lon_deg": 44.8271
+      }
+    }
+  ],
+  "outcome": {
+    "expectations": [
+      {
+        "name": "registry-absent-visible",
+        "matcher": {
+          "system": "authority",
+          "kind": "degraded",
+          "subject": "registry_projection_absent"
+        },
+        "raise_window": {
+          "from": "2026-10-03T07:31:01Z",
+          "to": "2026-10-03T07:31:36Z"
+        },
+        "hold_until": "2026-10-03T07:32:22.507233619Z",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:registry_projection_absent",
+          "phase": "raised",
+          "subject": "registry_projection_absent",
+          "observed_at": "2026-10-03T07:31:25.5063561Z",
+          "stream": "authority-picture"
+        },
+        "ok": true
+      },
+      {
+        "name": "switch-state-unknown-visible",
+        "matcher": {
+          "system": "authority",
+          "kind": "degraded",
+          "subject": "source_control_unknown"
+        },
+        "raise_window": {
+          "from": "2026-10-03T07:31:01Z",
+          "to": "2026-10-03T07:31:36Z"
+        },
+        "hold_until": "2026-10-03T07:32:22.507233619Z",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:source_control_unknown",
+          "phase": "raised",
+          "subject": "source_control_unknown",
+          "observed_at": "2026-10-03T07:31:25.5063561Z",
+          "stream": "authority-picture"
+        },
+        "ok": true
+      }
+    ],
+    "missed_alerts": 0,
+    "false_alert_count": 0,
+    "alerts": [
+      {
+        "system": "authority",
+        "kind": "degraded",
+        "alert_id": "authority:degraded:terrain_unavailable",
+        "subject": "terrain_unavailable",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:terrain_unavailable",
+          "phase": "raised",
+          "subject": "terrain_unavailable",
+          "observed_at": "2026-10-03T07:31:25.5063561Z",
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "degraded",
+        "alert_id": "authority:degraded:registry_projection_absent",
+        "subject": "registry_projection_absent",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:registry_projection_absent",
+          "phase": "raised",
+          "subject": "registry_projection_absent",
+          "observed_at": "2026-10-03T07:31:25.5063561Z",
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "degraded",
+        "alert_id": "authority:degraded:source_control_unknown",
+        "subject": "source_control_unknown",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:source_control_unknown",
+          "phase": "raised",
+          "subject": "source_control_unknown",
+          "observed_at": "2026-10-03T07:31:25.5063561Z",
+          "stream": "authority-picture"
+        }
+      }
+    ],
+    "pass": true
+  },
+  "frames": {
+    "authority-picture": {
+      "console/status/v1": 31
+    }
+  },
+  "receiver_ledgers": [
+    {
+      "receiver_id": "lab-rx-1",
+      "observed": 53,
+      "dropped_by_knob": 0,
+      "sent": 53,
+      "accepted": 53,
+      "duplicates": 0,
+      "refused": 0,
+      "backlog_shed": 0,
+      "pending": 0,
+      "balanced": true,
+      "counters": {
+        "accepted": 53,
+        "batches": 51,
+        "duplicates": 0,
+        "observations": 53,
+        "sent": 53
+      }
+    }
+  ],
+  "vehicle_samples": {
+    "a": 241
+  },
+  "target_counters": {
+    "authority_monitor": {
+      "conflict_checks_skipped": 45,
+      "height_checks_not_evaluated": 45
+    },
+    "direct_rid": {
+      "accepted": 53
+    },
+    "ussp_monitor": {}
+  },
+  "verdict": "pass"
+}

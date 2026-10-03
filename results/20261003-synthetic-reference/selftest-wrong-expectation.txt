@@ -1,0 +1,27 @@
+scenario selftest-wrong-expectation (20261003-synthetic-reference, synthetic vehicles, reference targets): FAIL
+  observed alerts (9):
+    ussp      degraded                          on terrain_unavailable raised +-5.7s
+    ussp      degraded                          on registry_projection_absent raised +-5.7s
+    ussp      degraded                          on source_control_unknown raised +-5.7s
+    ussp      proximity              a          peer b raised +0.3s cleared resolved +17.3s
+    ussp      proximity              b          peer a raised +0.3s cleared resolved +17.3s
+    ussp      proximity              b          peer c raised +0.3s
+    ussp      proximity              a          peer c raised +0.3s cleared resolved +17.3s
+    ussp      proximity              c          peer b raised +0.3s
+    ussp      proximity              c          peer a raised +0.3s cleared resolved +17.3s
+  missed 1, false 6
+  operator LABSTWA0001: sent 66 = accepted 66 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  operator LABSTWB0002: sent 66 = accepted 66 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  operator LABSTWC0003: sent 66 = accepted 66 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  latency ussp: n 6, p50 0.000 s, p95 0.001 s, max 0.001 s
+  FAIL false alert: ussp proximity 20bfa16c-0d97-4697-a5ce-8545b4420a1f (aircraft "c", peer "b", subject "") raised at 07:37:51.326
+  FAIL false alert: ussp proximity 2effe1b2-3c99-40f0-a21f-180b82f80fc6 (aircraft "b", peer "c", subject "") raised at 07:37:51.326
+  FAIL false alert: ussp proximity 3621d992-19a7-451d-9779-6ff85a173ef7 (aircraft "a", peer "b", subject "") raised at 07:37:51.324
+  FAIL false alert: ussp proximity 7db2a24d-29df-41fc-89d3-49fb6b7ffa25 (aircraft "a", peer "c", subject "") raised at 07:37:51.326
+  FAIL false alert: ussp proximity c67f0bc9-9f4b-4d08-aa38-be35b2274756 (aircraft "c", peer "a", subject "") raised at 07:37:51.326
+  FAIL false alert: ussp proximity eef61e40-89db-4147-9970-e92b46671bb4 (aircraft "b", peer "a", subject "") raised at 07:37:51.324
+  FAIL never ussp proximity for b with c: raised 2effe1b2-3c99-40f0-a21f-180b82f80fc6 at 07:37:51.326
+  FAIL wrong-a-and-far-b: no ussp proximity raise for a with b in [07:38:49.027, 07:38:54.027]
+  observed instead of wrong-a-and-far-b:
+    ussp proximity a peer b raised +0.3s cleared resolved +17.3s
+  result: results\20261003-synthetic-reference\selftest-wrong-expectation.json

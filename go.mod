@@ -3,8 +3,10 @@ module github.com/rootxkit/uspace-lab
 go 1.27
 
 require (
+	github.com/coder/websocket v1.8.15
 	github.com/goccy/go-yaml v1.19.2
-	github.com/rootxkit/uspace-core v1.0.0
+	github.com/lestrrat-go/jwx/v3 v3.3.0
+	github.com/rootxkit/uspace-core v1.3.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 )
 
@@ -20,7 +22,6 @@ require (
 	github.com/lestrrat-go/dsig-secp256k1 v1.0.0 // indirect
 	github.com/lestrrat-go/httpcc v1.0.1 // indirect
 	github.com/lestrrat-go/httprc/v3 v3.0.6 // indirect
-	github.com/lestrrat-go/jwx/v3 v3.3.0 // indirect
 	github.com/lestrrat-go/option/v2 v2.0.0 // indirect
 	github.com/oapi-codegen/oapi-codegen/v2 v2.8.0 // indirect
 	github.com/oasdiff/yaml v0.1.1 // indirect

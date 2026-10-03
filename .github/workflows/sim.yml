@@ -1,0 +1,53 @@
+name: sim
+
+# sim/ (docs/WORKPACKAGES/WP-L5.md): the receive-only MAVLink reader, the
+# SITL harness and the launch scripts. Lint, types, tests and the INV-01
+# guard; no SITL here (that is scenarios.yml, on dispatch).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "sim/**"
+      - ".github/workflows/sim.yml"
+  pull_request:
+    paths:
+      - "sim/**"
+      - ".github/workflows/sim.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sim-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sim:
+    name: ruff, mypy, pytest and the send guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: sim
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: sim/requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - name: no send call anywhere in sim/ (INV-01)
+        # The done-when grep, verbatim. grep exits 1 when nothing matches,
+        # which is the pass: invert it explicitly rather than mask it.
+        working-directory: .
+        run: |
+          if grep -rn "\.send(" sim/ --include='*.py' --include='*.sh'; then
+            echo "::error::a send call in sim/ (only sim/fly.py may write, and only through pymavlink's *_send towards SITL)"
+            exit 1
+          fi
+      - run: ruff format --check .
+      - run: ruff check .
+      - run: mypy
+      - run: pytest

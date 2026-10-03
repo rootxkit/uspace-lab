@@ -1,0 +1,70 @@
+format: scenario/v1
+id: selftest-wrong-expectation
+title: "Runner self-test: a deliberately wrong expectation must fail, listing what was observed"
+source: "docs/WORKPACKAGES/WP-L5.md Tests (the runner); LESSONS E-02"
+owners: [lab]
+policy: policy/demo.yaml
+systems: [ussp]
+reference: true
+note: >-
+  Two aircraft 500 m apart that never come within the minima, and an
+  expectation that they raise proximity. The run must fail with a miss
+  that names the alerts seen instead (none of that kind); the never-list
+  entry fires on the on-the-ground pair (b and c, homes 25 m apart, a
+  real conflict) so the failure also lists an observed raise. Run by
+  internal/runner's tests; it is the scenario that proves a failure is
+  reported, so it is expected to FAIL.
+duration_s: 60
+tail_s: 3
+aircraft:
+  - name: a
+    sysid: 1
+    serial: LABSTWA0001
+    operator_reg: GEOLAB000001
+    operator: &op
+      system: ussp
+      intent:
+        center: {north_m: 0, east_m: 0}
+        radius_m: 1500
+        alt_lower_rel_m: -20
+        alt_upper_rel_m: 120
+        starts_before_s: 60
+        lasts_s: 3600
+        category: open
+        subcategory: A2
+        class_label: C2
+  - name: b
+    sysid: 2
+    serial: LABSTWB0002
+    operator_reg: GEOLAB000001
+    operator: *op
+  - name: c
+    sysid: 3
+    serial: LABSTWC0003
+    operator_reg: GEOLAB000001
+    operator: *op
+steps:
+  - id: climb
+    at_s: 0
+    aircraft: [a, b, c]
+    do: takeoff
+    alt_rel_m: 20
+  - id: away
+    aircraft: [a]
+    do: goto
+    to: {north_m: 500, east_m: 0}
+    speed_ms: 12
+  - id: hover
+    aircraft: [a, b, c]
+    do: hold
+    for_s: 5
+expect:
+  - name: wrong-a-and-far-b
+    system: ussp
+    kind: proximity
+    aircraft: a
+    peer: b
+    raise: {after: hover, min_s: 0, max_s: 5}
+never:
+  - {system: ussp, kind: proximity, aircraft: b, peer: c}
+judged_kinds: ["ussp:proximity"]

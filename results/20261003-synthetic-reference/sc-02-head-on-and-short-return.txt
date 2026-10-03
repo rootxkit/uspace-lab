@@ -1,0 +1,16 @@
+scenario sc-02-head-on-and-short-return (ci-reference, synthetic vehicles, reference targets): PASS
+  observed alerts (9):
+    ussp      degraded                          on terrain_unavailable raised +-5.4s
+    ussp      degraded                          on registry_projection_absent raised +-5.4s
+    ussp      degraded                          on source_control_unknown raised +-5.4s
+    ussp      proximity              a          peer b raised +0.6s cleared resolved +37.6s
+    ussp      proximity              b          peer a raised +0.6s cleared resolved +37.6s
+    ussp      proximity              a          peer b raised +82.6s cleared resolved +118.6s
+    ussp      proximity              b          peer a raised +82.6s cleared resolved +118.6s
+    ussp      proximity              a          peer b raised +184.6s cleared resolved +225.6s
+    ussp      proximity              b          peer a raised +184.6s cleared resolved +225.6s
+  missed 0, false 0
+  operator LABSC02A0001: sent 318 = accepted 318 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  operator LABSC02B0002: sent 318 = accepted 318 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  latency ussp: n 6, p50 0.000 s, p95 0.001 s, max 0.001 s
+  result: results\20261003-synthetic-reference\sc-02-head-on-and-short-return.json

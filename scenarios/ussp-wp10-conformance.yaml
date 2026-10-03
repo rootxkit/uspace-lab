@@ -1,0 +1,171 @@
+format: scenario/v1
+id: ussp-wp10-conformance
+title: "uspace-ussp WP-10 (S-M2): conformance raises and clears on a SITL aircraft; nearby operators told; lost link"
+source: "uspace-ussp docs/RUNBOOKS/WP-10.md, 'Lab run (owed)'; spec 07 S-M2"
+owners: [ussp]
+policy: policy/demo.yaml
+systems: [ussp]
+reference: false
+note: >-
+  For the USSP's image (nonconformance is the USSP's judgement; the
+  reference target does not make it). A's intent is a 200 m circle up to
+  60 m above home; the demo policy's deviation thresholds are 50 m
+  horizontal, 15 m vertical, 60 s. A leaves the volume horizontally and
+  returns, climbs above the authorised upper and descends, then leaves
+  for more than 60 s (contingent, recorded with the alert's numbers),
+  returns, and goes silent past lost_link_s while airborne. B, 600 m
+  north on its own intent, is the nearby operator.
+duration_s: 330
+tail_s: 8
+aircraft:
+  - name: a
+    sysid: 1
+    serial: LABWP10A0001
+    operator_reg: GEOLAB000001
+    operator:
+      system: ussp
+      client: op-a
+      intent:
+        center: {north_m: 0, east_m: 0}
+        radius_m: 200
+        alt_lower_rel_m: -10
+        alt_upper_rel_m: 60
+        starts_before_s: 60
+        lasts_s: 3600
+        category: open
+        subcategory: A2
+        class_label: C2
+  - name: b
+    sysid: 2
+    serial: LABWP10B0002
+    operator_reg: GEOLAB000002
+    operator:
+      system: ussp
+      client: op-b
+      intent:
+        center: {north_m: 600, east_m: 25}
+        radius_m: 200
+        alt_lower_rel_m: -10
+        alt_upper_rel_m: 60
+        starts_before_s: 60
+        lasts_s: 3600
+        category: open
+        subcategory: A2
+        class_label: C2
+steps:
+  - id: climb
+    at_s: 0
+    aircraft: [a, b]
+    do: takeoff
+    alt_rel_m: 30
+  - id: b-station
+    aircraft: [b]
+    do: goto
+    to: {north_m: 600, east_m: 25}
+    speed_ms: 10
+  # Out horizontally: 330 m east is 130 m outside the circle (beyond h_m).
+  - id: out-h
+    at_s: 30
+    aircraft: [a]
+    do: goto
+    to: {north_m: 0, east_m: 330}
+    speed_ms: 8
+  - id: outside-h
+    aircraft: [a]
+    do: hold
+    for_s: 10
+  - id: back-h
+    aircraft: [a]
+    do: goto
+    to: {north_m: 0, east_m: 0}
+    speed_ms: 8
+  # Above the authorised upper: 90 m is 30 m over 60 m (beyond v_m).
+  - id: up-v
+    at_s: 110
+    aircraft: [a]
+    do: goto
+    to: {north_m: 0, east_m: 0}
+    alt_rel_m: 90
+    speed_ms: 5
+  - id: above
+    aircraft: [a]
+    do: hold
+    for_s: 10
+  - id: down-v
+    aircraft: [a]
+    do: goto
+    to: {north_m: 0, east_m: 0}
+    alt_rel_m: 30
+    speed_ms: 5
+  # Out for more than 60 s (t_s): contingent.
+  - id: out-long
+    at_s: 160
+    aircraft: [a]
+    do: goto
+    to: {north_m: 0, east_m: 330}
+    speed_ms: 8
+  - id: outside-long
+    aircraft: [a]
+    do: hold
+    for_s: 70
+  - id: back-long
+    aircraft: [a]
+    do: goto
+    to: {north_m: 0, east_m: 0}
+    speed_ms: 8
+  # Silence while airborne: lost link after lost_link_s.
+  - id: cut
+    at_s: 285
+    aircraft: [a]
+    do: knob
+    knob: {operator_stream: stop}
+  - id: restore
+    at_s: 310
+    aircraft: [a]
+    do: knob
+    knob: {operator_stream: start}
+expect:
+  - name: nonconformance-horizontal
+    system: ussp
+    kind: nonconformance
+    aircraft: a
+    raise: {after: out-h.start, min_s: 5, max_s: 40}
+    clear: {after: back-h.start, min_s: 3, max_s: 40, reason: resolved}
+  - name: nearby-told-horizontal
+    system: ussp
+    kind: nonconformance_nearby
+    aircraft: b
+    raise: {after: out-h.start, min_s: 5, max_s: 45}
+    clear: {after: back-h.start, min_s: 3, max_s: 45, reason: resolved}
+  - name: nonconformance-vertical
+    system: ussp
+    kind: nonconformance
+    aircraft: a
+    raise: {after: up-v.start, min_s: 3, max_s: 30}
+    clear: {after: down-v.start, min_s: 3, max_s: 30, reason: resolved}
+  - name: nearby-told-vertical
+    system: ussp
+    kind: nonconformance_nearby
+    aircraft: b
+    raise: {after: up-v.start, min_s: 3, max_s: 35}
+    clear: {after: down-v.start, min_s: 3, max_s: 35, reason: resolved}
+  - name: nonconformance-long
+    system: ussp
+    kind: nonconformance
+    aircraft: a
+    raise: {after: out-long.start, min_s: 5, max_s: 40}
+    clear: {after: back-long.start, min_s: 3, max_s: 40, reason: resolved}
+  - name: nearby-told-long
+    system: ussp
+    kind: nonconformance_nearby
+    aircraft: b
+    raise: {after: out-long.start, min_s: 5, max_s: 45}
+    clear: {after: back-long.start, min_s: 3, max_s: 45, reason: resolved}
+  - name: lost-link
+    system: ussp
+    kind: lost_link
+    aircraft: a
+    raise: {after: cut, min_s: 14, max_s: 22}
+    clear: {after: restore, min_s: 0, max_s: 6}
+judged_kinds: ["ussp:nonconformance", "ussp:nonconformance_nearby", "ussp:lost_link"]
+measure: [latency, ledger]

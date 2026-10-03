@@ -1,0 +1,65 @@
+# A targets file for the owed system runs (copy to targets/<name>.yaml;
+# targets/*.yaml other than the committed ones are the operator's). The
+# systems run from their images; every secret is a file named here and
+# kept out of the repository (secrets/ is gitignored).
+mode: systems
+name: lab-demo
+# The images under test, by digest: copied into every result (E-05).
+images:
+  ussp: ghcr.io/rootxkit/uspace-ussp@sha256:<digest>
+  authority: ghcr.io/rootxkit/uspace-authority@sha256:<digest>
+  ansp: ghcr.io/rootxkit/uspace-ansp@sha256:<digest>
+  cisp: ghcr.io/rootxkit/uspace-cisp@sha256:<digest>
+# The same geoid the systems' ingests use (R-16): a GeographicLib grid,
+# or constant:<N> when the deployment is configured with one.
+geoid: /path/to/egm2008-2_5.pgm
+# The sitl.env run_sitl.sh used (origin and fleet numbering).
+lab: ../sim/sitl.env
+ussp:
+  base_url: https://ussp.lab.example
+  token_url: https://ussp.lab.example/oauth/token
+  audience: ussp.lab.example
+  clients:
+    # Operator machine clients registered at the USSP, the scenario's
+    # serials bound to them.
+    default: {client_id: lab-op-1, secret_file: ../secrets/ussp-op-1.secret}
+    op-a: {client_id: lab-op-1, secret_file: ../secrets/ussp-op-1.secret}
+    op-b: {client_id: lab-op-2, secret_file: ../secrets/ussp-op-2.secret}
+authority:
+  base_url: https://authority.lab.example
+  picture_url: wss://authority.lab.example/v1/picture/ws
+  origin: https://authority.lab.example
+  # A console session cookie value (sign in with the lab account).
+  session_file: ../secrets/authority.session
+  receivers:
+    # Registered with POST /v1/rid/receivers; keys as shown once.
+    lab-rx-1: {bearer_key_file: ../secrets/rx-1.bearer, hmac_key_file: ../secrets/rx-1.hmac}
+ansp:
+  stream_url: wss://ansp.lab.example/v1/manned-traffic/stream
+  token:
+    token_url: https://issuer.lab.example/oauth/token
+    client_id: lab-01
+    secret_file: ../secrets/lab-01.secret
+    audience: ansp.lab.example
+    scopes: [ansp.traffic]
+feeds:
+  # Where the lab's manned feeds listen so the systems can reach them.
+  manned-1: {listen: "0.0.0.0:18092"}
+requests:
+  ansp:
+    base_url: https://ansp.lab.example
+    session_file: ../secrets/ansp.session
+    csrf_file: ../secrets/ansp.csrf
+  authority:
+    base_url: https://authority.lab.example
+    session_file: ../secrets/authority.session
+    csrf_file: ../secrets/authority.csrf
+# SITL vehicles (--vehicles sitl): the reader and the harness per vehicle.
+# Placeholders: {sysid} {out_port} {fly_port} {max_s}. This example runs
+# them in WSL from a Windows runner; on Linux drop the wsl.exe prefix.
+sitl:
+  reader_cmd: [wsl.exe, -e, bash, -lc, "cd /mnt/c/path/to/uspace-lab && ~/ardupilot-venv/bin/python sim/mav_reader.py --sysid {sysid} --out udp:127.0.0.1:{out_port} --max-seconds {max_s}"]
+  fly_cmd: [wsl.exe, -e, bash, -lc, "cd /mnt/c/path/to/uspace-lab && ~/ardupilot-venv/bin/python sim/fly.py --link udpin:127.0.0.1:{fly_port} --plan -"]
+extra:
+  # Identifiers the deployment issued (never coordinates).
+  uspace_airspace_id: USP0001

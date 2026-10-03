@@ -1,0 +1,88 @@
+format: scenario/v1
+id: kt4-baseline
+title: "KT-4 baseline: three aircraft seen by sim-operator and sim-receiver, every sample counted on both sides"
+source: "docs/spec/07-roadmap.md KT-4; docs/WORKPACKAGES/WP-L5.md (the KT-4 line)"
+owners: [lab]
+policy: policy/demo.yaml
+systems: [ussp, authority]
+reference: true
+note: >-
+  Counts, not alerts: the verdict is the ledgers (accepted + refused +
+  dropped + duplicate = sent per source), a sample from every vehicle and
+  every step confirmed by the vehicle.
+  SITL simulates the ground: around the example home (605 m) its terrain
+  runs from 578 m to the north to over 624 m 100 m east (TERRAIN_REPORT,
+  measured 2026-10-03), and a vehicle at 20 m above home flew into it
+  and held there at full lean. The flights here are at a height that
+  clears it.
+duration_s: 260
+tail_s: 5
+aircraft:
+  - name: a
+    sysid: 1
+    serial: LABKT4A0001
+    operator_reg: GEOLAB000001
+    operator_id: GEOLAB000001
+    operator: &op
+      system: ussp
+      intent: &intent
+        center: {north_m: 0, east_m: 0}
+        radius_m: 1500
+        alt_lower_rel_m: -20
+        alt_upper_rel_m: 120
+        starts_before_s: 60
+        lasts_s: 3600
+        category: open
+        subcategory: A2
+        class_label: C2
+        mode: VLOS
+        identification: both
+    receivers: [lab-rx-1]
+  - name: b
+    sysid: 2
+    serial: LABKT4B0002
+    operator_reg: GEOLAB000001
+    operator_id: GEOLAB000001
+    operator: *op
+    receivers: [lab-rx-1]
+  - name: c
+    sysid: 3
+    serial: LABKT4C0003
+    operator_reg: GEOLAB000001
+    operator_id: GEOLAB000001
+    operator: *op
+    receivers: [lab-rx-1]
+receivers:
+  - id: lab-rx-1
+    system: authority
+    at: {north_m: 0, east_m: 30}
+    transport: pack
+    hae: geoid
+    rssi_dbm: -60
+steps:
+  - id: up
+    at_s: 0
+    aircraft: [a, b, c]
+    do: takeoff
+    alt_rel_m: 80
+  - id: spread
+    aircraft: [a]
+    do: goto
+    to: {north_m: 300, east_m: 0}
+    speed_ms: 8
+  - aircraft: [b]
+    do: goto
+    to: {north_m: 0, east_m: 325}
+    speed_ms: 8
+  - aircraft: [c]
+    do: goto
+    to: {north_m: -300, east_m: 50}
+    speed_ms: 8
+  - id: hover
+    aircraft: [a, b, c]
+    do: hold
+    for_s: 20
+  - id: down
+    aircraft: [a, b, c]
+    do: land
+measure: [ledger, latency]

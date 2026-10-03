@@ -2,9 +2,10 @@ name: lab-stack
 
 # WP-L2: the DSS and the lab issuer. Runs the Go tests of the issuer and
 # the deploy checks, then `make dss-up` for real (build, start, the three
-# proofs) and `make dss-down`, so the success path is exercised on every
-# change to the stack (LESSONS E-02). Only when something it reads
-# changes.
+# proofs), `make sim-ussp-up` (WP-L5: the peer USSP's ISA and operational
+# intent reference written to that DSS and read back) and `make
+# dss-down`, so the success path is exercised on every change to the
+# stack (LESSONS E-02). Only when something it reads changes.
 on:
   push:
     branches: [main]
@@ -12,6 +13,11 @@ on:
       - "deploy/**"
       - "cmd/lab-issuer/**"
       - "internal/issuer/**"
+      - "cmd/sim-ussp/**"
+      - "internal/simussp/**"
+      - "internal/oauth/**"
+      - "internal/cli/**"
+      - "internal/vehicle/**"
       - "go.mod"
       - "go.sum"
       - ".dockerignore"
@@ -22,6 +28,11 @@ on:
       - "deploy/**"
       - "cmd/lab-issuer/**"
       - "internal/issuer/**"
+      - "cmd/sim-ussp/**"
+      - "internal/simussp/**"
+      - "internal/oauth/**"
+      - "internal/cli/**"
+      - "internal/vehicle/**"
       - "go.mod"
       - "go.sum"
       - ".dockerignore"
@@ -52,12 +63,14 @@ jobs:
           go-version-file: go.mod
           cache: true
       - name: go test (issuer, deploy checks)
-        run: go test -race -count=1 -shuffle=on ./internal/issuer/ ./deploy/ ./cmd/...
+        run: go test -race -count=1 -shuffle=on ./internal/issuer/ ./internal/simussp/ ./internal/cli/ ./deploy/ ./cmd/...
       - name: make dss-up (start, wait, prove)
         run: make dss-up
-      - name: DSS and issuer logs on failure
+      - name: make sim-ussp-up (peer USSP writes, read back from the DSS)
+        run: make sim-ussp-up
+      - name: DSS, issuer and peer USSP logs on failure
         if: failure()
-        run: docker compose -p uspace-lab -f deploy/compose.yaml --env-file deploy/.env --profile dss --profile issuer logs --no-color --tail 200
+        run: docker compose -p uspace-lab -f deploy/compose.yaml --env-file deploy/.env --profile dss --profile issuer --profile sim logs --no-color --tail 200
       - name: make dss-down (and check nothing is left)
         if: always()
         run: make dss-down

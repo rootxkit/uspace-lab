@@ -1,0 +1,146 @@
+format: scenario/v1
+id: sc-02-head-on-and-short-return
+title: "SC-02: head-on pass, and a return that stops short"
+source: "knowledge/scenarios.md SC-02 (utm P5-07, 2026-09-29); LESSONS C-10"
+owners: [ussp, authority]
+policy: policy/demo.yaml
+systems: [ussp]
+reference: true
+note: >-
+  Two aircraft at 30 m about 590 m apart fly towards each other at
+  10 m/s (closing 20 m/s): raised before t_cpa reaches 60 s, cleared
+  resolved past 60 m plus the hysteresis. Then b flies at a, which holds,
+  and stops 204 m short: the straight-line prediction closes inside 60 m,
+  so it is raised, and it clears once b has slowed enough that t_cpa
+  passes 60 s, the hysteresis later: around the stop, not after it
+  (C-10; measured on the reference target: 2.2 s before b's arrival was
+  confirmed within 3 m). The window is from the start of the return.
+  USSP proximity alerts (the authority raises no conflicts). At 80 m
+  rather than 30 m:
+  SITL simulates the ground: around the example home (605 m) its terrain
+  runs from 578 m to the north to over 624 m 100 m east (TERRAIN_REPORT,
+  measured 2026-10-03), and a vehicle at 20 m above home flew into it
+  and held there at full lean. The flights here are at a height that
+  clears it.
+duration_s: 400
+tail_s: 8
+aircraft:
+  - name: a
+    sysid: 1
+    serial: LABSC02A0001
+    operator_reg: GEOLAB000001
+    operator: &op
+      system: ussp
+      intent:
+        center: {north_m: 0, east_m: 0}
+        radius_m: 1500
+        alt_lower_rel_m: -20
+        alt_upper_rel_m: 120
+        starts_before_s: 60
+        lasts_s: 3600
+        category: open
+        subcategory: A2
+        class_label: C2
+  - name: b
+    sysid: 2
+    serial: LABSC02B0002
+    operator_reg: GEOLAB000001
+    operator: *op
+steps:
+  - id: climb
+    at_s: 0
+    aircraft: [a, b]
+    do: takeoff
+    alt_rel_m: 80
+  # Out to the start points, 590 m apart on one east-west line.
+  - id: out-a
+    aircraft: [a]
+    do: goto
+    to: {north_m: 0, east_m: -290}
+    speed_ms: 10
+  - id: out-b
+    aircraft: [b]
+    do: goto
+    to: {north_m: 0, east_m: 300}
+    speed_ms: 10
+  # 1-2. Towards each other at 10 m/s, and through the pass; at_s starts
+  #      both at once (each reaches its start point at its own time).
+  - id: run
+    at_s: 80
+    aircraft: [a, b]
+    do: goto
+    to: {north_m: 0, east_m: 0}
+    speed_ms: 10
+    tolerance_m: 400
+  - id: pass-a
+    aircraft: [a]
+    do: goto
+    to: {north_m: 0, east_m: 300}
+    speed_ms: 10
+  - id: pass-b
+    aircraft: [b]
+    do: goto
+    to: {north_m: 0, east_m: -290}
+    speed_ms: 10
+  # 3. a holds at 300 m east; b flies at it and stops 204 m short.
+  - id: return
+    at_s: 180
+    aircraft: [b]
+    do: goto
+    to: {north_m: 0, east_m: 96}
+    speed_ms: 10
+  - id: stop
+    aircraft: [b]
+    do: hold
+    for_s: 12
+  - id: down
+    at_s: 250
+    aircraft: [a, b]
+    do: land
+expect:
+  - name: head-on-a
+    system: ussp
+    kind: proximity
+    aircraft: a
+    peer: b
+    raise: {after: run.start, min_s: 0, max_s: 20}
+    clear: {after: run.start, min_s: 25, max_s: 70, reason: resolved}
+  - name: head-on-b
+    system: ussp
+    kind: proximity
+    aircraft: b
+    peer: a
+    raise: {after: run.start, min_s: 0, max_s: 20}
+    clear: {after: run.start, min_s: 25, max_s: 70, reason: resolved}
+  - name: short-return-a
+    system: ussp
+    kind: proximity
+    aircraft: a
+    peer: b
+    raise: {after: return.start, min_s: 0, max_s: 25}
+    clear: {after: return.start, min_s: 20, max_s: 60, reason: resolved}
+  - name: short-return-b
+    system: ussp
+    kind: proximity
+    aircraft: b
+    peer: a
+    raise: {after: return.start, min_s: 0, max_s: 25}
+    clear: {after: return.start, min_s: 20, max_s: 60, reason: resolved}
+  # The homes are 25 m apart: the pair is in conflict from arming until
+  # they part on the way out (C-03); expected, and resolved.
+  - name: on-the-ground-a
+    system: ussp
+    kind: proximity
+    aircraft: a
+    peer: b
+    raise: {after: climb, min_s: -40, max_s: 5}
+    clear: {after: climb, min_s: 0, max_s: 60, reason: resolved}
+  - name: on-the-ground-b
+    system: ussp
+    kind: proximity
+    aircraft: b
+    peer: a
+    raise: {after: climb, min_s: -40, max_s: 5}
+    clear: {after: climb, min_s: 0, max_s: 60, reason: resolved}
+judged_kinds: ["ussp:proximity"]
+measure: [latency, ledger]

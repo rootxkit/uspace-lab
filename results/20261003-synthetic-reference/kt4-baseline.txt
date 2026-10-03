@@ -1,0 +1,21 @@
+scenario kt4-baseline (ci-reference, synthetic vehicles, reference targets): PASS
+  observed alerts (12):
+    ussp      degraded                          on terrain_unavailable raised +-5.9s
+    ussp      degraded                          on registry_projection_absent raised +-5.9s
+    ussp      degraded                          on source_control_unknown raised +-5.9s
+    authority degraded                          on terrain_unavailable raised +-5.9s
+    authority degraded                          on registry_projection_absent raised +-5.9s
+    authority degraded                          on source_control_unknown raised +-5.9s
+    ussp      proximity              b          peer a raised +1.1s cleared resolved +39.1s
+    ussp      proximity              a          peer b raised +1.1s cleared resolved +39.1s
+    ussp      proximity              b          peer c raised +1.1s cleared resolved +43.1s
+    ussp      proximity              a          peer c raised +1.1s cleared resolved +38.1s
+    ussp      proximity              c          peer b raised +1.1s cleared resolved +43.1s
+    ussp      proximity              c          peer a raised +1.1s cleared resolved +38.1s
+  missed 0, false 0
+  operator LABKT4A0001: sent 155 = accepted 155 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  operator LABKT4B0002: sent 155 = accepted 155 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  operator LABKT4C0003: sent 155 = accepted 155 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  receiver lab-rx-1: observed 408, sent 408 = accepted 408 + duplicates 0 + refused 0 (balanced true)
+  latency ussp: n 6, p50 0.000 s, p95 0.000 s, max 0.000 s
+  result: results\20261003-synthetic-reference\kt4-baseline.json

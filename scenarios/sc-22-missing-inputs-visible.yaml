@@ -1,0 +1,59 @@
+format: scenario/v1
+id: sc-22-missing-inputs-visible
+title: "SC-22: a data source that does not exist yet must not be silence"
+source: "knowledge/scenarios.md SC-22 (design check); LESSONS E-02, D-04, Z-09"
+owners: [authority, ussp]
+policy: policy/demo.yaml
+systems: [authority]
+reference: true
+note: >-
+  Run once for each deployment, started with no registry projection and
+  no switch state: the authority's console status must name what is
+  missing from the first frame and keep naming it (the slugs are
+  uspace-authority's, internal/picture: registry_projection_absent,
+  source_control_unknown). The terrain, geoid and per-zone items of
+  SC-22 are in the authority's status log lines (detect service), which
+  the runner does not read; the system's PR records them. A Remote ID
+  aircraft flies so the stream carries traffic while the slugs hold.
+duration_s: 160
+tail_s: 3
+aircraft:
+  - name: a
+    sysid: 1
+    serial: LABSC22A0001
+    operator_reg: GEOLAB000001
+    operator_id: GEOLAB000001
+    receivers: [lab-rx-1]
+receivers:
+  - id: lab-rx-1
+    system: authority
+    at: {north_m: 0, east_m: 30}
+    transport: pack
+    hae: geoid
+steps:
+  - id: climb
+    at_s: 0
+    aircraft: [a]
+    do: takeoff
+    alt_rel_m: 20
+  - id: hover
+    aircraft: [a]
+    do: hold
+    for_s: 30
+  - id: down
+    aircraft: [a]
+    do: land
+expect:
+  - name: registry-absent-visible
+    system: authority
+    kind: degraded
+    subject: registry_projection_absent
+    raise: {after: t0, min_s: -30, max_s: 5}
+    hold_until: {after: down, min_s: 0, max_s: 0}
+  - name: switch-state-unknown-visible
+    system: authority
+    kind: degraded
+    subject: source_control_unknown
+    raise: {after: t0, min_s: -30, max_s: 5}
+    hold_until: {after: down, min_s: 0, max_s: 0}
+measure: [ledger]

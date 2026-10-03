@@ -1,0 +1,100 @@
+format: scenario/v1
+id: sc-21-slow-to-hover
+title: "SC-21: slowing to hover beside another aircraft"
+source: "knowledge/scenarios.md SC-21 (P5-12, not yet run in utm); LESSONS C-03, C-10"
+owners: [ussp, authority]
+policy: policy/demo.yaml
+systems: [ussp]
+reference: true
+note: >-
+  A hovers at 300 m north; B approaches from 300 m south of it at 10 m/s
+  and decelerates to hover 40 m from A. Expected: a conflict no later
+  than B's first sample inside 60 m (C-03 holds it while inside), never
+  cleared while B hovers there. How late the raise is relative to B
+  crossing 60 m is in the result (the vehicles' steps and the raise
+  times); it is the number SC-21 asks for. Owed by uspace-ussp WP-11.
+duration_s: 200
+tail_s: 5
+aircraft:
+  - name: a
+    sysid: 1
+    serial: LABSC21A0001
+    operator_reg: GEOLAB000001
+    operator: &op
+      system: ussp
+      intent:
+        center: {north_m: 150, east_m: 0}
+        radius_m: 1000
+        alt_lower_rel_m: -20
+        alt_upper_rel_m: 120
+        starts_before_s: 60
+        lasts_s: 3600
+        category: open
+        subcategory: A2
+        class_label: C2
+  - name: b
+    sysid: 2
+    serial: LABSC21B0002
+    operator_reg: GEOLAB000001
+    operator: *op
+steps:
+  - id: climb
+    at_s: 0
+    aircraft: [a, b]
+    do: takeoff
+    alt_rel_m: 30
+  - id: a-station
+    aircraft: [a]
+    do: goto
+    to: {north_m: 300, east_m: 0}
+    speed_ms: 8
+  - id: b-start
+    aircraft: [b]
+    do: goto
+    to: {north_m: 0, east_m: 25}
+    speed_ms: 5
+  - id: approach
+    at_s: 70
+    aircraft: [b]
+    do: goto
+    to: {north_m: 260, east_m: 0}
+    speed_ms: 10
+  - id: beside
+    aircraft: [b]
+    do: hold
+    for_s: 30
+  - id: down
+    at_s: 140
+    aircraft: [a, b]
+    do: land
+expect:
+  - name: on-the-ground-a
+    system: ussp
+    kind: proximity
+    aircraft: a
+    peer: b
+    raise: {after: climb, min_s: -40, max_s: 5}
+    clear: {after: climb, min_s: 0, max_s: 60, reason: resolved}
+  - name: on-the-ground-b
+    system: ussp
+    kind: proximity
+    aircraft: b
+    peer: a
+    raise: {after: climb, min_s: -40, max_s: 5}
+    clear: {after: climb, min_s: 0, max_s: 60, reason: resolved}
+  - name: beside-a
+    system: ussp
+    kind: proximity
+    aircraft: a
+    peer: b
+    raise: {after: approach.start, min_s: 0, max_s: 35}
+    hold_until: {after: beside, min_s: 0, max_s: 0}
+  - name: beside-b
+    system: ussp
+    kind: proximity
+    aircraft: b
+    peer: a
+    raise: {after: approach.start, min_s: 0, max_s: 35}
+    hold_until: {after: beside, min_s: 0, max_s: 0}
+judged_kinds: ["ussp:proximity"]
+measure: [latency, ledger]

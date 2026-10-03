@@ -1,0 +1,18 @@
+scenario sc-03-zone-entry-exit (20261003-sitl-reference, sitl vehicles, reference targets): PASS
+  observed alerts (10):
+    ussp      degraded                          on terrain_unavailable raised +-15.7s
+    ussp      degraded                          on registry_projection_absent raised +-15.7s
+    ussp      degraded                          on source_control_unknown raised +-15.7s
+    authority degraded                          on terrain_unavailable raised +-15.7s
+    authority degraded                          on registry_projection_absent raised +-15.7s
+    authority degraded                          on source_control_unknown raised +-15.7s
+    ussp      zone_incursion         a          on SC03Z raised +68.3s cleared resolved +82.3s
+    authority zone_incursion         a          on SC03Z raised +68.3s cleared resolved +82.3s
+    ussp      zone_incursion         a          on SC03Z raised +110.3s cleared resolved +124.3s
+    authority zone_incursion         a          on SC03Z raised +110.3s cleared resolved +125.3s
+  missed 0, false 0
+  operator LABSC03A0001: sent 196 = accepted 196 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  receiver lab-rx-1: observed 170, sent 170 = accepted 170 + duplicates 0 + refused 0 (balanced true)
+  latency ussp: n 2, p50 0.000 s, p95 0.000 s, max 0.000 s
+  latency authority: n 2, p50 1.496 s, p95 1.797 s, max 1.797 s
+  result: results\20261003-sitl-reference\sc-03-zone-entry-exit.json

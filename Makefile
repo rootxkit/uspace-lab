@@ -81,8 +81,47 @@ scripts-test:
 contracts: examples scripts-test
 	$(GO) run ./scripts/contracts index -check
 
+# --- WP-L5 SITL, simulators and the scenario runner (sim/, cmd/sim-*) --------
+.PHONY: sim sim-down sim-venv sim-lint sim-test scenario scenarios-ci
+
+N      ?= 1
+PY     ?= python3
+SIM_PY ?= sim/.venv/bin/python
+
+# N ArduCopter SITL vehicles (Linux or WSL; home and ports from
+# sim/sitl.env). sim-down says what it stopped and exits 0 when nothing
+# of this fleet is left running.
+sim:
+	sim/run_sitl.sh -n $(N)
+
+sim-down:
+	sim/stop_sitl.sh
+
+# The pinned Python tools for sim/ (pymavlink, ruff, mypy, pytest).
+sim-venv:
+	$(PY) -m venv sim/.venv
+	$(SIM_PY) -m pip install -q -r sim/requirements-dev.txt
+
+sim-lint:
+	cd sim && ../$(SIM_PY) -m ruff format --check . && ../$(SIM_PY) -m ruff check . && ../$(SIM_PY) -m mypy
+
+sim-test:
+	cd sim && ../$(SIM_PY) -m pytest
+
+# Run scenarios: make scenario TARGETS=targets/reference.yaml SCENARIOS="scenarios/sc-01-hover-inside-minima.yaml"
+# VEHICLES=sitl flies SITL through sim/fly.py (start the fleet with make sim).
+TARGETS   ?= targets/reference.yaml
+VEHICLES  ?= synthetic
+SCENARIOS ?= scenarios/kt4-baseline.yaml
+scenario:
+	$(GO) run ./cmd/scenario run --targets $(TARGETS) --vehicles $(VEHICLES) $(SCENARIOS)
+
+# What the scenarios workflow runs: every reference scenario, in parallel.
+scenarios-ci:
+	GO=$(GO) scripts/run-reference-scenarios.sh results/ci-reference
+
 # --- WP-L2 lab stack (deploy/) -------------------------------------------------
-.PHONY: dss-up dss-down
+.PHONY: dss-up dss-down sim-ussp-up
 
 # Start the DSS and the lab issuer, wait until healthy, prove them
 # together (deploy/README.md). Needs Docker with Compose v2.
@@ -92,3 +131,8 @@ dss-up:
 # Remove the stack and its volumes; keeps deploy/local/ (key, secrets).
 dss-down:
 	deploy/dss-down.sh
+
+# WP-L5: the peer USSP (profile sim) against that DSS, checked by reading
+# its writes back from the DSS (deploy/README.md). make dss-down removes it.
+sim-ussp-up:
+	deploy/sim-ussp-up.sh
