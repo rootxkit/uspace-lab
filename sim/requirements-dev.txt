@@ -1,0 +1,7 @@
+# Lint, types and tests for sim/ (docs/PLAN.md §6), pinned like the Go
+# linters. jsonschema validates reader lines against sim/schema/.
+-r requirements.txt
+ruff==0.14.0
+mypy==1.18.2
+pytest==8.4.2
+jsonschema==4.25.1

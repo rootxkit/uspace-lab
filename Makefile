@@ -80,3 +80,30 @@ scripts-test:
 # What the contracts CI job runs, offline part.
 contracts: examples scripts-test
 	$(GO) run ./scripts/contracts index -check
+
+# --- WP-L5 SITL, simulators and the scenario runner (sim/, cmd/sim-*) --------
+.PHONY: sim sim-down sim-venv sim-lint sim-test scenario scenarios-ci
+
+N      ?= 1
+PY     ?= python3
+SIM_PY ?= sim/.venv/bin/python
+
+# N ArduCopter SITL vehicles (Linux or WSL; home and ports from
+# sim/sitl.env). sim-down says what it stopped and exits 0 when nothing
+# of this fleet is left running.
+sim:
+	sim/run_sitl.sh -n $(N)
+
+sim-down:
+	sim/stop_sitl.sh
+
+# The pinned Python tools for sim/ (pymavlink, ruff, mypy, pytest).
+sim-venv:
+	$(PY) -m venv sim/.venv
+	$(SIM_PY) -m pip install -q -r sim/requirements-dev.txt
+
+sim-lint:
+	cd sim && ../$(SIM_PY) -m ruff format --check . && ../$(SIM_PY) -m ruff check . && ../$(SIM_PY) -m mypy
+
+sim-test:
+	cd sim && ../$(SIM_PY) -m pytest

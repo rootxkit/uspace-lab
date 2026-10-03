@@ -1,0 +1,4 @@
+# The reader and the harness (sim/). pymavlink is the only MAVLink library
+# (docs/PLAN.md D1); pinned because every field the reader uses is checked
+# against this version's message classes (E-03).
+pymavlink==2.4.49

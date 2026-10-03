@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.uspace.ge/lab/sim/vehicle/v1.json",
+  "title": "sim/vehicle/v1",
+  "description": "One sample of one simulated vehicle as the lab's MAVLink boundary (sim/mav_reader.py) or the runner's synthetic vehicle (internal/vehicle) reports it: one NDJSON line per GLOBAL_POSITION_INT. Lab-internal (docs/PLAN.md D2): the neutral line every Go simulator consumes; not part of the KT-2 aggregate and never sent to a system. Units are in the names (alt_amsl_m, speed_ms); positions WGS84 decimal degrees; ts is the vehicle's own UTC (SYSTEM_TIME), null until the vehicle has sent one (R-16). The MAVLink field each member comes from is the table in sim/mav_reader.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "sysid", "ts", "time_boot_ms", "lat_deg", "lon_deg", "alt_amsl_m", "alt_hae_m",
+    "alt_pressure_m", "height_takeoff_m", "speed_ms", "track_deg", "vspeed_ms", "vn_ms", "ve_ms",
+    "armed", "status", "fix_ok", "alt_invalid"
+  ],
+  "properties": {
+    "schema": { "const": "sim/vehicle/v1" },
+    "sysid": { "type": "integer", "minimum": 1, "maximum": 254 },
+    "ts": {
+      "description": "The vehicle's UTC for the sample: GLOBAL_POSITION_INT.time_boot_ms on the SYSTEM_TIME clock, RFC 3339 with milliseconds and Z; null while the vehicle has sent no UTC.",
+      "oneOf": [
+        { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$" },
+        { "type": "null" }
+      ]
+    },
+    "time_boot_ms": { "description": "GLOBAL_POSITION_INT.time_boot_ms: orders the samples of one vehicle run.", "type": "integer", "minimum": 0, "maximum": 4294967295 },
+    "lat_deg": { "type": "number", "minimum": -90, "maximum": 90 },
+    "lon_deg": { "type": "number", "minimum": -180, "maximum": 180 },
+    "alt_amsl_m": { "type": "number", "minimum": -1000, "maximum": 20000 },
+    "alt_hae_m": {
+      "description": "GPS_RAW_INT.alt_ellipsoid with a 3D fix, else null. SITL reports it equal to the AMSL altitude (no geoid), so it is not a HAE a bridge should broadcast (R-16).",
+      "oneOf": [{ "type": "number", "minimum": -1000, "maximum": 20000 }, { "type": "null" }]
+    },
+    "alt_pressure_m": {
+      "description": "ISA pressure altitude from SCALED_PRESSURE.press_abs (1013.25 hPa); never AMSL.",
+      "oneOf": [{ "type": "number", "minimum": -1000, "maximum": 20000 }, { "type": "null" }]
+    },
+    "height_takeoff_m": { "description": "GLOBAL_POSITION_INT.relative_alt: above home.", "type": "number", "minimum": -1000, "maximum": 20000 },
+    "speed_ms": { "type": "number", "minimum": 0, "maximum": 400 },
+    "track_deg": { "oneOf": [{ "type": "number", "minimum": 0, "exclusiveMaximum": 360 }, { "type": "null" }] },
+    "vspeed_ms": { "description": "Positive up.", "type": "number", "minimum": -400, "maximum": 400 },
+    "vn_ms": { "description": "Velocity north (GLOBAL_POSITION_INT.vx).", "type": "number", "minimum": -400, "maximum": 400 },
+    "ve_ms": { "description": "Velocity east (GLOBAL_POSITION_INT.vy).", "type": "number", "minimum": -400, "maximum": 400 },
+    "armed": { "type": "boolean" },
+    "status": { "enum": ["ground", "airborne", "emergency"] },
+    "fix_ok": { "description": "GPS_RAW_INT.fix_type is at least a 3D fix.", "type": "boolean" },
+    "alt_invalid": { "description": "The geodetic altitude is to be broadcast as invalid (S-36, or no 3D fix).", "type": "boolean" }
+  }
+}
