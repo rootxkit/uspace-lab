@@ -46,14 +46,18 @@ feeds:
   # Where the lab's manned feeds listen so the systems can reach them.
   manned-1: {listen: "0.0.0.0:18092"}
 requests:
+  # session_bearer: the session also as Authorization: Bearer, as the
+  # systems' BFFs forward it; the ANSP's and the authority's console APIs
+  # read it from that header (the cookie alone is answered 401).
   ansp:
     base_url: https://ansp.lab.example
     session_file: ../secrets/ansp.session
-    csrf_file: ../secrets/ansp.csrf
+    session_bearer: true
   authority:
     base_url: https://authority.lab.example
     session_file: ../secrets/authority.session
     csrf_file: ../secrets/authority.csrf
+    session_bearer: true
 # SITL vehicles (--vehicles sitl): the reader and the harness per vehicle.
 # Placeholders: {sysid} {out_port} {fly_port} {max_s}. This example runs
 # them in WSL from a Windows runner; on Linux drop the wsl.exe prefix.

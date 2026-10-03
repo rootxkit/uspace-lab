@@ -500,6 +500,9 @@ func (r *run) request(ctx context.Context, q *scenario.Request) (string, error) 
 		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	for k, v := range q.Headers {
+		req.Header.Set(k, sub(v))
+	}
 	switch {
 	case auth.Bearer != nil:
 		secret, err := r.tg.secret(auth.Bearer.SecretFile)
@@ -518,15 +521,20 @@ func (r *run) request(ctx context.Context, q *scenario.Request) (string, error) 
 		if err != nil {
 			return "", err
 		}
-		req.Header.Set("Cookie", "uspace_session="+session)
+		cookie := "uspace_session=" + session
+		if auth.SessionBearer {
+			req.Header.Set("Authorization", "Bearer "+session)
+		}
 		if auth.CSRFFile != "" {
 			csrf, err := r.tg.secret(auth.CSRFFile)
 			if err != nil {
 				return "", err
 			}
-			req.Header.Add("Cookie", "uspace_csrf="+csrf)
+			// One Cookie header (RFC 6265 5.4), not one per cookie.
+			cookie += "; uspace_csrf=" + csrf
 			req.Header.Set("X-CSRF-Token", csrf)
 		}
+		req.Header.Set("Cookie", cookie)
 	}
 	resp, err := (&http.Client{Timeout: 15 * time.Second}).Do(req)
 	if err != nil {

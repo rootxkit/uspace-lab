@@ -234,6 +234,9 @@ type Request struct {
 	// Capture names a JSON member of the answer to keep as ${name} for
 	// later requests.
 	Capture map[string]string `yaml:"capture" json:"capture,omitempty"`
+	// Headers are sent with the request, with the body's substitutions
+	// (the ANSP's Idempotency-Key, for one).
+	Headers map[string]string `yaml:"headers" json:"headers,omitempty"`
 }
 
 // Matcher selects observed events.
