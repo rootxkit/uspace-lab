@@ -1,0 +1,158 @@
+# The lab stack (docs/WORKPACKAGES/WP-L2.md, docs/PLAN.md §4).
+#
+# Profiles:
+#   dss     the InterUSS DSS and its datastore (CockroachDB, the datastore
+#           the pinned commit's build/dev/docker-compose_dss.yaml uses),
+#           images by digest; deploy/dss/SOURCE names the commit.
+#   issuer  the lab token service (cmd/lab-issuer).
+#   sim     (WP-L5) and systems (WP-L6) come later.
+#
+# Consumable as an `include:` from the droplet compose (docs/deploy/
+# PLAN.md WP-D1): no absolute path, every host and figure from the
+# environment (deploy/.env.example lists each variable). One network,
+# internal: nothing is published; on the droplet Caddy joins `lab` and is
+# the only thing with ports. `make dss-up` / `make dss-down` drive it
+# (deploy/dss-up.sh, deploy/dss-down.sh).
+#
+# The DSS is never patched (docs/PLAN.md D5): it runs the published
+# image with the flags its pinned commit defines (cmds/core-service/
+# main.go), read at that commit, not from memory.
+
+services:
+  dss-crdb:
+    profiles: [dss]
+    image: cockroachdb/cockroach:v24.1.3@sha256:1936a3bf5a7121bca0ae78094f87073b96a513369661279698f6ef3985d4eb63
+    # --cache and --max-sql-memory bound CockroachDB's two large memory
+    # pools (docs/PLAN.md L-Q1, the droplet's memory); measured use is
+    # in deploy/README.md.
+    command:
+      - start-single-node
+      - --insecure
+      - --cache=${CRDB_CACHE:?set CRDB_CACHE in deploy/.env}
+      - --max-sql-memory=${CRDB_MAX_SQL_MEMORY:?set CRDB_MAX_SQL_MEMORY in deploy/.env}
+    volumes:
+      - dss-crdb-data:/cockroach/cockroach-data
+    networks: [lab]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health?ready=1"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 10s
+
+  # Schema migrations, one per DSS store, as the pinned commit's compose
+  # runs them (db-manager migrate, --db_version latest). One-shot.
+  dss-migrate-rid:
+    profiles: [dss]
+    image: &dss_image interuss/dss:v0.23.0@sha256:0781042bef785f6c968efd4b4e1e85854db9bf361116916d0673d2c89db91582
+    entrypoint: ["/usr/bin/db-manager"]
+    command: ["migrate", "--schemas_dir=/db-schemas/rid", "--db_version", "latest", "--datastore_host", "dss-crdb"]
+    depends_on:
+      dss-crdb: {condition: service_healthy}
+    networks: [lab]
+    restart: "no"
+
+  dss-migrate-scd:
+    profiles: [dss]
+    image: *dss_image
+    entrypoint: ["/usr/bin/db-manager"]
+    command: ["migrate", "--schemas_dir=/db-schemas/scd", "--db_version", "latest", "--datastore_host", "dss-crdb"]
+    depends_on:
+      dss-crdb: {condition: service_healthy}
+    networks: [lab]
+    restart: "no"
+
+  dss-migrate-aux:
+    profiles: [dss]
+    image: *dss_image
+    entrypoint: ["/usr/bin/db-manager"]
+    command: ["migrate", "--schemas_dir=/db-schemas/aux_", "--db_version", "latest", "--datastore_host", "dss-crdb"]
+    depends_on:
+      dss-crdb: {condition: service_healthy}
+    networks: [lab]
+    restart: "no"
+
+  dss:
+    profiles: [dss]
+    image: *dss_image
+    entrypoint: ["/usr/bin/core-service"]
+    # Accepted audiences (decision record M18): the compose service name
+    # `dss` and DSS_PUBLIC_HOST. Trusted key: the lab issuer's public key
+    # file (-public_key_files; the DSS reads it once at start, which is
+    # why the issuer keeps its key across restarts). -dump_requests is
+    # left off: it would log every bearer token.
+    command:
+      - -datastore_host=dss-crdb
+      - -addr=:8082
+      - -public_key_files=/var/lab-issuer/issuer-public.pem
+      - -accepted_jwt_audiences=dss,${DSS_PUBLIC_HOST:?set DSS_PUBLIC_HOST in deploy/.env}
+      - -enable_scd
+      - -allow_http_base_urls=${DSS_ALLOW_HTTP_BASE_URLS:?set DSS_ALLOW_HTTP_BASE_URLS in deploy/.env}
+      - -locality=${DSS_LOCALITY:?set DSS_LOCALITY in deploy/.env}
+      - -public_endpoint=${DSS_PUBLIC_ENDPOINT:?set DSS_PUBLIC_ENDPOINT in deploy/.env}
+      - -log_format=console
+    volumes:
+      - ${LAB_STATE_DIR:-./local}/public:/var/lab-issuer:ro
+    depends_on:
+      dss-migrate-rid: {condition: service_completed_successfully}
+      dss-migrate-scd: {condition: service_completed_successfully}
+      dss-migrate-aux: {condition: service_completed_successfully}
+      # With the issuer profile, the DSS waits for the key file; without
+      # it, the file must already be in LAB_STATE_DIR/public.
+      lab-issuer: {condition: service_healthy, required: false}
+    networks: [lab]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8082/healthy"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 10s
+
+  lab-issuer:
+    profiles: [issuer]
+    image: ${LAB_ISSUER_IMAGE:-uspace-lab/lab-issuer:local}
+    build:
+      context: ..
+      dockerfile: deploy/issuer/Dockerfile
+    # The state directory is a bind mount the issuer writes (key, secrets,
+    # public key); dss-up.sh runs it as the invoking user so the files
+    # stay the user's.
+    user: "${LAB_UID:-65532}:${LAB_GID:-65532}"
+    environment:
+      LAB_ISSUER_URL: ${LAB_ISSUER_URL:?set LAB_ISSUER_URL in deploy/.env}
+      LAB_ISSUER_TOKEN_TTL: ${LAB_ISSUER_TOKEN_TTL:-50m}
+      LAB_ISSUER_STATE_DIR: /state
+      LAB_ISSUER_CLIENTS: /etc/lab-issuer/clients.yaml
+      LAB_AUTHORITY_AUDIENCES: ${LAB_AUTHORITY_AUDIENCES:?set LAB_AUTHORITY_AUDIENCES in deploy/.env}
+      LAB_CISP_AUDIENCES: ${LAB_CISP_AUDIENCES:?set LAB_CISP_AUDIENCES in deploy/.env}
+      LAB_ANSP_AUDIENCES: ${LAB_ANSP_AUDIENCES:?set LAB_ANSP_AUDIENCES in deploy/.env}
+      LAB_USSP_AUDIENCES: ${LAB_USSP_AUDIENCES:?set LAB_USSP_AUDIENCES in deploy/.env}
+      # Read by `lab-issuer probe` (make dss-up), run inside this container
+      # because nothing is published.
+      DSS_URL: ${DSS_URL:-http://dss:8082}
+      DSS_PROBE_LAT_DEG: ${DSS_PROBE_LAT_DEG:-}
+      DSS_PROBE_LNG_DEG: ${DSS_PROBE_LNG_DEG:-}
+      DSS_PROBE_RADIUS_M: ${DSS_PROBE_RADIUS_M:-}
+      DSS_PROBE_ALT_LOWER_WGS84_M: ${DSS_PROBE_ALT_LOWER_WGS84_M:-}
+      DSS_PROBE_ALT_UPPER_WGS84_M: ${DSS_PROBE_ALT_UPPER_WGS84_M:-}
+      DSS_PROBE_WINDOW: ${DSS_PROBE_WINDOW:-10m}
+      DSS_PROBE_WRONG_AUDIENCE: ${DSS_PROBE_WRONG_AUDIENCE:-not-the-dss.invalid}
+    volumes:
+      - ${LAB_STATE_DIR:-./local}:/state
+      - ./issuer/clients.yaml:/etc/lab-issuer/clients.yaml:ro
+    networks: [lab]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/lab-issuer", "healthcheck"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+networks:
+  lab:
+    internal: true
+
+volumes:
+  dss-crdb-data:

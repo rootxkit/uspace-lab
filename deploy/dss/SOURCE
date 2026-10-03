@@ -1,0 +1,43 @@
+# The InterUSS DSS the lab runs (docs/WORKPACKAGES/WP-L2.md,
+# docs/PLAN.md D5). Never patched. Bump the tag, commit and every digest
+# together, re-read the flags and the API fields at the new commit (E-04)
+# and re-run `make dss-up`; deploy/deploy_test.go checks that
+# deploy/compose.yaml uses exactly the digests below.
+repo = https://github.com/interuss/dss.git
+tag = interuss/dss/v0.23.0
+commit = af0648f519dfe75d684fcb47add006d7e35969e0
+image = docker.io/interuss/dss:v0.23.0
+image_digest = sha256:0781042bef785f6c968efd4b4e1e85854db9bf361116916d0673d2c89db91582
+# Observed, not assumed: the binary in that image embeds the version
+# string v0.23.0 and the commit prefix af0648f5 (strings
+# /usr/bin/core-service | grep, 2026-10-03).
+image_embeds = v0.23.0 af0648f5
+# The datastore the commit's build/dev/docker-compose_dss.yaml uses
+# (cockroachdb/cockroach:v24.1.3, start-single-node --insecure).
+datastore_image = docker.io/cockroachdb/cockroach:v24.1.3
+datastore_digest = sha256:1936a3bf5a7121bca0ae78094f87073b96a513369661279698f6ef3985d4eb63
+fetched_at = 2026-10-03
+#
+# Read at that commit:
+# - core-service flags (cmds/core-service/main.go): -addr,
+#   -accepted_jwt_audiences, -public_key_files (PKIX PEM RSA keys, read
+#   once by auth.FromFileKeyResolver), -jwks_endpoint with -jwks_key_ids
+#   (needs the kids in advance, so not used: the issuer's kid is
+#   generated), -enable_scd, -allow_http_base_urls, -locality and
+#   -public_endpoint (both required by the aux server), -log_format,
+#   -dump_requests (left off: it logs bearer tokens); the datastore flags
+#   (-datastore_host, port 26257 default) in pkg/sqlstore/params/params.go.
+# - token checks (pkg/auth/auth.go, pkg/auth/claims/claims.go): RS256
+#   signature (RSA) against each configured key, aud in the accepted list, sub non-empty,
+#   iss non-empty, exp set and at most one hour ahead, scope a
+#   space-separated string.
+# - the probe's route and body (pkg/api/scdv1): POST
+#   /dss/v1/operational_intent_references/query, scopes
+#   utm.strategic_coordination or utm.conformance_monitoring_sa, body
+#   QueryOperationalIntentReferenceParameters; units M, reference W84,
+#   time format RFC3339 (pkg/scd/models/conversions.go). There is no GET
+#   on /dss/v1/operational_intent_references at this commit.
+# - migrations (build/dev/docker-compose_dss.yaml): db-manager migrate
+#   --schemas_dir=/db-schemas/{rid,scd,aux_} --db_version latest.
+# - cmds/dummy-oauth: GET /token?intended_audience=&scope=&sub= (the
+#   reference token shape; not used).
