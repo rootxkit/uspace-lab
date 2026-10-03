@@ -70,13 +70,14 @@ steps:
     aircraft: [b]
     do: hold
     for_s: 400
-  # Out horizontally: 330 m north is 315 m outside the circle (beyond
-  # h_m).
+  # Out horizontally: 145 m north is 130 m outside the circle (beyond
+  # h_m), the excursion the windows were written for (the return
+  # re-enters after about 130 m).
   - id: out-h
     at_s: 30
     aircraft: [a]
     do: goto
-    to: {north_m: 330, east_m: 0}
+    to: {north_m: 145, east_m: 0}
     speed_ms: 8
   - id: outside-h
     aircraft: [a]
@@ -110,7 +111,7 @@ steps:
     at_s: 160
     aircraft: [a]
     do: goto
-    to: {north_m: 330, east_m: 0}
+    to: {north_m: 145, east_m: 0}
     speed_ms: 8
   - id: outside-long
     aircraft: [a]
@@ -178,5 +179,11 @@ expect:
     aircraft: a
     raise: {after: cut, min_s: 14, max_s: 22}
     clear: {after: restore, min_s: 0, max_s: 6}
+  - name: nearby-told-lost-link
+    system: ussp
+    kind: nonconformance_nearby
+    aircraft: b
+    raise: {after: cut, min_s: 14, max_s: 23}
+    clear: {after: restore, min_s: 0, max_s: 7}
 judged_kinds: ["ussp:nonconformance", "ussp:nonconformance_nearby", "ussp:lost_link"]
 measure: [latency, ledger]

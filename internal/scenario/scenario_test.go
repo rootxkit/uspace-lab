@@ -4,6 +4,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -179,6 +180,45 @@ func TestWP10CutsTheStreamAfterTheReturn(t *testing.T) {
 	for _, st := range s.Steps {
 		if st.ID == "cut" && *st.AtS < back {
 			t.Fatalf("the cut at %.0f s comes before A is back (about %.0f s)", *st.AtS, back)
+		}
+	}
+}
+
+// ussp-wp10-conformance's returns re-enter A's circle inside the clear
+// windows: the run with the circle shrunk to 15 m and the excursion left
+// at 330 m cleared 44 s after the return started, outside max_s 40.
+func TestWP10ReturnsReenterInsideTheClearWindow(t *testing.T) {
+	s := load(t, "ussp-wp10-conformance.yaml")
+	in := s.Aircraft[0].Operator.Intent
+	steps := map[string]Step{}
+	for _, st := range s.Steps {
+		if st.ID != "" {
+			steps[st.ID] = st
+		}
+	}
+	for _, e := range s.Expect {
+		if e.Kind != "nonconformance" || e.Clear == nil {
+			continue
+		}
+		back := steps[strings.TrimSuffix(e.Clear.After, ".start")]
+		if back.Do != DoGoto {
+			continue
+		}
+		// From the excursion point the return re-enters the circle after
+		// (distance - radius) at its speed; clear_after_s and a 10 s
+		// margin (acceleration, evaluation period) on top.
+		var from *Offset
+		for _, st := range s.Steps {
+			if st.ID == back.ID {
+				break
+			}
+			if st.Do == DoGoto && slices.Contains(st.Aircraft, "a") && st.To != nil {
+				from = st.To
+			}
+		}
+		d := math.Hypot(from.NorthM-in.Center.NorthM, from.EastM-in.Center.EastM) - in.RadiusM
+		if need := d/back.SpeedMS + s.PolicyDoc.Monitor.ClearAfterS + 10; need > e.Clear.MaxS {
+			t.Errorf("%s: the return re-enters after about %.0f s, after max_s %.0f", e.Name, need, e.Clear.MaxS)
 		}
 	}
 }
