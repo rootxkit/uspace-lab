@@ -1,2 +1,6 @@
 knowledge/tools/.venv/
 __pycache__/
+# WP-L2: the lab stack's generated state (signing key, client secrets,
+# public key outputs) and the local env file. Never committed (spec 06 §4).
+deploy/.env
+deploy/local/

@@ -80,3 +80,15 @@ scripts-test:
 # What the contracts CI job runs, offline part.
 contracts: examples scripts-test
 	$(GO) run ./scripts/contracts index -check
+
+# --- WP-L2 lab stack (deploy/) -------------------------------------------------
+.PHONY: dss-up dss-down
+
+# Start the DSS and the lab issuer, wait until healthy, prove them
+# together (deploy/README.md). Needs Docker with Compose v2.
+dss-up:
+	deploy/dss-up.sh
+
+# Remove the stack and its volumes; keeps deploy/local/ (key, secrets).
+dss-down:
+	deploy/dss-down.sh

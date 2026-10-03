@@ -1,0 +1,132 @@
+package deploy
+
+import (
+	"os"
+	"regexp"
+	"sort"
+	"strings"
+	"testing"
+)
+
+func read(t *testing.T, path string) string {
+	t.Helper()
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
+}
+
+// sourceField returns `name = value` from dss/SOURCE.
+func sourceField(t *testing.T, src, name string) string {
+	t.Helper()
+	m := regexp.MustCompile(`(?m)^` + regexp.QuoteMeta(name) + ` = (\S+)$`).FindStringSubmatch(src)
+	if m == nil {
+		t.Fatalf("dss/SOURCE has no %s", name)
+	}
+	return m[1]
+}
+
+var (
+	imageLine = regexp.MustCompile(`(?m)^\s*image:\s*(?:&\w+\s+)?(\S+)\s*$`)
+	fromLine  = regexp.MustCompile(`(?m)^FROM\s+(\S+)`)
+	digest    = regexp.MustCompile(`@sha256:[0-9a-f]{64}$`)
+)
+
+// Every third-party image is pinned by digest, and the DSS and its
+// datastore by exactly the digests dss/SOURCE records. The one image
+// without a digest is the lab issuer built from this repository. The
+// check is shown able to fail on a tag-only line (E-01).
+func TestImagesPinnedByDigest(t *testing.T) {
+	compose := read(t, "compose.yaml")
+	src := read(t, "dss/SOURCE")
+	images := imageLine.FindAllStringSubmatch(compose, -1)
+	if len(images) < 3 {
+		t.Fatalf("found %d image lines in compose.yaml", len(images))
+	}
+	for _, m := range images {
+		img := m[1]
+		if strings.HasPrefix(img, "*") || strings.HasPrefix(img, "${LAB_ISSUER_IMAGE") {
+			continue
+		}
+		if !digest.MatchString(img) {
+			t.Errorf("compose.yaml: image %s is not pinned by digest", img)
+		}
+	}
+	for _, pair := range [][2]string{{"image", "image_digest"}, {"datastore_image", "datastore_digest"}} {
+		ref := strings.TrimPrefix(sourceField(t, src, pair[0]), "docker.io/") + "@" + sourceField(t, src, pair[1])
+		if !strings.Contains(compose, "image: "+ref) && !strings.Contains(compose, "image: &dss_image "+ref) {
+			t.Errorf("compose.yaml does not use %s from dss/SOURCE", ref)
+		}
+	}
+	if commit := sourceField(t, src, "commit"); !regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString(commit) {
+		t.Errorf("dss/SOURCE commit %q is not a full SHA", commit)
+	}
+	froms := fromLine.FindAllStringSubmatch(read(t, "issuer/Dockerfile"), -1)
+	if len(froms) != 2 {
+		t.Fatalf("issuer/Dockerfile: %d FROM lines", len(froms))
+	}
+	for _, m := range froms {
+		if !digest.MatchString(m[1]) {
+			t.Errorf("issuer/Dockerfile: %s is not pinned by digest", m[1])
+		}
+	}
+	if digest.MatchString("cockroachdb/cockroach:v24.1.3") {
+		t.Fatal("the digest check accepts a tag-only image")
+	}
+}
+
+var varRef = regexp.MustCompile(`\$\{([A-Z][A-Z0-9_]*)`)
+
+// Every variable compose.yaml reads is listed, with a comment, in
+// .env.example; LAB_UID and LAB_GID are set by dss-up.sh, not the env
+// file. And nothing in .env.example is unused.
+func TestEnvExampleListsEveryVariable(t *testing.T) {
+	compose := read(t, "compose.yaml")
+	env := read(t, ".env.example")
+	used := map[string]bool{}
+	for _, m := range varRef.FindAllStringSubmatch(compose, -1) {
+		used[m[1]] = true
+	}
+	setByScript := map[string]bool{"LAB_UID": true, "LAB_GID": true}
+	listed := map[string]bool{}
+	for _, line := range strings.Split(env, "\n") {
+		if name, _, ok := strings.Cut(line, "="); ok && !strings.HasPrefix(line, "#") {
+			listed[name] = true
+		}
+	}
+	var missing, unused []string
+	for v := range used {
+		if !listed[v] && !setByScript[v] {
+			missing = append(missing, v)
+		}
+	}
+	for v := range listed {
+		if !used[v] {
+			unused = append(unused, v)
+		}
+	}
+	sort.Strings(missing)
+	sort.Strings(unused)
+	if len(missing) > 0 || len(unused) > 0 {
+		t.Fatalf(".env.example: missing %v, unused %v", missing, unused)
+	}
+	if len(used) < 10 {
+		t.Fatalf("only %d variables found in compose.yaml", len(used))
+	}
+}
+
+// Nothing is published: no ports: key in compose.yaml (WP-L2: one
+// isolated network; on the droplet only Caddy publishes), and no
+// absolute host path in a volume (the file is consumed as an include).
+func TestNothingPublishedNoAbsolutePaths(t *testing.T) {
+	compose := read(t, "compose.yaml")
+	if regexp.MustCompile(`(?m)^\s*ports:`).MatchString(compose) {
+		t.Error("compose.yaml publishes a port")
+	}
+	for _, m := range regexp.MustCompile(`(?m)^\s*-\s*(\S+):/`).FindAllStringSubmatch(compose, -1) {
+		if strings.HasPrefix(m[1], "/") || regexp.MustCompile(`^[A-Za-z]:`).MatchString(m[1]) {
+			t.Errorf("absolute host path %s", m[1])
+		}
+	}
+}
