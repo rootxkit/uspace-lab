@@ -119,3 +119,15 @@ scenario:
 # What the scenarios workflow runs: every reference scenario, in parallel.
 scenarios-ci:
 	GO=$(GO) scripts/run-reference-scenarios.sh results/ci-reference
+
+# --- WP-L2 lab stack (deploy/) -------------------------------------------------
+.PHONY: dss-up dss-down
+
+# Start the DSS and the lab issuer, wait until healthy, prove them
+# together (deploy/README.md). Needs Docker with Compose v2.
+dss-up:
+	deploy/dss-up.sh
+
+# Remove the stack and its volumes; keeps deploy/local/ (key, secrets).
+dss-down:
+	deploy/dss-down.sh

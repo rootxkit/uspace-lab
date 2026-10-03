@@ -1,0 +1,36 @@
+# gitleaks configuration for uspace-lab (WP-L2; spec 06 §4): the default
+# rules plus two narrow rule allowlists, adapted from uspace-core's
+# .gitleaks.toml for the vectors this repository keeps under
+# knowledge/vectors/. Read by gitleaks from the repository root.
+#
+# There is deliberately no global [allowlist]: allowlists on a rule touch
+# that rule only, so any other secret in these files is still reported.
+# The lab issuer's generated key and secrets live in deploy/local/, which
+# is git-ignored and never scanned as committed content.
+title = "uspace-lab"
+
+[extend]
+useDefault = true
+
+# The knowledge vectors carry EU operator registration numbers in their
+# public form ("compare_key": the number with the three secret characters
+# already stripped, LESSONS G-05); generic-api-key reads the key name as a
+# credential. Limited to that rule, to compare_key lines and to the vector
+# files.
+[[rules]]
+id = "generic-api-key"
+[[rules.allowlists]]
+description = "public operator numbers in the knowledge vectors"
+condition = "AND"
+paths = ['''^knowledge/vectors/[^/]+\.json$''']
+regexTarget = "line"
+regexes = ['''"compare_key"\s*:''']
+
+# jwt_verify.json carries test JWTs signed by a key generated at run time
+# by uspace-core's auth/internal/genvectors and discarded, so they grant
+# nothing anywhere. Limited to the jwt rule and to that one file.
+[[rules]]
+id = "jwt"
+[[rules.allowlists]]
+description = "discarded-key test tokens in the jwt_verify vector"
+paths = ['''^knowledge/vectors/jwt_verify\.json$''']

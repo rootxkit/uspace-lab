@@ -1,0 +1,10 @@
+# Build context of deploy/issuer/Dockerfile (the repository root): only
+# what the Go build needs. Never the generated state (keys, secrets).
+*
+!go.mod
+!go.sum
+!cmd/
+!internal/
+!deploy/issuer/clients.yaml
+**/testdata/
+**/*_test.go

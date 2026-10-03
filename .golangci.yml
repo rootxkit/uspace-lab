@@ -96,8 +96,9 @@ linters:
       - path: ^scripts/
         text: "fmt\\.Print|os\\.Exit"
         linters: [forbidigo]
-      # lab: cmd/ holds the simulators' and the runner's main packages
-      # (WP-L5): a CLI prints its result and returns its exit status.
+      # lab: cmd/ holds the lab binaries (WP-L2 on: the issuer, and from
+      # WP-L5 the simulators and the runner): a command prints its output
+      # and returns an exit status, like scripts/.
       - path: ^cmd/
         text: "fmt\\.Print|os\\.Exit"
         linters: [forbidigo]
