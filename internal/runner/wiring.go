@@ -173,6 +173,47 @@ func (r *run) startOperators(ctx, simCtx context.Context, wg *sync.WaitGroup) er
 	return nil
 }
 
+// endIntents ends every intent the run filed and left open (accepted or
+// activated), once the operators are stopped and their ledgers read. An
+// intent lasts beyond its run (lasts_s), and a later run's intent over
+// the same volume would be refused as filed second (intent_filed_first,
+// uspace-ussp WP-7 runbook, step 2): the owed runs follow each other on
+// one USSP.
+func (r *run) endIntents(ctx context.Context, res *Result) {
+	if res == nil {
+		return
+	}
+	base, _, _ := r.usspEndpoint()
+	for i := range res.Intents {
+		in := &res.Intents[i]
+		if in.IntentID == "" || (in.State != "accepted" && in.State != "activated") {
+			continue
+		}
+		var a *scenario.Aircraft
+		for j := range r.sc.Aircraft {
+			if r.sc.Aircraft[j].Name == in.Aircraft {
+				a = &r.sc.Aircraft[j]
+			}
+		}
+		if a == nil || a.Operator == nil {
+			in.EndError = "no such aircraft"
+			continue
+		}
+		tokens, err := r.operatorTokens(a)
+		if err != nil {
+			in.EndError = err.Error()
+			continue
+		}
+		d, err := (&simop.Intents{BaseURL: base, Tokens: tokens}).Change(ctx, in.IntentID, "end")
+		if err != nil {
+			in.EndError = err.Error()
+			r.log.Warn("intent not ended", "aircraft", in.Aircraft, "intent", in.IntentID, "err", err)
+			continue
+		}
+		in.Ended = d.State
+	}
+}
+
 func (r *run) startReceivers(simCtx context.Context, wg *sync.WaitGroup) error {
 	for _, rx := range r.sc.Receivers {
 		var txs []simrx.Transmitter

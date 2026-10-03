@@ -91,6 +91,10 @@ type IntentRecord struct {
 	Decision string `json:"decision,omitempty"`
 	State    string `json:"state,omitempty"`
 	Error    string `json:"error,omitempty"`
+	// Ended is the state the USSP answered when the runner ended the
+	// intent after the run; EndError why it could not.
+	Ended    string `json:"ended,omitempty"`
+	EndError string `json:"end_error,omitempty"`
 }
 
 // TimelineRecord is a knob or request as it was executed.

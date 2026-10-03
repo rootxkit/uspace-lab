@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -61,5 +62,51 @@ func TestRequestCarriesTheSessionAsTheSystemReadsIt(t *testing.T) {
 	}
 	if got.auth != "" || got.cookie == "" {
 		t.Fatalf("cookie only: %+v", got)
+	}
+}
+
+// The runner ends the intents it left open (accepted or activated) and
+// records the answer; a rejected intent is not touched. Without it a
+// run's intent outlives the run and the next run's intent over the same
+// volume is refused as filed second (uspace-ussp WP-7 runbook, step 2).
+func TestRunEndsTheIntentsItLeftOpen(t *testing.T) {
+	var ended []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/oauth/token":
+			_, _ = w.Write([]byte(`{"access_token":"tok","token_type":"Bearer","expires_in":3600}`))
+		case r.Method == http.MethodPatch && r.Header.Get("Authorization") == "Bearer tok":
+			ended = append(ended, filepath.Base(r.URL.Path))
+			_, _ = w.Write([]byte(`{"intent_id":"` + filepath.Base(r.URL.Path) + `","decision":"authorised","state":"ended"}`))
+		default:
+			http.Error(w, "no", http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "op.secret"), []byte("s\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	r := &run{
+		tg: &Targets{Mode: ModeSystems, dir: dir, USSP: &USSPTarget{BaseURL: srv.URL, TokenURL: srv.URL + "/oauth/token", Audience: "u",
+			Clients: map[string]Client{"default": {ClientID: "op", SecretFile: "op.secret"}}}},
+		sc: &scenario.Scenario{Aircraft: []scenario.Aircraft{
+			{Name: "a", Operator: &scenario.Operator{System: scenario.SystemUSSP}},
+			{Name: "b", Operator: &scenario.Operator{System: scenario.SystemUSSP}},
+			{Name: "c", Operator: &scenario.Operator{System: scenario.SystemUSSP}},
+		}},
+		log: slog.New(slog.DiscardHandler),
+	}
+	res := &Result{Intents: []IntentRecord{
+		{Aircraft: "a", IntentID: "i-a", Decision: "authorised", State: "activated"},
+		{Aircraft: "b", IntentID: "i-b", Decision: "rejected", State: "rejected"},
+		{Aircraft: "c", IntentID: "i-c", Decision: "authorised", State: "accepted"},
+	}}
+	r.endIntents(context.Background(), res)
+	if len(ended) != 2 || ended[0] != "i-a" || ended[1] != "i-c" {
+		t.Fatalf("ended %v", ended)
+	}
+	if res.Intents[0].Ended != "ended" || res.Intents[1].Ended != "" || res.Intents[2].Ended != "ended" {
+		t.Fatalf("%+v", res.Intents)
 	}
 }
