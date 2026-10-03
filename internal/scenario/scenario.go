@@ -10,6 +10,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/rootxkit/uspace-core/core"
+	"github.com/rootxkit/uspace-core/serial"
 )
 
 // Format is the scenario format version this package reads.
@@ -349,6 +350,13 @@ func (s *Scenario) Validate() error {
 			if in := a.Operator.Intent; in != nil {
 				if !(in.RadiusM > 0) || in.AltUpperRelM <= in.AltLowerRelM || !(in.LastsS > 0) || in.StartsBeforeS < 0 {
 					return core.Fieldf(f+".operator.intent", "radius_m > 0, alt_upper_rel_m > alt_lower_rel_m, lasts_s > 0")
+				}
+				// The USSP refuses an intent whose serial is not valid for
+				// its class (uspace-ussp internal/intent/validate.go,
+				// serial.ValidateForClass: CTA-2063-A for C1, C2, C3, C5
+				// and C6), and the authority's registry refuses the UAS.
+				if err := serial.ValidateForClass(a.Serial, in.ClassLabel); err != nil {
+					return core.Fieldf(f+".serial", "%q for class %q: %v", a.Serial, in.ClassLabel, err)
 				}
 			}
 		}

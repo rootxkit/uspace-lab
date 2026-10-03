@@ -22,7 +22,7 @@ tail_s: 5
 aircraft:
   - name: a
     sysid: 1
-    serial: LABWP07A0001
+    serial: LABX9WP07A0001
     operator_reg: GEOLAB000001
     operator:
       system: ussp
@@ -38,7 +38,7 @@ aircraft:
         mode: VLOS
   - name: b
     sysid: 2
-    serial: LABWP07B0002
+    serial: LABX9WP07B0002
     operator_reg: GEOLAB000002
     operator:
       system: ussp

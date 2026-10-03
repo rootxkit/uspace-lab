@@ -18,7 +18,7 @@ tail_s: 5
 aircraft:
   - name: a
     sysid: 1
-    serial: LABSC21A0001
+    serial: LABX9SC21A0001
     operator_reg: GEOLAB000001
     operator: &op
       system: ussp
@@ -34,7 +34,7 @@ aircraft:
         class_label: C2
   - name: b
     sysid: 2
-    serial: LABSC21B0002
+    serial: LABX9SC21B0002
     operator_reg: GEOLAB000001
     operator: *op
 steps:

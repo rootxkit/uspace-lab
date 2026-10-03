@@ -20,7 +20,7 @@ tail_s: 8
 aircraft:
   - name: a
     sysid: 1
-    serial: LABWP12A0001
+    serial: LABX9WP12A0001
     operator_reg: GEOLAB000001
     operator:
       system: ussp

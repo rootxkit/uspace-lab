@@ -20,7 +20,7 @@ tail_s: 5
 aircraft:
   - name: a
     sysid: 1
-    serial: LABKT4A0001
+    serial: LABX8KT4A0001
     operator_reg: GEOLAB000001
     operator_id: GEOLAB000001
     operator: &op
@@ -40,14 +40,14 @@ aircraft:
     receivers: [lab-rx-1]
   - name: b
     sysid: 2
-    serial: LABKT4B0002
+    serial: LABX8KT4B0002
     operator_reg: GEOLAB000001
     operator_id: GEOLAB000001
     operator: *op
     receivers: [lab-rx-1]
   - name: c
     sysid: 3
-    serial: LABKT4C0003
+    serial: LABX8KT4C0003
     operator_reg: GEOLAB000001
     operator_id: GEOLAB000001
     operator: *op

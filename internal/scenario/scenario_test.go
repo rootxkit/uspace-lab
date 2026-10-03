@@ -59,23 +59,26 @@ func TestRefusals(t *testing.T) {
 		t.Fatalf("the unchanged scenario is refused: %v", err)
 	}
 	cases := map[string]func(s *Scenario){
-		"format":              func(s *Scenario) { s.Format = "scenario/v2" },
-		"id":                  func(s *Scenario) { s.ID = "Not A Slug" },
-		"systems":             func(s *Scenario) { s.Systems = []string{"tower"} },
-		"duration":            func(s *Scenario) { s.DurationS = 0 },
-		"serial too long":     func(s *Scenario) { s.Aircraft[0].Serial = strings.Repeat("A", 21) },
-		"unknown receiver":    func(s *Scenario) { s.Aircraft[0].Receivers = []string{"nope"} },
-		"zone type":           func(s *Scenario) { s.Zones[0].Type = "USPACE" },
-		"zone ref":            func(s *Scenario) { s.Zones[0].Lower.Ref = "FL" },
-		"unknown mark":        func(s *Scenario) { s.Expect[0].Raise.After = "nowhere" },
-		"window":              func(s *Scenario) { s.Expect[0].Raise.MinS, s.Expect[0].Raise.MaxS = 5, 1 },
-		"unknown aircraft":    func(s *Scenario) { s.Expect[0].Aircraft = "zz" },
-		"step aircraft":       func(s *Scenario) { s.Steps[0].Aircraft = []string{"zz"} },
-		"knob without time":   func(s *Scenario) { s.Steps = append(s.Steps, Step{Do: DoKnob, Knob: &Knob{Receiver: "down"}}) },
-		"verb":                func(s *Scenario) { s.Steps[0].Do = "loop" },
-		"receiver system":     func(s *Scenario) { s.Receivers[0].System = "ussp" },
-		"operator system":     func(s *Scenario) { s.Aircraft[0].Operator.System = "authority" },
-		"intent band":         func(s *Scenario) { s.Aircraft[0].Operator.Intent.AltUpperRelM = -50 },
+		"format":            func(s *Scenario) { s.Format = "scenario/v2" },
+		"id":                func(s *Scenario) { s.ID = "Not A Slug" },
+		"systems":           func(s *Scenario) { s.Systems = []string{"tower"} },
+		"duration":          func(s *Scenario) { s.DurationS = 0 },
+		"serial too long":   func(s *Scenario) { s.Aircraft[0].Serial = strings.Repeat("A", 21) },
+		"unknown receiver":  func(s *Scenario) { s.Aircraft[0].Receivers = []string{"nope"} },
+		"zone type":         func(s *Scenario) { s.Zones[0].Type = "USPACE" },
+		"zone ref":          func(s *Scenario) { s.Zones[0].Lower.Ref = "FL" },
+		"unknown mark":      func(s *Scenario) { s.Expect[0].Raise.After = "nowhere" },
+		"window":            func(s *Scenario) { s.Expect[0].Raise.MinS, s.Expect[0].Raise.MaxS = 5, 1 },
+		"unknown aircraft":  func(s *Scenario) { s.Expect[0].Aircraft = "zz" },
+		"step aircraft":     func(s *Scenario) { s.Steps[0].Aircraft = []string{"zz"} },
+		"knob without time": func(s *Scenario) { s.Steps = append(s.Steps, Step{Do: DoKnob, Knob: &Knob{Receiver: "down"}}) },
+		"verb":              func(s *Scenario) { s.Steps[0].Do = "loop" },
+		"receiver system":   func(s *Scenario) { s.Receivers[0].System = "ussp" },
+		"operator system":   func(s *Scenario) { s.Aircraft[0].Operator.System = "authority" },
+		"intent band":       func(s *Scenario) { s.Aircraft[0].Operator.Intent.AltUpperRelM = -50 },
+		"serial not CTA for C2": func(s *Scenario) {
+			s.Aircraft[0].Serial = "LABSC03A0001" // no length character: the USSP refuses it for C2
+		},
 		"expect intent of no": func(s *Scenario) { s.ExpectIntents = []IntentExpect{{Aircraft: "zz", Decision: "authorised"}} },
 	}
 	for name, f := range cases {

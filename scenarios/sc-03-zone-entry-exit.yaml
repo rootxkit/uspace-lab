@@ -21,7 +21,7 @@ tail_s: 8
 aircraft:
   - name: a
     sysid: 1
-    serial: LABSC03A0001
+    serial: LABX9SC03A0001
     operator_reg: GEOLAB000001
     operator_id: GEOLAB000001
     operator:
