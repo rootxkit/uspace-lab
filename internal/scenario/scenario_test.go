@@ -92,6 +92,24 @@ func TestRefusals(t *testing.T) {
 	}
 }
 
+// An aircraft launched outside its own intent is refused at compile
+// time (it would be nonconforming from its first airborne sample), and
+// one parked there is not.
+func TestTakeoffOutsideTheIntentIsRefused(t *testing.T) {
+	lab, err := LoadLab("../../sim/sitl.env.example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := load(t, "ussp-wp10-conformance.yaml")
+	if _, err := Compile(s, lab, time.Unix(1_790_000_000, 0)); err != nil {
+		t.Fatalf("B parked at home: %v", err)
+	}
+	s.Steps[0].Aircraft = append(s.Steps[0].Aircraft, "b") // B takes off at home, 600 m from its intent
+	if _, err := Compile(s, lab, time.Unix(1_790_000_000, 0)); err == nil || !strings.Contains(err.Error(), "aircraft b takes off") {
+		t.Fatalf("got %v", err)
+	}
+}
+
 // The landing estimate against what SITL measured (LandS's comment).
 func TestLandSCoversTheMeasuredLandings(t *testing.T) {
 	for alt, measured := range map[float64]float64{20: 30.6, 30: 37.5, 60: 57.5} {

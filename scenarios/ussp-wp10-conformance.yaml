@@ -14,7 +14,13 @@ note: >-
   returns, climbs above the authorised upper and descends, then leaves
   for more than 60 s (contingent, recorded with the alert's numbers),
   returns, and goes silent past lost_link_s while airborne. B, 600 m
-  north on its own intent, is the nearby operator.
+  north on its own intent, is the nearby operator; its aircraft stays
+  parked at its home, streaming on the ground: flown from there it would
+  be outside its own volume and nonconforming itself until it arrived,
+  and a volume that also held its home would overlap A's and be refused
+  as filed second (both seen in the first systems run). A's excursions
+  go north: 330 m east the SITL ground rises to about 635 m AMSL, where A
+  at 30 m above home stopped against it 116 m out (the same run).
 duration_s: 330
 tail_s: 8
 aircraft:
@@ -55,20 +61,16 @@ aircraft:
 steps:
   - id: climb
     at_s: 0
-    aircraft: [a, b]
+    aircraft: [a]
     do: takeoff
     alt_rel_m: 30
-  - id: b-station
-    aircraft: [b]
-    do: goto
-    to: {north_m: 600, east_m: 25}
-    speed_ms: 10
-  # Out horizontally: 330 m east is 130 m outside the circle (beyond h_m).
+  # Out horizontally: 330 m north is 130 m outside the circle (beyond
+  # h_m), and 70 m short of B's volume.
   - id: out-h
     at_s: 30
     aircraft: [a]
     do: goto
-    to: {north_m: 0, east_m: 330}
+    to: {north_m: 330, east_m: 0}
     speed_ms: 8
   - id: outside-h
     aircraft: [a]
@@ -102,7 +104,7 @@ steps:
     at_s: 160
     aircraft: [a]
     do: goto
-    to: {north_m: 0, east_m: 330}
+    to: {north_m: 330, east_m: 0}
     speed_ms: 8
   - id: outside-long
     aircraft: [a]

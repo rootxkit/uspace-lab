@@ -7,6 +7,7 @@ import (
 
 	"github.com/rootxkit/uspace-core/core"
 	"github.com/rootxkit/uspace-core/ed269"
+	"github.com/rootxkit/uspace-core/geodesy"
 	"github.com/rootxkit/uspace-core/zones"
 
 	"github.com/rootxkit/uspace-lab/internal/vehicle"
@@ -91,6 +92,21 @@ func Compile(s *Scenario, lab *Lab, t0 time.Time) (*Compiled, error) {
 		}
 		if err := p.Validate(); err != nil {
 			return nil, fmt.Errorf("aircraft %s: %w", name, err)
+		}
+	}
+	// An aircraft that takes off must take off inside its own intent:
+	// the USSP judges conformance from the first airborne sample, so one
+	// launched outside its volume is nonconforming until it gets there
+	// (seen in the first systems run of ussp-wp10-conformance).
+	for i := range s.Aircraft {
+		a := &s.Aircraft[i]
+		if a.Operator == nil || a.Operator.Intent == nil || len(c.Plans[a.Name].Steps) == 0 {
+			continue
+		}
+		h := lab.Home(a.Sysid)
+		d, err := geodesy.DistanceM(core.LatLon{LatDeg: h.LatDeg, LonDeg: h.LonDeg}, lab.At(a.Operator.Intent.Center))
+		if err == nil && d > a.Operator.Intent.RadiusM {
+			return nil, fmt.Errorf("aircraft %s takes off %.0f m from its intent's centre, outside its %.0f m circle", a.Name, d, a.Operator.Intent.RadiusM)
 		}
 	}
 	sort.SliceStable(c.Timeline, func(i, j int) bool { return c.Timeline[i].AtS < c.Timeline[j].AtS })
