@@ -110,6 +110,64 @@ func TestTakeoffOutsideTheIntentIsRefused(t *testing.T) {
 	}
 }
 
+// sitlEndS is a conservative end time of an aircraft's last flight step
+// as SITL flies them one after the other: 30 s to arm (the EKF settles
+// after a restart), 1 m/s up, a goto at its speed plus 10 s, a hold for
+// its time, a landing by LandS. A step never starts before its at_s.
+func sitlEndS(s *Scenario, aircraft, untilID string) float64 {
+	t, alt := 0.0, 0.0
+	at := func(n, e float64) (float64, float64) { return n, e }
+	pn, pe := 0.0, 0.0
+	for _, st := range s.Steps {
+		mine := false
+		for _, a := range st.Aircraft {
+			mine = mine || a == aircraft
+		}
+		if !mine {
+			continue
+		}
+		if st.AtS != nil && *st.AtS > t {
+			t = *st.AtS
+		}
+		switch st.Do {
+		case DoTakeoff:
+			t += 30 + st.AltRelM/1.0
+			alt = st.AltRelM
+		case DoGoto:
+			n, e := at(st.To.NorthM, st.To.EastM)
+			d := math.Hypot(n-pn, e-pe)
+			if st.AltRelM > 0 {
+				d = math.Max(d, math.Abs(st.AltRelM-alt))
+				alt = st.AltRelM
+			}
+			t += d/math.Max(st.SpeedMS, 1) + 10
+			pn, pe = n, e
+		case DoHold:
+			t += st.ForS
+		case DoLand:
+			t += LandS(alt)
+		}
+		if st.ID == untilID {
+			return t
+		}
+	}
+	return t
+}
+
+// ussp-wp10-conformance cuts A's stream to raise lost_link once A is back
+// inside its volume; the first systems run cut it at +285 s while A was
+// still outside (it reached back-long at +320 s), so the long
+// nonconformance could not clear and the lost link fell inside it.
+func TestWP10CutsTheStreamAfterTheReturn(t *testing.T) {
+	s := load(t, "ussp-wp10-conformance.yaml")
+	back := sitlEndS(s, "a", "back-long")
+	for _, st := range s.Steps {
+		if st.ID == "cut" && *st.AtS < back {
+			t.Fatalf("the cut at %.0f s comes before A is back (about %.0f s)", *st.AtS, back)
+		}
+	}
+}
+
 // The landing estimate against what SITL measured (LandS's comment).
 func TestLandSCoversTheMeasuredLandings(t *testing.T) {
 	for alt, measured := range map[float64]float64{20: 30.6, 30: 37.5, 60: 57.5} {

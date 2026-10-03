@@ -21,7 +21,7 @@ note: >-
   as filed second (both seen in the first systems run). A's excursions
   go north: 330 m east the SITL ground rises to about 635 m AMSL, where A
   at 30 m above home stopped against it 116 m out (the same run).
-duration_s: 330
+duration_s: 450
 tail_s: 8
 aircraft:
   - name: a
@@ -115,14 +115,17 @@ steps:
     do: goto
     to: {north_m: 0, east_m: 0}
     speed_ms: 8
-  # Silence while airborne: lost link after lost_link_s.
+  # Silence while airborne, once A is back inside: lost link after
+  # lost_link_s. The flight steps follow each other at SITL's pace, not
+  # at their at_s (the first systems run reached back-long at +320 s),
+  # so the cut comes well after the return.
   - id: cut
-    at_s: 285
+    at_s: 400
     aircraft: [a]
     do: knob
     knob: {operator_stream: stop}
   - id: restore
-    at_s: 310
+    at_s: 425
     aircraft: [a]
     do: knob
     knob: {operator_stream: start}
