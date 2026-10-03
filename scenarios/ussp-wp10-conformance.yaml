@@ -13,14 +13,16 @@ note: >-
   horizontal, 15 m vertical, 60 s. A leaves the volume horizontally and
   returns, climbs above the authorised upper and descends, then leaves
   for more than 60 s (contingent, recorded with the alert's numbers),
-  returns, and goes silent past lost_link_s while airborne. B, 600 m
-  north on its own intent, is the nearby operator; its aircraft stays
-  parked at its home, streaming on the ground: flown from there it would
-  be outside its own volume and nonconforming itself until it arrived,
-  and a volume that also held its home would overlap A's and be refused
-  as filed second (both seen in the first systems run). A's excursions
-  go north: 330 m east the SITL ground rises to about 635 m AMSL, where A
-  at 30 m above home stopped against it 116 m out (the same run).
+  returns, and goes silent past lost_link_s while airborne. B is the
+  nearby operator: it hovers over its own home, 50 m east of A's, inside
+  its own 15 m circle, which does not touch A's (two volumes that
+  overlap: the second is refused as filed second). The USSP tells only
+  flying neighbours (Art. 13(2), uspace-ussp internal/conformance
+  nearby.go), so B must be airborne; B launched from its home towards a
+  volume elsewhere would be nonconforming itself until it arrived (both
+  seen in the first systems runs). A's excursions go north: 330 m east
+  the SITL ground rises to about 635 m AMSL, where A at 30 m above home
+  stopped against it 116 m out.
 duration_s: 450
 tail_s: 8
 aircraft:
@@ -33,7 +35,7 @@ aircraft:
       client: op-a
       intent:
         center: {north_m: 0, east_m: 0}
-        radius_m: 200
+        radius_m: 15
         alt_lower_rel_m: -10
         alt_upper_rel_m: 60
         starts_before_s: 60
@@ -42,15 +44,15 @@ aircraft:
         subcategory: A2
         class_label: C2
   - name: b
-    sysid: 2
+    sysid: 3
     serial: LABX9WP10B0002
     operator_reg: GEOLAB000002
     operator:
       system: ussp
       client: op-b
       intent:
-        center: {north_m: 600, east_m: 25}
-        radius_m: 200
+        center: {north_m: 0, east_m: 50}
+        radius_m: 15
         alt_lower_rel_m: -10
         alt_upper_rel_m: 60
         starts_before_s: 60
@@ -61,11 +63,15 @@ aircraft:
 steps:
   - id: climb
     at_s: 0
-    aircraft: [a]
+    aircraft: [a, b]
     do: takeoff
     alt_rel_m: 30
-  # Out horizontally: 330 m north is 130 m outside the circle (beyond
-  # h_m), and 70 m short of B's volume.
+  - id: b-hover
+    aircraft: [b]
+    do: hold
+    for_s: 400
+  # Out horizontally: 330 m north is 315 m outside the circle (beyond
+  # h_m).
   - id: out-h
     at_s: 30
     aircraft: [a]

@@ -95,6 +95,21 @@ func TestRefusals(t *testing.T) {
 // An aircraft launched outside its own intent is refused at compile
 // time (it would be nonconforming from its first airborne sample), and
 // one parked there is not.
+// A nearby operator expected to be told must fly (the USSP tells only
+// flying neighbours); found with B parked in a systems run of
+// ussp-wp10-conformance, told nothing three times.
+func TestNearbyOperatorMustFly(t *testing.T) {
+	s := load(t, "ussp-wp10-conformance.yaml")
+	if err := s.Validate(); err != nil {
+		t.Fatalf("B flying: %v", err)
+	}
+	s.Steps[0].Aircraft = []string{"a"}
+	s.Steps = append(s.Steps[:1], s.Steps[2:]...) // no b-hover either
+	if err := s.Validate(); err == nil || !strings.Contains(err.Error(), "never takes off") {
+		t.Fatalf("B parked: %v", err)
+	}
+}
+
 func TestTakeoffOutsideTheIntentIsRefused(t *testing.T) {
 	lab, err := LoadLab("../../sim/sitl.env.example")
 	if err != nil {
@@ -102,9 +117,9 @@ func TestTakeoffOutsideTheIntentIsRefused(t *testing.T) {
 	}
 	s := load(t, "ussp-wp10-conformance.yaml")
 	if _, err := Compile(s, lab, time.Unix(1_790_000_000, 0)); err != nil {
-		t.Fatalf("B parked at home: %v", err)
+		t.Fatalf("B over its home: %v", err)
 	}
-	s.Steps[0].Aircraft = append(s.Steps[0].Aircraft, "b") // B takes off at home, 600 m from its intent
+	s.Aircraft[1].Operator.Intent.Center = Offset{NorthM: 600, EastM: 50} // B takes off 600 m from its intent
 	if _, err := Compile(s, lab, time.Unix(1_790_000_000, 0)); err == nil || !strings.Contains(err.Error(), "aircraft b takes off") {
 		t.Fatalf("got %v", err)
 	}

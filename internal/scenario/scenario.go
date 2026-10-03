@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -292,6 +293,16 @@ const (
 	landingMarginS = 6.0
 )
 
+// takesOff reports whether an aircraft has a takeoff step.
+func takesOff(s *Scenario, name string) bool {
+	for _, st := range s.Steps {
+		if st.Do == DoTakeoff && slices.Contains(st.Aircraft, name) {
+			return true
+		}
+	}
+	return false
+}
+
 // LandS is about how long a SITL vehicle takes to land from alt_rel_m.
 func LandS(altRelM float64) float64 {
 	slow := math.Min(altRelM, landSlowBelowM)
@@ -563,6 +574,12 @@ func (s *Scenario) Validate() error {
 		expNames[e.Name] = true
 		if err := checkMatcher(f, e.Matcher); err != nil {
 			return err
+		}
+		// The USSP tells only flying neighbours of a deviating aircraft
+		// (Art. 13(2); uspace-ussp internal/conformance/nearby.go): a
+		// nearby operator expected to be told must take off.
+		if e.Kind == "nonconformance_nearby" && e.Aircraft != "" && !takesOff(s, e.Aircraft) {
+			return core.Fieldf(f+".aircraft", "%s is expected to be told nonconformance_nearby and never takes off", e.Aircraft)
 		}
 		for k, w := range map[string]*Window{"raise": &e.Raise, "clear": e.Clear, "hold_until": e.HoldUntil} {
 			if err := checkWindow(f+"."+k, w); err != nil {
