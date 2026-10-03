@@ -1,0 +1,12 @@
+scenario sc-01-hover-inside-minima (ci-reference, synthetic vehicles, reference targets): PASS
+  observed alerts (5):
+    ussp      degraded                          on terrain_unavailable raised +-5.7s
+    ussp      degraded                          on registry_projection_absent raised +-5.7s
+    ussp      degraded                          on source_control_unknown raised +-5.7s
+    ussp      proximity              b          peer a raised +0.3s cleared resolved +68.3s
+    ussp      proximity              a          peer b raised +0.3s cleared resolved +68.3s
+  missed 0, false 0
+  operator LABSC01A0001: sent 162 = accepted 162 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  operator LABSC01B0002: sent 163 = accepted 163 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  latency ussp: n 2, p50 0.000 s, p95 0.000 s, max 0.000 s
+  result: results\20261003-synthetic-reference\sc-01-hover-inside-minima.json

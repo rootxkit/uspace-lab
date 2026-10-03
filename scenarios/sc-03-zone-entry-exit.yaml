@@ -1,0 +1,108 @@
+format: scenario/v1
+id: sc-03-zone-entry-exit
+title: "SC-03: zone entry and exit"
+source: "knowledge/scenarios.md SC-03 (utm P5-15, 2026-09-29)"
+owners: [authority, ussp]
+policy: policy/demo.yaml
+systems: [ussp, authority]
+reference: true
+country: GEO
+note: >-
+  A 120 m square REQ_AUTHORIZATION zone 300 m north of home, permanent,
+  flown through and back by an armed aircraft streamed to the USSP
+  (operator telemetry) and heard by a receiver (the authority). The
+  lower limit is 0 m AMSL, below the ground, so the zone holds from the
+  ground up without needing terrain (an AGL limit is SC-13's case). The
+  "one audit row per transition" clause is read from each system's
+  events table, which the runner does not reach: the system's PR records
+  it beside this result.
+duration_s: 260
+tail_s: 8
+aircraft:
+  - name: a
+    sysid: 1
+    serial: LABSC03A0001
+    operator_reg: GEOLAB000001
+    operator_id: GEOLAB000001
+    operator:
+      system: ussp
+      intent:
+        center: {north_m: 200, east_m: 0}
+        radius_m: 1000
+        alt_lower_rel_m: -20
+        alt_upper_rel_m: 120
+        starts_before_s: 60
+        lasts_s: 3600
+        category: open
+        subcategory: A2
+        class_label: C2
+    receivers: [lab-rx-1]
+receivers:
+  - id: lab-rx-1
+    system: authority
+    at: {north_m: 150, east_m: 40}
+    transport: pack
+    hae: geoid
+    rssi_dbm: -55
+zones:
+  - id: SC03Z
+    type: REQ_AUTHORIZATION
+    square: {center: {north_m: 300, east_m: 0}, side_m: 120}
+    lower: {m: 0, ref: AMSL}
+    upper: {m: 1500, ref: AMSL}
+steps:
+  - id: climb
+    at_s: 0
+    aircraft: [a]
+    do: takeoff
+    alt_rel_m: 30
+  # Through the zone (240 m to 360 m north) to 450 m north at 10 m/s.
+  - id: through
+    aircraft: [a]
+    do: goto
+    to: {north_m: 450, east_m: 0}
+    speed_ms: 10
+  - id: beyond
+    aircraft: [a]
+    do: hold
+    for_s: 8
+  # And back through it to the origin.
+  - id: back
+    aircraft: [a]
+    do: goto
+    to: {north_m: 0, east_m: 0}
+    speed_ms: 10
+  - id: down
+    aircraft: [a]
+    do: land
+expect:
+  - name: ussp-entry-1
+    system: ussp
+    kind: zone_incursion
+    aircraft: a
+    subject: SC03Z
+    raise: {after: through.start, min_s: 15, max_s: 45}
+    clear: {after: through.start, min_s: 30, max_s: 70, reason: resolved}
+  - name: ussp-entry-2
+    system: ussp
+    kind: zone_incursion
+    aircraft: a
+    subject: SC03Z
+    raise: {after: back.start, min_s: 5, max_s: 30}
+    clear: {after: back.start, min_s: 15, max_s: 50, reason: resolved}
+  - name: authority-entry-1
+    system: authority
+    kind: zone_incursion
+    aircraft: a
+    subject: SC03Z
+    raise: {after: through.start, min_s: 15, max_s: 45}
+    clear: {after: through.start, min_s: 30, max_s: 70, reason: resolved}
+  - name: authority-entry-2
+    system: authority
+    kind: zone_incursion
+    aircraft: a
+    subject: SC03Z
+    raise: {after: back.start, min_s: 5, max_s: 30}
+    clear: {after: back.start, min_s: 15, max_s: 50, reason: resolved}
+judged_kinds: ["ussp:zone_incursion", "authority:zone_incursion"]
+measure: [latency, ledger]

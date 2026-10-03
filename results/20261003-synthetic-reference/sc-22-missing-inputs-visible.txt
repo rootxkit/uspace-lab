@@ -1,0 +1,8 @@
+scenario sc-22-missing-inputs-visible (ci-reference, synthetic vehicles, reference targets): PASS
+  observed alerts (3):
+    authority degraded                          on terrain_unavailable raised +-5.5s
+    authority degraded                          on registry_projection_absent raised +-5.5s
+    authority degraded                          on source_control_unknown raised +-5.5s
+  missed 0, false 0
+  receiver lab-rx-1: observed 53, sent 53 = accepted 53 + duplicates 0 + refused 0 (balanced true)
+  result: results\20261003-synthetic-reference\sc-22-missing-inputs-visible.json

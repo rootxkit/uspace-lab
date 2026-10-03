@@ -1,0 +1,86 @@
+format: scenario/v1
+id: authority-sc08-rid-switch
+title: "uspace-authority SC-08 (Remote ID part): switching direct Remote ID off clears as source_disabled; on raises again"
+source: "knowledge/scenarios.md SC-08 steps 1-3; uspace-authority CLAUDE.md rule 4 (INV-02)"
+owners: [authority]
+policy: policy/demo.yaml
+systems: [authority]
+reference: false
+country: GEO
+note: >-
+  C hovers inside its own PROHIBITED zone, heard only by Remote ID. The
+  zone is this scenario's (written beside the result as
+  <scenario>.zones.ed269.json, placed by the run's origin) and must be
+  imported and published in the authority before the run. The switches
+  are the authority's admin API with the session in the targets file
+  (requests.authority). Steps 4-8 of SC-08 (relays, KV loss) need the
+  authenticated feeds and the authority's own fault injection.
+duration_s: 120
+tail_s: 5
+aircraft:
+  - name: c
+    sysid: 3
+    serial: LABSC08C0003
+    operator_reg: GEOLAB000001
+    operator_id: GEOLAB000001
+    receivers: [lab-rx-1]
+receivers:
+  - id: lab-rx-1
+    system: authority
+    at: {north_m: 0, east_m: 80}
+    transport: pack
+    hae: geoid
+zones:
+  - id: SC08Z
+    type: PROHIBITED
+    square: {center: {north_m: 0, east_m: 50}, side_m: 160}
+    lower: {m: 0, ref: AMSL}
+    upper: {m: 1500, ref: AMSL}
+steps:
+  - id: climb
+    at_s: 0
+    aircraft: [c]
+    do: takeoff
+    alt_rel_m: 30
+  - id: hover
+    aircraft: [c]
+    do: hold
+    for_s: 80
+  - id: rid-off
+    at_s: 40
+    do: request
+    request:
+      system: authority
+      method: PUT
+      path: /v1/sources/direct_rid
+      body: {enabled: false, reason: "uspace-lab authority-sc08-rid-switch ${run}"}
+      expect: 200
+  - id: rid-on
+    at_s: 65
+    do: request
+    request:
+      system: authority
+      method: PUT
+      path: /v1/sources/direct_rid
+      body: {enabled: true, reason: "uspace-lab authority-sc08-rid-switch ${run}"}
+      expect: 200
+  - id: down
+    at_s: 100
+    aircraft: [c]
+    do: land
+expect:
+  - name: inside-the-zone
+    system: authority
+    kind: zone_incursion
+    aircraft: c
+    subject: SC08Z
+    raise: {after: t0, min_s: 0, max_s: 30}
+    clear: {after: rid-off, min_s: 0, max_s: 2, reason: source_disabled}
+  - name: raised-again-when-on
+    system: authority
+    kind: zone_incursion
+    aircraft: c
+    subject: SC08Z
+    raise: {after: rid-on, min_s: 0, max_s: 3}
+judged_kinds: ["authority:zone_incursion"]
+measure: [latency, ledger]

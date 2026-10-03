@@ -1,0 +1,82 @@
+format: scenario/v1
+id: ansp-inv02-manned
+title: "uspace-ansp INV-02: a replayed manned track through the ANSP's adapter and feed, against a SITL aircraft at the USSP"
+source: "uspace-ansp CLAUDE.md INV-02 (WP-4, WP-6: the manned path); knowledge/scenarios.md SC-15 (stale), SC-05 (a manned crossing)"
+owners: [ansp, ussp]
+policy: policy/demo.yaml
+systems: [ansp, ussp]
+reference: false
+note: >-
+  The lab serves the manned aircraft as a readsb aircraft.json (feed
+  manned-1, sim-adsb); the ANSP's dump1090_json adapter is configured to
+  poll it (targets feeds.manned-1.listen must be reachable from the
+  ANSP; the adapter URL is that address plus /data/aircraft.json). The
+  ANSP's manned-feed hands the track to the USSP, which raises proximity
+  for A, hovering at the origin, with the manned peer (trust
+  surveillance, horizontal judgement only on a pressure altitude, R-09).
+  Then the file freezes (positions stop): the ANSP's stream must show
+  the aircraft stale, never as a live old position (SC-15, T-11).
+duration_s: 150
+tail_s: 8
+aircraft:
+  - name: a
+    sysid: 1
+    serial: LABANSPA0001
+    operator_reg: GEOLAB000001
+    operator:
+      system: ussp
+      intent:
+        center: {north_m: 0, east_m: 0}
+        radius_m: 500
+        alt_lower_rel_m: -10
+        alt_upper_rel_m: 100
+        starts_before_s: 60
+        lasts_s: 3600
+        category: open
+        subcategory: A2
+        class_label: C2
+feeds:
+  - id: manned-1
+    kind: adsb_file
+    tracks:
+      - icao24: f0c001
+        callsign: LABM01
+        from: {north_m: 20, east_m: -3000}
+        to: {north_m: 20, east_m: 3000}
+        speed_ms: 60
+        alt_pressure_m: 650
+        start_s: 20
+steps:
+  - id: climb
+    at_s: 0
+    aircraft: [a]
+    do: takeoff
+    alt_rel_m: 30
+  - id: hover
+    aircraft: [a]
+    do: hold
+    for_s: 100
+  - id: freeze
+    at_s: 90
+    do: knob
+    knob: {feed: stale, feeds: [manned-1]}
+  - id: down
+    at_s: 125
+    aircraft: [a]
+    do: land
+expect:
+  - name: ansp-shows-the-manned-track
+    system: ansp
+    kind: manned_track
+    subject: f0c001
+    raise: {after: t0, min_s: 15, max_s: 45}
+    clear: {after: freeze, min_s: 5, max_s: 30, reason: stale}
+  - name: ussp-proximity-with-the-manned-peer
+    system: ussp
+    kind: proximity
+    aircraft: a
+    peer: f0c001
+    raise: {after: t0, min_s: 20, max_s: 70}
+    clear: {after: t0, min_s: 50, max_s: 110, reason: resolved}
+judged_kinds: ["ussp:proximity", "ansp:manned_track"]
+measure: [latency, ledger]

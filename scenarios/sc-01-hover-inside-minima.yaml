@@ -1,0 +1,96 @@
+format: scenario/v1
+id: sc-01-hover-inside-minima
+title: "SC-01: two aircraft hovering inside the minima"
+source: "knowledge/scenarios.md SC-01 (utm P5-07, 2026-09-29); LESSONS C-03"
+owners: [ussp, authority]
+policy: policy/demo.yaml
+systems: [ussp]
+reference: true
+note: >-
+  The authority raises no conflicts (violations only, authority plan D5),
+  so SC-01 is judged on the USSP's proximity alerts, one per flight of
+  the pair, each naming the other (C-11). Homes 25 m apart (sim/sitl.env
+  SITL_SPACING_M). The hover is at 60 m rather than SC-01's 30 m:
+  SITL simulates the ground: around the example home (605 m) its terrain
+  runs from 578 m to the north to over 624 m 100 m east (TERRAIN_REPORT,
+  measured 2026-10-03), and a vehicle at 20 m above home flew into it
+  and held there at full lean. The flights here are at a height that
+  clears it.
+duration_s: 280
+tail_s: 8
+aircraft:
+  - name: a
+    sysid: 1
+    serial: LABSC01A0001
+    operator_reg: GEOLAB000001
+    operator: &op
+      system: ussp
+      intent:
+        center: {north_m: 0, east_m: 0}
+        radius_m: 1000
+        alt_lower_rel_m: -20
+        alt_upper_rel_m: 120
+        starts_before_s: 60
+        lasts_s: 3600
+        category: open
+        subcategory: A2
+        class_label: C2
+  - name: b
+    sysid: 2
+    serial: LABSC01B0002
+    operator_reg: GEOLAB000001
+    operator: *op
+steps:
+  # 1. Arm both and climb both (60 m: see the note).
+  - id: climb
+    at_s: 0
+    aircraft: [a, b]
+    do: takeoff
+    alt_rel_m: 60
+  # 2. Hold the hover for at least 30 s.
+  - id: hover
+    aircraft: [a, b]
+    do: hold
+    for_s: 30
+  # 3. Fly one aircraft away until they are 60 m or more apart (b to
+  #    125 m east of the origin: 125 m from a).
+  - id: apart
+    aircraft: [b]
+    do: goto
+    to: {north_m: 0, east_m: 125}
+    speed_ms: 3
+  - id: settle
+    aircraft: [b]
+    do: hold
+    for_s: 8
+  - id: down
+    aircraft: [b]
+    do: land
+  - id: down-a
+    at_s: 110
+    aircraft: [a]
+    do: land
+expect:
+  # One critical conflict for the pair as soon as both are armed and
+  # placed: measured from the vehicles' confirmed climb (in SITL arming
+  # waits for the EKF, so t0 is not when they are armed, E-08); no clear
+  # during the hover (C-03, velocity noise); cleared resolved 3 s or
+  # more after the last sample inside 60 m.
+  - name: a-raised-held-resolved
+    system: ussp
+    kind: proximity
+    aircraft: a
+    peer: b
+    raise: {after: climb, min_s: -40, max_s: 5}
+    hold_until: {after: hover, min_s: 0, max_s: 0}
+    clear: {after: apart.start, min_s: 3, max_s: 40, reason: resolved}
+  - name: b-raised-held-resolved
+    system: ussp
+    kind: proximity
+    aircraft: b
+    peer: a
+    raise: {after: climb, min_s: -40, max_s: 5}
+    hold_until: {after: hover, min_s: 0, max_s: 0}
+    clear: {after: apart.start, min_s: 3, max_s: 40, reason: resolved}
+judged_kinds: ["ussp:proximity"]
+measure: [latency, ledger]

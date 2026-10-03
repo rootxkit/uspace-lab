@@ -1,0 +1,94 @@
+format: scenario/v1
+id: ussp-wp12-restriction
+title: "uspace-ussp WP-12 (N-M1, S-M4): an ANSP restriction over an activated intent raises restriction_activated within one tick"
+source: "uspace-ussp docs/RUNBOOKS/WP-12.md, 'Lab run (owed)'; spec 07 N-M1, S-M4"
+owners: [ussp, ansp, cisp]
+policy: policy/demo.yaml
+systems: [ussp, ansp]
+reference: false
+country: GEO
+note: >-
+  Needs the ANSP, the CISP and the USSP deployed together (the ANSP
+  publishes through the CISP; the USSP follows the CIS). The ANSP's
+  supervisor session and CSRF token are in the targets file
+  (requests.ansp); the USPACE airspace the restriction lies in is the
+  deployment's (extra.uspace_airspace_id). The restriction is a 300 m
+  circle over A's intent from 0 to 2000 m AMSL: the ground and A
+  included, with no terrain needed to judge it.
+duration_s: 150
+tail_s: 8
+aircraft:
+  - name: a
+    sysid: 1
+    serial: LABWP12A0001
+    operator_reg: GEOLAB000001
+    operator:
+      system: ussp
+      intent:
+        center: {north_m: 0, east_m: 0}
+        radius_m: 400
+        alt_lower_rel_m: -10
+        alt_upper_rel_m: 100
+        starts_before_s: 60
+        lasts_s: 3600
+        category: open
+        subcategory: A2
+        class_label: C2
+steps:
+  - id: climb
+    at_s: 0
+    aircraft: [a]
+    do: takeoff
+    alt_rel_m: 30
+  - id: hover
+    aircraft: [a]
+    do: hold
+    for_s: 90
+  - id: plan
+    at_s: 30
+    do: request
+    request:
+      system: ansp
+      method: POST
+      path: /v1/restrictions
+      body:
+        uspace_airspace_id: "${extra:uspace_airspace_id}"
+        geometry: {type: Point, coordinates: ["${lng:0,0}", "${lat:0,0}"]}
+        radius_m: 300
+        lower_m: 0
+        lower_ref: AMSL
+        upper_m: 2000
+        upper_ref: AMSL
+        starts_at: "${time:30}"
+        ends_at: "${time:3600}"
+        reason_text: "uspace-lab ussp-wp12-restriction ${run}"
+      expect: 201
+      capture: {restriction_id: id}
+  - id: activate
+    at_s: 40
+    do: request
+    request:
+      system: ansp
+      method: POST
+      path: /v1/restrictions/${restriction_id}/activate
+      expect: 200
+  - id: end
+    at_s: 100
+    do: request
+    request:
+      system: ansp
+      method: POST
+      path: /v1/restrictions/${restriction_id}/end
+      expect: 200
+  - id: down
+    at_s: 125
+    aircraft: [a]
+    do: land
+expect:
+  - name: restriction-activated-on-the-intent
+    system: ussp
+    kind: restriction_activated
+    aircraft: a
+    raise: {after: activate, min_s: 0, max_s: 10}
+judged_kinds: ["ussp:restriction_activated"]
+measure: [latency, ledger]

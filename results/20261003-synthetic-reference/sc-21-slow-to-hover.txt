@@ -1,0 +1,14 @@
+scenario sc-21-slow-to-hover (ci-reference, synthetic vehicles, reference targets): PASS
+  observed alerts (7):
+    ussp      degraded                          on terrain_unavailable raised +-5.8s
+    ussp      degraded                          on registry_projection_absent raised +-5.8s
+    ussp      degraded                          on source_control_unknown raised +-5.8s
+    ussp      proximity              a          peer b raised +1.2s cleared resolved +23.2s
+    ussp      proximity              b          peer a raised +1.2s cleared resolved +23.2s
+    ussp      proximity              a          peer b raised +72.2s cleared landed +160.2s
+    ussp      proximity              b          peer a raised +72.2s cleared landed +160.2s
+  missed 0, false 0
+  operator LABSC21A0001: sent 172 = accepted 172 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  operator LABSC21B0002: sent 171 = accepted 171 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  latency ussp: n 4, p50 0.000 s, p95 0.001 s, max 0.001 s
+  result: results\20261003-synthetic-reference\sc-21-slow-to-hover.json

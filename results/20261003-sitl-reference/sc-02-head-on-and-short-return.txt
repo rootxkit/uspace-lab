@@ -1,0 +1,16 @@
+scenario sc-02-head-on-and-short-return (20261003-sitl-reference, sitl vehicles, reference targets): PASS
+  observed alerts (9):
+    ussp      degraded                          on terrain_unavailable raised +-15.1s
+    ussp      degraded                          on registry_projection_absent raised +-15.1s
+    ussp      degraded                          on source_control_unknown raised +-15.1s
+    ussp      proximity              a          peer b raised +28.9s cleared resolved +68.9s
+    ussp      proximity              b          peer a raised +28.9s cleared resolved +68.9s
+    ussp      proximity              a          peer b raised +96.9s cleared resolved +131.9s
+    ussp      proximity              b          peer a raised +96.9s cleared resolved +131.9s
+    ussp      proximity              a          peer b raised +184.9s cleared resolved +225.9s
+    ussp      proximity              b          peer a raised +184.9s cleared resolved +225.9s
+  missed 0, false 0
+  operator LABSC02A0001: sent 317 = accepted 317 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  operator LABSC02B0002: sent 316 = accepted 316 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  latency ussp: n 6, p50 0.001 s, p95 0.001 s, max 0.001 s
+  result: results\20261003-sitl-reference\sc-02-head-on-and-short-return.json

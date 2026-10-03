@@ -1,0 +1,63 @@
+format: scenario/v1
+id: ussp-wp7-authorisation
+title: "uspace-ussp WP-7 (S-M1): first come first served, and telemetry only under an activated intent"
+source: "uspace-ussp docs/RUNBOOKS/WP-7.md (S-M1 steps 1-2, 12-13 in the lab); spec 07 S-M1"
+owners: [ussp]
+policy: policy/demo.yaml
+systems: [ussp]
+reference: false
+note: >-
+  Operator A files inside U-space airspace and is authorised and
+  activated; operator B files the same volume later and is refused
+  (intent_filed_first). B's samples inside U-space airspace without an
+  activated intent are then refused by the ingest (refused_no_
+  authorisation), which B's ledger shows as refused, not lost. The rest
+  of S-M1 (zones, restrictions, a DSS outage, a suspended operator)
+  needs the CISP and the authority's fakes the system's integration
+  suite has; it is not repeated here. Needs both operators' clients in
+  the targets file (op-a, op-b) and the origin inside a published U-space
+  airspace.
+duration_s: 90
+tail_s: 5
+aircraft:
+  - name: a
+    sysid: 1
+    serial: LABWP07A0001
+    operator_reg: GEOLAB000001
+    operator:
+      system: ussp
+      client: op-a
+      intent: &vol
+        center: {north_m: 0, east_m: 0}
+        radius_m: 300
+        alt_lower_rel_m: -10
+        alt_upper_rel_m: 100
+        starts_before_s: 60
+        lasts_s: 3600
+        category: specific
+        mode: VLOS
+  - name: b
+    sysid: 2
+    serial: LABWP07B0002
+    operator_reg: GEOLAB000002
+    operator:
+      system: ussp
+      client: op-b
+      intent: *vol
+steps:
+  - id: climb
+    at_s: 0
+    aircraft: [a, b]
+    do: takeoff
+    alt_rel_m: 20
+  - id: hover
+    aircraft: [a, b]
+    do: hold
+    for_s: 30
+  - id: down
+    aircraft: [a, b]
+    do: land
+expect_intents:
+  - {aircraft: a, decision: authorised, state: activated}
+  - {aircraft: b, decision: rejected}
+measure: [ledger]

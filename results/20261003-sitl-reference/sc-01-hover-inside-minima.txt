@@ -1,0 +1,12 @@
+scenario sc-01-hover-inside-minima (20261003-sitl-reference, sitl vehicles, reference targets): PASS
+  observed alerts (5):
+    ussp      degraded                          on terrain_unavailable raised +-15.7s
+    ussp      degraded                          on registry_projection_absent raised +-15.7s
+    ussp      degraded                          on source_control_unknown raised +-15.7s
+    ussp      proximity              b          peer a raised +29.3s cleared resolved +95.3s
+    ussp      proximity              a          peer b raised +29.3s cleared resolved +95.3s
+  missed 0, false 0
+  operator LABSC01A0001: sent 179 = accepted 179 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  operator LABSC01B0002: sent 178 = accepted 178 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  latency ussp: n 2, p50 0.001 s, p95 0.001 s, max 0.001 s
+  result: results\20261003-sitl-reference\sc-01-hover-inside-minima.json
