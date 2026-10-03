@@ -1,0 +1,14 @@
+# The reference target: the runner starts internal/reftarget in process
+# (the USSP's telemetry, intent and alert contracts and the authority's
+# receiver ingest and picture, judged by uspace-core's alerting monitor
+# under the scenario's policy). The runner's self-check and CI target;
+# never evidence for a system (every result says so).
+mode: reference
+name: reference
+# The flat undulation SC-12 used (15.9 m over the test area): the
+# receiver simulator broadcasts HAE = AMSL + N with it and the reference
+# ingest takes N off again, as R-16 asks (one geoid on both sides).
+geoid: "constant:15.9"
+# The origin and fleet numbering; CI uses the committed example, a SITL
+# run passes --lab sim/sitl.env (the file run_sitl.sh read).
+lab: ../sim/sitl.env.example

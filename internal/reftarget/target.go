@@ -405,7 +405,10 @@ func (t *Target) handleReceiverSwitch(w http.ResponseWriter, r *http.Request) {
 // degradedLocked names what this target runs without (SC-22: a missing
 // input is visible, never silence).
 func (t *Target) degradedLocked() []string {
-	d := []string{"terrain_unavailable", "registry_projection_unavailable"}
+	// The authority's own slugs where it has them (uspace-authority
+	// internal/picture: registry_projection_absent, source_control_unknown);
+	// terrain_unavailable is the reference target's.
+	d := []string{"terrain_unavailable", "registry_projection_absent", "source_control_unknown"}
 	if t.cfg.Geoid == nil {
 		d = append(d, "geoid_unavailable")
 	}

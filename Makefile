@@ -107,3 +107,15 @@ sim-lint:
 
 sim-test:
 	cd sim && ../$(SIM_PY) -m pytest
+
+# Run scenarios: make scenario TARGETS=targets/reference.yaml SCENARIOS="scenarios/sc-01-hover-inside-minima.yaml"
+# VEHICLES=sitl flies SITL through sim/fly.py (start the fleet with make sim).
+TARGETS   ?= targets/reference.yaml
+VEHICLES  ?= synthetic
+SCENARIOS ?= scenarios/kt4-baseline.yaml
+scenario:
+	$(GO) run ./cmd/scenario run --targets $(TARGETS) --vehicles $(VEHICLES) $(SCENARIOS)
+
+# What the scenarios workflow runs: every reference scenario, in parallel.
+scenarios-ci:
+	GO=$(GO) scripts/run-reference-scenarios.sh results/ci-reference

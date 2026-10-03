@@ -6,3 +6,7 @@ sim/sitl.env
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+secrets/
+results/*/logs/
+targets/local-*.yaml

@@ -1,0 +1,66 @@
+name: scenarios
+
+# The scenario runner against the lab's reference target with synthetic
+# vehicles (docs/WORKPACKAGES/WP-L5.md): every `reference: true` scenario
+# runs and must pass; the result files are kept as an artefact. A run
+# against the systems' images with SITL is a manual run (targets/
+# systems.example.yaml) until the images and a SITL container exist.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scenarios/**"
+      - "targets/**"
+      - "internal/**"
+      - "cmd/**"
+      - "sim/sitl.env.example"
+      - "scripts/run-reference-scenarios.sh"
+      - "go.mod"
+      - "go.sum"
+      - ".github/workflows/scenarios.yml"
+  pull_request:
+    paths:
+      - "scenarios/**"
+      - "targets/**"
+      - "internal/**"
+      - "cmd/**"
+      - "sim/sitl.env.example"
+      - "scripts/run-reference-scenarios.sh"
+      - "go.mod"
+      - "go.sum"
+      - ".github/workflows/scenarios.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scenarios-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GOFLAGS: -mod=mod
+  GOTOOLCHAIN: local
+
+jobs:
+  reference:
+    name: reference scenarios (synthetic vehicles)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: every scenario file is valid
+        run: go run ./cmd/scenario check scenarios/*.yaml
+      - name: run the reference scenarios
+        run: scripts/run-reference-scenarios.sh results/ci-reference
+      - name: keep the results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenario-results
+          path: results/ci-reference/*.json
+          retention-days: 14

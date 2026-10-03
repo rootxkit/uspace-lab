@@ -36,27 +36,30 @@ const (
 
 // Scenario is one scenarios/<id>.yaml (the format: scenarios/README.md).
 type Scenario struct {
-	Format      string     `yaml:"format" json:"format"`
-	ID          string     `yaml:"id" json:"id"`
-	Title       string     `yaml:"title" json:"title"`
-	Source      string     `yaml:"source" json:"source"`
-	Owners      []string   `yaml:"owners" json:"owners"`
-	Country     string     `yaml:"country" json:"country,omitempty"`
-	Policy      string     `yaml:"policy" json:"policy"`
-	Systems     []string   `yaml:"systems" json:"systems"`
-	Reference   bool       `yaml:"reference" json:"reference"`
-	Note        string     `yaml:"note" json:"note,omitempty"`
-	DurationS   float64    `yaml:"duration_s" json:"duration_s"`
-	TailS       float64    `yaml:"tail_s" json:"tail_s"`
-	Aircraft    []Aircraft `yaml:"aircraft" json:"aircraft"`
-	Receivers   []Receiver `yaml:"receivers" json:"receivers,omitempty"`
-	Feeds       []Feed     `yaml:"feeds" json:"feeds,omitempty"`
-	Zones       []Zone     `yaml:"zones" json:"zones,omitempty"`
-	Steps       []Step     `yaml:"steps" json:"steps"`
-	Expect      []Expect   `yaml:"expect" json:"expect,omitempty"`
-	Never       []Matcher  `yaml:"never" json:"never,omitempty"`
-	Measure     []string   `yaml:"measure" json:"measure,omitempty"`
-	JudgedKinds []string   `yaml:"judged_kinds" json:"judged_kinds,omitempty"`
+	Format    string     `yaml:"format" json:"format"`
+	ID        string     `yaml:"id" json:"id"`
+	Title     string     `yaml:"title" json:"title"`
+	Source    string     `yaml:"source" json:"source"`
+	Owners    []string   `yaml:"owners" json:"owners"`
+	Country   string     `yaml:"country" json:"country,omitempty"`
+	Policy    string     `yaml:"policy" json:"policy"`
+	Systems   []string   `yaml:"systems" json:"systems"`
+	Reference bool       `yaml:"reference" json:"reference"`
+	Note      string     `yaml:"note" json:"note,omitempty"`
+	DurationS float64    `yaml:"duration_s" json:"duration_s"`
+	TailS     float64    `yaml:"tail_s" json:"tail_s"`
+	Aircraft  []Aircraft `yaml:"aircraft" json:"aircraft"`
+	Receivers []Receiver `yaml:"receivers" json:"receivers,omitempty"`
+	Feeds     []Feed     `yaml:"feeds" json:"feeds,omitempty"`
+	Zones     []Zone     `yaml:"zones" json:"zones,omitempty"`
+	Steps     []Step     `yaml:"steps" json:"steps"`
+	Expect    []Expect   `yaml:"expect" json:"expect,omitempty"`
+	Never     []Matcher  `yaml:"never" json:"never,omitempty"`
+	// ExpectIntents are the decisions the USSP must give the intents the
+	// runner files (WP-7: flight authorisation has no alert path).
+	ExpectIntents []IntentExpect `yaml:"expect_intents" json:"expect_intents,omitempty"`
+	Measure       []string       `yaml:"measure" json:"measure,omitempty"`
+	JudgedKinds   []string       `yaml:"judged_kinds" json:"judged_kinds,omitempty"`
 
 	// Dir is the scenario file's directory (for the policy path).
 	Dir string `yaml:"-" json:"-"`
@@ -251,6 +254,13 @@ type Expect struct {
 	// HoldUntil: the alert must not clear before this window opens (SC-01
 	// step 2: no clear while the hover lasts).
 	HoldUntil *Window `yaml:"hold_until" json:"hold_until,omitempty"`
+}
+
+// IntentExpect is the decision and state an aircraft's intent must get.
+type IntentExpect struct {
+	Aircraft string `yaml:"aircraft" json:"aircraft"`
+	Decision string `yaml:"decision" json:"decision"`
+	State    string `yaml:"state" json:"state,omitempty"`
 }
 
 // Window is [mark + min_s, mark + max_s]. The mark is t0, a step id (the
@@ -476,14 +486,21 @@ func (s *Scenario) Validate() error {
 		}
 		return nil
 	}
+	icaos := map[string]bool{}
+	for _, fd := range s.Feeds {
+		for _, t := range fd.Tracks {
+			icaos[t.ICAO24] = true
+		}
+	}
 	checkMatcher := func(f string, m Matcher) error {
 		if !knownSystem(m.System) || m.Kind == "" {
 			return core.Fieldf(f, "system and kind are required")
 		}
-		for _, n := range []string{m.Aircraft, m.Peer} {
-			if n != "" && names[n] == nil {
-				return core.Fieldf(f, "%q is not an aircraft", n)
-			}
+		if m.Aircraft != "" && names[m.Aircraft] == nil {
+			return core.Fieldf(f, "%q is not an aircraft", m.Aircraft)
+		}
+		if m.Peer != "" && names[m.Peer] == nil && !icaos[m.Peer] {
+			return core.Fieldf(f, "%q is neither an aircraft nor a feed track's icao24", m.Peer)
 		}
 		return nil
 	}
@@ -507,6 +524,12 @@ func (s *Scenario) Validate() error {
 	for i, m := range s.Never {
 		if err := checkMatcher(fmt.Sprintf("never[%d]", i), m); err != nil {
 			return err
+		}
+	}
+	for i, ie := range s.ExpectIntents {
+		a := names[ie.Aircraft]
+		if a == nil || a.Operator == nil || a.Operator.Intent == nil || ie.Decision == "" {
+			return core.Fieldf(fmt.Sprintf("expect_intents[%d]", i), "an aircraft with an operator intent, and a decision")
 		}
 	}
 	return nil
