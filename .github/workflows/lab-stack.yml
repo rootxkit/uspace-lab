@@ -1,0 +1,63 @@
+name: lab-stack
+
+# WP-L2: the DSS and the lab issuer. Runs the Go tests of the issuer and
+# the deploy checks, then `make dss-up` for real (build, start, the three
+# proofs) and `make dss-down`, so the success path is exercised on every
+# change to the stack (LESSONS E-02). Only when something it reads
+# changes.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "deploy/**"
+      - "cmd/lab-issuer/**"
+      - "internal/issuer/**"
+      - "go.mod"
+      - "go.sum"
+      - ".dockerignore"
+      - "Makefile"
+      - ".github/workflows/lab-stack.yml"
+  pull_request:
+    paths:
+      - "deploy/**"
+      - "cmd/lab-issuer/**"
+      - "internal/issuer/**"
+      - "go.mod"
+      - "go.sum"
+      - ".dockerignore"
+      - "Makefile"
+      - ".github/workflows/lab-stack.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lab-stack-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GOFLAGS: -mod=mod
+  GOTOOLCHAIN: local
+
+jobs:
+  dss-up:
+    name: issuer tests, make dss-up, make dss-down
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: go test (issuer, deploy checks)
+        run: go test -race -count=1 -shuffle=on ./internal/issuer/ ./deploy/ ./cmd/...
+      - name: make dss-up (start, wait, prove)
+        run: make dss-up
+      - name: DSS and issuer logs on failure
+        if: failure()
+        run: docker compose -p uspace-lab -f deploy/compose.yaml --env-file deploy/.env --profile dss --profile issuer logs --no-color --tail 200
+      - name: make dss-down (and check nothing is left)
+        if: always()
+        run: make dss-down
