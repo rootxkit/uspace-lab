@@ -1,0 +1,126 @@
+# Machine clients of the lab issuer (docs/WORKPACKAGES/WP-L2.md).
+#
+# One client per calling system (decision record M24). `scopes` are the
+# catalogue scopes the client may request (decision record Appendix B,
+# uspace-authority WP-2 table B). `audiences` are the hosts it may
+# request a NATIONAL scope for; standard scopes (utm.*, rid.*) may be
+# requested for any audience, because peers are discovered through the
+# DSS, not configured (M18). An entry `${VAR}` is replaced by the
+# comma-separated hosts in that environment variable (deploy/.env); an
+# unset or empty variable stops the issuer at start. No host is written
+# here (INV-03).
+#
+# Secrets are not here: they are generated at first start into
+# deploy/local/client-secrets.json (git-ignored) and printed once.
+#
+# Who holds what, and why (spec 02, the plans of each system):
+#   authority-01  publishes zones, U-space airspace and the USSP list to
+#                 the CISP (F1) and reads it; reads manned traffic and
+#                 sends restriction requests to the ANSP (F4, F11); pulls
+#                 USSP service records (F7); arbitrates USS availability
+#                 and reads the DSS for conformance (Q-A5); F3411 DP.
+#   cisp-01       calls no other system with a token in its plan (its
+#                 webhooks are signed JWS, cisp PLAN §6.5); registered so
+#                 the id exists, with nothing to request.
+#   ansp-01       publishes restrictions to the CISP and reads it (F2,
+#                 F3); writes occurrences at the authority (F11); writes
+#                 F3548 constraints to the DSS (F2).
+#   ussp-USSP-DEV-01  the lab USSP (code USSP-DEV, M8): registry lookups,
+#                 occurrences, operating status at the authority (F7,
+#                 F8); CIS reads (F3); manned traffic and coordination
+#                 at the ANSP (F4, F13); F3548 and F3411 as a USS.
+#   sim-ussp-01   the simulated peer USSP (WP-L5): F3548 and F3411 as a
+#                 USS, CIS reads.
+#   lab-01        the lab itself (scenarios, conformance): every issuable
+#                 national scope, dp.observe (lab only, M23) and every
+#                 standard scope.
+
+clients:
+  - id: lab-01
+    scopes:
+      - cis.read
+      - cis.publish:zones
+      - cis.publish:uspace
+      - cis.publish:ussp_list
+      - cis.publish:restrictions
+      - registry.validate
+      - ussp.records
+      - occurrences.write
+      - certificates.status
+      - police.query
+      - ansp.traffic
+      - ansp.coordination
+      - ansp.requests
+      - dp.observe
+      - utm.strategic_coordination
+      - utm.constraint_processing
+      - utm.constraint_management
+      - utm.conformance_monitoring_sa
+      - utm.availability_arbitration
+      - rid.service_provider
+      - rid.display_provider
+    audiences:
+      - ${LAB_AUTHORITY_AUDIENCES}
+      - ${LAB_CISP_AUDIENCES}
+      - ${LAB_ANSP_AUDIENCES}
+      - ${LAB_USSP_AUDIENCES}
+
+  - id: authority-01
+    scopes:
+      - cis.read
+      - cis.publish:zones
+      - cis.publish:uspace
+      - cis.publish:ussp_list
+      - ansp.traffic
+      - ansp.requests
+      - ussp.records
+      - utm.availability_arbitration
+      - utm.conformance_monitoring_sa
+      - rid.display_provider
+    audiences:
+      - ${LAB_CISP_AUDIENCES}
+      - ${LAB_ANSP_AUDIENCES}
+      - ${LAB_USSP_AUDIENCES}
+
+  - id: cisp-01
+    scopes: []
+    audiences: []
+
+  - id: ansp-01
+    scopes:
+      - cis.read
+      - cis.publish:restrictions
+      - occurrences.write
+      - utm.constraint_management
+    audiences:
+      - ${LAB_CISP_AUDIENCES}
+      - ${LAB_AUTHORITY_AUDIENCES}
+
+  - id: ussp-USSP-DEV-01
+    scopes:
+      - registry.validate
+      - occurrences.write
+      - certificates.status
+      - cis.read
+      - ansp.traffic
+      - ansp.coordination
+      - utm.strategic_coordination
+      - utm.constraint_processing
+      - utm.conformance_monitoring_sa
+      - rid.service_provider
+      - rid.display_provider
+    audiences:
+      - ${LAB_AUTHORITY_AUDIENCES}
+      - ${LAB_CISP_AUDIENCES}
+      - ${LAB_ANSP_AUDIENCES}
+
+  - id: sim-ussp-01
+    scopes:
+      - cis.read
+      - utm.strategic_coordination
+      - utm.constraint_processing
+      - utm.conformance_monitoring_sa
+      - rid.service_provider
+      - rid.display_provider
+    audiences:
+      - ${LAB_CISP_AUDIENCES}
