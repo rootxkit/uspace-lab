@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("clients:\n  - id: 0\n    scopes: !00\n0000000000000")
