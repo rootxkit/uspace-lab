@@ -27,6 +27,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -221,7 +222,15 @@ type DSSError struct {
 
 func (e *DSSError) Error() string { return fmt.Sprintf("DSS answered %d: %s", e.Status, e.Body) }
 
-func (p *Peer) put(ctx context.Context, url string, body any, out any) error {
+// put sends body and decodes the answer into out when the DSS answers
+// one of ok: F3411 v22a answers a new ISA with 200, F3548-21 a new
+// operational intent reference with 201 (and its update with 200), as
+// the pinned InterUSS DSS does (deploy/dss/SOURCE).
+func (p *Peer) put(ctx context.Context, url string, body, out any, ok ...int) error {
+	return p.call(ctx, http.MethodPut, url, body, out, ok...)
+}
+
+func (p *Peer) call(ctx context.Context, method, url string, body, out any, ok ...int) error {
 	b, err := json.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("simussp: %w", err)
@@ -230,7 +239,7 @@ func (p *Peer) put(ctx context.Context, url string, body any, out any) error {
 	if err != nil {
 		return fmt.Errorf("simussp: token: %w", err)
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, bytes.NewReader(b))
+	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(b))
 	if err != nil {
 		return fmt.Errorf("simussp: %w", err)
 	}
@@ -238,11 +247,11 @@ func (p *Peer) put(ctx context.Context, url string, body any, out any) error {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := p.cfg.HTTP.Do(req)
 	if err != nil {
-		return fmt.Errorf("simussp: PUT %s: %w", url, err)
+		return fmt.Errorf("simussp: %s %s: %w", method, url, err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 	rb, _ := io.ReadAll(io.LimitReader(resp.Body, f3411.MaxMessageBytes))
-	if resp.StatusCode != http.StatusOK {
+	if !slices.Contains(ok, resp.StatusCode) {
 		return &DSSError{Status: resp.StatusCode, Body: short(rb)}
 	}
 	if err := json.Unmarshal(rb, out); err != nil {
@@ -273,7 +282,7 @@ func (p *Peer) PutISA(ctx context.Context) error {
 	}
 	id := uuidFrom("peer-isa:" + p.cfg.BaseURL + ":" + now.Format(time.RFC3339Nano))
 	var out f3411.PutIdentificationServiceAreaResponse
-	if err := p.put(ctx, strings.TrimRight(p.cfg.DSSRIDBase, "/")+"/dss/identification_service_areas/"+id, body, &out); err != nil {
+	if err := p.put(ctx, strings.TrimRight(p.cfg.DSSRIDBase, "/")+"/dss/identification_service_areas/"+id, body, &out, http.StatusOK); err != nil {
 		p.counters.Inc("isa_write_failures")
 		return err
 	}
@@ -286,19 +295,34 @@ func (p *Peer) PutISA(ctx context.Context) error {
 
 // PutIntents writes every intent's reference (F3548 PUT
 // /dss/v1/operational_intent_references/{entityid}), state Accepted, an
-// implicit subscription, and keeps the OVN the DSS returns.
+// implicit subscription, and keeps the OVN the DSS returns. Each write's
+// key holds the OVNs the DSS gives for the references already in that
+// volume (POST .../query), as F3548 requires of every intersecting
+// reference: the DSS returns the OVN of this USS's own references only,
+// so a reference of another USS there is still refused with 409 and its
+// missing_operational_intents (fetching its OVN from that USS is not
+// done here). The ids are
+// new on every call, as the ISA's are: a reference already in the DSS
+// can only be replaced with its OVN in the key, so a restarted peer
+// reusing an id would be refused with 409.
 func (p *Peer) PutIntents(ctx context.Context) error {
+	run := p.cfg.Now().Format(time.RFC3339Nano)
 	for i, in := range p.cfg.Intents {
-		id := uuidFrom(fmt.Sprintf("peer-intent:%s:%d", p.cfg.BaseURL, i))
+		id := uuidFrom(fmt.Sprintf("peer-intent:%s:%s:%d", p.cfg.BaseURL, run, i))
 		vols := []f3548.Volume4D{volume4D(in)}
+		key, err := p.keyFor(ctx, vols[0])
+		if err != nil {
+			p.counters.Inc("intent_write_failures")
+			return err
+		}
 		notify := false
 		body := f3548.PutOperationalIntentReferenceParameters{
 			Extents: vols, State: f3548.Accepted, UssBaseUrl: p.cfg.BaseURL,
-			Key:             &f3548.Key{},
+			Key:             &key,
 			NewSubscription: &f3548.ImplicitSubscriptionParameters{UssBaseUrl: p.cfg.BaseURL, NotifyForConstraints: &notify},
 		}
 		var out f3548.ChangeOperationalIntentReferenceResponse
-		if err := p.put(ctx, strings.TrimRight(p.cfg.DSSUTMBase, "/")+"/dss/v1/operational_intent_references/"+id, body, &out); err != nil {
+		if err := p.put(ctx, strings.TrimRight(p.cfg.DSSUTMBase, "/")+"/dss/v1/operational_intent_references/"+id, body, &out, http.StatusOK, http.StatusCreated); err != nil {
 			p.counters.Inc("intent_write_failures")
 			return err
 		}
@@ -311,6 +335,23 @@ func (p *Peer) PutIntents(ctx context.Context) error {
 		p.mu.Unlock()
 	}
 	return nil
+}
+
+// keyFor asks the DSS for the references in v and returns the OVNs it
+// gives (F3548 POST /dss/v1/operational_intent_references/query).
+func (p *Peer) keyFor(ctx context.Context, v f3548.Volume4D) (f3548.Key, error) {
+	var out f3548.QueryOperationalIntentReferenceResponse
+	q := f3548.QueryOperationalIntentReferenceParameters{AreaOfInterest: &v}
+	if err := p.call(ctx, http.MethodPost, strings.TrimRight(p.cfg.DSSUTMBase, "/")+"/dss/v1/operational_intent_references/query", q, &out, http.StatusOK); err != nil {
+		return nil, err
+	}
+	key := f3548.Key{}
+	for i := range out.OperationalIntentReferences {
+		if ovn := out.OperationalIntentReferences[i].Ovn; ovn != nil && *ovn != "" {
+			key = append(key, *ovn)
+		}
+	}
+	return key, nil
 }
 
 func volume4D(in Intent) f3548.Volume4D {

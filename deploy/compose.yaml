@@ -5,7 +5,9 @@
 #           the pinned commit's build/dev/docker-compose_dss.yaml uses),
 #           images by digest; deploy/dss/SOURCE names the commit.
 #   issuer  the lab token service (cmd/lab-issuer).
-#   sim     (WP-L5) and systems (WP-L6) come later.
+#   sim     (WP-L5) the peer USSP (cmd/sim-ussp) against the DSS, with
+#           tokens from the issuer; needs both profiles above.
+#   systems (WP-L6) comes later.
 #
 # Consumable as an `include:` from the droplet compose (docs/deploy/
 # PLAN.md WP-D1): no absolute path, every host and figure from the
@@ -149,6 +151,45 @@ services:
       interval: 2s
       timeout: 3s
       retries: 30
+
+  # The peer USSP (WP-L5): writes an ISA and one operational intent
+  # reference per SIM_USSP_INTENT to the DSS with a sim-ussp-01 token
+  # (audience `dss`), then serves its F3411 and F3548 endpoints on the
+  # lab network as http://sim-ussp:8093. It reads its client secret
+  # and the issuer's JWKS from the issuer's state directory (read only),
+  # as the invoking user so the 0600 secrets file is readable.
+  # Vehicles: mav_reader --emit datagrams to sim-ussp:15562/udp.
+  # make sim-ussp-up (deploy/sim-ussp-up.sh) runs it and checks the DSS
+  # accepted both writes.
+  sim-ussp:
+    profiles: [sim]
+    image: ${LAB_SIM_USSP_IMAGE:-uspace-lab/sim-ussp:local}
+    build:
+      context: ..
+      dockerfile: deploy/sim-ussp/Dockerfile
+    user: "${LAB_UID:-65532}:${LAB_GID:-65532}"
+    command:
+      - --listen=0.0.0.0:8093
+      - --base-url=http://sim-ussp:8093
+      - --dss-rid-base=${DSS_URL:-http://dss:8082}/rid/v2
+      - --dss-utm-base=${DSS_URL:-http://dss:8082}
+      - --dss-audience=dss
+      - --token-url=http://lab-issuer:8080/oauth/token
+      - --client-id=sim-ussp-01
+      - --client-secret-json=/state/client-secrets.json
+      - --issuer=${LAB_ISSUER_URL:?set LAB_ISSUER_URL in deploy/.env}
+      - --jwks-file=/state/public/jwks.json
+      - --audience=sim-ussp
+      - --isa=${SIM_USSP_ISA:?set SIM_USSP_ISA in deploy/.env}
+      - --intent=${SIM_USSP_INTENT:?set SIM_USSP_INTENT in deploy/.env}
+      - --vehicles=udp:0.0.0.0:15562
+    volumes:
+      - ${LAB_STATE_DIR:-./local}:/state:ro
+    depends_on:
+      dss: {condition: service_healthy}
+      lab-issuer: {condition: service_healthy}
+    networks: [lab]
+    restart: "no"
 
 networks:
   lab:

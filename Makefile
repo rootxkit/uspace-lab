@@ -121,7 +121,7 @@ scenarios-ci:
 	GO=$(GO) scripts/run-reference-scenarios.sh results/ci-reference
 
 # --- WP-L2 lab stack (deploy/) -------------------------------------------------
-.PHONY: dss-up dss-down
+.PHONY: dss-up dss-down sim-ussp-up
 
 # Start the DSS and the lab issuer, wait until healthy, prove them
 # together (deploy/README.md). Needs Docker with Compose v2.
@@ -131,3 +131,8 @@ dss-up:
 # Remove the stack and its volumes; keeps deploy/local/ (key, secrets).
 dss-down:
 	deploy/dss-down.sh
+
+# WP-L5: the peer USSP (profile sim) against that DSS, checked by reading
+# its writes back from the DSS (deploy/README.md). make dss-down removes it.
+sim-ussp-up:
+	deploy/sim-ussp-up.sh

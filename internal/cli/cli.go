@@ -6,6 +6,7 @@ package cli
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -17,10 +18,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/rootxkit/uspace-core/core"
 
 	"github.com/rootxkit/uspace-lab/internal/vehicle"
 )
+
+// MaxStateFileBytes bounds a secrets or JWKS file read from the lab
+// issuer's state directory (E-10).
+const MaxStateFileBytes = 64 << 10
 
 // SignalContext ends on SIGINT or SIGTERM.
 func SignalContext() (context.Context, context.CancelFunc) {
@@ -70,6 +76,58 @@ func ReadSecret(path string) (string, error) {
 		return "", fmt.Errorf("secret: %w", err)
 	}
 	return strings.TrimSpace(string(b)), nil
+}
+
+// ReadSecretJSON reads client id's secret from a JSON object of client
+// id to secret: the lab issuer's client-secrets.json (deploy/README.md),
+// so a simulator in the lab stack reads its secret where the issuer
+// wrote it. A missing or empty entry is an error.
+func ReadSecretJSON(path, id string) (string, error) {
+	b, err := readBounded(path)
+	if err != nil {
+		return "", fmt.Errorf("secret: %w", err)
+	}
+	var plain map[string]string
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return "", fmt.Errorf("secret: %s: %w", path, err)
+	}
+	s := strings.TrimSpace(plain[id])
+	if s == "" {
+		return "", fmt.Errorf("secret: %s has no secret for client %q", path, id)
+	}
+	return s, nil
+}
+
+// ReadJWKS reads a static JWKS file (the lab issuer's public/jwks.json):
+// inside the lab network the issuer is plain HTTP, which uspace-core's
+// verifier fetches from localhost only, so the keys are given statically.
+func ReadJWKS(path string) (jwk.Set, error) {
+	b, err := readBounded(path)
+	if err != nil {
+		return nil, fmt.Errorf("jwks: %w", err)
+	}
+	set, err := jwk.Parse(b)
+	if err != nil {
+		return nil, fmt.Errorf("jwks: %s: %w", path, err)
+	}
+	if set.Len() == 0 {
+		return nil, fmt.Errorf("jwks: %s holds no key", path)
+	}
+	return set, nil
+}
+
+func readBounded(path string) ([]byte, error) {
+	if path == "" {
+		return nil, fmt.Errorf("a file is required")
+	}
+	b, err := os.ReadFile(path) //nolint:gosec // the operator names the file
+	if err != nil {
+		return nil, err
+	}
+	if len(b) > MaxStateFileBytes {
+		return nil, fmt.Errorf("%s is larger than %d bytes", path, MaxStateFileBytes)
+	}
+	return b, nil
 }
 
 // ReadHexKey reads a hex key from a file.

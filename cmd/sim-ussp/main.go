@@ -12,6 +12,14 @@
 //	  --issuer https://issuer.lab --jwks-url https://issuer.lab/.well-known/jwks.json --audience peer.lab \
 //	  --isa 41.7151,44.8271,2000,500,900 --intent 41.7151,44.8271,500,600,760 \
 //	  --aircraft 3=LABPEER0003 --vehicles udp:127.0.0.1:15562
+//
+// In the lab stack (deploy/compose.yaml, profile sim; make sim-ussp-up)
+// it runs on the lab network against the real DSS and the lab issuer:
+// --client-secret-json reads its secret from the issuer's
+// client-secrets.json, and --jwks-file gives the verifier the issuer's
+// public/jwks.json, because the issuer is plain HTTP on that network
+// and uspace-core's verifier fetches a JWKS over HTTPS (or from
+// localhost) only (deploy/README.md).
 package main
 
 import (
@@ -53,9 +61,11 @@ func run() int {
 		tokenURL    = flag.String("token-url", "", "the issuer's /oauth/token")
 		clientID    = flag.String("client-id", "", "this USS's client id at the issuer")
 		secretFile  = flag.String("client-secret-file", "", "file holding the client secret")
+		secretJSON  = flag.String("client-secret-json", "", "or: the lab issuer's client-secrets.json, read for --client-id")
 		dssAudience = flag.String("dss-audience", "", "the DSS host (aud of DSS-bound tokens)")
 		issuer      = flag.String("issuer", "", "the allow-listed issuer of incoming tokens")
 		jwksURL     = flag.String("jwks-url", "", "that issuer's JWKS")
+		jwksFile    = flag.String("jwks-file", "", "or: that issuer's JWKS as a file (static keys)")
 		audience    = flag.String("audience", "", "this USS's host (aud of incoming tokens)")
 		isa         = flag.String("isa", "", "lat,lon,radius_m,alt_low_w84_m,alt_high_w84_m")
 		vehicles    = flag.String("vehicles", "-", "vehicle stream: - (stdin) or udp:HOST:PORT")
@@ -64,10 +74,28 @@ func run() int {
 	flag.Var(&aircraft, "aircraft", "sysid=serial[:operator_id] (repeatable)")
 	flag.Parse()
 	log := cli.Logger("sim-ussp")
-	secret, err := cli.ReadSecret(*secretFile)
-	if err != nil || *baseURL == "" || *dssRID == "" || *dssUTM == "" || *tokenURL == "" || *issuer == "" || *jwksURL == "" || *audience == "" || *isa == "" {
-		fmt.Fprintln(os.Stderr, "sim-ussp: --base-url, --dss-rid-base, --dss-utm-base, --token-url, --client-secret-file, --issuer, --jwks-url, --audience and --isa are required")
+	if *baseURL == "" || *dssRID == "" || *dssUTM == "" || *tokenURL == "" || *issuer == "" || *audience == "" || *isa == "" ||
+		(*secretFile == "") == (*secretJSON == "") || (*jwksURL == "") == (*jwksFile == "") {
+		fmt.Fprintln(os.Stderr, "sim-ussp: --base-url, --dss-rid-base, --dss-utm-base, --token-url, --issuer, --audience and --isa are required, with one of --client-secret-file or --client-secret-json and one of --jwks-url or --jwks-file")
 		return 2
+	}
+	var secret string
+	var err error
+	if *secretJSON != "" {
+		secret, err = cli.ReadSecretJSON(*secretJSON, *clientID)
+	} else {
+		secret, err = cli.ReadSecret(*secretFile)
+	}
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "sim-ussp:", err)
+		return 2
+	}
+	issuerCfg := auth.IssuerConfig{JWKSURL: *jwksURL}
+	if *jwksFile != "" {
+		if issuerCfg.Keys, err = cli.ReadJWKS(*jwksFile); err != nil {
+			fmt.Fprintln(os.Stderr, "sim-ussp:", err)
+			return 2
+		}
 	}
 	isaV, err := floats(*isa, 5)
 	if err != nil {
@@ -97,7 +125,7 @@ func run() int {
 	}
 	ctx, stop := cli.SignalContext()
 	defer stop()
-	ver, err := auth.NewVerifier(ctx, auth.Config{Issuers: map[string]auth.IssuerConfig{*issuer: {JWKSURL: *jwksURL}}, Audience: *audience})
+	ver, err := auth.NewVerifier(ctx, auth.Config{Issuers: map[string]auth.IssuerConfig{*issuer: issuerCfg}, Audience: *audience})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "sim-ussp:", err)
 		return 2

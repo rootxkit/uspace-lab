@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -34,12 +35,21 @@ func verify(_ context.Context, tok string) ([]string, error) {
 }
 
 // dss is a DSS double for the two writes: it records each body and
-// answers with the standard response shape (an E-01 pair: the refusal
-// path is TestDSSRefusalIsReported).
+// answers with the standard response shape and the status the pinned
+// InterUSS DSS answers a new entity with, observed against it (make
+// sim-ussp-up): 200 for an ISA, 201 for an operational intent reference
+// (an E-01 pair: the refusal path is TestDSSRefusalIsReported). Like the
+// DSS, it refuses with 409 a PUT to a reference id it already holds,
+// since this USS never sends the OVN key to replace one, and a PUT whose
+// key lacks the OVN of a reference it holds (every reference in the
+// double is in the one test volume, so every one intersects); its query
+// returns them with their OVNs, as the DSS does to their manager.
 type dss struct {
 	mu     sync.Mutex
 	isa    []f3411.CreateIdentificationServiceAreaParameters
 	oir    []f3548.PutOperationalIntentReferenceParameters
+	oirIDs []string
+	ovns   []string
 	paths  []string
 	status int
 }
@@ -60,6 +70,14 @@ func (d *dss) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	b, _ := io.ReadAll(r.Body)
 	id := r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:]
 	switch {
+	case r.Method == http.MethodPost && r.URL.Path == "/dss/v1/operational_intent_references/query":
+		refs := []f3548.OperationalIntentReference{}
+		for i, id := range d.oirIDs {
+			ovn := d.ovns[i]
+			refs = append(refs, f3548.OperationalIntentReference{Id: id, Manager: "lab-peer", Ovn: &ovn, State: f3548.Accepted,
+				SubscriptionId: "00000000-0000-4000-8000-000000000001", UssAvailability: "Normal", UssBaseUrl: "https://peer.lab.test", Version: 1})
+		}
+		_ = json.NewEncoder(w).Encode(f3548.QueryOperationalIntentReferenceResponse{OperationalIntentReferences: refs})
 	case strings.HasPrefix(r.URL.Path, "/rid/v2/dss/identification_service_areas/"):
 		var p f3411.CreateIdentificationServiceAreaParameters
 		if json.Unmarshal(b, &p) != nil {
@@ -75,8 +93,25 @@ func (d *dss) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		d.oir = append(d.oir, p)
+		for _, seen := range d.oirIDs {
+			if seen == id {
+				w.WriteHeader(http.StatusConflict)
+				_, _ = w.Write([]byte(`{"message":"Current version is x but client specified version "}`))
+				return
+			}
+		}
+		for _, want := range d.ovns {
+			if p.Key == nil || !slices.Contains(*p.Key, want) {
+				w.WriteHeader(http.StatusConflict)
+				_, _ = w.Write([]byte(`{"message":"Current OVNs not provided for one or more OperationalIntents or Constraints"}`))
+				return
+			}
+		}
 		ovn := "ovn-" + id[:8]
+		d.oir = append(d.oir, p)
+		d.oirIDs = append(d.oirIDs, id)
+		d.ovns = append(d.ovns, ovn)
+		w.WriteHeader(http.StatusCreated)
 		_ = json.NewEncoder(w).Encode(f3548.ChangeOperationalIntentReferenceResponse{
 			OperationalIntentReference: f3548.OperationalIntentReference{Id: id, Manager: "lab-peer", Ovn: &ovn, State: p.State,
 				SubscriptionId: "00000000-0000-4000-8000-000000000001", TimeStart: *p.Extents[0].TimeStart, TimeEnd: *p.Extents[0].TimeEnd,
@@ -210,5 +245,49 @@ func TestDSSRefusalIsReported(t *testing.T) {
 	var de *DSSError
 	if !errors.As(err, &de) || de.Status != http.StatusConflict || p.Counters().Get("isa_write_failures") != 1 {
 		t.Fatalf("got %v", err)
+	}
+}
+
+// A restarted peer (a second process, same configuration, later) writes
+// its references again and the DSS takes them: the ids are per run, so
+// the second PUT is a creation, not a replacement without the OVN, and
+// its key carries the OVN of the first run's reference in the same
+// volume. Both refusals the real DSS gave (409) are shown to happen in
+// the double without them.
+func TestRestartedPeerWritesNewReferences(t *testing.T) {
+	d := &dss{}
+	first, _ := newPeer(t, d)
+	second, _ := newPeer(t, d)
+	t0 := time.Date(2026, 10, 3, 12, 0, 0, 0, time.UTC)
+	first.cfg.Now = func() time.Time { return t0 }
+	second.cfg.Now = func() time.Time { return t0.Add(time.Minute) }
+	for _, p := range []*Peer{first, second} {
+		if err := p.PutIntents(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(d.oirIDs) != 2 || d.oirIDs[0] == d.oirIDs[1] {
+		t.Fatalf("reference ids %v", d.oirIDs)
+	}
+	if k := d.oir[0].Key; k == nil || len(*k) != 0 {
+		t.Fatalf("first key %v, want empty", k)
+	}
+	if k := d.oir[1].Key; k == nil || !slices.Equal(*k, []string{d.ovns[0]}) {
+		t.Fatalf("second key %v, want [%s]", k, d.ovns[0])
+	}
+	// The double does refuse a key without an intersecting OVN: the
+	// second run's reference is left out.
+	var de *DSSError
+	var out f3548.ChangeOperationalIntentReferenceResponse
+	body := f3548.PutOperationalIntentReferenceParameters{Key: &f3548.Key{d.ovns[0]}, Extents: []f3548.Volume4D{volume4D(second.cfg.Intents[0])},
+		State: f3548.Accepted, UssBaseUrl: second.cfg.BaseURL}
+	err := second.put(context.Background(), second.cfg.DSSUTMBase+"/dss/v1/operational_intent_references/00000000-0000-4000-8000-0000000000aa", body, &out, http.StatusCreated)
+	if !errors.As(err, &de) || de.Status != http.StatusConflict {
+		t.Fatalf("a key without an intersecting OVN: got %v, want a 409", err)
+	}
+	// The double does refuse a reused id: the second run again.
+	err = second.PutIntents(context.Background())
+	if !errors.As(err, &de) || de.Status != http.StatusConflict {
+		t.Fatalf("a reused id: got %v, want a 409", err)
 	}
 }

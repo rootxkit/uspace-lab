@@ -34,9 +34,10 @@ var (
 )
 
 // Every third-party image is pinned by digest, and the DSS and its
-// datastore by exactly the digests dss/SOURCE records. The one image
-// without a digest is the lab issuer built from this repository. The
-// check is shown able to fail on a tag-only line (E-01).
+// datastore by exactly the digests dss/SOURCE records. The images
+// without a digest are the two built from this repository (the lab
+// issuer, the peer USSP), whose base images are pinned. The check is
+// shown able to fail on a tag-only line (E-01).
 func TestImagesPinnedByDigest(t *testing.T) {
 	compose := read(t, "compose.yaml")
 	src := read(t, "dss/SOURCE")
@@ -46,7 +47,7 @@ func TestImagesPinnedByDigest(t *testing.T) {
 	}
 	for _, m := range images {
 		img := m[1]
-		if strings.HasPrefix(img, "*") || strings.HasPrefix(img, "${LAB_ISSUER_IMAGE") {
+		if strings.HasPrefix(img, "*") || strings.HasPrefix(img, "${LAB_ISSUER_IMAGE") || strings.HasPrefix(img, "${LAB_SIM_USSP_IMAGE") {
 			continue
 		}
 		if !digest.MatchString(img) {
@@ -62,13 +63,15 @@ func TestImagesPinnedByDigest(t *testing.T) {
 	if commit := sourceField(t, src, "commit"); !regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString(commit) {
 		t.Errorf("dss/SOURCE commit %q is not a full SHA", commit)
 	}
-	froms := fromLine.FindAllStringSubmatch(read(t, "issuer/Dockerfile"), -1)
-	if len(froms) != 2 {
-		t.Fatalf("issuer/Dockerfile: %d FROM lines", len(froms))
-	}
-	for _, m := range froms {
-		if !digest.MatchString(m[1]) {
-			t.Errorf("issuer/Dockerfile: %s is not pinned by digest", m[1])
+	for _, df := range []string{"issuer/Dockerfile", "sim-ussp/Dockerfile"} {
+		froms := fromLine.FindAllStringSubmatch(read(t, df), -1)
+		if len(froms) != 2 {
+			t.Fatalf("%s: %d FROM lines", df, len(froms))
+		}
+		for _, m := range froms {
+			if !digest.MatchString(m[1]) {
+				t.Errorf("%s: %s is not pinned by digest", df, m[1])
+			}
 		}
 	}
 	if digest.MatchString("cockroachdb/cockroach:v24.1.3") {
