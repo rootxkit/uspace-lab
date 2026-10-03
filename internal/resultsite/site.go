@@ -59,8 +59,8 @@ func Load(dir string) (*Site, error) {
 		if err != nil {
 			return err
 		}
-		var r runner.Result
-		if json.Unmarshal(b, &r) != nil || r.Format != runner.ResultFormat || r.Run == "" || r.Scenario == "" {
+		r, ok := decode(b)
+		if !ok {
 			rel, _ := filepath.Rel(dir, p)
 			s.Unreadable = append(s.Unreadable, filepath.ToSlash(rel))
 			return nil
@@ -78,7 +78,7 @@ func Load(dir string) (*Site, error) {
 		if r.StartedAt.Before(run.Started) {
 			run.Started = r.StartedAt
 		}
-		run.Results = append(run.Results, &r)
+		run.Results = append(run.Results, r)
 		seen[r.Scenario] = true
 		return nil
 	})
@@ -220,3 +220,12 @@ const templates = head + `
 {{if .Images}}<p><strong>Images</strong></p><ul>{{range $k, $v := .Images}}<li>{{$k}}: <code>{{short $v}}</code></li>{{end}}</ul>{{end}}
 <p class="lead">lab {{.Commits.Lab}}{{if .Commits.LabDirty}} (dirty){{end}}, core {{.Commits.Core}}, {{.Commits.Go}}</p></div>{{end}}
 </main></body></html>{{end}}`
+
+// decode reads a result/v1 file; false for anything else.
+func decode(b []byte) (*runner.Result, bool) {
+	var r runner.Result
+	if err := json.Unmarshal(b, &r); err != nil {
+		return nil, false
+	}
+	return &r, r.Format == runner.ResultFormat && r.Run != "" && r.Scenario != ""
+}

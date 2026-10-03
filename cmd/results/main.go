@@ -71,7 +71,7 @@ func run(args []string) int {
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-cache")
-		_, _ = w.Write(b)
+		_, _ = w.Write(b) //nolint:gosec // html/template output: every value is escaped
 	})
 	srv := &http.Server{Addr: *listen, Handler: h, ReadHeaderTimeout: 5 * time.Second}
 	log.Info("serving", "listen", *listen, "results", *in)
