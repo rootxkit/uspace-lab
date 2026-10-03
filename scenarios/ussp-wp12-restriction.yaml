@@ -15,7 +15,7 @@ note: >-
   deployment's (extra.uspace_airspace_id). The restriction is a 300 m
   circle over A's intent from 0 to 2000 m AMSL: the ground and A
   included, with no terrain needed to judge it.
-duration_s: 150
+duration_s: 175
 tail_s: 8
 aircraft:
   - name: a

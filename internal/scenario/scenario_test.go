@@ -76,6 +76,10 @@ func TestRefusals(t *testing.T) {
 		"receiver system":   func(s *Scenario) { s.Receivers[0].System = "ussp" },
 		"operator system":   func(s *Scenario) { s.Aircraft[0].Operator.System = "authority" },
 		"intent band":       func(s *Scenario) { s.Aircraft[0].Operator.Intent.AltUpperRelM = -50 },
+		"landing after the end": func(s *Scenario) {
+			at := s.DurationS - 10 // from 30 m SITL needs about 39 s
+			s.Steps = append(s.Steps, Step{Do: DoLand, Aircraft: []string{"a"}, AtS: &at})
+		},
 		"serial not CTA for C2": func(s *Scenario) {
 			s.Aircraft[0].Serial = "LABSC03A0001" // no length character: the USSP refuses it for C2
 		},
@@ -84,6 +88,15 @@ func TestRefusals(t *testing.T) {
 	for name, f := range cases {
 		if err := mutate(f); err == nil {
 			t.Errorf("%s: accepted", name)
+		}
+	}
+}
+
+// The landing estimate against what SITL measured (LandS's comment).
+func TestLandSCoversTheMeasuredLandings(t *testing.T) {
+	for alt, measured := range map[float64]float64{20: 30.6, 30: 37.5, 60: 57.5} {
+		if got := LandS(alt); got < measured || got > measured+6 {
+			t.Errorf("LandS(%.0f) = %.1f, measured %.1f", alt, got, measured)
 		}
 	}
 }

@@ -2,6 +2,7 @@ package scenario
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -278,6 +279,26 @@ type Window struct {
 
 var idPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,62}$`)
 
+// ArduCopter 4.5.7's landing defaults (read from its source, the SITL
+// the lab flies): WPNAV_SPEED_DN 150 cm/s down to LAND_ALT_LOW 1000 cm,
+// then LAND_SPEED 50 cm/s; landingMarginS covers the touchdown, the
+// disarm and its confirmation by sim/fly.py (measured: 30.6 s from 20 m,
+// 37.5 s from 30 m, 57.5 s from 60 m; results/20261003-sitl-reference,
+// results/20261004-systems).
+const (
+	landFastMS     = 1.5
+	landSlowMS     = 0.5
+	landSlowBelowM = 10.0
+	landingMarginS = 6.0
+)
+
+// LandS is about how long a SITL vehicle takes to land from alt_rel_m.
+func LandS(altRelM float64) float64 {
+	slow := math.Min(altRelM, landSlowBelowM)
+	fast := math.Max(altRelM-landSlowBelowM, 0)
+	return fast/landFastMS + slow/landSlowMS + landingMarginS
+}
+
 // Load reads, checks and resolves a scenario and its policy.
 func Load(path string) (*Scenario, error) {
 	b, err := os.ReadFile(path) //nolint:gosec // the operator names the scenario
@@ -441,6 +462,7 @@ func (s *Scenario) Validate() error {
 		zones[z.ID] = true
 	}
 	marks := map[string]bool{"t0": true}
+	altOf := map[string]float64{}
 	for i := range s.Steps {
 		st := &s.Steps[i]
 		f := fmt.Sprintf("steps[%d]", i)
@@ -472,6 +494,22 @@ func (s *Scenario) Validate() error {
 			}
 			if st.Do == DoHold && !(st.ForS > 0) {
 				return core.Fieldf(f+".for_s", "hold needs for_s > 0")
+			}
+			if (st.Do == DoTakeoff || st.Do == DoGoto) && st.AltRelM > 0 {
+				for _, n := range st.Aircraft {
+					altOf[n] = st.AltRelM
+				}
+			}
+			// A timed landing must be able to finish inside the run: the
+			// runner fails a run in which a vehicle did not confirm a
+			// step, and SITL lands at its own pace.
+			if st.Do == DoLand && st.AtS != nil {
+				for _, n := range st.Aircraft {
+					if need := LandS(altOf[n]); *st.AtS+need > s.DurationS {
+						return core.Fieldf(f+".at_s", "%s lands from %.0f m at %.0f s, which takes about %.0f s, after duration_s %.0f",
+							n, altOf[n], *st.AtS, need, s.DurationS)
+					}
+				}
 			}
 		case DoKnob:
 			if st.AtS == nil || st.Knob == nil {

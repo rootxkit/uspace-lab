@@ -16,7 +16,7 @@ note: >-
   surveillance, horizontal judgement only on a pressure altitude, R-09).
   Then the file freezes (positions stop): the ANSP's stream must show
   the aircraft stale, never as a live old position (SC-15, T-11).
-duration_s: 150
+duration_s: 175
 tail_s: 8
 aircraft:
   - name: a

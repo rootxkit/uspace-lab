@@ -15,7 +15,7 @@ note: >-
   are the authority's admin API with the session in the targets file
   (requests.authority). Steps 4-8 of SC-08 (relays, KV loss) need the
   authenticated feeds and the authority's own fault injection.
-duration_s: 120
+duration_s: 150
 tail_s: 5
 aircraft:
   - name: c
