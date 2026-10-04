@@ -1,6 +1,8 @@
 package scenario
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"math"
 	"os"
 	"path/filepath"
@@ -346,6 +348,38 @@ func TestUnknownMembersAreRefused(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(dir, "policy", "demo.yaml"), pol, 0o600)
 	if _, err := Load(filepath.Join(dir, "x.yaml")); err == nil {
 		t.Fatal("an unknown member was accepted")
+	}
+}
+
+// The digest is the SHA-256 of the file's bytes, and any edit, even one
+// that leaves the scenario's meaning alone, changes it.
+func TestDigestIsTheFileHash(t *testing.T) {
+	src := filepath.Join(scenariosDir, "sc-22-missing-inputs-visible.yaml")
+	b, err := os.ReadFile(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := Load(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(b)
+	if want := "sha256:" + hex.EncodeToString(sum[:]); s.Digest != want {
+		t.Fatalf("digest %s, want %s", s.Digest, want)
+	}
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "x.yaml"), append(b, []byte("# edited\n")...), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	pol, _ := os.ReadFile(filepath.Join(scenariosDir, "policy", "demo.yaml"))
+	_ = os.MkdirAll(filepath.Join(dir, "policy"), 0o750)
+	_ = os.WriteFile(filepath.Join(dir, "policy", "demo.yaml"), pol, 0o600)
+	e, err := Load(filepath.Join(dir, "x.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e.Digest == s.Digest || !strings.HasPrefix(e.Digest, "sha256:") {
+		t.Fatalf("an edited file kept the digest %s", e.Digest)
 	}
 }
 

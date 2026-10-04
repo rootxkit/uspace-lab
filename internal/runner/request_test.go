@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"log/slog"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/rootxkit/uspace-lab/internal/scenario"
+	"github.com/rootxkit/uspace-lab/internal/simop"
 )
 
 // A request step carries the console session the way the system reads
@@ -112,6 +114,53 @@ func TestRunEndsTheIntentsItLeftOpen(t *testing.T) {
 	}
 	if res.Intents[0].Ended != "ended" || res.Intents[1].Ended != "" || res.Intents[2].Ended != "ended" {
 		t.Fatalf("%+v", res.Intents)
+	}
+}
+
+type fixedToken string
+
+func (f fixedToken) Token(context.Context) (string, error) { return string(f), nil }
+func (fixedToken) Invalidate()                             {}
+
+// The intent record keeps the volumes the request filed, as sent, so a
+// decision is tied to the airspace asked for; a request that could not
+// be built files nothing and records none.
+func TestIntentRecordKeepsTheFiledVolumes(t *testing.T) {
+	var filed simop.IntentRequest
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/v1/intents" {
+			http.Error(w, "no", http.StatusNotFound)
+			return
+		}
+		if err := json.NewDecoder(r.Body).Decode(&filed); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(`{"intent_id":"i-a","decision":"authorised","state":"activated"}`))
+	}))
+	defer srv.Close()
+	req := simop.IntentRequest{ClientRef: "r", Volumes: []simop.Volume4D{{Volume: simop.Volume3D{
+		OutlineCircle: &simop.Circle{Center: simop.Point{Lat: 41.7, Lng: 44.8}, Radius: simop.Radius{Value: 150, Units: "M"}},
+		AltitudeLower: simop.IntentAltitude{Value: 500, Reference: "W84", Units: "M"},
+		AltitudeUpper: simop.IntentAltitude{Value: 560, Reference: "W84", Units: "M"},
+	}}}}
+	ins := &simop.Intents{BaseURL: srv.URL, Tokens: fixedToken("tok")}
+	rec := fileIntent(context.Background(), ins, "a", req, nil)
+	if rec.Error != "" || rec.IntentID != "i-a" || rec.State != "activated" {
+		t.Fatalf("%+v", rec)
+	}
+	got, _ := json.Marshal(rec.Volumes)
+	sent, _ := json.Marshal(filed.Volumes)
+	if len(rec.Volumes) != 1 || !bytes.Equal(got, sent) {
+		t.Fatalf("recorded %s, filed %s", got, sent)
+	}
+	if b, _ := json.Marshal(rec); !strings.Contains(string(b), `"volumes":[{`) {
+		t.Fatalf("the record does not carry the volumes: %s", b)
+	}
+	failed := fileIntent(context.Background(), ins, "b", simop.IntentRequest{}, os.ErrNotExist)
+	if failed.Error == "" || failed.Volumes != nil {
+		t.Fatalf("%+v", failed)
 	}
 }
 

@@ -2,6 +2,8 @@ package runner
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"os"
 	"path/filepath"
@@ -85,6 +87,14 @@ func TestCorrectExpectationPasses(t *testing.T) {
 	}
 	if res.Verdict != "pass" {
 		t.Fatalf("%s", res.Summary())
+	}
+	b, err := os.ReadFile(opts(t, "sc-22-missing-inputs-visible.yaml").Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(b)
+	if want := "sha256:" + hex.EncodeToString(sum[:]); res.ScenarioDigest != want {
+		t.Fatalf("scenario digest %q, want %q", res.ScenarioDigest, want)
 	}
 	if res.Commits.Core == "" || res.PolicyVersion != 1 || res.Mode.Targets != ModeReference || !strings.Contains(res.Evidence, "never evidence") {
 		t.Fatalf("result metadata %+v", res.Commits)

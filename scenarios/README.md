@@ -127,5 +127,8 @@ To run one:
    --vehicles sitl --lab sim/sitl.env scenarios/<file>.yaml`.
 6. Record the result file's path, its verdict and the observed numbers
    in the system's runbook ("Lab run (owed)"): the result names the lab
-   and core commits, the image digests as configured, the policy and
-   every raise and clear with its time.
+   and core commits, the image digests as configured, the policy, the
+   scenario file's SHA-256 (`scenario_digest`, so a PASS is tied to the
+   committed scenario: compare it with `sha256sum scenarios/<file>.yaml`
+   at the commit you cite), the volumes each intent filed, and every
+   raise and clear with its time.

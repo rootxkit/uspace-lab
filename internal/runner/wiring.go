@@ -132,6 +132,30 @@ func (r *run) intentRequest(a *scenario.Aircraft) (simop.IntentRequest, error) {
 	}, nil
 }
 
+// fileIntent files req (built with reqErr) and activates it when
+// accepted; the record keeps the volumes as filed, which tie the
+// decision to the airspace actually asked for.
+func fileIntent(ctx context.Context, ins *simop.Intents, aircraft string, req simop.IntentRequest, reqErr error) IntentRecord {
+	rec := IntentRecord{Aircraft: aircraft}
+	err := reqErr
+	if err == nil {
+		rec.Volumes = req.Volumes
+		var d simop.Decision
+		if d, err = ins.File(ctx, req); err == nil {
+			rec.IntentID, rec.Decision, rec.State = d.IntentID, d.Decision, d.State
+			if d.State == "accepted" {
+				if d, err = ins.Change(ctx, d.IntentID, "activate"); err == nil {
+					rec.State = d.State
+				}
+			}
+		}
+	}
+	if err != nil {
+		rec.Error = err.Error()
+	}
+	return rec
+}
+
 // clientRef is an intent's idempotency reference (intent/request/v1
 // client_ref, ^[A-Za-z0-9._:-]{1,64}$): one per execution. A USSP
 // answers a reference it has seen with a different body 409, and a
@@ -165,23 +189,8 @@ func (r *run) startOperators(ctx, simCtx context.Context, wg *sync.WaitGroup) er
 		}
 		intentID := ""
 		if a.Operator.Intent != nil {
-			rec := IntentRecord{Aircraft: a.Name}
 			req, err := r.intentRequest(a)
-			if err == nil {
-				ins := &simop.Intents{BaseURL: base, Tokens: tokens}
-				var d simop.Decision
-				if d, err = ins.File(ctx, req); err == nil {
-					rec.IntentID, rec.Decision, rec.State = d.IntentID, d.Decision, d.State
-					if d.State == "accepted" {
-						if d, err = ins.Change(ctx, d.IntentID, "activate"); err == nil {
-							rec.State = d.State
-						}
-					}
-				}
-			}
-			if err != nil {
-				rec.Error = err.Error()
-			}
+			rec := fileIntent(ctx, &simop.Intents{BaseURL: base, Tokens: tokens}, a.Name, req, err)
 			r.mu.Lock()
 			r.intents = append(r.intents, rec)
 			r.mu.Unlock()

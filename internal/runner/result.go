@@ -26,16 +26,19 @@ import (
 // latencies and the verdict. Nothing in it is expected rather than
 // observed (E-04).
 type Result struct {
-	Format    string    `json:"format"`
-	Run       string    `json:"run"`
-	Scenario  string    `json:"scenario"`
-	Title     string    `json:"title"`
-	Source    string    `json:"source"`
-	Owners    []string  `json:"owners"`
-	StartedAt time.Time `json:"started_at"`
-	EndedAt   time.Time `json:"ended_at"`
-	T0        time.Time `json:"t0"`
-	Mode      struct {
+	Format   string `json:"format"`
+	Run      string `json:"run"`
+	Scenario string `json:"scenario"`
+	// ScenarioDigest is the SHA-256 of the scenario file the run loaded
+	// ("sha256:<hex>"), so a verdict is tied to the committed scenario.
+	ScenarioDigest string    `json:"scenario_digest"`
+	Title          string    `json:"title"`
+	Source         string    `json:"source"`
+	Owners         []string  `json:"owners"`
+	StartedAt      time.Time `json:"started_at"`
+	EndedAt        time.Time `json:"ended_at"`
+	T0             time.Time `json:"t0"`
+	Mode           struct {
 		Vehicles string `json:"vehicles"` // synthetic or sitl
 		Targets  string `json:"targets"`  // reference or systems
 		Name     string `json:"targets_name,omitempty"`
@@ -91,6 +94,9 @@ type IntentRecord struct {
 	Decision string `json:"decision,omitempty"`
 	State    string `json:"state,omitempty"`
 	Error    string `json:"error,omitempty"`
+	// Volumes are the 4D volumes the request filed (or tried to file,
+	// with Error), as sent.
+	Volumes []simop.Volume4D `json:"volumes,omitempty"`
 	// Ended is the state the USSP answered when the runner ended the
 	// intent after the run; EndError why it could not.
 	Ended    string `json:"ended,omitempty"`

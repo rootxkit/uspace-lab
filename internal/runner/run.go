@@ -515,7 +515,7 @@ func (r *run) marks() verdict.Marks {
 }
 
 func (r *run) result(drain context.Context, started time.Time) *Result {
-	res := &Result{Format: ResultFormat, Run: r.opt.Run, Scenario: r.sc.ID, Title: r.sc.Title, Source: r.sc.Source,
+	res := &Result{Format: ResultFormat, Run: r.opt.Run, Scenario: r.sc.ID, ScenarioDigest: r.sc.Digest, Title: r.sc.Title, Source: r.sc.Source,
 		Owners: r.sc.Owners, StartedAt: started, T0: r.t0, Images: r.tg.Images, PolicyVersion: r.sc.PolicyDoc.PolicyVersion,
 		Policy: r.sc.PolicyDoc, Geoid: r.geoDesc}
 	res.Mode.Vehicles, res.Mode.Targets, res.Mode.Name = r.opt.Vehicles, r.tg.Mode, r.tg.Name
@@ -604,14 +604,15 @@ func (r *run) result(drain context.Context, started time.Time) *Result {
 			res.Failures = append(res.Failures, fmt.Sprintf("receiver %s ledger does not balance: observed %d, sent %d, accepted %d + duplicates %d + refused %d, pending %d", l.ReceiverID, l.Observed, l.Sent, l.Accepted, l.Duplicates, l.Refused, l.Pending))
 		}
 	}
-	for _, in := range res.Intents {
-		if in.Error != "" {
+	for i := range res.Intents {
+		if in := &res.Intents[i]; in.Error != "" {
 			res.Failures = append(res.Failures, fmt.Sprintf("intent of %s: %s", in.Aircraft, in.Error))
 		}
 	}
 	for _, ie := range r.sc.ExpectIntents {
 		found := false
-		for _, in := range res.Intents {
+		for i := range res.Intents {
+			in := &res.Intents[i]
 			if in.Aircraft != ie.Aircraft {
 				continue
 			}

@@ -1,6 +1,8 @@
 package scenario
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"math"
 	"os"
@@ -68,6 +70,10 @@ type Scenario struct {
 	Dir string `yaml:"-" json:"-"`
 	// PolicyDoc is the loaded policy.
 	PolicyDoc *Policy `yaml:"-" json:"-"`
+	// Digest is "sha256:" and the hex SHA-256 of the scenario file's
+	// bytes as loaded, which a result records to tie its verdict to the
+	// committed scenario (files are LF on every platform, .gitattributes).
+	Digest string `yaml:"-" json:"-"`
 }
 
 // Aircraft is one simulated vehicle and how the systems hear it.
@@ -409,6 +415,8 @@ func Load(path string) (*Scenario, error) {
 		return nil, fmt.Errorf("scenario %s: %w", path, err)
 	}
 	s.Dir = filepath.Dir(path)
+	sum := sha256.Sum256(b)
+	s.Digest = "sha256:" + hex.EncodeToString(sum[:])
 	if err := s.Validate(); err != nil {
 		return nil, fmt.Errorf("scenario %s: %w", path, err)
 	}
