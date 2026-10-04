@@ -1,7 +1,8 @@
 name: gitleaks
 
 # No key, secret or token in the repository (spec 06 §4, WP-L2). Every
-# commit of every push and pull request, whatever it touches.
+# commit a pull request adds, and the whole history of main on every
+# push to it, whatever it touches.
 on:
   push:
     branches: [main]
@@ -23,9 +24,23 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-      # gitleaks v8.30.0, pinned by digest.
-      - name: gitleaks (full history)
-        run: >
-          docker run --rm -v "$PWD:/repo" -w /repo
-          zricethezav/gitleaks:v8.30.0@sha256:691af3c7c5a48b16f187ce3446d5f194838f91238f27270ed36eef6359a574d9
-          git --redact --verbose --exit-code 1 /repo
+      # Which commits: on a pull request only its own (base..head), so a
+      # finding on another branch never fails it; on main, a tag or a
+      # manual run the whole history of the commit checked out, which
+      # holds the pushed range. Never every fetched branch (gitleaks'
+      # default --all): the checkout fetches them all. gitleaks v8.30.0,
+      # pinned by digest.
+      - name: gitleaks
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            range="origin/$BASE_REF..$HEAD_SHA"
+          else
+            range="$GITHUB_SHA"
+          fi
+          echo "gitleaks commits: $range ($(git rev-list --count "$range") commits)"
+          docker run --rm -v "$PWD:/repo" -w /repo \
+            zricethezav/gitleaks:v8.30.0@sha256:691af3c7c5a48b16f187ce3446d5f194838f91238f27270ed36eef6359a574d9 \
+            git --redact --verbose --exit-code 1 --log-opts="$range" /repo
