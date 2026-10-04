@@ -385,7 +385,25 @@ func (r *run) collectAuthority(ctx context.Context) {
 		return
 	}
 	r.collect(ctx, observe.Stream{Name: "authority-picture", System: scenario.SystemAuthority, URL: a.PictureURL,
-		Header: http.Header{"Cookie": {"uspace_session=" + session}, "Origin": {a.Origin}}})
+		Header: http.Header{"Cookie": {"uspace_session=" + session}, "Origin": {a.Origin}}, OnOpen: r.pictureSubscribe()})
+}
+
+// pictureSubscribeHalfM is half the side of the picture viewport about
+// the origin: every offset of the suite is within a few kilometres.
+const pictureSubscribeHalfM = 10000
+
+// pictureSubscribe is the console/subscribe/v1 frame (schemas/common/
+// console/subscribe/v1) the runner sends the authority's picture: a box
+// about the run's origin with the tracks, manned and alerts layers. The
+// picture sends violation/v1 only for a subscribed viewport, so without
+// it no authority expectation could ever be met.
+func (r *run) pictureSubscribe() []byte {
+	sw := r.lab.At(scenario.Offset{NorthM: -pictureSubscribeHalfM, EastM: -pictureSubscribeHalfM})
+	ne := r.lab.At(scenario.Offset{NorthM: pictureSubscribeHalfM, EastM: pictureSubscribeHalfM})
+	b, _ := json.Marshal(map[string]any{"schema": "console/subscribe/v1", "body": map[string]any{
+		"bbox": []float64{sw.LonDeg, sw.LatDeg, ne.LonDeg, ne.LatDeg}, "layers": []string{"tracks", "manned", "alerts"},
+	}})
+	return b
 }
 
 func (r *run) collectANSP(ctx context.Context) {

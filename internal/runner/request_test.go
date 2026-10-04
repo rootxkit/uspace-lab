@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -159,5 +160,33 @@ func TestLabCommitFromTheBuildWhenGitCannotBeAsked(t *testing.T) {
 	}
 	if c := withBuildVCS(Commits{Lab: "def456"}, st); c.Lab != "def456" || c.LabDirty {
 		t.Fatalf("git's answer overridden: %+v", c)
+	}
+}
+
+// The picture subscription is a console/subscribe/v1 (schemas/common/
+// console/subscribe/v1: a [west, south, east, north] box and known
+// layers) about the origin, with the alerts layer.
+func TestPictureSubscribeIsValid(t *testing.T) {
+	lab, err := scenario.LoadLab("../../sim/sitl.env.example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := (&run{lab: lab}).pictureSubscribe()
+	var m map[string]any
+	if err := json.Unmarshal(b, &m); err != nil {
+		t.Fatal(err)
+	}
+	body := m["body"].(map[string]any)
+	bb := body["bbox"].([]any)
+	if m["schema"] != "console/subscribe/v1" || len(bb) != 4 || bb[1].(float64) >= bb[3].(float64) {
+		t.Fatalf("%s", b)
+	}
+	for _, l := range body["layers"].([]any) {
+		if l != "tracks" && l != "manned" && l != "alerts" && l != "zones" {
+			t.Fatalf("unknown layer %v", l)
+		}
+	}
+	if !(bb[0].(float64) < lab.Origin.LonDeg && lab.Origin.LonDeg < bb[2].(float64)) || !strings.Contains(string(b), `"alerts"`) {
+		t.Fatalf("%s", b)
 	}
 }
