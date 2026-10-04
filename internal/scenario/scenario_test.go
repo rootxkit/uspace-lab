@@ -520,3 +520,30 @@ func TestOverlappingIntentsAreRefusedUnlessExpected(t *testing.T) {
 		t.Fatalf("wp7: %v", err)
 	}
 }
+
+// A landing that follows the aircraft's previous step (no at_s) must
+// finish inside the run as SITL flies it (sitlEndS). The re-run of
+// ussp-wp7-authorisation confirmed the climb 37.5 s after t0, and its
+// landing, started at +65 s, was not confirmed by the end at +95 s.
+func TestUntimedLandingsFinishInsideTheRun(t *testing.T) {
+	files, err := filepath.Glob(filepath.Join(scenariosDir, "*.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range files {
+		s, err := Load(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, st := range s.Steps {
+			if st.Do != DoLand || st.AtS != nil {
+				continue
+			}
+			for _, a := range st.Aircraft {
+				if end := sitlEndS(s, a, st.ID); end > s.DurationS {
+					t.Errorf("%s: %s lands by about %.0f s, after duration_s %.0f", filepath.Base(f), a, end, s.DurationS)
+				}
+			}
+		}
+	}
+}

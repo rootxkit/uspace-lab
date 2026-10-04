@@ -17,7 +17,10 @@ note: >-
   suite has; it is not repeated here. Needs both operators' clients in
   the targets file (op-a, op-b) and the origin inside a published U-space
   airspace.
-duration_s: 90
+# 130 s: SITL confirmed the climb 37.5 s after t0 in the re-run of
+# 20261004, and the landing from 20 m that followed the hover was not
+# confirmed inside 90 s.
+duration_s: 130
 tail_s: 5
 aircraft:
   - name: a
