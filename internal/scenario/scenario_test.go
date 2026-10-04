@@ -573,3 +573,27 @@ func TestANSPEndsCarryAReason(t *testing.T) {
 	}
 }
 
+// An idempotency key names one execution: a request body carries t0's
+// times, so a key without them is answered 409 when the scenario runs
+// again under the same run id (the runner's intents do the same with
+// their client_ref).
+func TestIdempotencyKeysAreOnePerExecution(t *testing.T) {
+	files, err := filepath.Glob(filepath.Join(scenariosDir, "*.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range files {
+		s, err := Load(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, st := range s.Steps {
+			if st.Request == nil {
+				continue
+			}
+			if k, ok := st.Request.Headers["Idempotency-Key"]; ok && !strings.Contains(k, "${time:") {
+				t.Errorf("%s step %s: Idempotency-Key %q is the same on every execution", filepath.Base(f), st.ID, k)
+			}
+		}
+	}
+}

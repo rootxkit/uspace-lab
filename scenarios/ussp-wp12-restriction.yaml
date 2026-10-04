@@ -52,8 +52,11 @@ steps:
       method: POST
       path: /v1/restrictions
       # Required by the ANSP on a plan (its client reference; a repeat
-      # with the same key answers the restriction first created).
-      headers: {Idempotency-Key: "uspace-lab-${run}-wp12-plan"}
+      # with the same key answers the restriction first created). One per
+      # execution: the body's times are new each time, and the ANSP
+      # answers a key seen with another body 409 (seen when wp12 ran
+      # twice under one run id in the re-run of 20261004).
+      headers: {Idempotency-Key: "uspace-lab-${run}-wp12-plan-${time:0}"}
       body:
         uspace_airspace_id: "${extra:uspace_airspace_id}"
         geometry: {type: Point, coordinates: ["${lng:0,0}", "${lat:0,0}"]}
