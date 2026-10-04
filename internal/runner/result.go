@@ -154,6 +154,26 @@ func commits(repo string) Commits {
 				c.Core = d.Version
 			}
 		}
+		c = withBuildVCS(c, bi.Settings)
+	}
+	return c
+}
+
+// withBuildVCS fills the lab commit from the binary's own VCS stamp when
+// git cannot be asked where the runner runs: a runner built on one side
+// and run on the other (Windows checkout, WSL runner, as the WP-L6
+// systems runs were) recorded "unknown" for every result (E-05).
+func withBuildVCS(c Commits, settings []debug.BuildSetting) Commits {
+	if c.Lab != "unknown" {
+		return c
+	}
+	for _, s := range settings {
+		switch s.Key {
+		case "vcs.revision":
+			c.Lab = s.Value
+		case "vcs.modified":
+			c.LabDirty = s.Value == "true"
+		}
 	}
 	return c
 }

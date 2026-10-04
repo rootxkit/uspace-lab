@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
@@ -145,5 +146,18 @@ func TestClientRefIsNewPerExecutionAndValid(t *testing.T) {
 		if len(ref) > 64 || !clientRefPattern.MatchString(ref) {
 			t.Errorf("invalid client_ref %q", ref)
 		}
+	}
+}
+
+// Without git where the runner runs, the lab commit comes from the
+// binary's VCS stamp; with git, git's answer stands.
+func TestLabCommitFromTheBuildWhenGitCannotBeAsked(t *testing.T) {
+	st := []debug.BuildSetting{{Key: "vcs.revision", Value: "abc123"}, {Key: "vcs.modified", Value: "true"}}
+	c := withBuildVCS(Commits{Lab: "unknown"}, st)
+	if c.Lab != "abc123" || !c.LabDirty {
+		t.Fatalf("%+v", c)
+	}
+	if c := withBuildVCS(Commits{Lab: "def456"}, st); c.Lab != "def456" || c.LabDirty {
+		t.Fatalf("git's answer overridden: %+v", c)
 	}
 }
