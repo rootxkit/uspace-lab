@@ -21,7 +21,7 @@ while read -r system commit sum; do
     fails=$((fails + 1))
     continue
   fi
-  got="$(sha256sum "$out" | cut -d' ' -f1)"
+  got="$(sha256sum < "$out" | cut -d' ' -f1)"
   if [ "$got" != "$sum" ]; then
     echo "FAIL $system: $url is sha256 $got, PINS says $sum"
     fails=$((fails + 1))
