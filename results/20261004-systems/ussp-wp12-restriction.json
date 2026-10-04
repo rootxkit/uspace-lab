@@ -1,0 +1,310 @@
+{
+  "format": "result/v1",
+  "run": "20261004-systems",
+  "scenario": "ussp-wp12-restriction",
+  "title": "uspace-ussp WP-12 (N-M1, S-M4): an ANSP restriction over an activated intent raises restriction_activated within one tick",
+  "source": "uspace-ussp docs/RUNBOOKS/WP-12.md, 'Lab run (owed)'; spec 07 N-M1, S-M4",
+  "owners": [
+    "ussp",
+    "ansp",
+    "cisp"
+  ],
+  "started_at": "2026-10-03T22:44:28.373019527Z",
+  "ended_at": "2026-10-03T22:47:38.764868694Z",
+  "t0": "2026-10-03T22:44:44Z",
+  "mode": {
+    "vehicles": "sitl",
+    "targets": "systems",
+    "targets_name": "lab-demo"
+  },
+  "evidence": "systems under test with SITL vehicles flown by sim/fly.py: INV-02 evidence when the images are pinned by digest",
+  "commits": {
+    "lab": "unknown",
+    "lab_dirty": false,
+    "core": "v1.3.0",
+    "go": "go1.27.1"
+  },
+  "images": {
+    "ansp": "uspace-lab/uspace-ansp:d02b09a (built locally from uspace-ansp d02b09a6f8ed75e1222650c9f21b366c4a116f3e; not published)",
+    "authority": "ghcr.io/rootxkit/uspace-authority@sha256:8663cac141d9351b7ab6e96dd85bc6402ac1c37d568c52924d706a5bf44c27ab",
+    "cisp": "ghcr.io/rootxkit/uspace-cisp@sha256:63a02a8da983a530744663e52bdd82dac31b4c9f36b5ecfd572bd529e83978cd",
+    "dss": "interuss/dss:v0.23.0@sha256:0781042bef785f6c968efd4b4e1e85854db9bf361116916d0673d2c89db91582",
+    "ussp": "ghcr.io/rootxkit/uspace-ussp@sha256:07718be47340f621936b744b0209de686f1b974ec690588cf59d98450d913a7f"
+  },
+  "policy_version": 1,
+  "policy": {
+    "policy_version": 1,
+    "source": "docs/PLAN.md §7.1 L-Q4 (owner-only, open; GCAA answers); knowledge/scenarios.md conventions",
+    "deviation": {
+      "h_m": 50,
+      "v_m": 15,
+      "t_s": 60
+    },
+    "telemetry_lost_s": 5,
+    "lost_link_s": 15,
+    "nonconformance_nearby_radius_m": 2000,
+    "cpa": {
+      "t_cpa_max_s": 60,
+      "d_horizontal_min_m": 60,
+      "d_vertical_min_m": 20,
+      "neighbour_radius_m": 800,
+      "neighbour_max_age_s": 10
+    },
+    "height_limit_agl_m": 120,
+    "monitor": {
+      "clear_after_s": 3,
+      "stale_after_s": 15,
+      "live_max_age_s": 10,
+      "pressure_uncertainty_m": 250,
+      "conditional_severity": "warning"
+    }
+  },
+  "lab": {
+    "file": "sim/sitl.env",
+    "origin_lat_deg": 41.7151,
+    "origin_lon_deg": 44.8271,
+    "origin_alt_amsl_m": 605,
+    "spacing_m": 25
+  },
+  "geoid": "WGS84 EGM2008, 2.5-minute grid",
+  "marks": {
+    "climb": "2026-10-03T22:45:22.605178594Z",
+    "climb.start": "2026-10-03T22:44:44.000252008Z",
+    "down": "2026-10-03T22:47:30.61339879Z",
+    "down.start": "2026-10-03T22:46:52.601133823Z",
+    "hover": "2026-10-03T22:46:52.601029872Z",
+    "hover.start": "2026-10-03T22:45:22.605246543Z",
+    "t0": "2026-10-03T22:44:44Z"
+  },
+  "steps": [
+    {
+      "sysid": 1,
+      "step": 0,
+      "action": "arm",
+      "state": "started",
+      "at_unix_s": 1791067484.000252
+    },
+    {
+      "sysid": 1,
+      "step": 0,
+      "action": "arm",
+      "state": "confirmed",
+      "at_unix_s": 1791067506.5901766,
+      "observed": {
+        "alt_rel_m": 0.004,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7151,
+        "lon_deg": 44.8271,
+        "time_boot_ms": 43099
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 1,
+      "action": "takeoff",
+      "state": "started",
+      "at_unix_s": 1791067506.590315
+    },
+    {
+      "sysid": 1,
+      "step": 1,
+      "action": "takeoff",
+      "state": "confirmed",
+      "at_unix_s": 1791067522.6051786,
+      "observed": {
+        "alt_rel_m": 29.219,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.715100199999995,
+        "lon_deg": 44.8270997,
+        "time_boot_ms": 59349
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 2,
+      "action": "hold",
+      "state": "started",
+      "at_unix_s": 1791067522.6052465
+    },
+    {
+      "sysid": 1,
+      "step": 2,
+      "action": "hold",
+      "state": "confirmed",
+      "at_unix_s": 1791067612.6010299,
+      "observed": {
+        "alt_rel_m": 30.001,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7151001,
+        "lon_deg": 44.8270998,
+        "time_boot_ms": 149099
+      },
+      "max_drift_m": 0.01387582166186324
+    },
+    {
+      "sysid": 1,
+      "step": 3,
+      "action": "land",
+      "state": "started",
+      "at_unix_s": 1791067612.6011338
+    },
+    {
+      "sysid": 1,
+      "step": 3,
+      "action": "land",
+      "state": "confirmed",
+      "at_unix_s": 1791067650.6133988,
+      "observed": {
+        "alt_rel_m": 0.014,
+        "armed": false,
+        "custom_mode": 9,
+        "lat_deg": 41.715100199999995,
+        "lon_deg": 44.8270997,
+        "time_boot_ms": 187349
+      }
+    }
+  ],
+  "intents": [
+    {
+      "aircraft": "a",
+      "intent_id": "8d0d3572-eba8-452c-a698-ba5a656089a6",
+      "decision": "pending_dss",
+      "state": "pending_dss"
+    }
+  ],
+  "timeline": [
+    {
+      "step": 2,
+      "id": "plan",
+      "do": "request",
+      "at": "2026-10-03T22:45:13.997311275Z",
+      "detail": "POST /v1/restrictions -\u003e 503",
+      "error": "ansp answered 503: {\"type\":\"https://schemas.uspace.ge/problems/cis_stale\",\"title\":\"Service Unavailable\",\"status\":503,\"detail\":\"no CIS projection of the uspace_airspace dataset yet; a restriction cannot be placed (M9)\",\""
+    },
+    {
+      "step": 3,
+      "id": "activate",
+      "do": "request",
+      "at": "2026-10-03T22:45:24.000780174Z",
+      "detail": "POST /v1/restrictions/${restriction_id}/activate -\u003e 404",
+      "error": "ansp answered 404: {\"type\":\"https://schemas.uspace.ge/problems/not_found\",\"title\":\"Not Found\",\"status\":404,\"detail\":\"no such restriction or request\",\"instance\":\"/v1/restrictions/${restriction_id}/activate\",\"errors\":[]}\n"
+    },
+    {
+      "step": 4,
+      "id": "end",
+      "do": "request",
+      "at": "2026-10-03T22:46:23.997741195Z",
+      "detail": "POST /v1/restrictions/${restriction_id}/end -\u003e 400",
+      "error": "ansp answered 400: {\"type\":\"https://schemas.uspace.ge/problems/invalid_request\",\"title\":\"Bad Request\",\"status\":400,\"detail\":\"the request is not valid\",\"instance\":\"/v1/restrictions/${restriction_id}/end\",\"errors\":[{\"fiel"
+    }
+  ],
+  "outcome": {
+    "expectations": [
+      {
+        "name": "restriction-activated-on-the-intent",
+        "matcher": {
+          "system": "ussp",
+          "kind": "restriction_activated",
+          "aircraft": "a"
+        },
+        "ok": false,
+        "why": [
+          "raise: mark \"activate\" never happened (no vehicle confirmed it, E-08)"
+        ]
+      }
+    ],
+    "missed_alerts": 1,
+    "false_alert_count": 0,
+    "alerts": [
+      {
+        "system": "ansp",
+        "kind": "degraded",
+        "alert_id": "ansp:degraded:adapters_silent",
+        "subject": "adapters_silent",
+        "raise": {
+          "system": "ansp",
+          "kind": "degraded",
+          "alert_id": "ansp:degraded:adapters_silent",
+          "phase": "raised",
+          "subject": "adapters_silent",
+          "observed_at": "2026-10-03T22:44:28.514035114Z",
+          "stream": "ansp-manned"
+        }
+      },
+      {
+        "system": "ansp",
+        "kind": "degraded",
+        "alert_id": "ansp:degraded:cis_projection_stale",
+        "subject": "cis_projection_stale",
+        "raise": {
+          "system": "ansp",
+          "kind": "degraded",
+          "alert_id": "ansp:degraded:cis_projection_stale",
+          "phase": "raised",
+          "subject": "cis_projection_stale",
+          "observed_at": "2026-10-03T22:44:28.514035114Z",
+          "stream": "ansp-manned"
+        }
+      }
+    ],
+    "pass": false,
+    "failures": [
+      "restriction-activated-on-the-intent: raise: mark \"activate\" never happened (no vehicle confirmed it, E-08)"
+    ]
+  },
+  "frames": {
+    "ansp-manned": {
+      "console/snapshot/v1": 1,
+      "console/status/v1": 96
+    }
+  },
+  "stream_errors": {
+    "ussp-alerts-a": "ussp-alerts-a: upgrade refused with 404"
+  },
+  "operator_ledgers": [
+    {
+      "serial": "LABX9WP12A0001",
+      "transport": "ws",
+      "produced": 180,
+      "sent_live": 180,
+      "sent_backlog": 0,
+      "sent": 180,
+      "dropped_by_knob": 0,
+      "queue_shed": 0,
+      "pending": 0,
+      "accepted": 0,
+      "refused": 180,
+      "dropped": 0,
+      "duplicate": 0,
+      "backlog": 0,
+      "outcomes": {
+        "refused_intent_state": 180
+      },
+      "acked_seq": 179,
+      "last_seq": 179,
+      "connections": 1,
+      "resent_after_break": 0,
+      "exact": true,
+      "balanced": true,
+      "client_counters": {
+        "dials": 1,
+        "produced": 180,
+        "sent_live": 180,
+        "status_frames": 276
+      }
+    }
+  ],
+  "vehicle_samples": {
+    "a": 721
+  },
+  "verdict": "fail",
+  "failures": [
+    "restriction-activated-on-the-intent: raise: mark \"activate\" never happened (no vehicle confirmed it, E-08)",
+    "step 2 (request): ansp answered 503: {\"type\":\"https://schemas.uspace.ge/problems/cis_stale\",\"title\":\"Service Unavailable\",\"status\":503,\"detail\":\"no CIS projection of the uspace_airspace dataset yet; a restriction cannot be placed (M9)\",\"",
+    "step 3 (request): ansp answered 404: {\"type\":\"https://schemas.uspace.ge/problems/not_found\",\"title\":\"Not Found\",\"status\":404,\"detail\":\"no such restriction or request\",\"instance\":\"/v1/restrictions/${restriction_id}/activate\",\"errors\":[]}\n",
+    "step 4 (request): ansp answered 400: {\"type\":\"https://schemas.uspace.ge/problems/invalid_request\",\"title\":\"Bad Request\",\"status\":400,\"detail\":\"the request is not valid\",\"instance\":\"/v1/restrictions/${restriction_id}/end\",\"errors\":[{\"fiel"
+  ]
+}

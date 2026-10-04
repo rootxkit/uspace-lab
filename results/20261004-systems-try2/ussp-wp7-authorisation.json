@@ -1,0 +1,355 @@
+{
+  "format": "result/v1",
+  "run": "20261004-systems-try2",
+  "scenario": "ussp-wp7-authorisation",
+  "title": "uspace-ussp WP-7 (S-M1): first come first served, and telemetry only under an activated intent",
+  "source": "uspace-ussp docs/RUNBOOKS/WP-7.md (S-M1 steps 1-2, 12-13 in the lab); spec 07 S-M1",
+  "owners": [
+    "ussp"
+  ],
+  "started_at": "2026-10-03T22:34:13.610558083Z",
+  "ended_at": "2026-10-03T22:35:49.299036597Z",
+  "t0": "2026-10-03T22:34:29Z",
+  "mode": {
+    "vehicles": "sitl",
+    "targets": "systems",
+    "targets_name": "lab-demo"
+  },
+  "evidence": "systems under test with SITL vehicles flown by sim/fly.py: INV-02 evidence when the images are pinned by digest",
+  "commits": {
+    "lab": "unknown",
+    "lab_dirty": false,
+    "core": "v1.3.0",
+    "go": "go1.27.1"
+  },
+  "images": {
+    "ansp": "uspace-lab/uspace-ansp:d02b09a (built locally from uspace-ansp d02b09a6f8ed75e1222650c9f21b366c4a116f3e; not published)",
+    "authority": "ghcr.io/rootxkit/uspace-authority@sha256:8663cac141d9351b7ab6e96dd85bc6402ac1c37d568c52924d706a5bf44c27ab",
+    "cisp": "ghcr.io/rootxkit/uspace-cisp@sha256:63a02a8da983a530744663e52bdd82dac31b4c9f36b5ecfd572bd529e83978cd",
+    "dss": "interuss/dss:v0.23.0@sha256:0781042bef785f6c968efd4b4e1e85854db9bf361116916d0673d2c89db91582",
+    "ussp": "ghcr.io/rootxkit/uspace-ussp@sha256:07718be47340f621936b744b0209de686f1b974ec690588cf59d98450d913a7f"
+  },
+  "policy_version": 1,
+  "policy": {
+    "policy_version": 1,
+    "source": "docs/PLAN.md §7.1 L-Q4 (owner-only, open; GCAA answers); knowledge/scenarios.md conventions",
+    "deviation": {
+      "h_m": 50,
+      "v_m": 15,
+      "t_s": 60
+    },
+    "telemetry_lost_s": 5,
+    "lost_link_s": 15,
+    "nonconformance_nearby_radius_m": 2000,
+    "cpa": {
+      "t_cpa_max_s": 60,
+      "d_horizontal_min_m": 60,
+      "d_vertical_min_m": 20,
+      "neighbour_radius_m": 800,
+      "neighbour_max_age_s": 10
+    },
+    "height_limit_agl_m": 120,
+    "monitor": {
+      "clear_after_s": 3,
+      "stale_after_s": 15,
+      "live_max_age_s": 10,
+      "pressure_uncertainty_m": 250,
+      "conditional_severity": "warning"
+    }
+  },
+  "lab": {
+    "file": "sim/sitl.env",
+    "origin_lat_deg": 41.7151,
+    "origin_lon_deg": 44.8271,
+    "origin_alt_amsl_m": 605,
+    "spacing_m": 25
+  },
+  "geoid": "WGS84 EGM2008, 2.5-minute grid",
+  "marks": {
+    "climb": "2026-10-03T22:34:42.57183361Z",
+    "climb.start": "2026-10-03T22:34:29.000273227Z",
+    "down": "2026-10-03T22:35:44.125532865Z",
+    "down.start": "2026-10-03T22:35:12.505235195Z",
+    "hover": "2026-10-03T22:35:12.570768356Z",
+    "hover.start": "2026-10-03T22:34:42.506387948Z",
+    "t0": "2026-10-03T22:34:29Z"
+  },
+  "steps": [
+    {
+      "sysid": 1,
+      "step": 0,
+      "action": "arm",
+      "state": "started",
+      "at_unix_s": 1791066869.0002732
+    },
+    {
+      "sysid": 2,
+      "step": 0,
+      "action": "arm",
+      "state": "started",
+      "at_unix_s": 1791066869.000278
+    },
+    {
+      "sysid": 1,
+      "step": 0,
+      "action": "arm",
+      "state": "confirmed",
+      "at_unix_s": 1791066870.0012217,
+      "observed": {
+        "alt_rel_m": 0.003,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7150999,
+        "lon_deg": 44.8271002,
+        "time_boot_ms": 577089
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 1,
+      "action": "takeoff",
+      "state": "started",
+      "at_unix_s": 1791066870.0012867
+    },
+    {
+      "sysid": 2,
+      "step": 0,
+      "action": "arm",
+      "state": "confirmed",
+      "at_unix_s": 1791066870.0012116,
+      "observed": {
+        "alt_rel_m": 0.003,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7151001,
+        "lon_deg": 44.8274007,
+        "time_boot_ms": 576057
+      }
+    },
+    {
+      "sysid": 2,
+      "step": 1,
+      "action": "takeoff",
+      "state": "started",
+      "at_unix_s": 1791066870.0012877
+    },
+    {
+      "sysid": 2,
+      "step": 1,
+      "action": "takeoff",
+      "state": "confirmed",
+      "at_unix_s": 1791066882.5063248,
+      "observed": {
+        "alt_rel_m": 19.088,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7150999,
+        "lon_deg": 44.827400999999995,
+        "time_boot_ms": 588557
+      }
+    },
+    {
+      "sysid": 2,
+      "step": 2,
+      "action": "hold",
+      "state": "started",
+      "at_unix_s": 1791066882.506388
+    },
+    {
+      "sysid": 1,
+      "step": 1,
+      "action": "takeoff",
+      "state": "confirmed",
+      "at_unix_s": 1791066882.5718336,
+      "observed": {
+        "alt_rel_m": 19.073,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7150998,
+        "lon_deg": 44.8271004,
+        "time_boot_ms": 589589
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 2,
+      "action": "hold",
+      "state": "started",
+      "at_unix_s": 1791066882.5718923
+    },
+    {
+      "sysid": 2,
+      "step": 2,
+      "action": "hold",
+      "state": "confirmed",
+      "at_unix_s": 1791066912.5051723,
+      "observed": {
+        "alt_rel_m": 20.004,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7151,
+        "lon_deg": 44.8274009,
+        "time_boot_ms": 618557
+      },
+      "max_drift_m": 0.013875821891341181
+    },
+    {
+      "sysid": 2,
+      "step": 3,
+      "action": "land",
+      "state": "started",
+      "at_unix_s": 1791066912.5052352
+    },
+    {
+      "sysid": 1,
+      "step": 2,
+      "action": "hold",
+      "state": "confirmed",
+      "at_unix_s": 1791066912.5707684,
+      "observed": {
+        "alt_rel_m": 20.004,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7150999,
+        "lon_deg": 44.8271002,
+        "time_boot_ms": 619590
+      },
+      "max_drift_m": 0.01998057430702542
+    },
+    {
+      "sysid": 1,
+      "step": 3,
+      "action": "land",
+      "state": "started",
+      "at_unix_s": 1791066912.5708277
+    },
+    {
+      "sysid": 2,
+      "step": 3,
+      "action": "land",
+      "state": "confirmed",
+      "at_unix_s": 1791066943.019736,
+      "observed": {
+        "alt_rel_m": 0.051000000000000004,
+        "armed": false,
+        "custom_mode": 9,
+        "lat_deg": 41.7151001,
+        "lon_deg": 44.8274006,
+        "time_boot_ms": 649057
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 3,
+      "action": "land",
+      "state": "confirmed",
+      "at_unix_s": 1791066944.1255329,
+      "observed": {
+        "alt_rel_m": 0,
+        "armed": false,
+        "custom_mode": 9,
+        "lat_deg": 41.7151001,
+        "lon_deg": 44.8271,
+        "time_boot_ms": 651340
+      }
+    }
+  ],
+  "intents": [
+    {
+      "aircraft": "a",
+      "intent_id": "fde81247-68e0-4670-83f7-deec87ac3f80",
+      "decision": "rejected",
+      "state": "rejected"
+    },
+    {
+      "aircraft": "b",
+      "intent_id": "d0127958-5ff9-42dd-a4ae-a1896ca91861",
+      "decision": "rejected",
+      "state": "rejected"
+    }
+  ],
+  "outcome": {
+    "expectations": null,
+    "missed_alerts": 0,
+    "false_alert_count": 0,
+    "alerts": null,
+    "pass": true
+  },
+  "frames": {},
+  "stream_errors": {
+    "ussp-alerts-a": "ussp-alerts-a: upgrade refused with 404",
+    "ussp-alerts-b": "ussp-alerts-b: upgrade refused with 404"
+  },
+  "operator_ledgers": [
+    {
+      "serial": "LABX9WP07A0001",
+      "transport": "ws",
+      "produced": 95,
+      "sent_live": 95,
+      "sent_backlog": 0,
+      "sent": 95,
+      "dropped_by_knob": 0,
+      "queue_shed": 0,
+      "pending": 0,
+      "accepted": 0,
+      "refused": 95,
+      "dropped": 0,
+      "duplicate": 0,
+      "backlog": 0,
+      "outcomes": {
+        "refused_intent_state": 95
+      },
+      "acked_seq": 94,
+      "last_seq": 94,
+      "connections": 1,
+      "resent_after_break": 0,
+      "exact": true,
+      "balanced": true,
+      "client_counters": {
+        "dials": 1,
+        "produced": 95,
+        "sent_live": 95,
+        "status_frames": 143
+      }
+    },
+    {
+      "serial": "LABX9WP07B0002",
+      "transport": "ws",
+      "produced": 95,
+      "sent_live": 95,
+      "sent_backlog": 0,
+      "sent": 95,
+      "dropped_by_knob": 0,
+      "queue_shed": 0,
+      "pending": 0,
+      "accepted": 0,
+      "refused": 95,
+      "dropped": 0,
+      "duplicate": 0,
+      "backlog": 0,
+      "outcomes": {
+        "refused_intent_state": 95
+      },
+      "acked_seq": 94,
+      "last_seq": 94,
+      "connections": 1,
+      "resent_after_break": 0,
+      "exact": true,
+      "balanced": true,
+      "client_counters": {
+        "dials": 1,
+        "produced": 95,
+        "sent_live": 95,
+        "status_frames": 143
+      }
+    }
+  ],
+  "vehicle_samples": {
+    "a": 381,
+    "b": 381
+  },
+  "verdict": "fail",
+  "failures": [
+    "intent of a: decision \"rejected\" state \"rejected\", want \"authorised\" \"activated\""
+  ]
+}

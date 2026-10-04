@@ -1,0 +1,17 @@
+scenario sc-01-hover-inside-minima (20261004-systems, sitl vehicles, systems targets): FAIL
+  observed alerts (7):
+    ussp      degraded                          on cis raised +-15.3s
+    ussp      degraded                          on dss raised +-15.3s
+    ussp      degraded                          on manned raised +-15.3s
+    ussp      degraded                          on monitor raised +-15.3s
+    ussp      degraded                          on policy raised +-15.3s
+    ussp      degraded                          on source_control raised +-15.3s
+    ussp      proximity              a          peer 748cf5a8-5056-48ce-b74f-0f17a0b224f1 raised +22.8s cleared resolved +87.8s
+  missed 2, false 1
+  operator LABX9SC01A0001: sent 182 = accepted 182 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  operator LABX9SC01B0002: sent 180 = accepted 180 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  latency ussp: n 1, p50 0.216 s, p95 0.216 s, max 0.216 s
+  FAIL a-raised-held-resolved: no ussp proximity raise for a with b in [00:11:37.105, 00:12:22.105]
+  FAIL b-raised-held-resolved: no ussp proximity raise for b with a in [00:11:37.105, 00:12:22.105]
+  FAIL false alert: ussp proximity 5ef1645e-e08c-488c-927a-600bd940a35b (aircraft "a", peer "748cf5a8-5056-48ce-b74f-0f17a0b224f1", subject "") raised at 00:11:50.818
+  result: results/20261004-systems/sc-01-hover-inside-minima.json

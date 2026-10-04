@@ -1,0 +1,316 @@
+{
+  "format": "result/v1",
+  "run": "20261004-systems-try2",
+  "scenario": "sc-22-missing-inputs-visible",
+  "title": "SC-22: a data source that does not exist yet must not be silence",
+  "source": "knowledge/scenarios.md SC-22 (design check); LESSONS E-02, D-04, Z-09",
+  "owners": [
+    "authority",
+    "ussp"
+  ],
+  "started_at": "2026-10-03T22:31:58.885590437Z",
+  "ended_at": "2026-10-03T22:33:31.177285985Z",
+  "t0": "2026-10-03T22:32:14Z",
+  "mode": {
+    "vehicles": "sitl",
+    "targets": "systems",
+    "targets_name": "lab-demo"
+  },
+  "evidence": "systems under test with SITL vehicles flown by sim/fly.py: INV-02 evidence when the images are pinned by digest",
+  "commits": {
+    "lab": "unknown",
+    "lab_dirty": false,
+    "core": "v1.3.0",
+    "go": "go1.27.1"
+  },
+  "images": {
+    "ansp": "uspace-lab/uspace-ansp:d02b09a (built locally from uspace-ansp d02b09a6f8ed75e1222650c9f21b366c4a116f3e; not published)",
+    "authority": "ghcr.io/rootxkit/uspace-authority@sha256:8663cac141d9351b7ab6e96dd85bc6402ac1c37d568c52924d706a5bf44c27ab",
+    "cisp": "ghcr.io/rootxkit/uspace-cisp@sha256:63a02a8da983a530744663e52bdd82dac31b4c9f36b5ecfd572bd529e83978cd",
+    "dss": "interuss/dss:v0.23.0@sha256:0781042bef785f6c968efd4b4e1e85854db9bf361116916d0673d2c89db91582",
+    "ussp": "ghcr.io/rootxkit/uspace-ussp@sha256:07718be47340f621936b744b0209de686f1b974ec690588cf59d98450d913a7f"
+  },
+  "policy_version": 1,
+  "policy": {
+    "policy_version": 1,
+    "source": "docs/PLAN.md §7.1 L-Q4 (owner-only, open; GCAA answers); knowledge/scenarios.md conventions",
+    "deviation": {
+      "h_m": 50,
+      "v_m": 15,
+      "t_s": 60
+    },
+    "telemetry_lost_s": 5,
+    "lost_link_s": 15,
+    "nonconformance_nearby_radius_m": 2000,
+    "cpa": {
+      "t_cpa_max_s": 60,
+      "d_horizontal_min_m": 60,
+      "d_vertical_min_m": 20,
+      "neighbour_radius_m": 800,
+      "neighbour_max_age_s": 10
+    },
+    "height_limit_agl_m": 120,
+    "monitor": {
+      "clear_after_s": 3,
+      "stale_after_s": 15,
+      "live_max_age_s": 10,
+      "pressure_uncertainty_m": 250,
+      "conditional_severity": "warning"
+    }
+  },
+  "lab": {
+    "file": "sim/sitl.env",
+    "origin_lat_deg": 41.7151,
+    "origin_lon_deg": 44.8271,
+    "origin_alt_amsl_m": 605,
+    "spacing_m": 25
+  },
+  "geoid": "WGS84 EGM2008, 2.5-minute grid",
+  "marks": {
+    "climb": "2026-10-03T22:32:27.508404731Z",
+    "climb.start": "2026-10-03T22:32:14.000246047Z",
+    "down": "2026-10-03T22:33:28.096243619Z",
+    "down.start": "2026-10-03T22:32:57.507783412Z",
+    "hover": "2026-10-03T22:32:57.507668972Z",
+    "hover.start": "2026-10-03T22:32:27.508474111Z",
+    "t0": "2026-10-03T22:32:14Z"
+  },
+  "steps": [
+    {
+      "sysid": 1,
+      "step": 0,
+      "action": "arm",
+      "state": "started",
+      "at_unix_s": 1791066734.000246
+    },
+    {
+      "sysid": 1,
+      "step": 0,
+      "action": "arm",
+      "state": "confirmed",
+      "at_unix_s": 1791066735.0011873,
+      "observed": {
+        "alt_rel_m": 0.001,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7151,
+        "lon_deg": 44.8270999,
+        "time_boot_ms": 442089
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 1,
+      "action": "takeoff",
+      "state": "started",
+      "at_unix_s": 1791066735.0012746
+    },
+    {
+      "sysid": 1,
+      "step": 1,
+      "action": "takeoff",
+      "state": "confirmed",
+      "at_unix_s": 1791066747.5084047,
+      "observed": {
+        "alt_rel_m": 19.065,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7150999,
+        "lon_deg": 44.8271,
+        "time_boot_ms": 454589
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 2,
+      "action": "hold",
+      "state": "started",
+      "at_unix_s": 1791066747.508474
+    },
+    {
+      "sysid": 1,
+      "step": 2,
+      "action": "hold",
+      "state": "confirmed",
+      "at_unix_s": 1791066777.507669,
+      "observed": {
+        "alt_rel_m": 20.003,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7150999,
+        "lon_deg": 44.8271,
+        "time_boot_ms": 484590
+      },
+      "max_drift_m": 0.013875821332246002
+    },
+    {
+      "sysid": 1,
+      "step": 3,
+      "action": "land",
+      "state": "started",
+      "at_unix_s": 1791066777.5077834
+    },
+    {
+      "sysid": 1,
+      "step": 3,
+      "action": "land",
+      "state": "confirmed",
+      "at_unix_s": 1791066808.0962436,
+      "observed": {
+        "alt_rel_m": 0.07200000000000001,
+        "armed": false,
+        "custom_mode": 9,
+        "lat_deg": 41.7150999,
+        "lon_deg": 44.827100099999996,
+        "time_boot_ms": 515089
+      }
+    }
+  ],
+  "outcome": {
+    "expectations": [
+      {
+        "name": "registry-absent-visible",
+        "matcher": {
+          "system": "authority",
+          "kind": "degraded",
+          "subject": "registry_projection_absent"
+        },
+        "raise_window": {
+          "from": "2026-10-03T22:31:44Z",
+          "to": "2026-10-03T22:32:19Z"
+        },
+        "hold_until": "2026-10-03T22:33:28.096243619Z",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:registry_projection_absent",
+          "phase": "raised",
+          "subject": "registry_projection_absent",
+          "observed_at": "2026-10-03T22:31:58.943018761Z",
+          "stream": "authority-picture"
+        },
+        "ok": true
+      },
+      {
+        "name": "switch-state-unknown-visible",
+        "matcher": {
+          "system": "authority",
+          "kind": "degraded",
+          "subject": "source_control_unknown"
+        },
+        "raise_window": {
+          "from": "2026-10-03T22:31:44Z",
+          "to": "2026-10-03T22:32:19Z"
+        },
+        "ok": false,
+        "why": [
+          "no authority degraded raise for any aircraft on source_control_unknown in [22:31:44.000, 22:32:19.000]"
+        ]
+      }
+    ],
+    "missed_alerts": 1,
+    "false_alert_count": 0,
+    "alerts": [
+      {
+        "system": "authority",
+        "kind": "degraded",
+        "alert_id": "authority:degraded:cis_stale",
+        "subject": "cis_stale",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:cis_stale",
+          "phase": "raised",
+          "subject": "cis_stale",
+          "observed_at": "2026-10-03T22:31:58.943018761Z",
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "degraded",
+        "alert_id": "authority:degraded:dp_unavailable",
+        "subject": "dp_unavailable",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:dp_unavailable",
+          "phase": "raised",
+          "subject": "dp_unavailable",
+          "observed_at": "2026-10-03T22:31:58.943018761Z",
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "degraded",
+        "alert_id": "authority:degraded:no_subscription",
+        "subject": "no_subscription",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:no_subscription",
+          "phase": "raised",
+          "subject": "no_subscription",
+          "observed_at": "2026-10-03T22:31:58.943018761Z",
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "degraded",
+        "alert_id": "authority:degraded:registry_projection_absent",
+        "subject": "registry_projection_absent",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:registry_projection_absent",
+          "phase": "raised",
+          "subject": "registry_projection_absent",
+          "observed_at": "2026-10-03T22:31:58.943018761Z",
+          "stream": "authority-picture"
+        }
+      }
+    ],
+    "pass": false,
+    "failures": [
+      "switch-state-unknown-visible: no authority degraded raise for any aircraft on source_control_unknown in [22:31:44.000, 22:32:19.000]"
+    ]
+  },
+  "frames": {
+    "authority-picture": {
+      "console/snapshot/v1": 1,
+      "console/status/v1": 47,
+      "source/status/v1": 2
+    }
+  },
+  "receiver_ledgers": [
+    {
+      "receiver_id": "lab-rx-1",
+      "observed": 79,
+      "dropped_by_knob": 0,
+      "sent": 79,
+      "accepted": 79,
+      "duplicates": 0,
+      "refused": 0,
+      "backlog_shed": 0,
+      "pending": 0,
+      "balanced": true,
+      "counters": {
+        "accepted": 79,
+        "batches": 79,
+        "duplicates": 0,
+        "locations_without_utc": 1,
+        "observations": 79,
+        "sent": 79
+      }
+    }
+  ],
+  "vehicle_samples": {
+    "a": 369
+  },
+  "verdict": "fail",
+  "failures": [
+    "switch-state-unknown-visible: no authority degraded raise for any aircraft on source_control_unknown in [22:31:44.000, 22:32:19.000]"
+  ]
+}

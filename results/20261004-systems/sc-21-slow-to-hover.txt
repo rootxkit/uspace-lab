@@ -1,0 +1,22 @@
+scenario sc-21-slow-to-hover (20261004-systems, sitl vehicles, systems targets): FAIL
+  observed alerts (8):
+    ussp      degraded                          on cis raised +-15.8s
+    ussp      degraded                          on dss raised +-15.8s
+    ussp      degraded                          on manned raised +-15.8s
+    ussp      degraded                          on monitor raised +-15.8s
+    ussp      degraded                          on policy raised +-15.8s
+    ussp      degraded                          on source_control raised +-15.8s
+    ussp      proximity              a          peer c7838c5d-c312-4d8b-9d8d-3ddf86bd4ddb raised +25.2s cleared resolved +52.2s
+    ussp      proximity              a          peer c7838c5d-c312-4d8b-9d8d-3ddf86bd4ddb raised +75.2s cleared landed +198.2s
+  missed 4, false 2
+  operator LABX9SC21A0001: sent 205 = accepted 205 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  operator LABX9SC21B0002: sent 204 = accepted 204 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  latency ussp: n 2, p50 0.029 s, p95 0.069 s, max 0.069 s
+  FAIL beside-a: no ussp proximity raise for a with b in [00:26:00.000, 00:26:35.000]
+  FAIL beside-b: no ussp proximity raise for b with a in [00:26:00.000, 00:26:35.000]
+  FAIL false alert: ussp proximity 713893fa-7adc-4fd8-b7c1-d9b621dcf4ae (aircraft "a", peer "c7838c5d-c312-4d8b-9d8d-3ddf86bd4ddb", subject "") raised at 00:25:15.232
+  FAIL false alert: ussp proximity d19a0916-d11f-4996-9525-4e3e04b1682d (aircraft "a", peer "c7838c5d-c312-4d8b-9d8d-3ddf86bd4ddb", subject "") raised at 00:26:05.160
+  FAIL on-the-ground-a: no ussp proximity raise for a with b in [00:24:51.590, 00:25:36.590]
+  FAIL on-the-ground-b: no ussp proximity raise for b with a in [00:24:51.590, 00:25:36.590]
+  FAIL vehicle b: plan step 5 (land) was not confirmed by the vehicle
+  result: results/20261004-systems/sc-21-slow-to-hover.json
