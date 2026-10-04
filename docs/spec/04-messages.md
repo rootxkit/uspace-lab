@@ -86,7 +86,7 @@ Alert policy (CPA 60 s / 60 m / 20 m / 800 m search radius; zone severities; hys
 
 | Message | Producer → consumer | Key fields |
 |---|---|---|
-| ED-318 `FeatureCollection` (external F1–F3) | authority, ANSP → CISP → all | `metadata {creationDateTime, updateDateTime, originator}`, `features[] {type: Feature, geometry, properties: UASZone}` |
+| ED-318 `FeatureCollection` (external F1–F3) | authority, ANSP → CISP → all | `metadata {issued, provider, validFrom, validTo, description}` (`uspace-core/ed318.Metadata`), `features[] {type: Feature, geometry, properties: UASZone}`; as served by the CISP, plus the top-level `cis_dataset`, `cis_version`, `cis_updated_at` |
 | `cis/change/v1` (external F3 webhook) | CISP → subscribers | `dataset`, `version`, `feature_ids[]`, `reason` (publication/restriction_activated/restriction_ended/…), `at`, `pull_url`; body JWS-signed |
 | `restriction/state/v1` (internal in ANSP and CISP; external degraded path F2) | ANSP | `restriction_id`, `ansp_ref`, `state`, `starts_at`, `ends_at`, `feature`, `version` |
 | `zone/applicable/v1` (internal) | each system's CIS cache → monitors | evaluated set of zones applicable at `at` for a cell; `cis_version` |
@@ -120,3 +120,9 @@ Alert policy (CPA 60 s / 60 m / 20 m / 800 m search radius; zone severities; hys
 | Deprecation | a field is marked `deprecated: true` in the schema for at least one minor before removal in the next major. |
 | Standards | F3411 v22a, F3548 v21 and ED-318 as published by `uas_standards`; a standard version bump is handled as a major on our side with dual support. Our own messages extend, never redefine, a standard object: F3548 states beyond the four DSS states live in `local_state`; ED-318 extras live in `extendedProperties` (its own extension mechanism, Annex V(2)(e)). |
 | Pinning | `knowledge/vectors/<name>.json` in this repo holds input/expected pairs for the safety behaviours; `uspace-lab/schemas/vectors/<name>/vN/*.json` holds message-shape examples; `uspace-core` CI runs the behaviour vectors, every repo's CI runs the schema examples (Go structs and the generated TypeScript client types); a change that breaks a vector fails unless the vector is changed in the same PR with a reason. |
+
+## Errata
+
+| Date | Where | Change | Source |
+|---|---|---|---|
+| 2026-10-04 | §3.4, ED-318 `FeatureCollection` row | Collection metadata per `uspace-core/ed318.Metadata` (`issued`, `provider`, `validFrom`, `validTo`, `description`), not `{creationDateTime, updateDateTime, originator}`; the CISP adds `cis_dataset`, `cis_version`, `cis_updated_at` at the top level. | `docs/decisions/2026-10-02-cross-plan.md` M15; cisp Q1 |
