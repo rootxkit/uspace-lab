@@ -1,9 +1,9 @@
-// Command basemap is the Go half of basemap/build.sh and verify.sh
-// (docs/WORKPACKAGES/WP-L3.md): it reads the region policy and the
-// pinned inputs, plans the go-pmtiles extracts, fetches and checks the
-// inputs, writes SOURCE.json and runs the bundle checks. The tiles are
-// cut by go-pmtiles and the glyphs drawn by font-maker; this command
-// never writes an archive.
+// Command basemap is the Go half of basemap/build.sh, storybook.sh and
+// verify.sh (docs/WORKPACKAGES/WP-L3.md): it reads the region policy
+// and the pinned inputs, plans the go-pmtiles extracts, fetches and
+// checks the inputs, writes SOURCE.json and runs the bundle checks. The
+// tiles are cut by go-pmtiles and the glyphs drawn by font-maker; this
+// command never writes an archive.
 //
 //	basemap build-info --inputs F [--out FILE] [BUILD]
 //	basemap plan       --regions F --profile bundle|storybook --work DIR

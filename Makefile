@@ -175,7 +175,7 @@ results:
 # Linux, or a golang container: font-maker is compiled by basemap/tools.sh
 # (cmake, clang, libfreetype-dev, libboost-dev). BUILD is a Protomaps
 # daily build (YYYYMMDD); empty means the newest. See basemap/README.md.
-.PHONY: basemap basemap-verify
+.PHONY: basemap basemap-verify basemap-storybook
 BASEMAP_OUT ?= local/basemap
 BUILD       ?=
 
@@ -185,3 +185,5 @@ basemap:
 basemap-verify:
 	basemap/verify.sh $(BASEMAP_OUT)
 
+basemap-storybook:
+	basemap/storybook.sh local/basemap-storybook $(BUILD)
