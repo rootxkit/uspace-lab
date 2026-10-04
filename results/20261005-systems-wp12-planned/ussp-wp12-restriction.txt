@@ -1,0 +1,13 @@
+scenario ussp-wp12-restriction (20261005-systems-wp12-planned, sitl vehicles, systems targets): PASS
+  observed alerts (7):
+    ussp      degraded                          on econspicuity raised +-15.1s
+    ussp      degraded                          on manned raised +-15.1s
+    ussp      degraded                          on policy raised +-15.1s
+    ussp      degraded                          on source_control raised +-15.1s
+    ansp      degraded                          on adapters_silent raised +-15.1s
+    ussp      restriction_activated  a          raised +40.1s cleared resolved +102.0s
+    ussp      zone_incursion         a          on DARUUUA raised +40.9s cleared not_reconfirmed +100.8s
+  missed 0, false 0
+  operator LABX9WP12A0001: sent 180 = accepted 180 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  latency ussp: n 2, p50 0.008 s, p95 0.214 s, max 0.214 s
+  result: results/20261005-systems-wp12-planned/ussp-wp12-restriction.json
