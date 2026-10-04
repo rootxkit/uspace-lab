@@ -136,9 +136,11 @@ stays `unknown` for the whole run; seen once).
 - **A U-space height ceiling needs terrain**: with
   `max_height_agl_m` set and no terrain, the USSP rejects every intent
   (`airspace_ceiling_not_judged`). The seed gives the airspace an AMSL
-  ceiling instead, the feature's upper limit, 150 m over the origin's
+  ceiling instead, the feature's upper limit, 1500 m over the origin's
   altitude (`--uspace-ceiling-above-origin-m`; it refuses a ceiling at
-  or below the top of a scenario's intent). The AGL case the lab keeps
+  or below the top of a scenario's intent, or below an AMSL restriction
+  a scenario asks the ANSP for, which the ANSP refuses above the
+  airspace). The AGL case the lab keeps
   is SC-22's zone, which expects `limit_not_judged`.
 - The authority's and the ANSP's console APIs read the session as a
   bearer (`session_bearer: true` in the targets file).

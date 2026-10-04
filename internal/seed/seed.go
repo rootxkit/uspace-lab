@@ -215,7 +215,7 @@ func Run(ctx context.Context, o Options) error {
 
 	if has[StepUSpace] {
 		id := def(o.USpaceID, "LABUSP1")
-		if err := ceilingCovers(o.Scenarios, o.USpaceCeilingAboveOriginM); err != nil {
+		if err := ceilingCovers(o.Scenarios, lab.Origin.AltAMSLM, o.USpaceCeilingAboveOriginM); err != nil {
 			return err
 		}
 		f, err := uspaceFeature(lab, id, env["DEMO_COUNTRY"], o.USpaceHalfSideM, o.USpaceCenter, o.USpaceCeilingAboveOriginM)
@@ -411,16 +411,29 @@ func keys(m map[string]bool) []string {
 	return out
 }
 
-// ceilingCovers refuses a U-space ceiling (metres above the origin) at
-// or below the top of a scenario's intent: that intent would reach out
-// of the airspace it is meant to be judged in. An intent's band is
-// relative to its aircraft's home, which is at the origin's altitude
-// (scenario.Lab.Home).
-func ceilingCovers(ss []*scenario.Scenario, aboveOriginM float64) error {
+// ceilingCovers refuses a U-space ceiling (metres above the origin,
+// whose altitude is originAMSLM) at or below the top of a scenario's
+// intent, or below the AMSL top of a restriction a scenario asks the
+// ANSP for: the intent would reach out of the airspace it is meant to
+// be judged in, and the ANSP refuses a restriction above the airspace's
+// upper limit (restriction_invalid, seen in the re-run of
+// ussp-wp12-restriction). An intent's band is relative to its
+// aircraft's home, which is at the origin's altitude (scenario.Lab.Home).
+func ceilingCovers(ss []*scenario.Scenario, originAMSLM, aboveOriginM float64) error {
 	if !(aboveOriginM > 0) {
 		return fmt.Errorf("seed: the U-space ceiling must be above the origin (got %v m)", aboveOriginM)
 	}
+	ceiling := originAMSLM + aboveOriginM
 	for _, s := range ss {
+		for _, st := range s.Steps {
+			if st.Request == nil || st.Request.Body["upper_ref"] != "AMSL" {
+				continue
+			}
+			if top, ok := amslNumber(st.Request.Body["upper_m"]); ok && top > ceiling {
+				return fmt.Errorf("seed: %s step %s asks for a restriction up to %.0f m AMSL, above the U-space ceiling %.0f m AMSL",
+					s.ID, st.ID, top, ceiling)
+			}
+		}
 		for _, a := range s.Aircraft {
 			if a.Operator == nil || a.Operator.Intent == nil {
 				continue
@@ -432,6 +445,21 @@ func ceilingCovers(ss []*scenario.Scenario, aboveOriginM float64) error {
 		}
 	}
 	return nil
+}
+
+// amslNumber reads a number as YAML gives it.
+func amslNumber(v any) (float64, bool) {
+	switch n := v.(type) {
+	case int:
+		return float64(n), true
+	case int64:
+		return float64(n), true
+	case uint64:
+		return float64(n), true
+	case float64:
+		return n, true
+	}
+	return 0, false
 }
 
 // uspaceFeature is an ED-318 USPACE feature: a square of half side h

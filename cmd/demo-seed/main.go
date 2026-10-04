@@ -45,7 +45,7 @@ func run() int {
 		half    = flag.Float64("uspace-half-side-m", 10000, "half side of the U-space airspace square, metres")
 		north   = flag.Float64("uspace-north-m", 0, "the U-space airspace square's centre, metres north of the origin")
 		east    = flag.Float64("uspace-east-m", 0, "the U-space airspace square's centre, metres east of the origin")
-		ceiling = flag.Float64("uspace-ceiling-above-origin-m", 150, "the U-space airspace's ceiling, an AMSL limit this many metres above the origin's altitude (sitl.env)")
+		ceiling = flag.Float64("uspace-ceiling-above-origin-m", 1500, "the U-space airspace's ceiling, an AMSL limit this many metres above the origin's altitude (sitl.env)")
 		away    = flag.Float64("zones-away-north-m", 0, "with --steps zones: publish the zones this far north of their place (takes them off the area)")
 		adsb    = flag.String("adsb-listen", "0.0.0.0:18092", "where the runner serves sim-adsb for the ANSP's adapter")
 		// The SITL commands are the operator's (docs/RUNBOOKS/demo.md

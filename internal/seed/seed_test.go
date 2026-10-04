@@ -212,7 +212,9 @@ func TestUSpaceFeature(t *testing.T) {
 	}
 }
 
-// The ceiling must clear the top of every intent the scenarios file.
+// The ceiling must clear the top of every intent the scenarios file and
+// of every AMSL restriction they ask the ANSP for (ussp-wp12-restriction
+// asks for one up to 2000 m AMSL).
 func TestUSpaceCeilingCoversTheIntents(t *testing.T) {
 	files, err := filepath.Glob("../../scenarios/*.yaml")
 	if err != nil || len(files) == 0 {
@@ -226,13 +228,17 @@ func TestUSpaceCeilingCoversTheIntents(t *testing.T) {
 		}
 		ss = append(ss, s)
 	}
-	if err := ceilingCovers(ss, 150); err != nil {
+	const origin = 605
+	if err := ceilingCovers(ss, origin, 1500); err != nil {
 		t.Fatalf("the demo default: %v", err)
 	}
-	if err := ceilingCovers(ss, 120); err == nil || !strings.Contains(err.Error(), "not under the U-space ceiling") {
+	if err := ceilingCovers(ss, origin, 150); err == nil || !strings.Contains(err.Error(), "ussp-wp12-restriction step plan asks for a restriction up to 2000 m AMSL") {
+		t.Fatalf("a ceiling below wp12's restriction: %v", err)
+	}
+	if err := ceilingCovers(ss, 5000, 120); err == nil || !strings.Contains(err.Error(), "not under the U-space ceiling") {
 		t.Fatalf("a ceiling at an intent's top: %v", err)
 	}
-	if err := ceilingCovers(ss, 0); err == nil {
+	if err := ceilingCovers(ss, origin, 0); err == nil {
 		t.Fatal("no ceiling was accepted")
 	}
 }
