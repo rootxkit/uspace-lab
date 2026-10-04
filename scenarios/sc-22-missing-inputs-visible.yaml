@@ -26,7 +26,10 @@ note: >-
   needs it for every other scenario of the same stack. The terrain,
   geoid and per-zone status log lines of SC-22 are the authority's
   (detect service), which the runner does not read; the system's PR
-  records them.
+  records them. With no registry projection an aircraft's
+  identification is unknown, not "unregistered": the authority resolves
+  against no registry as registry_unavailable (its internal/ridpipe), so
+  an unregistered violation there is a guess presented as a finding.
 duration_s: 200
 tail_s: 3
 aircraft:
@@ -93,5 +96,9 @@ expect:
     detail: {limit_not_judged: true, vertical_known: false}
     raise: {after: in.start, min_s: 5, max_s: 40}
     clear: {after: out.start, min_s: 3, max_s: 40, reason: resolved}
+never:
+  # No registry, no verdict on registration (SC-22: identification is
+  # null where there is no projection).
+  - {system: authority, kind: unregistered, aircraft: a}
 judged_kinds: ["authority:zone_incursion"]
 measure: [ledger]

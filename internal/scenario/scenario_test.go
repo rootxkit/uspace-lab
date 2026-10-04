@@ -295,6 +295,13 @@ func TestSC22AsksForWhatADeploymentCanLack(t *testing.T) {
 	if !notJudged {
 		t.Error("no zone_incursion on an AGL zone expecting limit_not_judged, raised and cleared")
 	}
+	// Identification is null where there is no projection: nothing may
+	// call the aircraft unregistered.
+	if !slices.ContainsFunc(s.Never, func(m Matcher) bool {
+		return m.System == SystemAuthority && m.Kind == "unregistered" && (m.Aircraft == "" || m.Aircraft == "a")
+	}) {
+		t.Error("no never on an unregistered violation without a registry")
+	}
 }
 
 // A scenario zone names a zone authority: ED-318 requires one, and
