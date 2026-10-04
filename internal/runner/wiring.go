@@ -575,8 +575,9 @@ func (r *run) knob(st *scenario.Step) (string, error) {
 }
 
 // request sends one request step with the targets file's credentials for
-// its system; ${name} in the path or body is a value an earlier request
-// captured.
+// its system; ${name} in the path, headers or body is a value an earlier
+// request captured, and the lab placeholders are filled in the headers
+// and the body.
 func (r *run) request(ctx context.Context, q *scenario.Request) (string, error) {
 	auth, ok := r.tg.Requests[q.System]
 	if !ok || auth.BaseURL == "" {
@@ -610,7 +611,7 @@ func (r *run) request(ctx context.Context, q *scenario.Request) (string, error) 
 	}
 	req.Header.Set("Content-Type", "application/json")
 	for k, v := range q.Headers {
-		req.Header.Set(k, sub(v))
+		req.Header.Set(k, r.textPlaceholders(sub(v)))
 	}
 	switch {
 	case auth.Bearer != nil:
@@ -673,8 +674,9 @@ func (r *run) request(ctx context.Context, q *scenario.Request) (string, error) 
 }
 
 var (
-	placeLatLng = regexp.MustCompile(`"\$\{(lat|lng):(-?[0-9]+(?:\.[0-9]+)?),(-?[0-9]+(?:\.[0-9]+)?)\}"`)
-	placeTime   = regexp.MustCompile(`\$\{time:(-?[0-9]+)\}`)
+	placeLatLng     = regexp.MustCompile(`"\$\{(lat|lng):(-?[0-9]+(?:\.[0-9]+)?),(-?[0-9]+(?:\.[0-9]+)?)\}"`)
+	placeLatLngText = regexp.MustCompile(`\$\{(lat|lng):(-?[0-9]+(?:\.[0-9]+)?),(-?[0-9]+(?:\.[0-9]+)?)\}`)
+	placeTime       = regexp.MustCompile(`\$\{time:(-?[0-9]+)\}`)
 )
 
 // placeholders fills a request body's lab values: "${lat:N,E}" and
@@ -682,8 +684,18 @@ var (
 // of the origin (no coordinate is written in a scenario, INV-03), and
 // ${time:S} the RFC 3339 time t0 + S seconds.
 func (r *run) placeholders(s string) string {
-	s = placeLatLng.ReplaceAllStringFunc(s, func(m string) string {
-		g := placeLatLng.FindStringSubmatch(m)
+	return r.fillLab(placeLatLng, s)
+}
+
+// textPlaceholders fills the same lab values in a header's text, where
+// ${lat:N,E} stands unquoted and becomes the number's text.
+func (r *run) textPlaceholders(s string) string {
+	return r.fillLab(placeLatLngText, s)
+}
+
+func (r *run) fillLab(latLng *regexp.Regexp, s string) string {
+	s = latLng.ReplaceAllStringFunc(s, func(m string) string {
+		g := latLng.FindStringSubmatch(m)
 		n, _ := strconv.ParseFloat(g[2], 64)
 		e, _ := strconv.ParseFloat(g[3], 64)
 		p := r.lab.At(scenario.Offset{NorthM: n, EastM: e})

@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -68,6 +69,38 @@ func TestRequestCarriesTheSessionAsTheSystemReadsIt(t *testing.T) {
 	}
 	if got.auth != "" || got.cookie == "" {
 		t.Fatalf("cookie only: %+v", got)
+	}
+}
+
+// A header's lab placeholders are filled as a body's are: ${time:S} as
+// the RFC 3339 time t0 + S seconds and ${lat:N,E}/${lng:N,E} as the
+// offset's number. Found by wp12, whose Idempotency-Key went out as the
+// literal "${time:0}", the same on every execution.
+func TestRequestFillsTheLabPlaceholdersInHeaders(t *testing.T) {
+	var idem, where string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		idem, where = r.Header.Get("Idempotency-Key"), r.Header.Get("X-Lab-Where")
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer srv.Close()
+	lab, err := scenario.LoadLab("../../sim/sitl.env.example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t0 := time.Date(2026, 10, 4, 9, 0, 0, 0, time.UTC)
+	r := &run{opt: Options{Run: "run-7"}, captures: map[string]string{}, lab: lab, t0: t0,
+		tg: &Targets{Requests: map[string]RequestAuth{"ansp": {BaseURL: srv.URL}}}}
+	q := &scenario.Request{System: "ansp", Method: http.MethodPost, Path: "/v1/restrictions", Expect: http.StatusCreated,
+		Headers: map[string]string{"Idempotency-Key": "lab-${run}-plan-${time:30}", "X-Lab-Where": "${lat:0,0},${lng:0,0}"}}
+	if _, err := r.request(context.Background(), q); err != nil {
+		t.Fatal(err)
+	}
+	if want := "lab-run-7-plan-2026-10-04T09:00:30Z"; idem != want {
+		t.Fatalf("Idempotency-Key %q, want %q", idem, want)
+	}
+	o := lab.At(scenario.Offset{})
+	if want := strconv.FormatFloat(o.LatDeg, 'f', 7, 64) + "," + strconv.FormatFloat(o.LonDeg, 'f', 7, 64); where != want {
+		t.Fatalf("X-Lab-Where %q, want %q", where, want)
 	}
 }
 
