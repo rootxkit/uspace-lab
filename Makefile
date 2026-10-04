@@ -170,3 +170,20 @@ demo-down:
 # The results pages (cmd/results) into site/.
 results:
 	$(GO) run ./cmd/results build --in results --out site
+
+# --- WP-L3 basemap bundle (basemap/) -------------------------------------------
+# Linux, or a golang container: font-maker is compiled by basemap/tools.sh
+# (cmake, clang, libfreetype-dev, libboost-dev). BUILD is a Protomaps
+# daily build (YYYYMMDD); empty means the newest. See basemap/README.md.
+.PHONY: basemap basemap-verify basemap-storybook
+BASEMAP_OUT ?= local/basemap
+BUILD       ?=
+
+basemap:
+	basemap/build.sh $(BASEMAP_OUT) $(BUILD)
+
+basemap-verify:
+	basemap/verify.sh $(BASEMAP_OUT)
+
+basemap-storybook:
+	basemap/storybook.sh local/basemap-storybook $(BUILD)

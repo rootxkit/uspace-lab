@@ -1,0 +1,120 @@
+# WP-L3 inputs of the basemap bundle. Every file the build downloads is
+# pinned by commit and SHA-256 with its licence and source; `basemap
+# fetch` refuses a file whose hash differs, and a font whose name-table
+# version differs from `version`. SOURCE.json repeats all of it.
+#
+# The tiles are the exception: a Protomaps daily build is one planet
+# file of over 100 GB, so the build records the upstream's own size and
+# BLAKE3 from the builds list, and the SHA-256 of the extract it made.
+
+tiles:
+  builds: https://build-metadata.protomaps.dev/builds.json
+  base: https://build.protomaps.com/
+  licence: "ODbL-1.0 (OpenStreetMap contributors); Natural Earth, public domain"
+
+# The basemaps-assets commit the sprites come from (the same commit as
+# uspace-ui's browser-test extract).
+assets: https://github.com/protomaps/basemaps-assets@028c18f713baecad011301ff7a69acc39bcc2ae7
+
+licence: >-
+  Map data (c) OpenStreetMap contributors, ODbL 1.0, via the Protomaps
+  basemap; Natural Earth, public domain. Glyphs drawn from Noto Sans and
+  Noto Sans Georgian, SIL OFL 1.1 (fonts/OFL.txt). Sprites from
+  protomaps/basemaps-assets, derived from tangrams/icons, MIT
+  (sprites/v4/LICENSE.md).
+
+# The glyph sets, as the Protomaps style layers name them (Regular,
+# Medium, Italic); "Noto Sans Regular" is the kit's mapFontstack. Fonts
+# are tried in order per code point: Noto Sans first, Noto Sans Georgian
+# for what it lacks. Noto Sans Georgian has no italic, so the Italic
+# stack (water and park labels) falls back to its Regular.
+fontstacks:
+  - name: Noto Sans Regular
+    fonts: [noto-sans-regular, noto-sans-georgian-regular]
+  - name: Noto Sans Medium
+    fonts: [noto-sans-medium, noto-sans-georgian-medium]
+  - name: Noto Sans Italic
+    fonts: [noto-sans-italic, noto-sans-georgian-regular]
+
+inputs:
+  # Fonts: notofonts.github.io, the unhinted TTFs basemaps-assets builds
+  # from (its scripts/create_fonts.sh), pinned at one commit.
+  - id: noto-sans-regular
+    url: https://raw.githubusercontent.com/notofonts/notofonts.github.io/e3ff34c3178cb4012124c9e6390b9a3535ff2c3f/fonts/NotoSans/unhinted/ttf/NotoSans-Regular.ttf
+    sha256: f3961a9cde016d41a4879aecda1474d3a36d6bf54fa0e4643de029cc2248b0e8
+    licence: OFL-1.1
+    version: Version 2.015
+  - id: noto-sans-medium
+    url: https://raw.githubusercontent.com/notofonts/notofonts.github.io/e3ff34c3178cb4012124c9e6390b9a3535ff2c3f/fonts/NotoSans/unhinted/ttf/NotoSans-Medium.ttf
+    sha256: 220e74546aee1b9a17cd50025dd917a064d0224e653f562287446c2328e4160b
+    licence: OFL-1.1
+    version: Version 2.015
+  - id: noto-sans-italic
+    url: https://raw.githubusercontent.com/notofonts/notofonts.github.io/e3ff34c3178cb4012124c9e6390b9a3535ff2c3f/fonts/NotoSans/unhinted/ttf/NotoSans-Italic.ttf
+    sha256: 678288f868807d4d64a6f3b51466871d117d915780381ce9d0ed4b3bcbd06d37
+    licence: OFL-1.1
+    version: Version 2.015
+  - id: noto-sans-georgian-regular
+    url: https://raw.githubusercontent.com/notofonts/notofonts.github.io/e3ff34c3178cb4012124c9e6390b9a3535ff2c3f/fonts/NotoSansGeorgian/unhinted/ttf/NotoSansGeorgian-Regular.ttf
+    sha256: f4b229b126859725b75031dd8c051335d20c85e4eb6d525af28f3e83e471baa4
+    licence: OFL-1.1
+    version: Version 2.005
+  - id: noto-sans-georgian-medium
+    url: https://raw.githubusercontent.com/notofonts/notofonts.github.io/e3ff34c3178cb4012124c9e6390b9a3535ff2c3f/fonts/NotoSansGeorgian/unhinted/ttf/NotoSansGeorgian-Medium.ttf
+    sha256: 4ab94cd342f4db4b8a722d3e52f06ab59a378b15c6a604e4af22e26dba2246fd
+    licence: OFL-1.1
+    version: Version 2.005
+  - id: ofl
+    url: https://raw.githubusercontent.com/notofonts/notofonts.github.io/e3ff34c3178cb4012124c9e6390b9a3535ff2c3f/fonts/LICENSE
+    sha256: f2095b08bed08b23a6fe26112fcd679a2bee3f002eef077eb05d215ed1051bd8
+    licence: OFL-1.1
+    path: fonts/OFL.txt
+
+  # Sprites: the Protomaps v4 icon sheets the style layers reference.
+  - id: sprite-light-json
+    url: https://raw.githubusercontent.com/protomaps/basemaps-assets/028c18f713baecad011301ff7a69acc39bcc2ae7/sprites/v4/light.json
+    sha256: bfac76cf7ed5c2aa2992695904056a1c6b07785b7fd20e6c640cb44fd6244a2e
+    licence: MIT
+    path: sprites/v4/light.json
+  - id: sprite-light-png
+    url: https://raw.githubusercontent.com/protomaps/basemaps-assets/028c18f713baecad011301ff7a69acc39bcc2ae7/sprites/v4/light.png
+    sha256: b6a34640917bdc57d0bd080836db33376371a3312ebe7b849045268015de3481
+    licence: MIT
+    path: sprites/v4/light.png
+  - id: sprite-light-2x-json
+    url: https://raw.githubusercontent.com/protomaps/basemaps-assets/028c18f713baecad011301ff7a69acc39bcc2ae7/sprites/v4/light@2x.json
+    sha256: 1fb5b123fbe35d2e1f6ac171513ce01df89e671273a417ee89c44886a4c132f0
+    licence: MIT
+    path: sprites/v4/light@2x.json
+  - id: sprite-light-2x-png
+    url: https://raw.githubusercontent.com/protomaps/basemaps-assets/028c18f713baecad011301ff7a69acc39bcc2ae7/sprites/v4/light@2x.png
+    sha256: 23f6e9df27c2e9a14385763980a24e3608966bfc8192a106058bc2ca959ab563
+    licence: MIT
+    path: sprites/v4/light@2x.png
+  - id: sprite-dark-json
+    url: https://raw.githubusercontent.com/protomaps/basemaps-assets/028c18f713baecad011301ff7a69acc39bcc2ae7/sprites/v4/dark.json
+    sha256: bfac76cf7ed5c2aa2992695904056a1c6b07785b7fd20e6c640cb44fd6244a2e
+    licence: MIT
+    path: sprites/v4/dark.json
+  - id: sprite-dark-png
+    url: https://raw.githubusercontent.com/protomaps/basemaps-assets/028c18f713baecad011301ff7a69acc39bcc2ae7/sprites/v4/dark.png
+    sha256: 8920f68e8f9f7a4188da43e62a81bbc426532579fff7b5f27aad09e130f4246e
+    licence: MIT
+    path: sprites/v4/dark.png
+  - id: sprite-dark-2x-json
+    url: https://raw.githubusercontent.com/protomaps/basemaps-assets/028c18f713baecad011301ff7a69acc39bcc2ae7/sprites/v4/dark@2x.json
+    sha256: 1fb5b123fbe35d2e1f6ac171513ce01df89e671273a417ee89c44886a4c132f0
+    licence: MIT
+    path: sprites/v4/dark@2x.json
+  - id: sprite-dark-2x-png
+    url: https://raw.githubusercontent.com/protomaps/basemaps-assets/028c18f713baecad011301ff7a69acc39bcc2ae7/sprites/v4/dark@2x.png
+    sha256: 6e01b4e366d304f27bbd55390511a3d4e39aa1d03eb3e82f873f7ea32e74cbe4
+    licence: MIT
+    path: sprites/v4/dark@2x.png
+  # basemaps-assets ships no licence file beside the sprites; its README
+  # names tangrams/icons' MIT licence, shipped here with the sheets.
+  - id: sprite-licence
+    url: https://raw.githubusercontent.com/tangrams/icons/92510779634f4a006c61ea70e50cb8c52c765a81/LICENSE.md
+    sha256: 46d0ca73c10d7366ef7bf3932d8508267096393ccc9ef3a41d1b1d1fe37023f1
+    licence: MIT
+    path: sprites/v4/LICENSE.md

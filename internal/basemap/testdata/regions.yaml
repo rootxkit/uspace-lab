@@ -1,0 +1,13 @@
+# The policy testdata/fixture.pmtiles was cut to (testdata/README.md).
+country:
+  name: sea
+  bounds: [35.00, 43.00, 35.06, 43.04]
+  max_zoom: 12
+cities:
+  - name: harbour
+    bounds: [35.02, 43.01, 35.04, 43.03]
+    max_zoom: 14
+storybook:
+  name: sea-centre
+  bounds: [35.00, 43.00, 35.06, 43.04]
+  max_zoom: 12
