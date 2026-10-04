@@ -248,3 +248,29 @@ func TestANSPImageAsTheResultNamesIt(t *testing.T) {
 		t.Errorf("local: %q", got)
 	}
 }
+
+// A seed resumed after a failure finds the USSP operator it saved before
+// binding any serial, with no serials member (omitempty), and binds into
+// it: seen in the re-run of 20261004, where the first try stopped at an
+// operator left pending_validation and the second panicked on the nil
+// map.
+func TestResumedStateBindsSerials(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "seed-state.json")
+	st, err := LoadState(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st.USSPOperators["GEOLAB000001"] = &USSPOperator{ID: "op", AdminUser: "lab-geolab000001", Serials: map[string]bool{}}
+	if err := st.Save(); err != nil {
+		t.Fatal(err)
+	}
+	again, err := LoadState(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	op := again.USSPOperators["GEOLAB000001"]
+	if op == nil || op.Serials == nil {
+		t.Fatalf("operator after reload: %+v", op)
+	}
+	op.Serials["LABX9SC01A0001"] = true
+}
