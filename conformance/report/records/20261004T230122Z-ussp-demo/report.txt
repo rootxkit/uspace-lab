@@ -1,0 +1,12 @@
+conformance 20261004T230122Z-ussp-demo: ussp-demo (ussp) at https://ussp.uspace.test: fail, 1 pass, 3 fail, 7 not applicable
+  fail           NAT-UNAUTH           16/4/0  answered 101, want 401; answered 400, want 401; answered 404, want 401
+  fail           NAT-SCOPE            0/1/11  answered 404, want 403
+  fail           NAT-SUCCESS          3/1/9  the WebSocket handshake was answered 404, not 101
+  not_applicable NAT-NOTFOUND         0/0/3  no value for path parameter client_id; the target file supplies no console or portal session; the target file supplies no operator token (the contract states no scope)
+  not_applicable NAT-PRECONDITION     0/0/0  no check of this run applied (decided by national.stale_precondition)
+  not_applicable REG-NOPII            0/0/1  the target file supplies no operator token (the contract states no scope)
+  not_applicable F3411-SP             0/0/1  the target exposes no InterUSS rid_injection interface (target file interfaces)
+  not_applicable F3548-SCD            0/0/1  the target exposes no InterUSS flight_planning interface (target file interfaces)
+  not_applicable F3548-CP             0/0/1  uss_qualifier v0.36.0 has no constraint processing requirement set (requirements/astm/f3548/v21 holds dss_provider and scd only)
+  not_applicable A11Y-PUBLIC          (informative) 0/0/1  the target file names no public page
+  pass           NAT-INVALID          2/0/8

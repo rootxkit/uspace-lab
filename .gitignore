@@ -30,3 +30,12 @@ basemap/.tools/
 # WP-L3: bundles built by make basemap / basemap-storybook.
 local/basemap/
 local/basemap-storybook/
+
+# WP-L7: conformance runs (the committed records of reviewed runs live
+# under conformance/report/records/), the axe runner's Node tree and
+# output.
+conformance/report/runs/
+conformance/axe/node_modules/
+conformance/axe/test-results/
+conformance/axe/playwright-report/
+conformance/axe/axe-results.json

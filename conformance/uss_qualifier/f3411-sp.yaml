@@ -1,0 +1,74 @@
+$content_schema: monitoring/uss_qualifier/configurations/configuration/USSQualifierConfiguration.json
+# F3411-22a with the system under test as the Network Remote ID Service
+# Provider (flights injected through its InterUSS RID injection
+# interface) and the InterUSS mock USS as the Display Provider that
+# observes it. Decides F3411-SP (a gate by the L-Q3 default). Rendered by
+# `conformance qualifier-render`; the keys are those of the commit SOURCE
+# pins.
+v1:
+  test_run:
+    resources:
+      resource_declarations:
+        flights_data: {$ref: 'library/resources.yaml#/tbilisi_flights_data'}
+        evaluation_configuration: {$ref: 'library/resources.yaml#/netrid_observation_evaluation_configuration'}
+        id_generator: {$ref: 'library/resources.yaml#/id_generator'}
+        service_area: {$ref: 'library/resources.yaml#/tbilisi_service_area'}
+        tbilisi_service_area_volume: {$ref: 'library/resources.yaml#/tbilisi_service_area_volume'}
+        tbilisi_planning_area_volume: {$ref: 'library/resources.yaml#/tbilisi_planning_area_volume'}
+        planning_area: {$ref: 'library/resources.yaml#/tbilisi_planning_area'}
+        problematically_big_area: {$ref: 'library/resources.yaml#/problematically_big_area'}
+        test_exclusions: {$ref: 'library/resources.yaml#/test_exclusions'}
+
+        utm_auth: {$ref: 'library/environment.yaml#/utm_auth'}
+        utm_client_identity: {$ref: 'library/environment.yaml#/utm_client_identity'}
+        dss_instances: {$ref: 'library/environment.yaml#/netrid_dss_instances_v22a'}
+        mock_uss_dp: {$ref: 'library/environment.yaml#/mock_uss_dp'}
+        uss_identification: {$ref: 'library/environment.yaml#/uss_identification'}
+
+        service_providers:
+          $content_schema: monitoring/uss_qualifier/resources/definitions/ResourceDeclaration.json
+          resource_type: resources.netrid.NetRIDServiceProviders
+          dependencies:
+            auth_adapter: utm_auth
+          specification:
+            service_providers:
+              - participant_id: "${QUALIFIER_PARTICIPANT}"
+                injection_base_url: ${QUALIFIER_TARGET_INTERFACE_URL}
+        observers:
+          $content_schema: monitoring/uss_qualifier/resources/definitions/ResourceDeclaration.json
+          resource_type: resources.netrid.NetRIDObserversResource
+          dependencies:
+            auth_adapter: utm_auth
+          specification:
+            observers:
+              - participant_id: mock_uss
+                observation_base_url: ${QUALIFIER_MOCK_RIDDP_URL}/riddp/observation
+    non_baseline_inputs:
+      - v1.test_run.resources.resource_declarations.utm_auth
+      - v1.test_run.resources.resource_declarations.service_providers
+      - v1.test_run.resources.resource_declarations.observers
+      - v1.test_run.resources.resource_declarations.dss_instances
+      - v1.test_run.resources.resource_declarations.mock_uss_dp
+      - v1.test_run.resources.resource_declarations.uss_identification
+    action:
+      test_suite:
+        suite_type: suites.astm.netrid.f3411_22a
+        resources:
+          flights_data: flights_data
+          service_providers: service_providers
+          observers: observers
+          mock_uss_dp: mock_uss_dp
+          evaluation_configuration: evaluation_configuration
+          dss_instances: dss_instances
+          utm_client_identity: utm_client_identity
+          id_generator: id_generator
+          service_area: service_area
+          problematically_big_area: problematically_big_area
+          planning_area: planning_area
+          test_exclusions: test_exclusions
+          uss_identification: uss_identification
+    execution:
+      stop_fast: false
+  artifacts:
+    raw_report: {}
+    sequence_view: {}

@@ -1,0 +1,10 @@
+conformance 20261004T230117Z-authority-demo: authority-demo (authority) at https://authority.uspace.test: fail, 1 pass, 4 fail, 4 not applicable
+  fail           NAT-UNAUTH           94/9/9  answered 400, want 401; answered 403, want 401; answered 502, want 401; and 1 more
+  fail           NAT-SCOPE            5/1/1  the body does not match the contract: status 403 declares no content, got 60 bytes
+  fail           NAT-SUCCESS          4/4/48  answered 400, not a 2xx; answered 404, not a 2xx
+  fail           REG-NOPII            0/1/0  answered 400, not 200: nothing to inspect
+  not_applicable NAT-PRECONDITION     0/0/0  no check of this run applied (decided by national.stale_precondition)
+  not_applicable NAT-INVALID          0/0/19  no value for required header parameter X-Report-Signature; the body is not JSON; the body schema refuses nothing the suite can construct offline; and 6 more
+  not_applicable F3411-DP             (informative) 0/0/1  the target exposes no InterUSS rid_observation interface (target file interfaces)
+  not_applicable A11Y-PUBLIC          (informative) 0/0/1  the target file names no public page
+  pass           NAT-NOTFOUND         1/0/6

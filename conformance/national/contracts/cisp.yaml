@@ -1,0 +1,41 @@
+# The CISP states most token scopes in each operation's description
+# ("Token scope cis.read.") and leaves security out of those operations
+# (uspace-cisp api/openapi.yaml): `unsecured: token` classifies them,
+# and the scopes below are the description's words. An operation whose
+# description names no scope is listed under unstated: its wrong-scope
+# check does not apply.
+system: cisp
+schemes:
+  ecosystemToken: {kind: token, issuer: ecosystem}
+  consoleSession: {kind: session}
+unsecured: token
+scopes:
+  getStatus: [cis.read]
+  putPublication: ["cis.publish:zones", "cis.publish:uspace", "cis.publish:ussp_list"]
+  listPublications: [cis.read]
+  listPublicationAttempts: ["cis.publish:zones", "cis.publish:uspace", "cis.publish:ussp_list"]
+  postPublisherHeartbeat: ["cis.publish:zones", "cis.publish:uspace", "cis.publish:ussp_list", "cis.publish:restrictions"]
+  createRestriction: ["cis.publish:restrictions"]
+  listRestrictions: [cis.read]
+  getRestriction: [cis.read]
+  listSubscriptions: [cis.read]
+  getDataset: [cis.read]
+  headDataset: [cis.read]
+  listDatasetVersions: [cis.read]
+  getDatasetVersion: [cis.read]
+  listChanges: [cis.read]
+unstated:
+  - patchRestriction
+  - createSubscription
+  - getSubscription
+  - patchSubscription
+  - deleteSubscription
+  - listDeliveries
+  - retryDelivery
+skip:
+  putPublication:
+    invalid_body: "the contract verifies the publisher's detached JWS before it reads the body (403 signature first); conformance/ed318 sends a signed invalid body (ED318-VERSIONING)"
+  createRestriction:
+    invalid_body: "the contract verifies the ANSP's detached JWS before anything else is read (403 signature first); a signed invalid restriction needs the ANSP's key"
+  patchRestriction:
+    invalid_body: "the signature of POST /v1/restrictions applies (403 signature before the body is read)"

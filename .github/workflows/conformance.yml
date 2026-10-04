@@ -1,0 +1,216 @@
+name: conformance
+
+# The conformance suite (docs/WORKPACKAGES/WP-L7.md, conformance/README.md).
+#
+# On every change to the suite: its own tests both ways with the systems'
+# pinned contracts, every uss_qualifier configuration validated by the
+# pinned InterUSS image, the axe runner's Playwright test, and the CISP's
+# conformance target (its chaos stack, built from the CISP at the commit
+# conformance/national/contracts/PINS names) gated on
+# conformance/baseline/cisp.json: a regression fails the run.
+#
+# On dispatch, and on a system's release (repository_dispatch
+# `system-release` with client_payload {system, ref}): the suite against
+# that system's conformance target. The CISP builds its own stack; the
+# other targets are reached with the CONFORMANCE_TARGETS_ENV secret
+# (KEY=VALUE lines resolving conformance/targets/<name>.yaml); without it
+# the run fails and names what is unset. A run in which a gate
+# requirement could not be checked (an unpinned contract, an unset
+# optional variable) is incomplete and fails the job (exit 3): it is
+# never reported as green.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "conformance/**"
+      - "cmd/conformance/**"
+      - "schemas/common/**"
+      - "internal/issuer/**"
+      - "internal/oauth/**"
+      - "go.mod"
+      - "go.sum"
+      - "Makefile"
+      - ".github/workflows/conformance.yml"
+  pull_request:
+    paths:
+      - "conformance/**"
+      - "cmd/conformance/**"
+      - "schemas/common/**"
+      - "internal/issuer/**"
+      - "internal/oauth/**"
+      - "go.mod"
+      - "go.sum"
+      - "Makefile"
+      - ".github/workflows/conformance.yml"
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "the conformance target (conformance/targets/<name>.yaml)"
+        required: true
+        type: choice
+        options: [cisp, ansp, authority, ussp, sim-ussp]
+      ref:
+        description: "cisp only: the uspace-cisp ref its stack is built from (default: the commit PINS names)"
+        required: false
+        default: ""
+  repository_dispatch:
+    types: [system-release]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: conformance-${{ github.ref }}-${{ github.event.inputs.target || github.event.client_payload.system || 'suite' }}
+  cancel-in-progress: true
+
+env:
+  GOFLAGS: -mod=mod
+  GOTOOLCHAIN: local
+
+jobs:
+  suite:
+    name: suite tests, pinned contracts
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: fetch and classify every system's pinned contract
+        run: conformance/national/fetch-contracts.sh "$RUNNER_TEMP/contracts"
+      - name: go test -race (the suite against its doubles, both ways)
+        env:
+          CONFORMANCE_CONTRACTS_DIR: ${{ runner.temp }}/contracts
+          CONFORMANCE_REQUIRE_CONTRACTS: "1"
+        run: go test -race -count=1 -shuffle=on -v ./conformance/... ./cmd/conformance/ 2>&1 | tee "$RUNNER_TEMP/test.log"; exit "${PIPESTATUS[0]}"
+      - name: skipped or unverified tests
+        if: always()
+        run: |
+          { echo '### Conformance suite tests: skipped or unverified'; grep -E -- '--- SKIP|unverified' "$RUNNER_TEMP/test.log" || echo 'none'; } >> "$GITHUB_STEP_SUMMARY"
+
+  qualifier:
+    name: uss_qualifier configurations at the pinned commit
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: validate every configuration with the pinned image
+        run: conformance/uss_qualifier/check.sh
+
+  axe:
+    name: axe runner (Playwright)
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: conformance/axe
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: the runner both ways (clean pages in en and ka, a defect, a page that does not load)
+        run: npx playwright test tests/runner.spec.ts
+
+  cisp:
+    name: CISP conformance target (its chaos stack), gated on the baseline
+    if: >-
+      github.event_name == 'push' || github.event_name == 'pull_request' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'cisp') ||
+      (github.event_name == 'repository_dispatch' && github.event.client_payload.system == 'cisp')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: lab
+      - name: the CISP ref
+        id: ref
+        env:
+          INPUT_REF: ${{ github.event.inputs.ref || github.event.client_payload.ref || '' }}
+        run: |
+          ref="$INPUT_REF"
+          if [ -z "$ref" ]; then ref="$(awk '$1 == "cisp" {print $2}' lab/conformance/national/contracts/PINS)"; fi
+          if ! [[ "$ref" =~ ^[A-Za-z0-9._/-]{1,100}$ ]]; then echo "not a git ref: $ref"; exit 1; fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "uspace-cisp at $ref" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: rootxkit/uspace-cisp
+          ref: ${{ steps.ref.outputs.ref }}
+          path: cisp
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: lab/go.mod
+          cache: true
+          cache-dependency-path: |
+            lab/go.sum
+            cisp/go.sum
+      - name: the suite against the CISP (tools/conformance.sh, Q47)
+        working-directory: cisp
+        env:
+          LAB_DIR: ${{ github.workspace }}/lab
+          CONFORMANCE_PUBLISH: "true"
+          CONFORMANCE_REPORT: ${{ runner.temp }}/conformance-report
+          GOTOOLCHAIN: auto
+        run: tools/conformance.sh
+      - name: keep the report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: conformance-cisp
+          path: ${{ runner.temp }}/conformance-report
+          if-no-files-found: error
+
+  target:
+    name: conformance target (dispatch, release)
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.target != 'cisp') ||
+      (github.event_name == 'repository_dispatch' && github.event.client_payload.system != 'cisp')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: the target
+        id: t
+        env:
+          TARGET: ${{ github.event.inputs.target || github.event.client_payload.system }}
+        run: |
+          case "$TARGET" in ansp|authority|ussp|sim-ussp) ;; *) echo "unknown target: $TARGET"; exit 1 ;; esac
+          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+      - name: the target's environment
+        env:
+          TARGETS_ENV: ${{ secrets.CONFORMANCE_TARGETS_ENV }}
+        run: |
+          umask 077
+          printf '%s\n' "$TARGETS_ENV" > "$RUNNER_TEMP/targets.env"
+          if [ -z "$TARGETS_ENV" ]; then
+            echo "CONFORMANCE_TARGETS_ENV is not set: the run below names every variable the target needs" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: make conformance
+        env:
+          CONFORMANCE_ENV: ${{ runner.temp }}/targets.env
+          CONFORMANCE_OUT: ${{ runner.temp }}/conformance-report
+        run: make conformance TARGET=${{ steps.t.outputs.target }}
+      - name: keep the report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: conformance-${{ steps.t.outputs.target }}
+          path: ${{ runner.temp }}/conformance-report
+          if-no-files-found: error

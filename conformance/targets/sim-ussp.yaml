@@ -1,0 +1,16 @@
+# The onboarding candidate (docs/WORKPACKAGES/WP-L7.md, L-M4): the lab's
+# simulated peer USSP (cmd/sim-ussp) standing in for a third party. It
+# publishes no national contract, so only the uss_qualifier suites of a
+# USSP apply to it.
+system: sim-ussp
+name: ${CONFORMANCE_TARGET_NAME:-sim-ussp}
+role: candidate
+participant: sim-ussp-01
+base_url: ${SIM_USSP_CONFORMANCE_BASE_URL}
+images:
+  sim-ussp: ${SIM_USSP_IMAGE:-unrecorded}
+national: false
+pages: []
+interfaces:
+  rid_injection: ${SIM_USSP_CONFORMANCE_RID_INJECTION_URL:-}
+  flight_planning: ${SIM_USSP_CONFORMANCE_FLIGHT_PLANNING_URL:-}

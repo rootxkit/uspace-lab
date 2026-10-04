@@ -1,0 +1,29 @@
+# The authority's conformance target (uspace-authority docs/PLAN.md §9
+# conformance row): the national contract and, through dp-poller's
+# observation hook (Q-A7), the F3411 Display Provider suite.
+system: authority
+name: ${CONFORMANCE_TARGET_NAME:-authority}
+role: own
+participant: authority-01
+base_url: ${AUTHORITY_CONFORMANCE_BASE_URL}
+images:
+  authority: ${AUTHORITY_IMAGE:-unrecorded}
+contract:
+  openapi: ${CONFORMANCE_AUTHORITY_OPENAPI:-api/authority/openapi.yaml}
+  schemas: ${CONFORMANCE_AUTHORITY_SCHEMAS:-schemas/authority}
+issuers:
+  ecosystem:
+    token_url: ${LAB_TOKEN_URL}
+    client_id: lab-01
+    secrets_json: ${LAB_SECRETS_JSON:-deploy/local/client-secrets.json}
+    audience: ${AUTHORITY_CONFORMANCE_AUDIENCE:-}
+    offers: [ansp.traffic, cis.read, police.query]
+session:
+  bearer_file: ${AUTHORITY_CONFORMANCE_SESSION_FILE:-}
+fixtures:
+  # A registered operator's registration number for the registry
+  # validation (REG-NOPII asks about it).
+  operator: ${AUTHORITY_CONFORMANCE_OPERATOR:-}
+pages: []
+interfaces:
+  rid_observation: ${AUTHORITY_CONFORMANCE_OBSERVATION_URL:-}

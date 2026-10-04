@@ -1,0 +1,21 @@
+# Which uss_qualifier configuration decides each F3411 / F3548
+# requirement of conformance/requirements.yaml, and the InterUSS
+# automated-testing interface the system under test must expose for it
+# (a target file's `interfaces`). A requirement with `none` is not
+# applicable to uss_qualifier at the pinned commit, for the reason given
+# (observed at that commit: SOURCE).
+format: conformance-qualifier-coverage/v1
+requirements:
+  F3411-SP:
+    config: f3411-sp.yaml
+    needs: rid_injection
+  F3411-DP:
+    config: f3411-dp.yaml
+    needs: rid_observation
+  F3548-SCD:
+    config: f3548-scd.yaml
+    needs: flight_planning
+  F3548-CP:
+    none: "uss_qualifier v0.36.0 has no constraint processing requirement set (requirements/astm/f3548/v21 holds dss_provider and scd only)"
+  F3548-CM:
+    none: "uss_qualifier v0.36.0 has no constraint management requirement set or suite (requirements/astm/f3548/v21 holds dss_provider and scd only)"

@@ -1,0 +1,28 @@
+# The USSP's operator operations take a token of its own issuer
+# (operatorToken, POST /oauth/token) whose scopes its descriptions name
+# for the streams only; the rest are listed under unstated. The
+# ecosystem operations' scopes are the descriptions' words.
+system: ussp
+schemes:
+  operatorToken: {kind: token, issuer: operator}
+  ecosystemToken: {kind: token, issuer: ecosystem}
+  session: {kind: session}
+scopes:
+  openTelemetryStream: [ussp.telemetry]
+  openTrafficStream: [ussp.traffic]
+  getTrafficSnapshot: [ussp.traffic]
+  openAlertStream: [ussp.traffic]
+  getFlightRecord: [ussp.records]
+  getDailyRecords: [ussp.records]
+  openAuthorityFlights: [rid.display_provider]
+unstated:
+  - validateRegistry
+  - postTelemetryBatch
+  - createIntent
+  - listIntents
+  - getIntent
+  - changeIntent
+  - getGeo
+  - getGeoForIntent
+  - getWeather
+  - ackAlert

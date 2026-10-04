@@ -1,0 +1,40 @@
+# The CISP's conformance target, as conformance/cisp/run is called
+# (uspace-cisp tools/conformance.sh, its docs/PLAN.md §15 Q47):
+# CISP_BASE_URL and a CONFORMANCE_ENV file with the stack's tokens and
+# publication keys.
+system: cisp
+name: ${CONFORMANCE_TARGET_NAME:-cisp}
+role: own
+participant: cisp-01
+base_url: ${CISP_BASE_URL}
+images:
+  cisp: ${CISP_IMAGE:-unrecorded}
+contract:
+  openapi: ${CONFORMANCE_CISP_OPENAPI:-api/cisp/openapi.yaml}
+  schemas: ${CONFORMANCE_CISP_SCHEMAS:-schemas/cisp}
+static_tokens:
+  authority: ${CISP_AUTHORITY_TOKEN:-}
+  ansp: ${CISP_ANSP_TOKEN:-}
+  reader: ${CISP_READER_TOKEN:-}
+issuers:
+  ecosystem:
+    token_url: ${LAB_TOKEN_URL:-}
+    client_id: ${CISP_CONFORMANCE_LAB_CLIENT_ID:-}
+    secrets_json: ${LAB_SECRETS_JSON:-deploy/local/client-secrets.json}
+    audience: ${CISP_CONFORMANCE_AUDIENCE:-}
+    offers: [police.query, ansp.traffic]
+ed318:
+  reader_token: ${CISP_READER_TOKEN:-}
+  authority_token: ${CISP_AUTHORITY_TOKEN:-}
+  authority_key_file: ${CISP_AUTHORITY_SIGNING_KEY_FILE:-}
+  authority_kid: ${CISP_AUTHORITY_SIGNING_KID:-}
+  ansp_token: ${CISP_ANSP_TOKEN:-}
+  jwks_url: ${CISP_JWKS_URL:-}
+  issuer_url: ${CISP_ISSUER_URL:-}
+  webhook_listen: ${CONFORMANCE_WEBHOOK_LISTEN:-}
+  webhook_url: ${CONFORMANCE_WEBHOOK_URL:-}
+  # Publishing replaces the zones dataset and the heartbeat moves the
+  # publisher's last_heartbeat_at: true only on a disposable stack.
+  publish: ${CONFORMANCE_PUBLISH:-false}
+pages: []
+interfaces: {}

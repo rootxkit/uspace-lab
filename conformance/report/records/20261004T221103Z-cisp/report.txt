@@ -1,0 +1,15 @@
+conformance 20261004T221103Z-cisp: cisp (cisp) at http://127.0.0.1:2145: fail, 9 pass, 2 fail, 3 not applicable
+  fail           NAT-UNAUTH           21/16/0  answered 503 with a body that is not the declared problem: not a problem/v1 body: jsonschema validation failed with 'https://schemas.uspace.ge/problem/v1.json#' - at '': missing property 'errors'
+  fail           NAT-INVALID          2/2/10  answered 503 with a body that is not the declared problem: not a problem/v1 body: jsonschema validation failed with 'https://schemas.uspace.ge/problem/v1.json#' - at '': missing property 'errors'
+  not_applicable NAT-PRECONDITION     0/0/1  the contract gives no valid example body to send with the stale If-Match
+  not_applicable ED318-WEBHOOK        0/0/1  the target file names no webhook receiver the CISP can reach (ed318.webhook_listen, webhook_url)
+  not_applicable A11Y-PUBLIC          (informative) 0/0/1  the target file names no public page
+  pass           NAT-SCOPE            4/0/17
+  pass           NAT-NOTFOUND         5/0/9
+  pass           NAT-SUCCESS          11/0/15
+  pass           ED318-SCHEMA         2/0/2
+  pass           ED318-VERTICAL       1/0/0
+  pass           ED318-APPLICABILITY  4/0/2
+  pass           ED318-VERSIONING     8/0/0
+  pass           ED318-CHANGES        1/0/0
+  pass           ED318-HEARTBEAT      2/0/0

@@ -1,0 +1,131 @@
+openapi: 3.1.0
+info:
+  title: CISP subset for the ED-318 tests' own tests
+  version: 0.0.1
+  description: |
+    The operations conformance/ed318 reads, with the shapes of
+    uspace-cisp's api/openapi.yaml reduced to what the suite relies on.
+paths:
+  /v1/{dataset}:
+    get:
+      operationId: getDataset
+      parameters:
+        - {name: dataset, in: path, required: true, schema: {type: string, enum: [zones, uspace_airspace, ussp_list]}}
+      responses:
+        "200":
+          description: The dataset.
+          content:
+            application/geo+json:
+              schema: {$ref: "#/components/schemas/Collection"}
+        "304": {description: Not modified.}
+        "400": {$ref: "#/components/responses/Problem"}
+        "404": {$ref: "#/components/responses/Problem"}
+  /v1/{dataset}/versions:
+    get:
+      operationId: listDatasetVersions
+      parameters:
+        - {name: dataset, in: path, required: true, schema: {type: string}}
+      responses:
+        "200":
+          description: The versions.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [versions]
+                properties:
+                  versions:
+                    type: array
+                    items:
+                      type: object
+                      required: [version]
+                      properties:
+                        version: {type: integer}
+  /v1/publications/{dataset}:
+    put:
+      operationId: putPublication
+      parameters:
+        - {name: dataset, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/geo+json:
+            schema: {type: object}
+      responses:
+        "201":
+          description: Accepted.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [dataset, version, etag]
+                properties:
+                  dataset: {type: string}
+                  version: {type: integer}
+                  etag: {type: string}
+        "400": {$ref: "#/components/responses/Problem"}
+        "412": {$ref: "#/components/responses/Problem"}
+        "428": {$ref: "#/components/responses/Problem"}
+  /v1/changes:
+    get:
+      operationId: listChanges
+      responses:
+        "200":
+          description: The changes.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [changes, next]
+                properties:
+                  changes:
+                    type: array
+                    items: {$ref: "#/components/schemas/Change"}
+                  next: {type: integer, minimum: 0}
+  /v1/status:
+    get:
+      operationId: getStatus
+      responses:
+        "200":
+          description: The status.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [now, publishers]
+                properties:
+                  now: {type: string, format: date-time}
+                  publishers:
+                    type: array
+                    items:
+                      type: object
+                      required: [client_id, stale]
+                      properties:
+                        client_id: {type: string}
+                        last_heartbeat_at: {type: string, format: date-time}
+                        stale_after_s: {type: integer, minimum: 1}
+                        stale: {type: boolean}
+components:
+  responses:
+    Problem:
+      description: The error body.
+      content:
+        application/problem+json:
+          schema: {type: object, required: [type, title, status, errors]}
+  schemas:
+    Collection:
+      type: object
+      required: [type, features]
+      properties:
+        type: {const: FeatureCollection}
+        features: {type: array}
+    Change:
+      type: object
+      additionalProperties: false
+      required: [schema, msg_id, dataset, version, reason]
+      properties:
+        schema: {const: cis/change/v1}
+        msg_id: {type: string}
+        dataset: {type: string}
+        version: {type: integer}
+        reason: {type: string}

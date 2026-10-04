@@ -31,8 +31,11 @@ func TestLabClientsFile(t *testing.T) {
 	}
 	for _, id := range r.IDs() {
 		c, _ := r.Client(id)
-		if id != LabClientID && slices.Contains(c.Scopes, "dp.observe") {
-			t.Errorf("%s holds dp.observe", id)
+		for _, labOnly := range []string{"dp.observe", "rid.inject_test_data", "dss.read.identification_service_areas",
+			"interuss.flight_planning.direct_automated_test", "interuss.flight_planning.plan"} {
+			if id != LabClientID && slices.Contains(c.Scopes, labOnly) {
+				t.Errorf("%s holds %s", id, labOnly)
+			}
 		}
 	}
 	auth, _ := r.Client("authority-01")
@@ -76,6 +79,7 @@ func TestLoadClientsRefusals(t *testing.T) {
 		{"scope outside the catalogue", "[rid.service_provider]", "[rid.observe]", "not in the catalogue"},
 		{"reserved scope", "[rid.service_provider]", "[cis.publish:ats_data]", "reserved"},
 		{"lab-only scope elsewhere", "[rid.service_provider]", "[dp.observe]", "lab-01 only"},
+		{"InterUSS test scope elsewhere", "[rid.service_provider]", "[rid.inject_test_data]", "lab-01 only"},
 		{"repeated scope", "[rid.service_provider]", "[rid.service_provider, rid.service_provider]", "listed twice"},
 		{"unset variable", "${HOSTS}", "${NOPE}", "NOPE is unset"},
 		{"empty variable", "${HOSTS}", "${EMPTY}", "EMPTY is unset or empty"},

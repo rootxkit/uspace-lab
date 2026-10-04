@@ -1,0 +1,67 @@
+# The InterUSS mock USS beside a system under test
+# (conformance/uss_qualifier/README.md): the F3411 Service Provider the
+# Display Provider suite injects into (mock-ridsp), the Display Provider
+# the Service Provider suite observes through (mock-riddp), and the
+# second F3548 USS (mock-scd). The image and its environment are those
+# of the commit SOURCE pins (mock_uss/config.py,
+# mock_uss/docker-compose.yaml); check.sh checks the digest.
+#
+#   docker compose -p uspace-lab-qualifier -f conformance/uss_qualifier/compose.yaml up -d
+#   docker compose -p uspace-lab-qualifier -f conformance/uss_qualifier/compose.yaml down
+#
+# They join the lab stack's network (QUALIFIER_DOCKER_NETWORK, default
+# uspace-lab_lab), reach the DSS and the issuer there, and trust the lab
+# issuer's public key from LAB_STATE_DIR/public. MOCK_USS_AUTH_SPEC holds
+# lab-01's secret and comes from the environment of `docker compose`.
+
+x-mock: &mock
+  image: docker.io/interuss/monitoring@sha256:a771c82cda62b83be707e650ddd2550bbabf6790120c4a57f76153a8f5504bb7
+  command: mock_uss/start.sh
+  volumes:
+    - ${LAB_STATE_DIR:-../../deploy/local}/public:/var/lab-issuer:ro
+  networks: [lab]
+  restart: "no"
+
+services:
+  mock-ridsp:
+    <<: *mock
+    environment:
+      MOCK_USS_AUTH_SPEC: ${MOCK_USS_AUTH_SPEC:?set MOCK_USS_AUTH_SPEC (ClientIdClientSecret with lab-01)}
+      MOCK_USS_DSS_URL: ${QUALIFIER_DSS_URL:-http://dss:8082}
+      MOCK_USS_PUBLIC_KEY: /var/lab-issuer/issuer-public.pem
+      MOCK_USS_TOKEN_AUDIENCE: mock-ridsp
+      MOCK_USS_BASE_URL: http://mock-ridsp
+      MOCK_USS_SERVICES: ridsp
+      MOCK_USS_RID_VERSION: F3411-22a
+      MOCK_USS_PORT: "80"
+  mock-riddp:
+    <<: *mock
+    environment:
+      MOCK_USS_AUTH_SPEC: ${MOCK_USS_AUTH_SPEC:?set MOCK_USS_AUTH_SPEC (ClientIdClientSecret with lab-01)}
+      MOCK_USS_DSS_URL: ${QUALIFIER_DSS_URL:-http://dss:8082}
+      MOCK_USS_PUBLIC_KEY: /var/lab-issuer/issuer-public.pem
+      MOCK_USS_TOKEN_AUDIENCE: mock-riddp
+      MOCK_USS_BASE_URL: http://mock-riddp
+      MOCK_USS_SERVICES: riddp
+      MOCK_USS_RID_VERSION: F3411-22a
+      MOCK_USS_PORT: "80"
+  mock-scd:
+    <<: *mock
+    environment:
+      MOCK_USS_AUTH_SPEC: ${MOCK_USS_AUTH_SPEC:?set MOCK_USS_AUTH_SPEC (ClientIdClientSecret with lab-01)}
+      MOCK_USS_DSS_URL: ${QUALIFIER_DSS_URL:-http://dss:8082}
+      MOCK_USS_PUBLIC_KEY: /var/lab-issuer/issuer-public.pem
+      MOCK_USS_TOKEN_AUDIENCE: mock-scd
+      MOCK_USS_BASE_URL: http://mock-scd
+      MOCK_USS_SERVICES: scdsc,flight_planning,interaction_logging
+      MOCK_USS_INTERACTIONS_LOG_DIR: output/scdsc_interaction_logs
+      MOCK_USS_PORT: "80"
+    # The interaction log directory must exist at start (mock_uss/
+    # interaction_logging/config.py); the logs live only as long as the run.
+    tmpfs:
+      - /app/monitoring/mock_uss/output/scdsc_interaction_logs
+
+networks:
+  lab:
+    name: ${QUALIFIER_DOCKER_NETWORK:-uspace-lab_lab}
+    external: true

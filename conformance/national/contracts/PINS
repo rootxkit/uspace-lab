@@ -1,0 +1,10 @@
+# The systems' api/openapi.yaml the suite's own CI classifies
+# (conformance/national/fetch-contracts.sh, the conformance workflow),
+# until the aggregate's mirrors under api/<system>/ are pinned (WP-L1):
+# <system> <commit> <sha256 of the file at that commit>. Bump a line when
+# its system's contract moves and the overrides beside this file follow
+# it; a file whose digest differs from the line is refused.
+ansp 08731a35ca83af6aa1d7a3bee20e3fdd2e4c1fac 5435ab27e2c8d05e91238a6caeb3dcf0b775c41269ffe10a80c5b3491e81430d
+authority d3a41981946e65dab3eb8ee5d0b5a9b932342da6 e869dae6ac165119e209dbfd7a369bb130da717698139e29d55a41f7071c193e
+cisp d89910109ac8769cd30f7218714d3746a991ae27 3dcf572b2033941d4336f1488ca7802f7920b7f8cae3c8baa3c55a0533866e0b
+ussp fba2920efa58a0f55209442e8d7dca02d03fbee3 9f9c1b3db270b52a53397e8b81f07d36cd3469e535aabcc674cdc43f5bab8d37

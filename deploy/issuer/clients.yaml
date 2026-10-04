@@ -33,8 +33,10 @@
 #   sim-ussp-01   the simulated peer USSP (WP-L5): F3548 and F3411 as a
 #                 USS, CIS reads.
 #   lab-01        the lab itself (scenarios, conformance): every issuable
-#                 national scope, dp.observe (lab only, M23) and every
-#                 standard scope.
+#                 national scope, dp.observe (lab only, M23), every
+#                 standard scope, and the InterUSS automated-testing
+#                 scopes uss_qualifier and its mock USS use (lab only,
+#                 WP-L7).
 
 clients:
   - id: lab-01
@@ -60,6 +62,10 @@ clients:
       - utm.availability_arbitration
       - rid.service_provider
       - rid.display_provider
+      - rid.inject_test_data
+      - dss.read.identification_service_areas
+      - interuss.flight_planning.direct_automated_test
+      - interuss.flight_planning.plan
     audiences:
       - ${LAB_AUTHORITY_AUDIENCES}
       - ${LAB_CISP_AUDIENCES}

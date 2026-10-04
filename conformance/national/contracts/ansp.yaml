@@ -1,0 +1,9 @@
+# What the national contract test needs to know about the ANSP's
+# api/openapi.yaml that the file does not say in a form a program reads
+# (conformance/national/classify.go). The ANSP states every operation's
+# access rule in x-auth, so only its security schemes are named here.
+system: ansp
+schemes:
+  ecosystemToken: {kind: token, issuer: ecosystem}
+  consoleSession: {kind: session}
+  sessionCookie: {kind: session}

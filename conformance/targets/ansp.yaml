@@ -1,0 +1,34 @@
+# The ANSP's conformance target (uspace-ansp `make conformance-target`,
+# its testdata/conformance/target.yaml): what the suite calls and with
+# which credentials. Every host and secret is a variable; the values of
+# a run come from the environment (conformance/targets/README.md).
+system: ansp
+name: ${CONFORMANCE_TARGET_NAME:-ansp}
+role: own
+participant: ansp-01
+base_url: ${ANSP_CONFORMANCE_BASE_URL}
+images:
+  ansp: ${ANSP_IMAGE:-unrecorded}
+contract:
+  # Default: the aggregate's api/ansp/openapi.yaml; until it is pinned,
+  # the ANSP checkout's own (CONFORMANCE_ANSP_OPENAPI).
+  openapi: ${CONFORMANCE_ANSP_OPENAPI:-api/ansp/openapi.yaml}
+  schemas: ${CONFORMANCE_ANSP_SCHEMAS:-schemas/ansp}
+issuers:
+  ecosystem:
+    token_url: ${LAB_TOKEN_URL}
+    client_id: lab-01
+    secrets_json: ${LAB_SECRETS_JSON:-deploy/local/client-secrets.json}
+    # The host the ANSP's tokens must name (ANSP_CONFORMANCE_AUDIENCE,
+    # printed by make conformance-target).
+    audience: ${ANSP_CONFORMANCE_AUDIENCE}
+    offers: [police.query, dp.observe, cis.read]
+session:
+  # A dispatcher console session (sign in on the target, TOTP): the
+  # session operations are not applicable without one.
+  bearer_file: ${ANSP_CONFORMANCE_SESSION_FILE:-}
+fixtures:
+  # An existing coordination notice (its ack_id) and restriction.
+  ack_id: ${ANSP_CONFORMANCE_ACK_ID:-}
+pages: []
+interfaces: {}

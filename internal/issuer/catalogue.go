@@ -59,6 +59,16 @@ var catalogue = map[string]scopeInfo{
 	"utm.availability_arbitration":  {kind: Standard},
 	"rid.service_provider":          {kind: Standard},
 	"rid.display_provider":          {kind: Standard},
+
+	// The InterUSS automated-testing interfaces uss_qualifier drives:
+	// rid v1 injection and observation, flight_planning v1
+	// (uas_standards.interuss.automated_testing.*.constants.Scope at the
+	// commit conformance/uss_qualifier/SOURCE pins). Lab only: they exist
+	// to test a system, never to operate one (WP-L7).
+	"rid.inject_test_data":                           {kind: Standard, labOnly: true},
+	"dss.read.identification_service_areas":          {kind: Standard, labOnly: true},
+	"interuss.flight_planning.direct_automated_test": {kind: Standard, labOnly: true},
+	"interuss.flight_planning.plan":                  {kind: Standard, labOnly: true},
 }
 
 // ScopeKind returns the audience rule of scope and whether scope is in
