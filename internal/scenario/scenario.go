@@ -249,6 +249,10 @@ type Matcher struct {
 	Peer     string `yaml:"peer" json:"peer,omitempty"`
 	// Subject matches a non-aircraft subject (a zone id, a source slug).
 	Subject string `yaml:"subject" json:"subject,omitempty"`
+	// Detail matches members of the raise's detail, each equal to the
+	// value given (Z-09: limit_not_judged true where a limit cannot be
+	// judged). A member the raise does not carry does not match.
+	Detail map[string]any `yaml:"detail" json:"detail,omitempty"`
 }
 
 // Expect is one expected alert: its raise and, when given, its clear.
@@ -561,6 +565,13 @@ func (s *Scenario) Validate() error {
 		}
 		if m.Peer != "" && names[m.Peer] == nil && !icaos[m.Peer] {
 			return core.Fieldf(f, "%q is neither an aircraft nor a feed track's icao24", m.Peer)
+		}
+		for k, v := range m.Detail {
+			switch v.(type) {
+			case bool, string, int, int64, uint64, float64:
+			default:
+				return core.Fieldf(f+".detail."+k, "a boolean, a number or a string")
+			}
 		}
 		return nil
 	}

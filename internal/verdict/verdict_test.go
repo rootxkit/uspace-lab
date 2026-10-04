@@ -113,3 +113,31 @@ func TestStatusSlugsAreNotFalseAlertsUnlessJudged(t *testing.T) {
 		t.Fatalf("an unexpected judged slug passed: %+v", o)
 	}
 }
+
+// A detail matcher holds only when the raise carries each member with an
+// equal value (Z-09: a zone alert that says its limit was not judged).
+func TestDetailMatcher(t *testing.T) {
+	s := &scenario.Scenario{Expect: []scenario.Expect{{Name: "z",
+		Matcher: scenario.Matcher{System: "authority", Kind: "zone_incursion", Aircraft: "a", Subject: "Z",
+			Detail: map[string]any{"limit_not_judged": true, "max_height_agl_m": uint64(120)}},
+		Raise: scenario.Window{After: "t0", MinS: 0, MaxS: 10}}}, JudgedKinds: []string{"authority:zone_incursion"}}
+	raise := func(detail map[string]any) []observe.Event {
+		return []observe.Event{{System: "authority", Kind: "zone_incursion", AlertID: "1", Phase: "raised", Aircraft: "a", Subject: "Z",
+			ObservedAt: at(5), Detail: detail}}
+	}
+	if o := Evaluate(s, Marks{"t0": t0}, raise(map[string]any{"limit_not_judged": true, "max_height_agl_m": 120.0, "identifier": "Z"})); !o.Pass {
+		t.Fatalf("the matching raise: %+v", o.Failures)
+	}
+	for name, d := range map[string]map[string]any{
+		"judged":          {"limit_not_judged": false, "max_height_agl_m": 120.0},
+		"member missing":  {"max_height_agl_m": 120.0},
+		"other number":    {"limit_not_judged": true, "max_height_agl_m": 121.0},
+		"string for bool": {"limit_not_judged": "true", "max_height_agl_m": 120.0},
+		"no detail":       nil,
+	} {
+		o := Evaluate(s, Marks{"t0": t0}, raise(d))
+		if o.Pass || o.Missed != 1 || !strings.Contains(strings.Join(o.Failures, "|"), "with detail limit_not_judged=true,max_height_agl_m=120") {
+			t.Errorf("%s: %+v", name, o.Failures)
+		}
+	}
+}

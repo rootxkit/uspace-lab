@@ -8,6 +8,7 @@ package verdict
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/rootxkit/uspace-lab/internal/observe"
@@ -61,7 +62,58 @@ func matches(m scenario.Matcher, g *Group) bool {
 	return m.System == g.System && m.Kind == g.Kind &&
 		(m.Aircraft == "" || m.Aircraft == g.Aircraft) &&
 		(m.Peer == "" || m.Peer == g.Peer) &&
-		(m.Subject == "" || m.Subject == g.Subject)
+		(m.Subject == "" || m.Subject == g.Subject) &&
+		detailMatches(m.Detail, g)
+}
+
+// detailMatches reports whether the alert's raise carries every member
+// of want with an equal value. YAML reads a number as an int or a float
+// and a frame's JSON as a float64, so numbers compare as float64.
+func detailMatches(want map[string]any, g *Group) bool {
+	if len(want) == 0 {
+		return true
+	}
+	if g.Raise == nil {
+		return false
+	}
+	for k, w := range want {
+		got, ok := g.Raise.Detail[k]
+		if !ok || !sameValue(w, got) {
+			return false
+		}
+	}
+	return true
+}
+
+func sameValue(a, b any) bool {
+	fa, aNum := number(a)
+	fb, bNum := number(b)
+	if aNum || bNum {
+		return aNum && bNum && fa == fb
+	}
+	switch av := a.(type) {
+	case bool:
+		bv, ok := b.(bool)
+		return ok && av == bv
+	case string:
+		bv, ok := b.(string)
+		return ok && av == bv
+	}
+	return false
+}
+
+func number(v any) (float64, bool) {
+	switch n := v.(type) {
+	case int:
+		return float64(n), true
+	case int64:
+		return float64(n), true
+	case uint64:
+		return float64(n), true
+	case float64:
+		return n, true
+	}
+	return 0, false
 }
 
 // Marks are the moments the windows are measured from.
@@ -249,6 +301,18 @@ func who(m scenario.Matcher) string {
 	}
 	if m.Subject != "" {
 		s += " on " + m.Subject
+	}
+	if len(m.Detail) > 0 {
+		keys := make([]string, 0, len(m.Detail))
+		for k := range m.Detail {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		parts := make([]string, 0, len(keys))
+		for _, k := range keys {
+			parts = append(parts, fmt.Sprintf("%s=%v", k, m.Detail[k]))
+		}
+		s += " with detail " + strings.Join(parts, ",")
 	}
 	return s
 }

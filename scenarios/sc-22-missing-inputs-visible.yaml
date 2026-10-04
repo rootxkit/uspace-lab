@@ -6,16 +6,28 @@ owners: [authority, ussp]
 policy: policy/demo.yaml
 systems: [authority]
 reference: true
+country: GEO
 note: >-
-  Run once for each deployment, started with no registry projection and
-  no switch state: the authority's console status must name what is
-  missing from the first frame and keep naming it (the slugs are
-  uspace-authority's, internal/picture: registry_projection_absent,
-  source_control_unknown). The terrain, geoid and per-zone items of
-  SC-22 are in the authority's status log lines (detect service), which
-  the runner does not read; the system's PR records them. A Remote ID
-  aircraft flies so the stream carries traffic while the slugs hold.
-duration_s: 160
+  Run once for each deployment, before the registry is seeded and with
+  no terrain: the inputs a lab deployment really lacks, and how each
+  must show. (1) No registry projection: the authority's console status
+  names it from the first frame and keeps naming it
+  (registry_projection_absent, uspace-authority internal/picture).
+  (2) No terrain: a PROHIBITED zone whose upper limit is AGL cannot be
+  judged, and an aircraft inside it raises a warning that says so
+  (Z-09: limit_not_judged true, vertical_known false) instead of
+  silence or a guess; the zone is this scenario's, SC22Z, imported
+  before the run (demo-seed --steps zones --zones
+  sc-22-missing-inputs-visible). SC-22's "switch state unknown" is not
+  asked for: the authority publishes its switch state at start (version
+  0, every source on), so a deployment always has one and
+  source_control_unknown is not a missing input there (results/
+  20261004-systems finding 6). The geoid is not withheld: Remote ID
+  needs it for every other scenario of the same stack. The terrain,
+  geoid and per-zone status log lines of SC-22 are the authority's
+  (detect service), which the runner does not read; the system's PR
+  records them.
+duration_s: 200
 tail_s: 3
 aircraft:
   - name: a
@@ -30,16 +42,37 @@ receivers:
     at: {north_m: 0, east_m: 30}
     transport: pack
     hae: geoid
+zones:
+  # From 0 m AMSL (judged: below any ground) up to 120 m above the
+  # ground (not judged without terrain). The aircraft flies at 30 m
+  # above home, where the ground is lower to the north (sim/README.md).
+  - id: SC22Z
+    type: PROHIBITED
+    square: {center: {north_m: 150, east_m: 0}, side_m: 100}
+    lower: {m: 0, ref: AMSL}
+    upper: {m: 120, ref: AGL}
 steps:
   - id: climb
     at_s: 0
     aircraft: [a]
     do: takeoff
-    alt_rel_m: 20
+    alt_rel_m: 30
+  # Into the zone (its south edge is 100 m north) and hold there.
+  - id: in
+    aircraft: [a]
+    do: goto
+    to: {north_m: 150, east_m: 0}
+    speed_ms: 5
   - id: hover
     aircraft: [a]
     do: hold
-    for_s: 30
+    for_s: 20
+  # Out of it, home, and down.
+  - id: out
+    aircraft: [a]
+    do: goto
+    to: {north_m: 0, east_m: 0}
+    speed_ms: 5
   - id: down
     aircraft: [a]
     do: land
@@ -50,10 +83,15 @@ expect:
     subject: registry_projection_absent
     raise: {after: t0, min_s: -30, max_s: 5}
     hold_until: {after: down, min_s: 0, max_s: 0}
-  - name: switch-state-unknown-visible
+  # Inside a zone whose limit cannot be judged: a warning that says it
+  # was not judged, raised on entry and cleared on the way out.
+  - name: agl-limit-not-judged
     system: authority
-    kind: degraded
-    subject: source_control_unknown
-    raise: {after: t0, min_s: -30, max_s: 5}
-    hold_until: {after: down, min_s: 0, max_s: 0}
+    kind: zone_incursion
+    aircraft: a
+    subject: SC22Z
+    detail: {limit_not_judged: true, vertical_known: false}
+    raise: {after: in.start, min_s: 5, max_s: 40}
+    clear: {after: out.start, min_s: 3, max_s: 40, reason: resolved}
+judged_kinds: ["authority:zone_incursion"]
 measure: [ledger]

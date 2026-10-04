@@ -56,7 +56,10 @@ Through the public APIs only. Order matters for SC-22:
 # Receivers only: SC-22 needs an authority with no registry projection.
 go run ./cmd/demo-seed --steps receivers scenarios/*.yaml
 docker restart uspace-demo-authority-rid-ingest-1   # see "rid-ingest" below
-# ... run SC-22 now (step 4) ...
+# SC-22's zone (an AGL limit the stack cannot judge without terrain):
+go run ./cmd/demo-seed --steps zones --zones sc-22-missing-inputs-visible scenarios/*.yaml
+# ... run SC-22 now (step 4), then take its zone off the area:
+go run ./cmd/demo-seed --steps zones --zones sc-22-missing-inputs-visible --zones-away-north-m 60000 scenarios/*.yaml
 go run ./cmd/demo-seed --steps registry,uspace,ussp,ansp scenarios/*.yaml
 ```
 

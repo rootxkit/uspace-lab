@@ -267,6 +267,36 @@ func TestLandingsTheSystemsRunSawLate(t *testing.T) {
 	}
 }
 
+// SC-22 asks a deployment for what it can lack and must show. The
+// authority publishes its switch state at start, so
+// source_control_unknown can never show on a deployment (results/
+// 20261004-systems finding 6); without terrain an AGL limit cannot be
+// judged, and the warning must say so (Z-09).
+func TestSC22AsksForWhatADeploymentCanLack(t *testing.T) {
+	s := load(t, "sc-22-missing-inputs-visible.yaml")
+	agl := map[string]bool{}
+	for _, z := range s.Zones {
+		if z.Lower.Ref == "AGL" || z.Upper.Ref == "AGL" {
+			agl[z.ID] = true
+		}
+	}
+	var registry, notJudged bool
+	for _, e := range s.Expect {
+		if e.Subject == "source_control_unknown" {
+			t.Errorf("%s expects source_control_unknown, which a deployment never shows", e.Name)
+		}
+		registry = registry || (e.System == SystemAuthority && e.Kind == "degraded" && e.Subject == "registry_projection_absent")
+		notJudged = notJudged || (e.System == SystemAuthority && e.Kind == "zone_incursion" && agl[e.Subject] &&
+			e.Detail["limit_not_judged"] == true && e.Clear != nil)
+	}
+	if !registry {
+		t.Error("no expectation that the absent registry projection is shown")
+	}
+	if !notJudged {
+		t.Error("no zone_incursion on an AGL zone expecting limit_not_judged, raised and cleared")
+	}
+}
+
 // A scenario zone names a zone authority: ED-318 requires one, and
 // uspace-authority refuses a zones import without it.
 func TestZonesNameAZoneAuthority(t *testing.T) {
