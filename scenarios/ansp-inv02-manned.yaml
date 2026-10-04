@@ -55,7 +55,10 @@ steps:
   - id: hover
     aircraft: [a]
     do: hold
-    for_s: 100
+    # 80 s: SITL confirms the climb about 41 s after t0 (it arms once
+    # its EKF settles), so a 100 s hover pushed the landing past at_s
+    # 125 and out of the run (systems run 20261004).
+    for_s: 80
   - id: freeze
     at_s: 90
     do: knob

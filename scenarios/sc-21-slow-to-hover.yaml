@@ -13,7 +13,11 @@ note: >-
   cleared while B hovers there. How late the raise is relative to B
   crossing 60 m is in the result (the vehicles' steps and the raise
   times); it is the number SC-21 asks for. Owed by uspace-ussp WP-11.
-duration_s: 200
+duration_s: 230
+# 230 s, not 200: B lands 260 m north, where the SITL ground is lower
+# than at home (578 m to the north against 605 m, sim/README.md), so B
+# descends up to about 57 m, not 30; the systems run of 20261004 did not
+# confirm B's landing within the 60 s it had, so it has 90 s.
 tail_s: 5
 aircraft:
   - name: a

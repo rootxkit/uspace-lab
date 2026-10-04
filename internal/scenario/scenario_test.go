@@ -223,6 +223,34 @@ func TestWP10ReturnsReenterInsideTheClearWindow(t *testing.T) {
 	}
 }
 
+// Two landings the systems run of 20261004 did not see confirmed: in
+// ansp-inv02-manned the hover after a climb SITL confirms about 41 s
+// after t0 must end by the landing's at_s; in sc-21 B lands where the
+// ground is up to 27 m below home (sim/README.md), so up to 57 m down.
+func TestLandingsTheSystemsRunSawLate(t *testing.T) {
+	const climbConfirmedS = 41.5 // measured, both runs
+	inv := load(t, "ansp-inv02-manned.yaml")
+	var hover, land float64
+	for _, st := range inv.Steps {
+		switch {
+		case st.ID == "hover":
+			hover = st.ForS
+		case st.Do == DoLand:
+			land = *st.AtS
+		}
+	}
+	if climbConfirmedS+hover > land+2 {
+		t.Errorf("ansp-inv02-manned: the hover ends at about %.0f s, after the landing's at_s %.0f", climbConfirmedS+hover, land)
+	}
+	// B's landing there was not confirmed within 60 s; 75 s leaves margin.
+	sc21 := load(t, "sc-21-slow-to-hover.yaml")
+	for _, st := range sc21.Steps {
+		if st.Do == DoLand && sc21.DurationS-*st.AtS < 75 {
+			t.Errorf("sc-21: %.0f s for B's landing from the lower ground, under 75 s", sc21.DurationS-*st.AtS)
+		}
+	}
+}
+
 // The landing estimate against what SITL measured (LandS's comment).
 func TestLandSCoversTheMeasuredLandings(t *testing.T) {
 	for alt, measured := range map[float64]float64{20: 30.6, 30: 37.5, 60: 57.5} {
