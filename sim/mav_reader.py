@@ -29,8 +29,16 @@ table and diffs encoded frames that differ in one field.
 Where each member of the line comes from:
 
 - ``ts``: ``GLOBAL_POSITION_INT.time_boot_ms`` put on UTC by the last
-  ``SYSTEM_TIME`` (``time_unix_usec - time_boot_ms``); null until the
-  vehicle has sent a non-zero UTC (R-16).
+  ``SYSTEM_TIME``; null until the vehicle has sent a non-zero UTC (R-16).
+  With ``--clock host`` (the default) the vehicle's boot clock is put on
+  the host's clock at the receipt of that ``SYSTEM_TIME`` (host time -
+  ``time_boot_ms``); with ``--clock vehicle`` on the vehicle's own UTC
+  (``time_unix_usec - time_boot_ms``). ArduCopter SITL's UTC runs a
+  constant 1.5 to 1.7 s behind the host clock it runs on (measured at
+  this reader, 2026-10-04, Copter 4.5.7 in WSL), so a vehicle-clock
+  sample reaches a system 1.6 s old, and every judgement a system makes
+  from capture time (lost link, latency) is off by that; a real
+  aircraft's GNSS time is not. The status line reports the skew.
 - ``lat_deg``, ``lon_deg``: ``GLOBAL_POSITION_INT.lat/lon``.
 - ``alt_amsl_m``: ``GLOBAL_POSITION_INT.alt`` (MSL).
 - ``alt_hae_m``: ``GPS_RAW_INT.alt_ellipsoid`` with a 3D fix and
@@ -213,6 +221,9 @@ class VehicleState:
     """What the reader has heard from the vehicle besides positions."""
 
     utc_offset_s: float | None = None
+    # The vehicle's UTC minus the host clock at the last SYSTEM_TIME
+    # (seconds); reported, and used only with the vehicle clock.
+    utc_skew_s: float | None = None
     armed: bool = False
     system_status: int | None = None
     fix_type: int | None = None
@@ -227,11 +238,14 @@ class Reader:
     the vehicle, else None.
     """
 
-    def __init__(self, sysid: int, *, mark_alt_invalid: bool = False) -> None:
+    def __init__(self, sysid: int, *, mark_alt_invalid: bool = False, host_clock: Callable[[], float] | None = None) -> None:
         if not 1 <= sysid <= 254:
             raise ValueError(f"sysid {sysid} is not 1..254")
         self.sysid = sysid
         self.mark_alt_invalid = mark_alt_invalid
+        # host_clock (Unix seconds) anchors the vehicle's boot clock to
+        # the host at each SYSTEM_TIME; None keeps the vehicle's UTC.
+        self.host_clock = host_clock
         self.state = VehicleState()
         self.counters = Counters()
 
@@ -252,9 +266,14 @@ class Reader:
             return None
         if name == "SYSTEM_TIME":
             if msg.time_unix_usec > 0:
-                self.state.utc_offset_s = msg.time_unix_usec * scale(name, "time_unix_usec") - msg.time_boot_ms * scale(
-                    name, "time_boot_ms"
-                )
+                vehicle_utc = msg.time_unix_usec * scale(name, "time_unix_usec")
+                boot = msg.time_boot_ms * scale(name, "time_boot_ms")
+                if self.host_clock is None:
+                    self.state.utc_offset_s = vehicle_utc - boot
+                else:
+                    host = self.host_clock()
+                    self.state.utc_offset_s = host - boot
+                    self.state.utc_skew_s = vehicle_utc - host
             return None
         if name == "GPS_RAW_INT":
             self.state.fix_type = int(msg.fix_type)
@@ -368,8 +387,9 @@ def run(
     max_seconds: float | None,
     write: Callable[[bytes], None],
     status: Callable[[str], None],
+    clock: str = "host",
 ) -> int:
-    reader = Reader(sysid, mark_alt_invalid=mark_alt_invalid)
+    reader = Reader(sysid, mark_alt_invalid=mark_alt_invalid, host_clock=time.time if clock == "host" else None)
     mav, sink = new_parser()
     host, port = parse_endpoint(out)
     rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -426,6 +446,8 @@ def status_line(reader: Reader, sink: RefuseWrites) -> str:
             "parse_errors": c.parse_errors,
             "writes_refused": sink.writes,
             "utc_known": reader.state.utc_offset_s is not None,
+            "clock": "host" if reader.host_clock is not None else "vehicle",
+            "utc_skew_s": None if reader.state.utc_skew_s is None else round(reader.state.utc_skew_s, 3),
         },
         sort_keys=True,
     )
@@ -438,6 +460,12 @@ def main(argv: Iterable[str] | None = None) -> int:
     p.add_argument("--emit", help="udp:HOST:PORT, also send each line as a datagram there")
     p.add_argument("--mark-alt-invalid", action="store_true", help="S-36: mark the geodetic altitude invalid")
     p.add_argument("--max-seconds", type=float, help="stop after this many seconds")
+    p.add_argument(
+        "--clock",
+        choices=("host", "vehicle"),
+        default="host",
+        help="put ts on the host's clock (default; SITL's UTC lags it) or on the vehicle's own UTC",
+    )
     args = p.parse_args(list(argv) if argv is not None else None)
 
     def write(b: bytes) -> None:
@@ -452,7 +480,7 @@ def main(argv: Iterable[str] | None = None) -> int:
 
     signal.signal(signal.SIGTERM, stop)
     try:
-        return run(args.sysid, args.out, args.emit, args.mark_alt_invalid, args.max_seconds, write, status)
+        return run(args.sysid, args.out, args.emit, args.mark_alt_invalid, args.max_seconds, write, status, args.clock)
     except KeyboardInterrupt:
         return 0
     except BrokenPipeError:

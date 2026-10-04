@@ -88,7 +88,11 @@ docker compose -p uspace-lab -f deploy/compose.yaml --env-file deploy/.env logs 
 The DSS logs in the console format; a refused token is logged with its
 reason (`Invalid access token audience`, `Access token validation
 failed`, `missing scopes`). `-dump_requests` is deliberately off: it
-would write every bearer token to the log.
+would write every bearer token to the log. So is the default log level:
+at `info` core-service logs every request with its headers, the bearer
+token included, `-dump_requests` or not (387 such lines in one WP-L6
+systems run), so it runs at `-log_level=warn`, where the refusals and
+errors still appear.
 
 ## The lab issuer
 

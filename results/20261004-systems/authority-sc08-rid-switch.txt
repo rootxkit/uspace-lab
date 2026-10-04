@@ -1,0 +1,11 @@
+scenario authority-sc08-rid-switch (20261004-systems, sitl vehicles, systems targets): PASS
+  observed alerts (5):
+    authority degraded                          on cis_stale raised +-15.0s
+    authority degraded                          on dp_unavailable raised +-15.0s
+    authority degraded                          on no_subscription raised +-15.0s cleared not_degraded +-15.0s
+    authority zone_incursion         c          on SC08Z raised +26.0s cleared source_disabled +40.0s
+    authority zone_incursion         c          on SC08Z raised +68.0s cleared landed +138.0s
+  missed 0, false 0
+  receiver lab-rx-1: observed 126, sent 126 = accepted 126 + duplicates 0 + refused 0 (balanced true)
+  latency authority: n 2, p50 0.094 s, p95 0.392 s, max 0.392 s
+  result: results/20261004-systems/authority-sc08-rid-switch.json

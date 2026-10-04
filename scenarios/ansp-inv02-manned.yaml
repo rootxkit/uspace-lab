@@ -16,12 +16,12 @@ note: >-
   surveillance, horizontal judgement only on a pressure altitude, R-09).
   Then the file freezes (positions stop): the ANSP's stream must show
   the aircraft stale, never as a live old position (SC-15, T-11).
-duration_s: 150
+duration_s: 175
 tail_s: 8
 aircraft:
   - name: a
     sysid: 1
-    serial: LABANSPA0001
+    serial: LABX9ANSPA0001
     operator_reg: GEOLAB000001
     operator:
       system: ussp
@@ -55,7 +55,10 @@ steps:
   - id: hover
     aircraft: [a]
     do: hold
-    for_s: 100
+    # 80 s: SITL confirms the climb about 41 s after t0 (it arms once
+    # its EKF settles), so a 100 s hover pushed the landing past at_s
+    # 125 and out of the run (systems run 20261004).
+    for_s: 80
   - id: freeze
     at_s: 90
     do: knob

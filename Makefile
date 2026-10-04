@@ -136,3 +136,37 @@ dss-down:
 # its writes back from the DSS (deploy/README.md). make dss-down removes it.
 sim-ussp-up:
 	deploy/sim-ussp-up.sh
+
+# --- WP-L6 the systems stack, the seed, the results site ----------------------
+.PHONY: demo demo-down demo-seed demo-sessions results
+
+# The DSS, the issuer and the four systems (deploy/demo-up.sh), then the
+# seed through the systems' public APIs (cmd/demo-seed). The scenarios
+# run after it (docs/RUNBOOKS/demo.md). Needs Docker with Compose v2.
+DEMO_SCENARIOS ?= scenarios/*.yaml
+DEMO_GEOID     ?= ../../_geoids/egm2008-2_5.pgm
+SITL_READER    ?= bash -c "exec ~/ardupilot-venv/bin/python sim/mav_reader.py --sysid {sysid} --out udp:127.0.0.1:{out_port} --max-seconds {max_s}"
+SITL_FLY       ?= bash -c "exec ~/ardupilot-venv/bin/python sim/fly.py --link udpin:127.0.0.1:{fly_port} --plan -"
+demo:
+	deploy/demo-up.sh
+	$(GO) run ./cmd/demo-seed --steps receivers,registry,uspace,ussp,ansp,sessions --geoid $(DEMO_GEOID) \
+	  --sitl-reader '$(SITL_READER)' --sitl-fly '$(SITL_FLY)' $(DEMO_SCENARIOS)
+
+# Console sessions end after 30 minutes idle: refresh them before a run.
+demo-sessions:
+	$(GO) run ./cmd/demo-seed --steps sessions --geoid $(DEMO_GEOID) \
+	  --sitl-reader '$(SITL_READER)' --sitl-fly '$(SITL_FLY)' $(DEMO_SCENARIOS)
+
+# Publish the zones of named scenarios: make demo-seed STEPS=zones ZONES=sc-03-zone-entry-exit
+STEPS ?= sessions
+ZONES ?=
+demo-seed:
+	$(GO) run ./cmd/demo-seed --steps $(STEPS) --zones '$(ZONES)' --geoid $(DEMO_GEOID) \
+	  --sitl-reader '$(SITL_READER)' --sitl-fly '$(SITL_FLY)' $(DEMO_SCENARIOS)
+
+demo-down:
+	deploy/demo-down.sh
+
+# The results pages (cmd/results) into site/.
+results:
+	$(GO) run ./cmd/results build --in results --out site

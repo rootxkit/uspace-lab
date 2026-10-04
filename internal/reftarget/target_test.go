@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -20,7 +21,31 @@ import (
 	"github.com/rootxkit/uspace-lab/internal/wire/wiretest"
 )
 
+// clock is a test clock the target reads for every receipt time, so a
+// test controls the live-rate check instead of racing it.
+type clock struct {
+	mu  sync.Mutex
+	now time.Time
+}
+
+func (c *clock) Now() time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.now
+}
+
+func (c *clock) Advance(d time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.now = c.now.Add(d)
+}
+
 func newTarget(t *testing.T) (*Target, *httptest.Server) {
+	t.Helper()
+	return newTargetAt(t, time.Now)
+}
+
+func newTargetAt(t *testing.T, now func() time.Time) (*Target, *httptest.Server) {
 	t.Helper()
 	pol, err := scenario.LoadPolicy(wiretest.Root() + "/scenarios/policy/demo.yaml")
 	if err != nil {
@@ -28,7 +53,7 @@ func newTarget(t *testing.T) (*Target, *httptest.Server) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
-	tg, err := New(ctx, Config{Policy: pol, Audience: "ref.test", Geoid: geoidx.Constant(15.9), ConsoleToken: "console", MaxLiveHz: 1000,
+	tg, err := New(ctx, Config{Policy: pol, Audience: "ref.test", Geoid: geoidx.Constant(15.9), ConsoleToken: "console", MaxLiveHz: 1000, Now: now,
 		Clients: []Client{
 			{ID: "op-a", Secret: "sa", Serials: []string{"A1"}, Scopes: []string{ScopeTelemetry, ScopeIntents, ScopeTraffic}},
 			{ID: "op-x", Secret: "sx", Serials: []string{"X1"}, Scopes: []string{ScopeIntents}},
@@ -106,9 +131,13 @@ func TestRoutesFailClosed(t *testing.T) {
 
 // Two flights 20 m apart stream; core's monitor raises proximity for both,
 // one alert per flight naming the other, valid alert/v1; a flight landing
-// clears it.
+// clears it. The target's clock moves 1 s between samples of a flight, so
+// every sample is outside the live-rate bound and accepted: on the wall
+// clock, a fast machine sent the landing sample inside 1/MaxLiveHz of the
+// last one, the target dropped it as over rate, and the clear never came.
 func TestProximityFromTelemetry(t *testing.T) {
-	tg, srv := newTarget(t)
+	clk := &clock{now: time.Now().UTC()}
+	tg, srv := newTargetAt(t, clk.Now)
 	tg.mu.Lock()
 	tg.clients["op-a"] = Client{ID: "op-a", Secret: "sa", Serials: []string{"A1", "A2"}, Scopes: []string{ScopeTelemetry, ScopeIntents, ScopeTraffic}}
 	tg.serials["A2"] = "op-a"
@@ -136,7 +165,7 @@ func TestProximityFromTelemetry(t *testing.T) {
 	}
 	defer tel.CloseNow()
 	send := func(serial string, seq int, lat float64, status string) {
-		body := map[string]any{"ts": wire.Format(time.Now()), "serial": serial, "seq": seq, "epoch": "e", "position": map[string]any{"lat": lat, "lng": 44.8271},
+		body := map[string]any{"ts": wire.Format(clk.Now()), "serial": serial, "seq": seq, "epoch": "e", "position": map[string]any{"lat": lat, "lng": 44.8271},
 			"alt_wgs84_m": 650.9, "height_m": 30, "height_ref": "TakeoffLocation", "speed_ms": 0, "track_deg": nil, "vspeed_ms": 0,
 			"status": status, "emergency": false, "accuracy_h": "HA10m", "accuracy_v": "VA10m", "timestamp_accuracy_s": nil}
 		b, _ := json.Marshal(map[string]any{"schema": "telemetry/v1", "body": body})
@@ -144,9 +173,25 @@ func TestProximityFromTelemetry(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	accepted := func() uint64 { return tg.Counters()[groupTelemetry]["accepted"] }
+	// waitAccepted waits until the target has accepted n samples: the
+	// socket is asynchronous, and the clock may only move once a sample
+	// has been read at the time it was sent.
+	waitAccepted := func(n uint64) {
+		t.Helper()
+		deadline := time.Now().Add(5 * time.Second)
+		for accepted() < n {
+			if time.Now().After(deadline) {
+				t.Fatalf("accepted %d samples, want %d: %v", accepted(), n, tg.Counters()[groupTelemetry])
+			}
+			time.Sleep(time.Millisecond)
+		}
+	}
 	for i := range 3 {
 		send("A1", i, 41.7151, "Airborne")
 		send("A2", i, 41.71528, "Airborne") // 20 m north
+		waitAccepted(uint64(2 * (i + 1)))
+		clk.Advance(time.Second)
 	}
 	raised := readAlert(t, alerts, func(b map[string]any) bool { return b["state"] == "raised" })
 	wiretest.Validate(t, "ussp/alert-v1.json", raised)
@@ -156,6 +201,7 @@ func TestProximityFromTelemetry(t *testing.T) {
 	}
 	// Landing clears it (alerting.ClearLanded).
 	send("A1", 3, 41.7151, "Ground")
+	waitAccepted(7)
 	cleared := readAlert(t, alerts, func(b map[string]any) bool { return b["state"] == "cleared" })
 	wiretest.Validate(t, "ussp/alert-v1.json", cleared)
 	if cleared["body"].(map[string]any)["clear_reason"] != "landed" {

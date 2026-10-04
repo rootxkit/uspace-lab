@@ -224,6 +224,28 @@ def test_unknown_time_until_utc_and_no_hae_without_a_fix() -> None:
         validate_against_schema(line)
 
 
+def test_host_clock_puts_the_vehicle_on_the_host_time() -> None:
+    # SITL's UTC lags the host by about 1.6 s: with the host clock the
+    # line is on the host's time at the SYSTEM_TIME's receipt, whatever
+    # the vehicle's UTC says, and the skew is kept for the status line.
+    host_at_systime = 1_790_942_401.600
+    r = mav_reader.Reader(7, host_clock=lambda: host_at_systime)
+    lines = feed_all(
+        r,
+        [mavlink.MAVLink_system_time_message(1_790_942_400_000_000, 5_000), gpi(time_boot_ms=6_000)],
+    )
+    assert lines[0]["ts"] == "2026-10-02T12:00:02.600Z"  # host 12:00:01.600 at boot 5 s, + 1 s
+    assert r.state.utc_skew_s == pytest.approx(-1.6)
+    # Presence beside it: the vehicle clock keeps the vehicle's UTC.
+    v = mav_reader.Reader(7)
+    lines = feed_all(v, [mavlink.MAVLink_system_time_message(1_790_942_400_000_000, 5_000), gpi(time_boot_ms=6_000)])
+    assert lines[0]["ts"] == "2026-10-02T12:00:01.000Z"
+    assert v.state.utc_skew_s is None
+    # No UTC from the vehicle: no ts on either clock (R-16).
+    h = mav_reader.Reader(7, host_clock=lambda: host_at_systime)
+    assert feed_all(h, [mavlink.MAVLink_system_time_message(0, 5_000), gpi()])[0]["ts"] is None
+
+
 def test_unknown_heading_and_emergency() -> None:
     r = mav_reader.Reader(7)
     lines = feed_all(r, [heartbeat(armed=True, status=mavlink.MAV_STATE_EMERGENCY), gpi(hdg=mav_reader.HDG_UNKNOWN)])

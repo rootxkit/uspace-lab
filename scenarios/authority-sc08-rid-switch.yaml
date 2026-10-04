@@ -15,12 +15,12 @@ note: >-
   are the authority's admin API with the session in the targets file
   (requests.authority). Steps 4-8 of SC-08 (relays, KV loss) need the
   authenticated feeds and the authority's own fault injection.
-duration_s: 120
+duration_s: 150
 tail_s: 5
 aircraft:
   - name: c
     sysid: 3
-    serial: LABSC08C0003
+    serial: LABX9SC08C0003
     operator_reg: GEOLAB000001
     operator_id: GEOLAB000001
     receivers: [lab-rx-1]
@@ -45,7 +45,9 @@ steps:
   - id: hover
     aircraft: [c]
     do: hold
-    for_s: 80
+    # 55 s: SITL confirms the climb about 41 s after t0, so an 80 s hover
+    # pushed the landing (at_s 100) past the run (systems run 20261004).
+    for_s: 55
   - id: rid-off
     at_s: 40
     do: request

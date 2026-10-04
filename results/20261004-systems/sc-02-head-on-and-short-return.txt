@@ -1,0 +1,25 @@
+scenario sc-02-head-on-and-short-return (20261004-systems, sitl vehicles, systems targets): FAIL
+  observed alerts (9):
+    ussp      degraded                          on cis raised +-15.8s
+    ussp      degraded                          on dss raised +-15.8s
+    ussp      degraded                          on manned raised +-15.8s
+    ussp      degraded                          on monitor raised +-15.8s
+    ussp      degraded                          on policy raised +-15.8s
+    ussp      degraded                          on source_control raised +-15.8s
+    ussp      proximity              a          peer cd8e3875-5866-4d17-b20e-bf57230b0c0a raised +25.3s cleared resolved +65.3s
+    ussp      proximity              a          peer cd8e3875-5866-4d17-b20e-bf57230b0c0a raised +94.2s cleared resolved +128.3s
+    ussp      proximity              a          peer cd8e3875-5866-4d17-b20e-bf57230b0c0a raised +184.3s cleared resolved +226.2s
+  missed 6, false 3
+  operator LABX9SC02A0001: sent 321 = accepted 321 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  operator LABX9SC02B0002: sent 320 = accepted 320 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  latency ussp: n 3, p50 0.072 s, p95 0.090 s, max 0.090 s
+  FAIL false alert: ussp proximity 66d156b6-b892-4678-8608-f6ddc439ea94 (aircraft "a", peer "cd8e3875-5866-4d17-b20e-bf57230b0c0a", subject "") raised at 00:17:25.312
+  FAIL false alert: ussp proximity 6986017d-56d7-4553-8234-51c5aadd0f4f (aircraft "a", peer "cd8e3875-5866-4d17-b20e-bf57230b0c0a", subject "") raised at 00:20:04.304
+  FAIL false alert: ussp proximity a5e4846e-f4a2-483b-889e-75df3702d9d4 (aircraft "a", peer "cd8e3875-5866-4d17-b20e-bf57230b0c0a", subject "") raised at 00:18:34.221
+  FAIL head-on-a: no ussp proximity raise for a with b in [00:18:30.134, 00:18:50.134]
+  FAIL head-on-b: no ussp proximity raise for b with a in [00:18:30.134, 00:18:50.134]
+  FAIL on-the-ground-a: no ussp proximity raise for a with b in [00:17:19.540, 00:18:04.540]
+  FAIL on-the-ground-b: no ussp proximity raise for b with a in [00:17:19.540, 00:18:04.540]
+  FAIL short-return-a: no ussp proximity raise for a with b in [00:20:00.000, 00:20:25.000]
+  FAIL short-return-b: no ussp proximity raise for b with a in [00:20:00.000, 00:20:25.000]
+  result: results/20261004-systems/sc-02-head-on-and-short-return.json

@@ -1,0 +1,10 @@
+# Where the files of deploy/systems/ come from (compose.yaml's header has
+# the reasoning). Bump a line together with its image in demo.env.example
+# and re-read the file at the new commit.
+#
+# <file>                 <repository>        <commit>                                  <path there>
+initdb/cisp.sql          uspace-cisp         e8e90a569d66a7cbf5c83b2945da27c4acd2161a  deploy/postgres/init.sql
+initdb/ussp.sql          uspace-ussp         6ec62385a9b2d5679036d1b278c999636bff50ed  deploy/compose/initdb/10-ussp.sql
+initdb/authority.sql     uspace-deploy       8a242ecb504465bca2be247c0438a11408588e1c  systems/authority/init.sql
+initdb/ansp.sql          uspace-deploy       8a242ecb504465bca2be247c0438a11408588e1c  systems/ansp/init.sql
+compose.yaml, Caddyfile  uspace-deploy       8a242ecb504465bca2be247c0438a11408588e1c  compose/*.yaml, caddy/sites/*.caddy (derived, not copied)

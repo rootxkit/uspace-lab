@@ -1,0 +1,645 @@
+# The four systems for the lab (WP-L6, profile `systems`), used together
+# with deploy/compose.yaml (the DSS and the lab issuer) as one project:
+#
+#   docker compose -p uspace-demo -f deploy/compose.yaml \
+#     -f deploy/systems/compose.yaml --env-file deploy/demo.env \
+#     --env-file deploy/local-demo/passwords.env \
+#     --profile dss --profile issuer --profile systems ...
+#
+# deploy/demo-up.sh drives it (make demo). Paths are relative to deploy/
+# (the first file's directory is the project directory).
+#
+# Derived from uspace-deploy's compose/{authority,cisp,ussp,ansp}.yaml at
+# 8a242ec, which are derived from each system's own compose at the commit
+# of its image: the same processes, entrypoints, commands and databases
+# (one timescaledb-ha container per system holding both of its databases,
+# M37; the init SQL is vendored under systems/initdb/, systems/SOURCE).
+# What the lab changes, and why:
+#
+#   - One internal network `lab` for every system and the DSS, with the
+#     lab Caddy on it under each public host as an alias, instead of the
+#     droplet's per-system internal and edge networks. Each system still
+#     has its own database and NATS; nothing shares a store.
+#   - TLS from the lab's own CA (gen-secrets.sh), trusted by every Go
+#     process through SSL_CERT_FILE, so the HTTPS-only JWKS fetches of
+#     uspace-core's verifier work exactly as on the droplet.
+#   - No NATS authentication and no per-process database users beyond
+#     what the systems' init SQL creates: the network is internal.
+#   - The lab issuer is the token service of every outgoing call
+#     (*_TOKEN_URL) and an allow-listed issuer everywhere (*_ISSUERS),
+#     standing in for the authority's token service until A-M4 (WP-L6).
+#   - The DSS is reached at https://LAB_HOST through Caddy, as on the
+#     droplet, not at http://dss:8082: the ANSP asks the issuer for the
+#     audience "dss:8082" (host with port), which the lab issuer refuses
+#     as not a bare host (M18); without a port both agree.
+#   - mTLS off everywhere (each system says so at error level).
+#   - No web images (the consoles are not needed to judge a scenario).
+#   - The ANSP's manned-adapter polls the lab's sim-adsb (dump1090_json)
+#     on the host instead of replaying its own file; it is the one
+#     service on the `egress` network besides Caddy.
+#
+# The images are by digest from deploy/demo.env (uspace-deploy
+# images.env), except the ANSP's, which is not published and is built
+# locally from ANSP_SOURCE_COMMIT by demo-up.sh.
+
+x-lab-ca: &lab-ca
+  SSL_CERT_FILE: /etc/lab-ca/ca.pem
+
+x-ca-mount: &ca-mount ${DEMO_STATE_DIR:-./local-demo}/ca/ca.pem:/etc/lab-ca/ca.pem:ro
+
+x-pg-command: &pg-command
+  - postgres
+  - -c
+  - shared_buffers=64MB
+  - -c
+  - max_wal_size=256MB
+  - -c
+  - min_wal_size=64MB
+  - -c
+  - max_connections=100
+
+x-nats: &nats
+  profiles: [systems]
+  image: ${NATS_IMAGE:?deploy/demo.env}
+  command: ["-js", "-sd", "/data", "-m", "8222"]
+  networks: [lab]
+  restart: unless-stopped
+  healthcheck:
+    test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8222/healthz?js-enabled-only=true"]
+    interval: 3s
+    timeout: 3s
+    retries: 30
+
+# ---- authority ---------------------------------------------------------------
+
+x-authority: &authority
+  profiles: [systems]
+  image: ${AUTHORITY_IMAGE:?deploy/demo.env}
+  entrypoint: ["/uspace-authority"]
+  restart: unless-stopped
+  read_only: true
+  tmpfs: [/tmp]
+  networks: [lab]
+  volumes:
+    - *ca-mount
+    - ${DEMO_STATE_DIR:-./local-demo}/authority:/run/secrets/authority:ro
+    - ${DEMO_STATE_DIR:-./local-demo}/clients:/run/secrets/clients:ro
+    - ${DEMO_GROUND_DIR:-./local-demo/ground}:/srv/ground:ro
+  depends_on:
+    authority-migrate: {condition: service_completed_successfully}
+    authority-nats: {condition: service_healthy}
+
+x-authority-env: &authority-env
+  <<: *lab-ca
+  LOG_LEVEL: info
+  STATUS_INTERVAL_S: "30"
+  NATS_URL: nats://authority-nats:4222
+  ADMIN_ADDR: ":9090"
+  PG_URL: postgres://postgres:${AUTHORITY_PG_PASSWORD:?passwords.env}@authority-postgres:5432/authority?sslmode=disable
+  TS_URL: postgres://postgres:${AUTHORITY_PG_PASSWORD}@authority-postgres:5432/authority_ts?sslmode=disable
+  AUTHORITY_PUBLIC_URL: https://${AUTHORITY_HOST:?deploy/demo.env}
+  AUTHORITY_AUDIENCES: ${AUTHORITY_HOST},authority
+  AUTHORITY_MTLS_MODE: "off"
+  AUTHORITY_TRUSTED_PROXIES: ""
+  CISP_ISSUER_URL: https://${CISP_HOST:?deploy/demo.env}
+  CISP_JWKS_URL: https://${CISP_HOST}/.well-known/jwks.json
+  ANSP_ISSUER_URL: https://${ANSP_HOST:?deploy/demo.env}
+  ANSP_JWKS_URL: https://${ANSP_HOST}/.well-known/jwks.json
+  LAB_ISSUER_URL: https://${LAB_HOST:?deploy/demo.env}
+  LAB_JWKS_URL: https://${LAB_HOST}/.well-known/jwks.json
+  GEOID_FILE: /srv/ground/egm2008-2_5.pgm
+
+services:
+  caddy:
+    profiles: [systems]
+    image: ${CADDY_IMAGE:?deploy/demo.env}
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp, /data, /config]
+    environment:
+      AUTHORITY_HOST: ${AUTHORITY_HOST}
+      CISP_HOST: ${CISP_HOST}
+      USSP_HOST: ${USSP_HOST}
+      ANSP_HOST: ${ANSP_HOST}
+      LAB_HOST: ${LAB_HOST}
+    volumes:
+      - ./systems/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${DEMO_STATE_DIR:-./local-demo}/tls:/etc/caddy/tls:ro
+    ports:
+      - "127.0.0.1:${DEMO_HTTPS_PORT:-443}:443"
+    networks:
+      lab:
+        aliases: ["${AUTHORITY_HOST}", "${CISP_HOST}", "${USSP_HOST}", "${ANSP_HOST}", "${LAB_HOST}"]
+      egress: {}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2019/config/"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  authority-postgres:
+    profiles: [systems]
+    image: ${TIMESCALEDB_IMAGE:?deploy/demo.env}
+    restart: unless-stopped
+    networks: [lab]
+    environment:
+      POSTGRES_PASSWORD: ${AUTHORITY_PG_PASSWORD}
+      POSTGRES_DB: authority
+    command: *pg-command
+    volumes:
+      - ./systems/initdb/authority.sql:/docker-entrypoint-initdb.d/10-authority.sql:ro
+      - authority-pgdata:/home/postgres/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres && psql -U postgres -d authority_ts -tAc 'SELECT 1' | grep -q 1"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+
+  authority-nats:
+    <<: *nats
+    volumes: [authority-nats:/data]
+
+  authority-migrate:
+    <<: *authority
+    restart: "no"
+    command: ["migrate"]
+    environment: *authority-env
+    depends_on:
+      authority-postgres: {condition: service_healthy}
+
+  authority-api:
+    <<: *authority
+    command: ["api"]
+    environment:
+      <<: *authority-env
+      API_ADDR: ":8080"
+      SIGNING_KEY_FILES: /run/secrets/authority/token-1.pem
+      PUBLICATION_KEY_FILE: /run/secrets/authority/publication-1.pem
+      PII_KEY_FILE: /run/secrets/authority/pii.key
+      REGISTRY_HASH_KEY_FILE: /run/secrets/authority/registry-hash.key
+      BOOTSTRAP_ADMIN_USERNAME: admin
+      BOOTSTRAP_ADMIN_PASSWORD_FILE: /run/secrets/authority/admin.pw
+      ZONES_PROVIDER_NAME: uspace-lab demo authority
+      CISP_BASE_URL: https://${CISP_HOST}
+      CISP_CLIENT_ID: authority-01
+      CISP_CLIENT_SECRET_FILE: /run/secrets/clients/authority-01.secret
+      CISP_TOKEN_URL: https://${LAB_HOST}/oauth/token
+      CIS_CALLBACK_URL: https://${AUTHORITY_HOST}/v1/cis/notifications
+      CIS_SUBSCRIPTION_BBOX: ${DEMO_CIS_BBOX:-}
+      RECORDS_CLIENT_ID: authority-01
+      RECORDS_CLIENT_SECRET_FILE: /run/secrets/clients/authority-01.secret
+      DSS_BASE_URL: https://${LAB_HOST}
+      DP_CLIENT_ID: authority-01
+      DP_CLIENT_SECRET_FILE: /run/secrets/clients/authority-01.secret
+
+  authority-rid-ingest:
+    <<: *authority
+    command: ["rid-ingest"]
+    environment:
+      <<: *authority-env
+      RID_INGEST_ADDR: ":8081"
+
+  authority-dp-poller:
+    <<: *authority
+    command: ["dp-poller"]
+    environment:
+      <<: *authority-env
+      DP_ADDR: ":8082"
+      DSS_BASE_URL: https://${LAB_HOST}
+      DP_USS_BASE_URL: https://${AUTHORITY_HOST}
+      DP_CLIENT_ID: authority-01
+      DP_CLIENT_SECRET_FILE: /run/secrets/clients/authority-01.secret
+      DP_TOKEN_URL: https://${LAB_HOST}/oauth/token
+
+  authority-manned-ingest:
+    <<: *authority
+    command: ["manned-ingest"]
+    environment:
+      <<: *authority-env
+      ANSP_BASE_URL: https://${ANSP_HOST}
+      MANNED_CLIENT_ID: authority-01
+      MANNED_CLIENT_SECRET_FILE: /run/secrets/clients/authority-01.secret
+      MANNED_TOKEN_URL: https://${LAB_HOST}/oauth/token
+
+  authority-detect:
+    <<: *authority
+    command: ["detect"]
+    environment:
+      <<: *authority-env
+      CELLS: all
+
+  authority-tsdb-writer:
+    <<: *authority
+    command: ["tsdb-writer"]
+    environment: *authority-env
+
+  authority-picture-ws:
+    <<: *authority
+    command: ["picture-ws"]
+    environment:
+      <<: *authority-env
+      PICTURE_ADDR: ":8083"
+      PICTURE_SESSION_URL: http://authority-api:8080/v1/auth/session
+
+  # ---- cisp ------------------------------------------------------------------
+
+  cisp-postgres:
+    profiles: [systems]
+    image: ${TIMESCALEDB_IMAGE}
+    restart: unless-stopped
+    networks: [lab]
+    environment:
+      POSTGRES_PASSWORD: ${CISP_PG_PASSWORD:?passwords.env}
+      PG_CISP_API_PASSWORD: ${CISP_PG_API_PASSWORD:?passwords.env}
+      PG_CISP_DELIVER_PASSWORD: ${CISP_PG_DELIVER_PASSWORD:?passwords.env}
+    command: *pg-command
+    volumes:
+      - ./systems/initdb/cisp.sql:/docker-entrypoint-initdb.d/10-cisp.sql:ro
+      - cisp-pgdata:/home/postgres/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres && psql -U postgres -d cisp_ts -tAc \"SELECT 1 FROM pg_extension WHERE extname = 'timescaledb'\" | grep -q 1"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+
+  cisp-nats:
+    <<: *nats
+    volumes: [cisp-nats:/data]
+
+  cisp-migrate:
+    profiles: [systems]
+    image: ${CISP_GO_IMAGE:?deploy/demo.env}
+    restart: "no"
+    read_only: true
+    networks: [lab]
+    command: ["cispctl", "migrate", "all"]
+    environment:
+      CISP_DATABASE_URL: postgres://cisp_api:${CISP_PG_API_PASSWORD}@cisp-postgres:5432/cisp?sslmode=disable
+      CISP_TIMESERIES_URL: postgres://cisp_deliver:${CISP_PG_DELIVER_PASSWORD}@cisp-postgres:5432/cisp_ts?sslmode=disable
+    depends_on:
+      cisp-postgres: {condition: service_healthy}
+
+  cisp-api:
+    &cisp
+    profiles: [systems]
+    image: ${CISP_GO_IMAGE}
+    restart: unless-stopped
+    read_only: true
+    # /var/lib/cisp holds the JWKS cache the processes write as the
+    # image's nonroot user (65532).
+    tmpfs: [/tmp, "/var/lib/cisp:uid=65532,gid=65532,mode=0700"]
+    networks: [lab]
+    command: ["api"]
+    volumes:
+      - *ca-mount
+      - ${DEMO_STATE_DIR:-./local-demo}/cisp:/run/secrets/cisp:ro
+    environment: &cisp-env
+      <<: *lab-ca
+      CISP_LOG_LEVEL: info
+      CISP_STATUS_INTERVAL_S: "30"
+      CISP_HTTP_ADDR: ":8080"
+      CISP_NATS_URL: nats://cisp-nats:4222
+      CISP_DATABASE_URL: postgres://cisp_api:${CISP_PG_API_PASSWORD}@cisp-postgres:5432/cisp?sslmode=disable
+      CISP_TIMESERIES_URL: postgres://cisp_api:${CISP_PG_API_PASSWORD}@cisp-postgres:5432/cisp_ts?sslmode=disable
+      CISP_SIGNING_KEY_FILE: /run/secrets/cisp/signing.pem
+      CISP_SIGNING_KID: ${CISP_SIGNING_KID:?passwords.env}
+      CISP_SESSION_KEY_FILE: /run/secrets/cisp/session.pem
+      CISP_SECRETS_KEY_FILE: /run/secrets/cisp/secrets.key
+      CISP_JWKS_CACHE_FILE: /var/lib/cisp/jwks-cache.json
+      CISP_PUBLIC_BASE_URL: https://${CISP_HOST}
+      CISP_ISSUER_URL: https://${CISP_HOST}
+      CISP_CONSOLE_ISSUER: https://${CISP_HOST}/console
+      CISP_AUDIENCES: ${CISP_HOST},cisp
+      # The authority is the ecosystem issuer of record and the zones'
+      # publisher (its JWKS holds the publication key); the lab issuer is
+      # the second issuer, the one every lab client's token comes from.
+      CISP_TOKEN_ISSUER: https://${AUTHORITY_HOST}
+      CISP_TOKEN_JWKS_URL: https://${AUTHORITY_HOST}/.well-known/jwks.json
+      CISP_LAB_ISSUER: https://${LAB_HOST}
+      CISP_LAB_JWKS_URL: https://${LAB_HOST}/.well-known/jwks.json
+      CISP_AUTHORITY_CLIENT_ID: authority-01
+      CISP_ANSP_CLIENT_ID: ansp-01
+      CISP_ANSP_JWKS_URL: https://${ANSP_HOST}/.well-known/jwks.json
+      CISP_MTLS_MODE: "off"
+      # The subscribers' callbacks are the lab hosts, private addresses.
+      CISP_ALLOW_PRIVATE_CALLBACKS: "true"
+      CISP_ALLOW_INSECURE_CALLBACKS: "false"
+      CISP_TRUSTED_PROXY_CIDR: ""
+    depends_on:
+      cisp-migrate: {condition: service_completed_successfully}
+      cisp-nats: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "api", "-probe=/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  cisp-deliver:
+    <<: *cisp
+    command: ["deliver"]
+    environment:
+      <<: *cisp-env
+      CISP_DELIVER_HTTP_ADDR: ":8081"
+      CISP_DATABASE_URL: postgres://cisp_deliver:${CISP_PG_DELIVER_PASSWORD}@cisp-postgres:5432/cisp?sslmode=disable
+      CISP_TIMESERIES_URL: postgres://cisp_deliver:${CISP_PG_DELIVER_PASSWORD}@cisp-postgres:5432/cisp_ts?sslmode=disable
+      CISP_DELIVERY_LOG_RETENTION_DAYS: "14"
+    healthcheck:
+      test: ["CMD", "deliver", "-probe=/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ---- ussp ------------------------------------------------------------------
+
+  ussp-timescaledb:
+    profiles: [systems]
+    image: ${TIMESCALEDB_IMAGE}
+    restart: unless-stopped
+    networks: [lab]
+    environment:
+      POSTGRES_PASSWORD: ${USSP_PG_PASSWORD:?passwords.env}
+      USSP_PG_API_PASSWORD: ${USSP_PG_API_PASSWORD:?passwords.env}
+      USSP_PG_TSDB_PASSWORD: ${USSP_PG_TSDB_PASSWORD:?passwords.env}
+    command: *pg-command
+    volumes:
+      - ./systems/initdb/ussp.sql:/docker-entrypoint-initdb.d/10-ussp.sql:ro
+      - ussp-pgdata:/home/postgres/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres && psql -U postgres -d ussp_timeseries -tAc \"SELECT 1 FROM pg_extension WHERE extname = 'postgis'\" | grep -q 1"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+
+  ussp-nats:
+    <<: *nats
+    volumes: [ussp-nats:/data]
+
+  ussp-migrate:
+    &ussp
+    profiles: [systems]
+    image: ${USSP_GO_IMAGE:?deploy/demo.env}
+    restart: "no"
+    read_only: true
+    tmpfs: [/tmp]
+    networks: [lab]
+    entrypoint: ["/usr/bin/ussp-api", "migrate"]
+    volumes:
+      - *ca-mount
+      - ${DEMO_STATE_DIR:-./local-demo}/ussp:/run/secrets/ussp:ro
+      - ${DEMO_STATE_DIR:-./local-demo}/clients:/run/secrets/clients:ro
+      - ${DEMO_GROUND_DIR:-./local-demo/ground}:/srv/ground:ro
+    environment: &ussp-env
+      <<: *lab-ca
+      USSP_LOG_LEVEL: info
+      USSP_STATUS_INTERVAL_S: "30"
+      USSP_NATS_URL: nats://ussp-nats:4222
+      USSP_PG_URL: postgres://ussp_api:${USSP_PG_API_PASSWORD}@ussp-timescaledb:5432/ussp_relational?sslmode=disable
+      USSP_TS_URL: postgres://ussp_api:${USSP_PG_API_PASSWORD}@ussp-timescaledb:5432/ussp_timeseries?sslmode=disable
+      USSP_SYSTEM_ID: ${USSP_SYSTEM_ID:?deploy/demo.env}
+      USSP_AUDIENCES: ${USSP_HOST:?deploy/demo.env},ussp
+      USSP_USS_BASE_URL: https://${USSP_HOST}
+      USSP_ISSUER_URL: https://${USSP_HOST}
+      # The lab issuer first: it is the token service for outgoing calls.
+      USSP_TOKEN_ISSUERS: https://${LAB_HOST}=https://${LAB_HOST}/.well-known/jwks.json,https://${AUTHORITY_HOST}=https://${AUTHORITY_HOST}/.well-known/jwks.json
+      USSP_TOKEN_CLIENT_SECRET_FILE: /run/secrets/clients/${USSP_CLIENT_ID:?deploy/demo.env}.secret
+      USSP_CIS_NOTIFY_ISSUERS: https://${CISP_HOST}=https://${CISP_HOST}/.well-known/jwks.json,https://${ANSP_HOST}=https://${ANSP_HOST}/.well-known/jwks.json
+      USSP_CIS_PUBLISHER_KEYS: authority=https://${AUTHORITY_HOST}/.well-known/jwks.json,ansp=https://${ANSP_HOST}/.well-known/jwks.json
+      USSP_CIS_BBOX: ${DEMO_CIS_BBOX:-}
+      USSP_DSS_BASE_URL: https://${LAB_HOST}
+      USSP_CISP_BASE_URL: https://${CISP_HOST}
+      USSP_AUTHORITY_BASE_URL: https://${AUTHORITY_HOST}
+      USSP_ANSP_BASE_URL: https://${ANSP_HOST}
+      USSP_ANSP_STREAM_URL: wss://${ANSP_HOST}/v1/manned-traffic/stream
+      USSP_WS_ALLOWED_ORIGINS: https://${USSP_HOST}
+      USSP_MTLS_MODE: "off"
+      USSP_GEOID_FILE: /srv/ground/egm2008-2_5.pgm
+      USSP_TRUSTED_PROXIES: ""
+    depends_on:
+      ussp-timescaledb: {condition: service_healthy}
+
+  ussp-migrate-timeseries:
+    <<: *ussp
+    entrypoint: ["/usr/bin/ussp-tsdb-writer", "migrate"]
+    environment:
+      <<: *ussp-env
+      USSP_TS_URL: postgres://ussp_tsdb:${USSP_PG_TSDB_PASSWORD}@ussp-timescaledb:5432/ussp_timeseries?sslmode=disable
+
+  ussp-api:
+    <<: *ussp
+    restart: unless-stopped
+    entrypoint: ["/usr/bin/ussp-api"]
+    environment:
+      <<: *ussp-env
+      USSP_ISSUER_KEY_FILE: /run/secrets/ussp/issuer.pem
+      USSP_MFA_KEY_FILE: /run/secrets/ussp/mfa.key
+    depends_on: &ussp-deps
+      ussp-migrate: {condition: service_completed_successfully}
+      ussp-migrate-timeseries: {condition: service_completed_successfully}
+      ussp-nats: {condition: service_healthy}
+    healthcheck: &ussp-probe
+      test: ["CMD", "/usr/bin/ussp-api", "healthcheck"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  ussp-telemetry-ingest:
+    <<: *ussp
+    restart: unless-stopped
+    entrypoint: ["/usr/bin/ussp-telemetry-ingest"]
+    environment:
+      <<: *ussp-env
+      # Operator tokens are this USSP's own; api refuses its own issuer in
+      # this list, so it is appended here, for telemetry-ingest only (as
+      # uspace-deploy compose/ussp.yaml).
+      USSP_TOKEN_ISSUERS: https://${LAB_HOST}=https://${LAB_HOST}/.well-known/jwks.json,https://${AUTHORITY_HOST}=https://${AUTHORITY_HOST}/.well-known/jwks.json,https://${USSP_HOST}=https://${USSP_HOST}/.well-known/jwks.json
+    depends_on: *ussp-deps
+    healthcheck:
+      <<: *ussp-probe
+      test: ["CMD", "/usr/bin/ussp-telemetry-ingest", "healthcheck"]
+
+  ussp-rid-sp:
+    <<: *ussp
+    restart: unless-stopped
+    entrypoint: ["/usr/bin/ussp-rid-sp"]
+    depends_on: *ussp-deps
+    healthcheck:
+      <<: *ussp-probe
+      test: ["CMD", "/usr/bin/ussp-rid-sp", "healthcheck"]
+
+  ussp-monitor:
+    <<: *ussp
+    restart: unless-stopped
+    entrypoint: ["/usr/bin/ussp-monitor"]
+    depends_on: *ussp-deps
+    healthcheck:
+      <<: *ussp-probe
+      test: ["CMD", "/usr/bin/ussp-monitor", "healthcheck"]
+
+  ussp-traffic-ws:
+    <<: *ussp
+    restart: unless-stopped
+    entrypoint: ["/usr/bin/ussp-traffic-ws"]
+    environment:
+      <<: *ussp-env
+      USSP_TOKEN_ISSUERS: https://${LAB_HOST}=https://${LAB_HOST}/.well-known/jwks.json,https://${AUTHORITY_HOST}=https://${AUTHORITY_HOST}/.well-known/jwks.json,https://${USSP_HOST}=https://${USSP_HOST}/.well-known/jwks.json
+    depends_on: *ussp-deps
+    healthcheck:
+      <<: *ussp-probe
+      test: ["CMD", "/usr/bin/ussp-traffic-ws", "healthcheck"]
+
+  ussp-dss-sync:
+    <<: *ussp
+    restart: unless-stopped
+    entrypoint: ["/usr/bin/ussp-dss-sync"]
+    depends_on: *ussp-deps
+    healthcheck:
+      <<: *ussp-probe
+      test: ["CMD", "/usr/bin/ussp-dss-sync", "healthcheck"]
+
+  ussp-tsdb-writer:
+    <<: *ussp
+    restart: unless-stopped
+    entrypoint: ["/usr/bin/ussp-tsdb-writer"]
+    environment:
+      <<: *ussp-env
+      USSP_TS_URL: postgres://ussp_tsdb:${USSP_PG_TSDB_PASSWORD}@ussp-timescaledb:5432/ussp_timeseries?sslmode=disable
+      USSP_WRITER_HOLD_ROWS: "20000"
+    depends_on: *ussp-deps
+    healthcheck:
+      <<: *ussp-probe
+      test: ["CMD", "/usr/bin/ussp-tsdb-writer", "healthcheck"]
+
+  # ---- ansp ------------------------------------------------------------------
+
+  ansp-timescaledb:
+    profiles: [systems]
+    image: ${TIMESCALEDB_IMAGE}
+    restart: unless-stopped
+    networks: [lab]
+    environment:
+      POSTGRES_PASSWORD: ${ANSP_PG_PASSWORD:?passwords.env}
+      POSTGRES_DB: ansp
+    command: *pg-command
+    volumes:
+      - ./systems/initdb/ansp.sql:/docker-entrypoint-initdb.d/10-ansp.sql:ro
+      - ansp-pgdata:/home/postgres/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres && psql -U postgres -d ansp_ts -tAc 'SELECT 1' | grep -q 1"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+
+  ansp-nats:
+    <<: *nats
+    volumes: [ansp-nats:/data]
+
+  ansp-migrate:
+    &ansp
+    profiles: [systems]
+    image: ${ANSP_GO_IMAGE:?deploy/demo.env}
+    pull_policy: never
+    restart: "no"
+    read_only: true
+    tmpfs: [/tmp]
+    networks: [lab]
+    entrypoint: ["/api", "migrate", "relational", "timeseries"]
+    volumes:
+      - *ca-mount
+      - ${DEMO_STATE_DIR:-./local-demo}/ansp:/run/secrets/ansp:ro
+      - ${DEMO_STATE_DIR:-./local-demo}/clients:/run/secrets/clients:ro
+      - ${DEMO_GROUND_DIR:-./local-demo/ground}:/srv/ground:ro
+    environment: &ansp-env
+      <<: *lab-ca
+      ANSP_PROCESS: api
+      ANSP_LOG_LEVEL: info
+      # A label for logs and the envelope producer, never an audience (the
+      # ANSP refuses its system id in ANSP_AUDIENCES, and "ansp" is the
+      # lab alias there).
+      ANSP_SYSTEM_ID: uspace-ansp
+      ANSP_HTTP_ADDR: ":8080"
+      ANSP_NATS_URL: nats://ansp-nats:4222
+      ANSP_RELATIONAL_DSN: postgres://postgres:${ANSP_PG_PASSWORD}@ansp-timescaledb:5432/ansp?sslmode=disable
+      ANSP_TIMESERIES_DSN: postgres://postgres:${ANSP_PG_PASSWORD}@ansp-timescaledb:5432/ansp_ts?sslmode=disable
+      ANSP_AUDIENCES: ${ANSP_HOST},ansp
+      ANSP_PUBLIC_BASE_URL: https://${ANSP_HOST}
+      ANSP_TOKEN_ISSUERS: https://${LAB_HOST}=https://${LAB_HOST}/.well-known/jwks.json,https://${AUTHORITY_HOST}=https://${AUTHORITY_HOST}/.well-known/jwks.json
+      ANSP_TOKEN_URL: https://${LAB_HOST}/oauth/token
+      ANSP_CLIENT_ID: ansp-01
+      ANSP_CLIENT_SECRET_FILE: /run/secrets/clients/ansp-01.secret
+      ANSP_CISP_URL: https://${CISP_HOST}
+      ANSP_CIS_NOTIFY_ISSUERS: https://${CISP_HOST}=https://${CISP_HOST}/.well-known/jwks.json
+      ANSP_CIS_PUBLISHER_KEYS: authority=https://${AUTHORITY_HOST}/.well-known/jwks.json,ansp=https://${ANSP_HOST}/.well-known/jwks.json
+      ANSP_DSS_URL: https://${LAB_HOST}
+      ANSP_DSS_NOTIFY_PRIVATE_ALLOWED: "true"
+      ANSP_AUTHORITY_URL: https://${AUTHORITY_HOST}
+      ANSP_MTLS_MODE: "off"
+      ANSP_WS_ALLOWED_ORIGINS: https://${ANSP_HOST}
+      ANSP_COUNTRY: ${DEMO_COUNTRY:?deploy/demo.env}
+      ANSP_GEOID_FILE: /srv/ground/egm2008-2_5.pgm
+      ANSP_TRUSTED_PROXIES: ""
+    depends_on:
+      ansp-timescaledb: {condition: service_healthy}
+
+  ansp-api:
+    <<: *ansp
+    restart: unless-stopped
+    entrypoint: ["/api"]
+    environment:
+      <<: *ansp-env
+      ANSP_INSTANCE: lab
+      ANSP_SESSION_KEY_FILE: /run/secrets/ansp/session.pem
+      ANSP_SECRETS_KEY_FILE: /run/secrets/ansp/secrets.key
+      ANSP_DELIVERY_KEY_FILE: /run/secrets/ansp/delivery.pem
+      ANSP_BOOTSTRAP_ADMIN_USERNAME: admin
+      ANSP_BOOTSTRAP_ADMIN_PASSWORD_FILE: /run/secrets/ansp/admin.pw
+    depends_on: &ansp-deps
+      ansp-migrate: {condition: service_completed_successfully}
+      ansp-nats: {condition: service_healthy}
+
+  ansp-manned-feed:
+    <<: *ansp
+    restart: unless-stopped
+    entrypoint: ["/manned-feed"]
+    environment:
+      <<: *ansp-env
+      ANSP_PROCESS: manned-feed
+      ANSP_INSTANCE: lab
+    depends_on: *ansp-deps
+
+  # Polls the lab's sim-adsb (feed manned-1 of a scenario) as readsb
+  # aircraft.json on the host: the scenario runner serves it on
+  # DEMO_ADSB_LISTEN (targets feeds.manned-1.listen).
+  ansp-manned-adapter:
+    <<: *ansp
+    restart: unless-stopped
+    entrypoint: ["/manned-adapter"]
+    networks: [lab, egress]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    environment:
+      <<: *ansp-env
+      ANSP_PROCESS: manned-adapter
+      ANSP_INSTANCE: lab-adsb
+      ANSP_ADAPTER_KIND: dump1090_json
+      ANSP_ADAPTER_ID: lab-adsb
+      ANSP_ADAPTER_SOURCE_CLASS: ads_b
+      ANSP_ADAPTER_JSON_URL: ${DEMO_ADSB_URL:-http://host.docker.internal:18092/data/aircraft.json}
+    depends_on:
+      ansp-nats: {condition: service_healthy}
+
+networks:
+  # Outbound and published ports only: Caddy (its published port) and the
+  # ANSP adapter (the host's sim-adsb). `lab` stays internal.
+  egress: {}
+
+volumes:
+  authority-pgdata:
+  authority-nats:
+  cisp-pgdata:
+  cisp-nats:
+  ussp-pgdata:
+  ussp-nats:
+  ansp-pgdata:
+  ansp-nats:

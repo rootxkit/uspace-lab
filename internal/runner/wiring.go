@@ -3,6 +3,7 @@ package runner
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -92,7 +93,7 @@ func (r *run) intentRequest(a *scenario.Aircraft) (simop.IntentRequest, error) {
 		return v
 	}
 	return simop.IntentRequest{
-		ClientRef: r.opt.Run + "-" + r.sc.ID + "-" + a.Name, UASSerial: a.Serial,
+		ClientRef: clientRef(r.opt.Run, r.sc.ID, a.Name, r.t0), UASSerial: a.Serial,
 		Mode: pick(in.Mode, "VLOS"), FlightType: "normal", Category: pick(in.Category, "open"),
 		Subcategory: in.Subcategory, ClassLabel: in.ClassLabel,
 		Volumes: []simop.Volume4D{{
@@ -111,13 +112,33 @@ func (r *run) intentRequest(a *scenario.Aircraft) (simop.IntentRequest, error) {
 	}, nil
 }
 
+// clientRef is an intent's idempotency reference (intent/request/v1
+// client_ref, ^[A-Za-z0-9._:-]{1,64}$): one per execution. A USSP
+// answers a reference it has seen with a different body 409, and a
+// scenario run again under the same run id (into the same results
+// directory) files a different body, its times being new; t0 makes the
+// reference new with them. A long one is shortened to a digest.
+func clientRef(runID, scenarioID, aircraft string, t0 time.Time) string {
+	ref := fmt.Sprintf("%s-%s-%s-%d", runID, scenarioID, aircraft, t0.Unix())
+	if len(ref) <= 64 && clientRefPattern.MatchString(ref) {
+		return ref
+	}
+	sum := sha256.Sum256([]byte(ref))
+	return fmt.Sprintf("lab-%x-%d", sum[:12], t0.Unix())
+}
+
+var clientRefPattern = regexp.MustCompile(`^[A-Za-z0-9._:-]{1,64}$`)
+
 func (r *run) startOperators(ctx, simCtx context.Context, wg *sync.WaitGroup) error {
-	base, _, _ := r.usspEndpoint()
 	for i := range r.sc.Aircraft {
 		a := &r.sc.Aircraft[i]
 		if a.Operator == nil {
 			continue
 		}
+		if r.tg.Mode != ModeReference && r.tg.USSP == nil {
+			return fmt.Errorf("aircraft %s streams to a USSP and the targets file has no ussp", a.Name)
+		}
+		base, _, _ := r.usspEndpoint()
 		tokens, err := r.operatorTokens(a)
 		if err != nil {
 			return err
@@ -171,6 +192,47 @@ func (r *run) startOperators(ctx, simCtx context.Context, wg *sync.WaitGroup) er
 		}
 	}
 	return nil
+}
+
+// endIntents ends every intent the run filed and left open (accepted or
+// activated), once the operators are stopped and their ledgers read. An
+// intent lasts beyond its run (lasts_s), and a later run's intent over
+// the same volume would be refused as filed second (intent_filed_first,
+// uspace-ussp WP-7 runbook, step 2): the owed runs follow each other on
+// one USSP.
+func (r *run) endIntents(ctx context.Context, res *Result) {
+	if res == nil || (r.tg.Mode != ModeReference && r.tg.USSP == nil) {
+		return
+	}
+	base, _, _ := r.usspEndpoint()
+	for i := range res.Intents {
+		in := &res.Intents[i]
+		if in.IntentID == "" || (in.State != "accepted" && in.State != "activated") {
+			continue
+		}
+		var a *scenario.Aircraft
+		for j := range r.sc.Aircraft {
+			if r.sc.Aircraft[j].Name == in.Aircraft {
+				a = &r.sc.Aircraft[j]
+			}
+		}
+		if a == nil || a.Operator == nil {
+			in.EndError = "no such aircraft"
+			continue
+		}
+		tokens, err := r.operatorTokens(a)
+		if err != nil {
+			in.EndError = err.Error()
+			continue
+		}
+		d, err := (&simop.Intents{BaseURL: base, Tokens: tokens}).Change(ctx, in.IntentID, "end")
+		if err != nil {
+			in.EndError = err.Error()
+			r.log.Warn("intent not ended", "aircraft", in.Aircraft, "intent", in.IntentID, "err", err)
+			continue
+		}
+		in.Ended = d.State
+	}
 }
 
 func (r *run) startReceivers(simCtx context.Context, wg *sync.WaitGroup) error {
@@ -323,7 +385,25 @@ func (r *run) collectAuthority(ctx context.Context) {
 		return
 	}
 	r.collect(ctx, observe.Stream{Name: "authority-picture", System: scenario.SystemAuthority, URL: a.PictureURL,
-		Header: http.Header{"Cookie": {"uspace_session=" + session}, "Origin": {a.Origin}}})
+		Header: http.Header{"Cookie": {"uspace_session=" + session}, "Origin": {a.Origin}}, OnOpen: r.pictureSubscribe()})
+}
+
+// pictureSubscribeHalfM is half the side of the picture viewport about
+// the origin: every offset of the suite is within a few kilometres.
+const pictureSubscribeHalfM = 10000
+
+// pictureSubscribe is the console/subscribe/v1 frame (schemas/common/
+// console/subscribe/v1) the runner sends the authority's picture: a box
+// about the run's origin with the tracks, manned and alerts layers. The
+// picture sends violation/v1 only for a subscribed viewport, so without
+// it no authority expectation could ever be met.
+func (r *run) pictureSubscribe() []byte {
+	sw := r.lab.At(scenario.Offset{NorthM: -pictureSubscribeHalfM, EastM: -pictureSubscribeHalfM})
+	ne := r.lab.At(scenario.Offset{NorthM: pictureSubscribeHalfM, EastM: pictureSubscribeHalfM})
+	b, _ := json.Marshal(map[string]any{"schema": "console/subscribe/v1", "body": map[string]any{
+		"bbox": []float64{sw.LonDeg, sw.LatDeg, ne.LonDeg, ne.LatDeg}, "layers": []string{"tracks", "manned", "alerts"},
+	}})
+	return b
 }
 
 func (r *run) collectANSP(ctx context.Context) {
@@ -500,6 +580,9 @@ func (r *run) request(ctx context.Context, q *scenario.Request) (string, error) 
 		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	for k, v := range q.Headers {
+		req.Header.Set(k, sub(v))
+	}
 	switch {
 	case auth.Bearer != nil:
 		secret, err := r.tg.secret(auth.Bearer.SecretFile)
@@ -518,15 +601,20 @@ func (r *run) request(ctx context.Context, q *scenario.Request) (string, error) 
 		if err != nil {
 			return "", err
 		}
-		req.Header.Set("Cookie", "uspace_session="+session)
+		cookie := "uspace_session=" + session
+		if auth.SessionBearer {
+			req.Header.Set("Authorization", "Bearer "+session)
+		}
 		if auth.CSRFFile != "" {
 			csrf, err := r.tg.secret(auth.CSRFFile)
 			if err != nil {
 				return "", err
 			}
-			req.Header.Add("Cookie", "uspace_csrf="+csrf)
+			// One Cookie header (RFC 6265 5.4), not one per cookie.
+			cookie += "; uspace_csrf=" + csrf
 			req.Header.Set("X-CSRF-Token", csrf)
 		}
+		req.Header.Set("Cookie", cookie)
 	}
 	resp, err := (&http.Client{Timeout: 15 * time.Second}).Do(req)
 	if err != nil {

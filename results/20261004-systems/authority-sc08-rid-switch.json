@@ -1,0 +1,527 @@
+{
+  "format": "result/v1",
+  "run": "20261004-systems",
+  "scenario": "authority-sc08-rid-switch",
+  "title": "uspace-authority SC-08 (Remote ID part): switching direct Remote ID off clears as source_disabled; on raises again",
+  "source": "knowledge/scenarios.md SC-08 steps 1-3; uspace-authority CLAUDE.md rule 4 (INV-02)",
+  "owners": [
+    "authority"
+  ],
+  "started_at": "2026-10-04T00:54:45.986293434Z",
+  "ended_at": "2026-10-04T00:57:24.021287458Z",
+  "t0": "2026-10-04T00:55:01Z",
+  "mode": {
+    "vehicles": "sitl",
+    "targets": "systems",
+    "targets_name": "lab-demo"
+  },
+  "evidence": "systems under test with SITL vehicles flown by sim/fly.py: INV-02 evidence when the images are pinned by digest",
+  "commits": {
+    "lab": "91e22e163f1aae0bb899d23db50bf50872acee7f",
+    "lab_dirty": true,
+    "core": "v1.3.0",
+    "go": "go1.27.1"
+  },
+  "images": {
+    "ansp": "uspace-lab/uspace-ansp:d02b09a (built locally from uspace-ansp d02b09a6f8ed75e1222650c9f21b366c4a116f3e; not published)",
+    "authority": "ghcr.io/rootxkit/uspace-authority@sha256:8663cac141d9351b7ab6e96dd85bc6402ac1c37d568c52924d706a5bf44c27ab",
+    "cisp": "ghcr.io/rootxkit/uspace-cisp@sha256:63a02a8da983a530744663e52bdd82dac31b4c9f36b5ecfd572bd529e83978cd",
+    "dss": "interuss/dss:v0.23.0@sha256:0781042bef785f6c968efd4b4e1e85854db9bf361116916d0673d2c89db91582",
+    "ussp": "ghcr.io/rootxkit/uspace-ussp@sha256:07718be47340f621936b744b0209de686f1b974ec690588cf59d98450d913a7f"
+  },
+  "policy_version": 1,
+  "policy": {
+    "policy_version": 1,
+    "source": "docs/PLAN.md §7.1 L-Q4 (owner-only, open; GCAA answers); knowledge/scenarios.md conventions",
+    "deviation": {
+      "h_m": 50,
+      "v_m": 15,
+      "t_s": 60
+    },
+    "telemetry_lost_s": 5,
+    "lost_link_s": 15,
+    "nonconformance_nearby_radius_m": 2000,
+    "cpa": {
+      "t_cpa_max_s": 60,
+      "d_horizontal_min_m": 60,
+      "d_vertical_min_m": 20,
+      "neighbour_radius_m": 800,
+      "neighbour_max_age_s": 10
+    },
+    "height_limit_agl_m": 120,
+    "monitor": {
+      "clear_after_s": 3,
+      "stale_after_s": 15,
+      "live_max_age_s": 10,
+      "pressure_uncertainty_m": 250,
+      "conditional_severity": "warning"
+    }
+  },
+  "lab": {
+    "file": "sim/sitl.env",
+    "origin_lat_deg": 41.7151,
+    "origin_lon_deg": 44.8271,
+    "origin_alt_amsl_m": 605,
+    "spacing_m": 25
+  },
+  "geoid": "WGS84 EGM2008, 2.5-minute grid",
+  "marks": {
+    "climb": "2026-10-04T00:55:42.016626119Z",
+    "climb.start": "2026-10-04T00:55:01.000245571Z",
+    "down": "2026-10-04T00:57:18.52265048Z",
+    "down.start": "2026-10-04T00:56:41.000297307Z",
+    "hover": "2026-10-04T00:56:37.007755041Z",
+    "hover.start": "2026-10-04T00:55:42.016698837Z",
+    "rid-off": "2026-10-04T00:55:40.997344619Z",
+    "rid-off.start": "2026-10-04T00:55:40.997344619Z",
+    "rid-on": "2026-10-04T00:56:05.998574474Z",
+    "rid-on.start": "2026-10-04T00:56:05.998574474Z",
+    "t0": "2026-10-04T00:55:01Z"
+  },
+  "steps": [
+    {
+      "sysid": 3,
+      "step": 0,
+      "action": "arm",
+      "state": "started",
+      "at_unix_s": 1791075301.0002456
+    },
+    {
+      "sysid": 3,
+      "step": 0,
+      "action": "arm",
+      "state": "confirmed",
+      "at_unix_s": 1791075326.5107656,
+      "observed": {
+        "alt_rel_m": 0.004,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7151,
+        "lon_deg": 44.8277017,
+        "time_boot_ms": 42284
+      }
+    },
+    {
+      "sysid": 3,
+      "step": 1,
+      "action": "takeoff",
+      "state": "started",
+      "at_unix_s": 1791075326.5108397
+    },
+    {
+      "sysid": 3,
+      "step": 1,
+      "action": "takeoff",
+      "state": "confirmed",
+      "at_unix_s": 1791075342.0166261,
+      "observed": {
+        "alt_rel_m": 28.512,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.715100199999995,
+        "lon_deg": 44.827701499999996,
+        "time_boot_ms": 57784
+      }
+    },
+    {
+      "sysid": 3,
+      "step": 2,
+      "action": "hold",
+      "state": "started",
+      "at_unix_s": 1791075342.0166988
+    },
+    {
+      "sysid": 3,
+      "step": 2,
+      "action": "hold",
+      "state": "confirmed",
+      "at_unix_s": 1791075397.007755,
+      "observed": {
+        "alt_rel_m": 30.001,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7151001,
+        "lon_deg": 44.827701499999996,
+        "time_boot_ms": 112784
+      },
+      "max_drift_m": 0.011119507784390236
+    },
+    {
+      "sysid": 3,
+      "step": 3,
+      "action": "land",
+      "state": "started",
+      "at_unix_s": 1791075401.0002973
+    },
+    {
+      "sysid": 3,
+      "step": 3,
+      "action": "land",
+      "state": "confirmed",
+      "at_unix_s": 1791075438.5226505,
+      "observed": {
+        "alt_rel_m": 0.044,
+        "armed": false,
+        "custom_mode": 9,
+        "lat_deg": 41.7151001,
+        "lon_deg": 44.827701499999996,
+        "time_boot_ms": 154284
+      }
+    }
+  ],
+  "timeline": [
+    {
+      "step": 2,
+      "id": "rid-off",
+      "do": "request",
+      "at": "2026-10-04T00:55:40.997344619Z",
+      "detail": "PUT /v1/sources/direct_rid -\u003e 200"
+    },
+    {
+      "step": 3,
+      "id": "rid-on",
+      "do": "request",
+      "at": "2026-10-04T00:56:05.998574474Z",
+      "detail": "PUT /v1/sources/direct_rid -\u003e 200"
+    }
+  ],
+  "outcome": {
+    "expectations": [
+      {
+        "name": "inside-the-zone",
+        "matcher": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "aircraft": "c",
+          "subject": "SC08Z"
+        },
+        "raise_window": {
+          "from": "2026-10-04T00:55:01Z",
+          "to": "2026-10-04T00:55:31Z"
+        },
+        "clear_window": {
+          "from": "2026-10-04T00:55:40.997344619Z",
+          "to": "2026-10-04T00:55:42.997344619Z"
+        },
+        "raise": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M426H70G0NP951VE18M0S6B4",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "c",
+          "subject": "SC08Z",
+          "observed_at": "2026-10-04T00:55:26.993777459Z",
+          "captured_at": "2026-10-04T00:55:26.9Z",
+          "raised_at": "2026-10-04T00:55:26.9Z",
+          "detail": {
+            "identifier": "SC08Z",
+            "restriction": "PROHIBITED"
+          },
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M426H70G0NP951VE18M0S6B4",
+          "phase": "cleared",
+          "reason": "source_disabled",
+          "severity": "critical",
+          "aircraft": "c",
+          "subject": "SC08Z",
+          "observed_at": "2026-10-04T00:55:41.012263096Z",
+          "captured_at": "2026-10-04T00:55:41.01Z",
+          "raised_at": "2026-10-04T00:55:26.9Z",
+          "detail": {
+            "identifier": "SC08Z",
+            "restriction": "PROHIBITED"
+          },
+          "stream": "authority-picture"
+        },
+        "ok": true
+      },
+      {
+        "name": "raised-again-when-on",
+        "matcher": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "aircraft": "c",
+          "subject": "SC08Z"
+        },
+        "raise_window": {
+          "from": "2026-10-04T00:56:05.998574474Z",
+          "to": "2026-10-04T00:56:08.998574474Z"
+        },
+        "raise": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M426JG0XNJGTEX8CXFP2ZRXV",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "c",
+          "subject": "SC08Z",
+          "observed_at": "2026-10-04T00:56:08.990519095Z",
+          "captured_at": "2026-10-04T00:56:08.599Z",
+          "raised_at": "2026-10-04T00:56:08.599Z",
+          "detail": {
+            "identifier": "SC08Z",
+            "restriction": "PROHIBITED"
+          },
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M426JG0XNJGTEX8CXFP2ZRXV",
+          "phase": "cleared",
+          "reason": "landed",
+          "severity": "critical",
+          "aircraft": "c",
+          "subject": "SC08Z",
+          "observed_at": "2026-10-04T00:57:18.989860454Z",
+          "captured_at": "2026-10-04T00:57:18.988Z",
+          "raised_at": "2026-10-04T00:56:08.599Z",
+          "detail": {
+            "identifier": "SC08Z",
+            "restriction": "PROHIBITED"
+          },
+          "stream": "authority-picture"
+        },
+        "ok": true,
+        "seen": [
+          {
+            "system": "authority",
+            "kind": "zone_incursion",
+            "alert_id": "01M426H70G0NP951VE18M0S6B4",
+            "aircraft": "c",
+            "subject": "SC08Z",
+            "raise": {
+              "system": "authority",
+              "kind": "zone_incursion",
+              "alert_id": "01M426H70G0NP951VE18M0S6B4",
+              "phase": "raised",
+              "severity": "critical",
+              "aircraft": "c",
+              "subject": "SC08Z",
+              "observed_at": "2026-10-04T00:55:26.993777459Z",
+              "captured_at": "2026-10-04T00:55:26.9Z",
+              "raised_at": "2026-10-04T00:55:26.9Z",
+              "detail": {
+                "identifier": "SC08Z",
+                "restriction": "PROHIBITED"
+              },
+              "stream": "authority-picture"
+            },
+            "clear": {
+              "system": "authority",
+              "kind": "zone_incursion",
+              "alert_id": "01M426H70G0NP951VE18M0S6B4",
+              "phase": "cleared",
+              "reason": "source_disabled",
+              "severity": "critical",
+              "aircraft": "c",
+              "subject": "SC08Z",
+              "observed_at": "2026-10-04T00:55:41.012263096Z",
+              "captured_at": "2026-10-04T00:55:41.01Z",
+              "raised_at": "2026-10-04T00:55:26.9Z",
+              "detail": {
+                "identifier": "SC08Z",
+                "restriction": "PROHIBITED"
+              },
+              "stream": "authority-picture"
+            }
+          }
+        ]
+      }
+    ],
+    "missed_alerts": 0,
+    "false_alert_count": 0,
+    "alerts": [
+      {
+        "system": "authority",
+        "kind": "degraded",
+        "alert_id": "authority:degraded:cis_stale",
+        "subject": "cis_stale",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:cis_stale",
+          "phase": "raised",
+          "subject": "cis_stale",
+          "observed_at": "2026-10-04T00:54:46.023092149Z",
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "degraded",
+        "alert_id": "authority:degraded:dp_unavailable",
+        "subject": "dp_unavailable",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:dp_unavailable",
+          "phase": "raised",
+          "subject": "dp_unavailable",
+          "observed_at": "2026-10-04T00:54:46.023092149Z",
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "degraded",
+        "alert_id": "authority:degraded:no_subscription",
+        "subject": "no_subscription",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:no_subscription",
+          "phase": "raised",
+          "subject": "no_subscription",
+          "observed_at": "2026-10-04T00:54:46.023092149Z",
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:no_subscription",
+          "phase": "cleared",
+          "reason": "not_degraded",
+          "subject": "no_subscription",
+          "observed_at": "2026-10-04T00:54:46.024271421Z",
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "zone_incursion",
+        "alert_id": "01M426H70G0NP951VE18M0S6B4",
+        "aircraft": "c",
+        "subject": "SC08Z",
+        "raise": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M426H70G0NP951VE18M0S6B4",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "c",
+          "subject": "SC08Z",
+          "observed_at": "2026-10-04T00:55:26.993777459Z",
+          "captured_at": "2026-10-04T00:55:26.9Z",
+          "raised_at": "2026-10-04T00:55:26.9Z",
+          "detail": {
+            "identifier": "SC08Z",
+            "restriction": "PROHIBITED"
+          },
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M426H70G0NP951VE18M0S6B4",
+          "phase": "cleared",
+          "reason": "source_disabled",
+          "severity": "critical",
+          "aircraft": "c",
+          "subject": "SC08Z",
+          "observed_at": "2026-10-04T00:55:41.012263096Z",
+          "captured_at": "2026-10-04T00:55:41.01Z",
+          "raised_at": "2026-10-04T00:55:26.9Z",
+          "detail": {
+            "identifier": "SC08Z",
+            "restriction": "PROHIBITED"
+          },
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "zone_incursion",
+        "alert_id": "01M426JG0XNJGTEX8CXFP2ZRXV",
+        "aircraft": "c",
+        "subject": "SC08Z",
+        "raise": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M426JG0XNJGTEX8CXFP2ZRXV",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "c",
+          "subject": "SC08Z",
+          "observed_at": "2026-10-04T00:56:08.990519095Z",
+          "captured_at": "2026-10-04T00:56:08.599Z",
+          "raised_at": "2026-10-04T00:56:08.599Z",
+          "detail": {
+            "identifier": "SC08Z",
+            "restriction": "PROHIBITED"
+          },
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M426JG0XNJGTEX8CXFP2ZRXV",
+          "phase": "cleared",
+          "reason": "landed",
+          "severity": "critical",
+          "aircraft": "c",
+          "subject": "SC08Z",
+          "observed_at": "2026-10-04T00:57:18.989860454Z",
+          "captured_at": "2026-10-04T00:57:18.988Z",
+          "raised_at": "2026-10-04T00:56:08.599Z",
+          "detail": {
+            "identifier": "SC08Z",
+            "restriction": "PROHIBITED"
+          },
+          "stream": "authority-picture"
+        }
+      }
+    ],
+    "pass": true
+  },
+  "frames": {
+    "authority-picture": {
+      "console/snapshot/v1": 2,
+      "console/status/v1": 81,
+      "source/status/v1": 6,
+      "track/telemetry/v1": 103,
+      "violation/v1": 4
+    }
+  },
+  "receiver_ledgers": [
+    {
+      "receiver_id": "lab-rx-1",
+      "observed": 126,
+      "dropped_by_knob": 0,
+      "sent": 126,
+      "accepted": 126,
+      "duplicates": 0,
+      "refused": 0,
+      "backlog_shed": 0,
+      "pending": 0,
+      "balanced": true,
+      "counters": {
+        "accepted": 126,
+        "backlog_batches": 4,
+        "batch_failures": 24,
+        "batches": 130,
+        "duplicates": 0,
+        "locations_without_utc": 1,
+        "observations": 126,
+        "sent": 126
+      }
+    }
+  ],
+  "vehicle_samples": {
+    "c": 578
+  },
+  "latency_s": {
+    "authority": {
+      "n": 2,
+      "p50": 0.094,
+      "p95": 0.392,
+      "max": 0.392
+    }
+  },
+  "verdict": "pass"
+}

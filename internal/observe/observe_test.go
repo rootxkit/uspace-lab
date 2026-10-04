@@ -1,9 +1,15 @@
 package observe
 
 import (
+	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/coder/websocket"
 
 	"github.com/rootxkit/uspace-lab/internal/wire"
 	"github.com/rootxkit/uspace-lab/internal/wire/wiretest"
@@ -115,3 +121,39 @@ func TestViolationMannedAndStatus(t *testing.T) {
 }
 
 func jsonRoundTrip(b []byte, v any) error { return json.Unmarshal(b, v) }
+
+// A stream with OnOpen sends it first on every connection (the picture's
+// console/subscribe/v1), and one without sends nothing.
+func TestOnOpenIsSentOnConnect(t *testing.T) {
+	got := make(chan string, 4)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			return
+		}
+		defer c.CloseNow()
+		ctx, cancel := context.WithTimeout(r.Context(), 300*time.Millisecond)
+		defer cancel()
+		_, b, err := c.Read(ctx)
+		if err != nil {
+			got <- "nothing"
+			return
+		}
+		got <- string(b)
+	}))
+	defer srv.Close()
+	url := "ws" + strings.TrimPrefix(srv.URL, "http")
+	for _, on := range []string{`{"schema":"console/subscribe/v1"}`, ""} {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		r := NewRecorder(nil)
+		go r.Run(ctx, Stream{Name: "s", URL: url, OnOpen: []byte(on), Retry: time.Hour})
+		want := on
+		if on == "" {
+			want = "nothing"
+		}
+		if g := <-got; g != want {
+			t.Fatalf("got %q, want %q", g, want)
+		}
+		cancel()
+	}
+}

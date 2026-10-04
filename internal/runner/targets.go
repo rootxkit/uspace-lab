@@ -102,6 +102,11 @@ type RequestAuth struct {
 	Bearer      *TokenCfg `yaml:"bearer"`
 	SessionFile string    `yaml:"session_file"`
 	CSRFFile    string    `yaml:"csrf_file"`
+	// SessionBearer sends the console session as Authorization: Bearer
+	// too, as the systems' BFFs forward it: the ANSP's and the
+	// authority's console APIs read the session from that header only
+	// (the cookie alone is answered 401, "no bearer token").
+	SessionBearer bool `yaml:"session_bearer"`
 }
 
 // SITLTarget says how to start the reader and the harness for a SITL

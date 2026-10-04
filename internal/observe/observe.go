@@ -146,6 +146,10 @@ type Stream struct {
 	Aircraft string
 	// Retry reconnects after a break until ctx ends.
 	Retry time.Duration
+	// OnOpen is a text frame sent on every (re)connection before
+	// reading: the authority's picture sends violation/v1 only for the
+	// viewport a console subscribed to (console/subscribe/v1).
+	OnOpen []byte
 }
 
 // Run reads the stream until ctx ends, reconnecting after a break.
@@ -192,6 +196,11 @@ func (r *Recorder) read(ctx context.Context, s Stream, st *streamState) error {
 	}
 	conn.SetReadLimit(wire.MaxFrameBytes)
 	defer func() { _ = conn.CloseNow() }()
+	if len(s.OnOpen) > 0 {
+		if err := conn.Write(ctx, websocket.MessageText, s.OnOpen); err != nil {
+			return fmt.Errorf("%s: subscribe: %w", s.Name, err)
+		}
+	}
 	for {
 		_, b, err := conn.Read(ctx)
 		if err != nil {

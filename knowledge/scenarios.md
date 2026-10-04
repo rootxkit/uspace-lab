@@ -43,7 +43,7 @@ Contents:
 | SC-18 | Storage down while observations arrive | authority | ran 2026-09-30 |
 | SC-19 | Replay holes with their causes | authority, lab | partly run |
 | SC-20 | Soak and missed-alert count | lab | **not yet run** |
-| SC-21 | Slowing to hover beside another aircraft | ussp, authority | **not yet run** |
+| SC-21 | Slowing to hover beside another aircraft | ussp, authority | **not yet run**; lab 2026-10-04 against the USSP image 6ec6238: FAIL, B's intent refused as filed second (results/20261004-systems) |
 | SC-22 | A data source that does not exist yet must not be silence | authority, ussp | design check |
 
 ---

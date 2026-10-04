@@ -20,7 +20,7 @@ runs one and writes `results/<run>/<scenario>.json`.
 | `receivers[]` | sim-receiver: `id` (registered at the authority), `at`, `transport` (`pack` or `single`), `hae` (`geoid` or `gps`), `drop_rate`, `latency_s`, `seed`, `rssi_dbm`. |
 | `feeds[]` | Manned traffic: `kind` `ansp_stream` (sim-ansp-feed) or `adsb_file` (sim-adsb), with `tracks` (straight legs) or a `recording`. |
 | `zones[]` | `id`, `type`, a `square` or `circle`, `lower`/`upper` with their reference (`AGL`, `AMSL`, `WGS84`), an optional `window`. The reference target loads them; for a systems run they are written beside the result as `<scenario>.zones.ed269.json` for import. |
-| `steps[]` | `do`: `takeoff` (arm, then climb to `alt_rel_m`), `goto` (`to`, `speed_ms`, `tolerance_m`), `hold` (`for_s`), `land`, `knob`, `request`. `at_s` delays a step to t0 + `at_s`; a flight step without it follows the aircraft's previous step. An `id` makes the step a mark. |
+| `steps[]` | `do`: `takeoff` (arm, then climb to `alt_rel_m`), `goto` (`to`, `speed_ms`, `tolerance_m`), `hold` (`for_s`), `land`, `knob`, `request` (`system`, `method`, `path`, `body`, `headers`, `expect`, `capture`). `at_s` delays a step to t0 + `at_s`; a flight step without it follows the aircraft's previous step. An `id` makes the step a mark. |
 | `expect[]` | `system`, `kind` (the system's own kind: `proximity`, `zone_incursion`, `violation/v1` kinds, `degraded`, `manned_track`), `aircraft`, `peer`, `subject`; `raise` and `clear` windows (`after` a mark, `min_s`, `max_s`, a clear `reason`); `hold_until` (no clear before a mark). |
 | `never[]` | Matchers that must raise nothing. |
 | `expect_intents[]` | The decision (and state) the USSP must give an aircraft's intent. |

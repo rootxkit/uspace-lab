@@ -1,0 +1,14 @@
+scenario sc-03-zone-entry-exit (20261004-systems, sitl vehicles, systems targets): FAIL
+  observed alerts (5):
+    authority degraded                          on cis_stale raised +-15.1s
+    authority degraded                          on dp_unavailable raised +-15.1s
+    authority degraded                          on no_subscription raised +-15.1s cleared not_degraded +-15.1s
+    authority zone_incursion         a          on SC03Z raised +68.9s cleared resolved +82.9s
+    authority zone_incursion         a          on SC03Z raised +110.9s cleared resolved +123.9s
+  missed 2, false 0
+  operator LABX9SC03A0001: sent 197 = accepted 197 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  receiver lab-rx-1: observed 171, sent 171 = accepted 171 + duplicates 0 + refused 0 (balanced true)
+  latency authority: n 2, p50 0.722 s, p95 0.921 s, max 0.921 s
+  FAIL ussp-entry-1: no ussp zone_incursion raise for a on SC03Z in [01:00:54.008, 01:01:24.008]
+  FAIL ussp-entry-2: no ussp zone_incursion raise for a on SC03Z in [01:01:41.025, 01:02:06.025]
+  result: results/20261004-systems/sc-03-zone-entry-exit.json

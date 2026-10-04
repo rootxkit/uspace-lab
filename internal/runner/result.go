@@ -91,6 +91,10 @@ type IntentRecord struct {
 	Decision string `json:"decision,omitempty"`
 	State    string `json:"state,omitempty"`
 	Error    string `json:"error,omitempty"`
+	// Ended is the state the USSP answered when the runner ended the
+	// intent after the run; EndError why it could not.
+	Ended    string `json:"ended,omitempty"`
+	EndError string `json:"end_error,omitempty"`
 }
 
 // TimelineRecord is a knob or request as it was executed.
@@ -149,6 +153,26 @@ func commits(repo string) Commits {
 			if d.Path == "github.com/rootxkit/uspace-core" {
 				c.Core = d.Version
 			}
+		}
+		c = withBuildVCS(c, bi.Settings)
+	}
+	return c
+}
+
+// withBuildVCS fills the lab commit from the binary's own VCS stamp when
+// git cannot be asked where the runner runs: a runner built on one side
+// and run on the other (Windows checkout, WSL runner, as the WP-L6
+// systems runs were) recorded "unknown" for every result (E-05).
+func withBuildVCS(c Commits, settings []debug.BuildSetting) Commits {
+	if c.Lab != "unknown" {
+		return c
+	}
+	for _, s := range settings {
+		switch s.Key {
+		case "vcs.revision":
+			c.Lab = s.Value
+		case "vcs.modified":
+			c.LabDirty = s.Value == "true"
 		}
 	}
 	return c
