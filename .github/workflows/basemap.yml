@@ -1,0 +1,82 @@
+name: basemap
+
+# basemap/ (docs/WORKPACKAGES/WP-L3.md): the scripts linted, verify.sh
+# run over the fixture bundle with a real Caddy (passing, then failing
+# on a removed Georgian range and on the budget), and the Tbilisi-only
+# Storybook extract built and verified end to end (a few MB of tiles,
+# so it stays lean). The Georgia-wide bundle is built only by
+# release.yml, on a basemap tag.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "basemap/**"
+      - "internal/basemap/**"
+      - "cmd/basemap/**"
+      - ".github/workflows/basemap.yml"
+      - ".github/workflows/release.yml"
+  pull_request:
+    paths:
+      - "basemap/**"
+      - "internal/basemap/**"
+      - "cmd/basemap/**"
+      - ".github/workflows/basemap.yml"
+      - ".github/workflows/release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: basemap-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GOFLAGS: -mod=mod
+  GOTOOLCHAIN: local
+
+jobs:
+  scripts:
+    name: shellcheck and verify.sh over the fixture
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: shellcheck
+        run: shellcheck -x basemap/*.sh
+      - name: verify.sh passes the fixture and fails it without Nuskhuri or over budget
+        # The test skips without BASEMAP_SCRIPT_TEST=1; here it must run,
+        # so a skip is a failure.
+        env:
+          BASEMAP_SCRIPT_TEST: "1"
+        run: |
+          set -o pipefail
+          go test -count=1 -v -run '^TestVerifyScript$' ./internal/basemap | tee script-test.log
+          grep -q -- '--- PASS: TestVerifyScript' script-test.log
+
+  storybook:
+    name: build and verify the Storybook extract
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: font-maker build dependencies
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq cmake clang libfreetype-dev libboost-dev
+      - name: storybook.sh (newest Protomaps build)
+        run: basemap/storybook.sh "$RUNNER_TEMP/storybook" | tee "$RUNNER_TEMP/storybook.log"
+      - name: summary
+        run: |
+          {
+            echo '### Storybook extract'
+            echo '```'
+            grep -E '^(build\.sh|storybook\.sh|ok  |FAIL|verify:)' "$RUNNER_TEMP/storybook.log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

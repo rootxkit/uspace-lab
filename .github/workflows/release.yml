@@ -1,0 +1,103 @@
+name: release
+
+# Release artefacts of the lab (docs/PLAN.md §6). The basemap job
+# (docs/WORKPACKAGES/WP-L3.md) runs on a tag basemap-vYYYYMMDD, where the
+# date is the Protomaps daily build to cut: it builds the Georgia bundle,
+# verifies it, and publishes basemap-YYYYMMDD.tar.gz with its SHA-256
+# and SOURCE.json as release assets, the notes carrying both. Never on a
+# push or a pull request: the download is large and CI stays lean.
+#
+# uspace-deploy (WP-D1, basemap/pull.sh) fetches
+#   https://github.com/rootxkit/uspace-lab/releases/download/basemap-vYYYYMMDD/basemap-YYYYMMDD.tar.gz
+# and checks it against the .sha256 beside it.
+on:
+  push:
+    tags: ["basemap-v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GOFLAGS: -mod=mod
+  GOTOOLCHAIN: local
+
+jobs:
+  basemap:
+    name: basemap bundle
+    if: startsWith(github.ref, 'refs/tags/basemap-v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write # create the release and upload its assets
+    env:
+      TAG: ${{ github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: the tag names the build
+        run: |
+          if [[ ! "$TAG" =~ ^basemap-v([0-9]{8})$ ]]; then
+            echo "::error::tag $TAG is not basemap-vYYYYMMDD"
+            exit 1
+          fi
+          echo "BUILD=${BASH_REMATCH[1]}" >> "$GITHUB_ENV"
+      - name: no release of that name yet
+        # A rebuild would change fetched_at and so the asset's hash under
+        # a URL someone may already have pinned: refuse, never replace.
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::release $TAG exists; tag a new date instead"
+            exit 1
+          fi
+      - name: font-maker build dependencies
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq cmake clang libfreetype-dev libboost-dev
+      - name: build
+        run: basemap/build.sh "$RUNNER_TEMP/basemap" "$BUILD" | tee "$RUNNER_TEMP/build.log"
+      - name: verify
+        run: basemap/verify.sh "$RUNNER_TEMP/basemap" | tee "$RUNNER_TEMP/verify.log"
+      - name: package
+        run: basemap/package.sh "$RUNNER_TEMP/basemap" "$RUNNER_TEMP/release/basemap-$BUILD.tar.gz"
+      - name: release notes
+        run: |
+          asset="basemap-$BUILD.tar.gz"
+          sha="$(cut -d' ' -f1 "$RUNNER_TEMP/release/$asset.sha256")"
+          bytes="$(wc -c < "$RUNNER_TEMP/release/$asset" | tr -d ' ')"
+          {
+            echo "Basemap bundle cut from the Protomaps daily build $BUILD (docs/WORKPACKAGES/WP-L3.md)."
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Asset | \`$asset\` |"
+            echo "| URL | https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$asset |"
+            echo "| SHA-256 | \`$sha\` |"
+            echo "| Size | $bytes bytes |"
+            echo "| Commit | $GITHUB_SHA |"
+            echo
+            echo "Unpack into the shared volume served at \`/basemap/\` (uspace-deploy \`basemap/pull.sh\`)."
+            echo
+            echo "### verify.sh"
+            echo '```'
+            cat "$RUNNER_TEMP/verify.log"
+            echo '```'
+            echo
+            echo "### SOURCE.json"
+            echo '```json'
+            cat "$RUNNER_TEMP/basemap/SOURCE.json"
+            echo '```'
+          } > "$RUNNER_TEMP/notes.md"
+          cp "$RUNNER_TEMP/notes.md" "$GITHUB_STEP_SUMMARY"
+      - name: publish
+        run: |
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "Basemap $BUILD" --notes-file "$RUNNER_TEMP/notes.md" \
+            "$RUNNER_TEMP/release/basemap-$BUILD.tar.gz" \
+            "$RUNNER_TEMP/release/basemap-$BUILD.tar.gz.sha256" \
+            "$RUNNER_TEMP/basemap/SOURCE.json"

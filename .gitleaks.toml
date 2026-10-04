@@ -38,6 +38,17 @@ paths = ['''^internal/seed/seed_test\.go$''']
 regexTarget = "line"
 regexes = ['''GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ''']
 
+# The basemap tests (WP-L3) carry entries of the Protomaps builds list,
+# whose "key" is the build's file name, YYYYMMDD.pmtiles; generic-api-key
+# reads the key name as a credential. Limited to this rule, to those two
+# test files and to lines where the value is a build file name.
+[[rules.allowlists]]
+description = "Protomaps build file names in the basemap tests"
+condition = "AND"
+paths = ['''^internal/basemap/(fixture|source)_test\.go$''']
+regexTarget = "line"
+regexes = ['''(?i)"?key"?\s*:\s*"[0-9]{8}\.pmtiles"''']
+
 # jwt_verify.json carries test JWTs signed by a key generated at run time
 # by uspace-core's auth/internal/genvectors and discarded, so they grant
 # nothing anywhere. Limited to the jwt rule and to that one file.

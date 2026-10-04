@@ -1,0 +1,38 @@
+# WP-L3 region policy of the basemap bundle (decision record M38, ui Q4,
+# docs/PLAN.md L-Q8). Every coordinate and zoom of the bundle is here,
+# none in build.sh or the Go code (INV-03). Boxes are WGS84 degrees in
+# the TileJSON order: [min_lon, min_lat, max_lon, max_lat].
+#
+# The bundle keeps zoom 0 to country.max_zoom over country.bounds, and
+# above that only the tiles that overlap a city box whose max_zoom
+# reaches that zoom. verify.sh checks every tile against this file.
+
+country:
+  name: georgia
+  # The predecessor's bbox (utm docs/runbooks/p1-12-basemap.md): the
+  # whole of Georgia within its internationally recognised borders.
+  bounds: [39.9, 41.0, 46.8, 43.6]
+  max_zoom: 12
+
+# The four cities of ui Q4 at street level. Each box covers the built-up
+# area with a margin.
+cities:
+  - name: tbilisi
+    bounds: [44.65, 41.62, 45.05, 41.85]
+    max_zoom: 15
+  - name: kutaisi
+    bounds: [42.60, 42.20, 42.78, 42.32]
+    max_zoom: 15
+  - name: batumi
+    bounds: [41.55, 41.56, 41.72, 41.69]
+    max_zoom: 15
+  - name: poti
+    bounds: [41.62, 42.10, 41.74, 42.19]
+    max_zoom: 15
+
+# The Storybook extract for uspace-ui (WP-3; its browser/public/basemap
+# today): Tbilisi centre, a few MB.
+storybook:
+  name: tbilisi-centre
+  bounds: [44.77, 41.68, 44.83, 41.73]
+  max_zoom: 14
