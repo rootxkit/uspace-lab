@@ -82,6 +82,10 @@ steps:
       system: ansp
       method: POST
       path: /v1/restrictions/${restriction_id}/end
+      # The ANSP requires why (its ReasonRequest, the N4 record): without
+      # it the re-run of 20261004 was refused 400 and the restriction
+      # stayed active over the origin.
+      body: {reason: "uspace-lab ussp-wp12-restriction ${run} ended"}
       expect: 200
   - id: down
     at_s: 125

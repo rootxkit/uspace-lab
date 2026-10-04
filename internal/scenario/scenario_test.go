@@ -547,3 +547,29 @@ func TestUntimedLandingsFinishInsideTheRun(t *testing.T) {
 		}
 	}
 }
+
+// An ANSP restriction's end and cancel carry a reason (uspace-ansp
+// ReasonRequest): a run whose end is refused leaves the restriction
+// active over the origin for every scenario after it.
+func TestANSPEndsCarryAReason(t *testing.T) {
+	files, err := filepath.Glob(filepath.Join(scenariosDir, "*.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range files {
+		s, err := Load(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, st := range s.Steps {
+			r := st.Request
+			if r == nil || r.System != SystemANSP || (!strings.HasSuffix(r.Path, "/end") && !strings.HasSuffix(r.Path, "/cancel")) {
+				continue
+			}
+			if reason, _ := r.Body["reason"].(string); reason == "" {
+				t.Errorf("%s step %s: %s %s carries no reason", filepath.Base(f), st.ID, r.Method, r.Path)
+			}
+		}
+	}
+}
+
