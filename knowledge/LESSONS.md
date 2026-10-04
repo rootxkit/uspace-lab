@@ -496,8 +496,13 @@ authenticated.**
   - a report more than 30 s from our clock;
   - a nonce seen before within twice the window.
 
-  Without keys, the ingest binds to loopback only. A key file with an
-  empty or duplicate entry is a startup error.
+  Without keys, the ingest still listens on its configured address and
+  refuses every report (401, counted as refused for no receiver keys);
+  `/readyz` reports `receiver_keys` not ready until the first key
+  arrives, and a key added at runtime is accepted on the same listener
+  without a restart (uspace-authority #36; it used to bind loopback and
+  never rebind, lab WP-L6 finding 5). A key file with an empty or
+  duplicate entry is a startup error.
 - Why: P1-15, S-08. Without this, anyone who can reach the port can put
   an aircraft on the map and into the airspace monitor.
   `rid_receiver_auth.json`.
