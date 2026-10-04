@@ -201,6 +201,17 @@ func double(t *testing.T, f faults) *httptest.Server {
 	mux.HandleFunc("POST /v1/receivers/observations", func(w http.ResponseWriter, _ *http.Request) {
 		problem(w, 401, "unauthenticated", nil)
 	})
+	// A body in a media type other than JSON (a compact JWS, as the
+	// ANSP's receiveCisNotification): a request without its declared
+	// Content-Type is refused 415 before any credential is looked at,
+	// as a real system does.
+	mux.HandleFunc("POST /v1/receivers/frames", func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Content-Type") != "application/jose" {
+			problem(w, 415, "unsupported_media_type", nil)
+			return
+		}
+		problem(w, 401, "unauthenticated", nil)
+	})
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 	return srv
@@ -313,7 +324,7 @@ func TestDoublePasses(t *testing.T) {
 	}
 	// The receiver operation is checked for 401 and nothing else.
 	for _, o := range out {
-		if strings.HasPrefix(o.Subject, "postObservations ") && o.Check != CheckUnauthenticated && o.Status != result.NotApplicable {
+		if (strings.HasPrefix(o.Subject, "postObservations ") || strings.HasPrefix(o.Subject, "postFrames ")) && o.Check != CheckUnauthenticated && o.Status != result.NotApplicable {
 			t.Errorf("receiver operation: %s %s", o.Check, o.Status)
 		}
 	}

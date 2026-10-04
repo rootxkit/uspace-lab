@@ -144,6 +144,20 @@ paths:
       responses:
         "202": {description: Taken.}
         "401": {$ref: "#/components/responses/Problem"}
+  /v1/receivers/frames:
+    post:
+      operationId: postFrames
+      x-receiver: true
+      security: [{receiverKey: []}]
+      requestBody:
+        required: true
+        content:
+          application/jose:
+            schema: {type: string}
+      responses:
+        "202": {description: Taken.}
+        "401": {$ref: "#/components/responses/Problem"}
+        "415": {$ref: "#/components/responses/Problem"}
 components:
   securitySchemes:
     ecosystemToken: {type: http, scheme: bearer}

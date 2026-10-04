@@ -665,7 +665,11 @@ func (r *Runner) once(ctx context.Context, method, target string, req *request) 
 			hr.Header.Add(k, v)
 		}
 	}
-	if req.ctype != "" && req.body != nil {
+	// The declared media type goes with the request even when the suite
+	// has no body to send in it (a compact JWS it cannot forge): a
+	// system answers a request without its Content-Type 415 before it
+	// looks at the credential, which would leave the check unobserved.
+	if req.ctype != "" {
 		hr.Header.Set("Content-Type", req.ctype)
 	}
 	hr.Header.Set("Accept", "application/json, application/geo+json, application/problem+json;q=0.9, */*;q=0.5")
