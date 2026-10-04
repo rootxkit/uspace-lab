@@ -33,7 +33,8 @@ ed318:
   issuer_url: ${CISP_ISSUER_URL:-}
   webhook_listen: ${CONFORMANCE_WEBHOOK_LISTEN:-}
   webhook_url: ${CONFORMANCE_WEBHOOK_URL:-}
-  # Publishing replaces the zones dataset: true only on a disposable stack.
+  # Publishing replaces the zones dataset and the heartbeat moves the
+  # publisher's last_heartbeat_at: true only on a disposable stack.
   publish: ${CONFORMANCE_PUBLISH:-false}
 pages: []
 interfaces: {}

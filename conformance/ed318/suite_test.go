@@ -488,20 +488,30 @@ func TestSuiteFailsEachDefect(t *testing.T) {
 }
 
 // TestPublicationNeedsConsent: without ed318.publish nothing is
-// published and the publication checks say why.
+// written to the target, neither a publication nor a heartbeat (a
+// heartbeat moves a real publisher's last_heartbeat_at), and the checks
+// that would write say why.
 func TestPublicationNeedsConsent(t *testing.T) {
 	d := newCISPDouble(t, cispFaults{})
 	s := suiteFor(t, d, time.Second)
 	s.cfg.Publish = false
 	out := s.Run(context.Background())
 	d.mu.Lock()
-	v := d.version
+	v, beats := d.version, len(d.lastBeat)
 	d.mu.Unlock()
 	if v != 0 {
 		t.Fatalf("published %d versions without consent", v)
 	}
+	if beats != 0 {
+		t.Fatalf("sent a heartbeat without consent (%d publishers recorded)", beats)
+	}
+	for _, o := range out {
+		if o.Requirement == ReqHeartbeat && (o.Status != result.NotApplicable || !strings.Contains(o.Reason, "ed318.publish")) {
+			t.Errorf("heartbeat outcome %+v: want not applicable naming ed318.publish", o)
+		}
+	}
 	st := fold(out)
-	for _, r := range []string{ReqChanges, ReqWebhook} {
+	for _, r := range []string{ReqChanges, ReqWebhook, ReqHeartbeat} {
 		if st[r] != result.NotApplicable {
 			t.Errorf("%s: %s, want not_applicable", r, st[r])
 		}

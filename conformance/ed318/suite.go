@@ -6,10 +6,11 @@
 // /v1/changes feed, the signed webhook within the policy's latency, and
 // the publisher heartbeat and stale rules.
 //
-// Publishing replaces the target's whole zones dataset, so the
-// publication half runs only when the target file enables it for a
-// disposable stack (ed318.publish); otherwise those checks are not
-// applicable, with that reason. The read half runs against any CISP.
+// Publishing replaces the target's whole zones dataset and a heartbeat
+// moves a publisher's last_heartbeat_at, so the publication half and the
+// heartbeat run only when the target file enables them for a disposable
+// stack (ed318.publish); otherwise those checks are not applicable, with
+// that reason. The read half runs against any CISP.
 package ed318
 
 import (
@@ -935,6 +936,13 @@ func (s *Suite) observeWebhook(ctx context.Context, r *receiver, version int64, 
 
 func (s *Suite) heartbeat(ctx context.Context) {
 	subj := "POST /v1/publishers/heartbeat"
+	// A heartbeat is a write: it moves the publisher's
+	// last_heartbeat_at on the target, which a real deployment's stale
+	// judgement reads. Like a publication, only on a disposable stack.
+	if !s.cfg.Publish {
+		s.add(result.Skipped(ReqHeartbeat, "heartbeat", subj, "a heartbeat is recorded against the target's publisher: enable ed318.publish only on a disposable stack"))
+		return
+	}
 	if s.cfg.ANSPToken == "" || s.cfg.ReaderToken == "" {
 		s.add(result.Skipped(ReqHeartbeat, "heartbeat", subj, "the target file supplies no publisher token (ed318.ansp_token) or no cis.read token"))
 		return
