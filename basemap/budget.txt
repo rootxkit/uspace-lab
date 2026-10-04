@@ -1,0 +1,7 @@
+# WP-L3 size budgets, bytes (decimal: 1 GB = 1000000000). verify.sh
+# fails a bundle over its profile's budget. The bundle default is the
+# owner's L-Q8 default (docs/PLAN.md §7.1): a Georgia-wide extract under
+# about 1 GB; change it here when the owner answers. The Storybook
+# extract is "a few MB" (ui WP-3).
+bundle    1000000000
+storybook 10000000

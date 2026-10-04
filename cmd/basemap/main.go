@@ -1,8 +1,9 @@
-// Command basemap is the Go half of basemap/build.sh
+// Command basemap is the Go half of basemap/build.sh and verify.sh
 // (docs/WORKPACKAGES/WP-L3.md): it reads the region policy and the
 // pinned inputs, plans the go-pmtiles extracts, fetches and checks the
-// inputs and writes SOURCE.json. The tiles are cut by go-pmtiles and the
-// glyphs drawn by font-maker; this command never writes an archive.
+// inputs, writes SOURCE.json and runs the bundle checks. The tiles are
+// cut by go-pmtiles and the glyphs drawn by font-maker; this command
+// never writes an archive.
 //
 //	basemap build-info --inputs F [--out FILE] [BUILD]
 //	basemap plan       --regions F --profile bundle|storybook --work DIR
@@ -10,6 +11,7 @@
 //	basemap fontstacks --inputs F --fetched DIR
 //	basemap source     --regions F --inputs F --profile P --build-info FILE
 //	                   --fetched DIR --archive FILE --tool NAME=VERSION... --out FILE
+//	basemap verify     --regions F --inputs F --budget F --profile P --range-url URL DIR
 package main
 
 import (
@@ -28,7 +30,7 @@ import (
 	"github.com/rootxkit/uspace-lab/internal/basemap"
 )
 
-const usage = `usage: basemap build-info|plan|fetch|fontstacks|source [flags]
+const usage = `usage: basemap build-info|plan|fetch|fontstacks|source|verify [flags]
 see the comment at the top of cmd/basemap/main.go`
 
 func main() {
@@ -49,6 +51,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		"fetch":      cmdFetch,
 		"fontstacks": cmdFontstacks,
 		"source":     cmdSource,
+		"verify":     cmdVerify,
 	}
 	cmd, ok := cmds[args[0]]
 	if !ok {
@@ -320,4 +323,45 @@ func cmdSource(_ context.Context, args []string, stdout io.Writer) error {
 	_, err = fmt.Fprintf(stdout, "wrote %s: build %s, OSM data as of %s, archive %d bytes sha256 %s\n",
 		*out, src.Build, src.OSMDataAsOf, src.Archive.Bytes, src.Archive.SHA256)
 	return err
+}
+
+func cmdVerify(ctx context.Context, args []string, stdout io.Writer) error {
+	fs := newFlags("verify")
+	regions := fs.String("regions", "", "basemap/regions.yaml")
+	inputs := fs.String("inputs", "", "basemap/inputs.yaml")
+	budget := fs.String("budget", "", "basemap/budget.txt")
+	profile := fs.String("profile", basemap.ProfileBundle, "bundle or storybook")
+	rangeURL := fs.String("range-url", "", "basemap.pmtiles served by a local file server")
+	if err := parse(fs, args); err != nil {
+		return err
+	}
+	if err := required(map[string]string{"regions": *regions, "inputs": *inputs, "budget": *budget}); err != nil {
+		return err
+	}
+	if fs.NArg() != 1 {
+		return usageError{"want one bundle directory"}
+	}
+	r, err := loadPolicy(*regions)
+	if err != nil {
+		return err
+	}
+	in, err := basemap.LoadInputs(*inputs)
+	if err != nil {
+		return err
+	}
+	n, err := basemap.ReadBudget(*budget, *profile)
+	if err != nil {
+		return err
+	}
+	rep := basemap.Verify(ctx, &basemap.VerifyConfig{
+		Dir: fs.Arg(0), Profile: *profile, Regions: r, Inputs: in, BudgetBytes: n,
+		RangeURL: *rangeURL, Client: client(),
+	})
+	if err := rep.Write(stdout); err != nil {
+		return err
+	}
+	if !rep.OK() {
+		return errors.New("the bundle failed verification")
+	}
+	return nil
 }

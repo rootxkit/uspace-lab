@@ -48,6 +48,7 @@ func TestUsageErrors(t *testing.T) {
 		{"nope"},
 		{"plan", "--work", "x"},
 		{"plan", "--regions", "../../basemap/regions.yaml", "--work", "x", "--profile", "country"},
+		{"verify", "--regions", "a", "--inputs", "b", "--budget", "c"},
 		{"source", "--tool", "noequals"},
 	} {
 		if code, _, _ := runCmd(args...); code != 2 {
