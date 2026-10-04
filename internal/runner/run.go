@@ -67,7 +67,7 @@ type Options struct {
 // referenceKinds are what the reference target judges, per system.
 var referenceKinds = map[string]map[string]bool{
 	scenario.SystemUSSP:      {"proximity": true, "zone_incursion": true, "lost_link": true, observe.KindDegraded: true},
-	scenario.SystemAuthority: {"zone_incursion": true, "height_120m": true, observe.KindDegraded: true},
+	scenario.SystemAuthority: {"zone_incursion": true, "height_120m": true, "unregistered": true, observe.KindDegraded: true},
 }
 
 // CheckRunnable refuses, before anything starts, a scenario the targets
