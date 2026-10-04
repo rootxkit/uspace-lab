@@ -8,6 +8,7 @@ require (
 	github.com/lestrrat-go/jwx/v3 v3.3.0
 	github.com/rootxkit/uspace-core v1.3.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
+	golang.org/x/image v0.45.0
 )
 
 require (

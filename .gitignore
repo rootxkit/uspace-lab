@@ -23,3 +23,10 @@ deploy/local-demo/
 
 # cmd/results output (make results)
 site/
+
+# WP-L3: the basemap tools tools.sh installs (go-pmtiles, font-maker).
+basemap/.tools/
+
+# WP-L3: bundles built by make basemap / basemap-storybook.
+local/basemap/
+local/basemap-storybook/
