@@ -34,13 +34,18 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        shell: bash
         run: |
+          set -o pipefail
           if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
             range="origin/$BASE_REF..$HEAD_SHA"
           else
             range="$GITHUB_SHA"
           fi
-          echo "gitleaks commits: $range ($(git rev-list --count "$range") commits)"
+          # An empty range would scan nothing and pass: refuse it.
+          n=$(git rev-list --count "$range")
+          [ "$n" -gt 0 ] || { echo "empty scan range: $range"; exit 1; }
+          echo "gitleaks commits: $range ($n commits)"
           docker run --rm -v "$PWD:/repo" -w /repo \
             zricethezav/gitleaks:v8.30.0@sha256:691af3c7c5a48b16f187ce3446d5f194838f91238f27270ed36eef6359a574d9 \
             git --redact --verbose --exit-code 1 --log-opts="$range" /repo
