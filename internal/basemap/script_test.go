@@ -80,3 +80,32 @@ func TestVerifyScript(t *testing.T) {
 		t.Errorf("verify.sh passed a bundle without Nuskhuri: %v", err)
 	}
 }
+
+// The scripts are run as basemap/build.sh, not through bash: the mode
+// the repository records is what a Linux checkout (CI, the release job,
+// a container) gets. A checkout made on Windows does not carry the bit,
+// so the index is read, not the file system.
+func TestScriptsAreExecutableInTheIndex(t *testing.T) {
+	if err := exec.Command("git", "rev-parse", "--is-inside-work-tree").Run(); err != nil {
+		t.Skipf("not a git work tree: %v", err)
+	}
+	out, err := exec.Command("git", "ls-files", "-s", "--", "../../basemap/").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	scripts := 0
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		mode, _, _ := strings.Cut(line, " ")
+		_, path, _ := strings.Cut(line, "\t")
+		if !strings.HasSuffix(path, ".sh") {
+			continue
+		}
+		scripts++
+		if mode != "100755" {
+			t.Errorf("%s: mode %s in the index, want 100755", path, mode)
+		}
+	}
+	if scripts == 0 {
+		t.Fatalf("no basemap/*.sh in the index:\n%s", out)
+	}
+}
