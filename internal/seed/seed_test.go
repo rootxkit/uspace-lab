@@ -236,3 +236,15 @@ func TestUSpaceCeilingCoversTheIntents(t *testing.T) {
 		t.Fatal("no ceiling was accepted")
 	}
 }
+
+// A result names the ANSP image as demo.env gives it: a registry digest
+// as it is, a local build with the commit it was built from.
+func TestANSPImageAsTheResultNamesIt(t *testing.T) {
+	const digest = "ghcr.io/rootxkit/uspace-ansp@sha256:8e6a7e11d543fbbe28c7d1708437a835aab9c19b815a026ba2fc8997d89d9336"
+	if got := anspImage(map[string]string{"ANSP_GO_IMAGE": digest, "ANSP_SOURCE_COMMIT": "d02b09a"}); got != digest {
+		t.Errorf("published: %q", got)
+	}
+	if got := anspImage(map[string]string{"ANSP_GO_IMAGE": "uspace-lab/uspace-ansp:d02b09a", "ANSP_SOURCE_COMMIT": "d02b09a"}); got != "uspace-lab/uspace-ansp:d02b09a (built locally from uspace-ansp d02b09a; not published)" {
+		t.Errorf("local: %q", got)
+	}
+}
