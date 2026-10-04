@@ -94,6 +94,11 @@ services:
       - -locality=${DSS_LOCALITY:?set DSS_LOCALITY in deploy/.env}
       - -public_endpoint=${DSS_PUBLIC_ENDPOINT:?set DSS_PUBLIC_ENDPOINT in deploy/.env}
       - -log_format=console
+      # warn, not the default info: at info core-service logs every
+      # request with its headers (logging/http.go), Authorization and its
+      # bearer token included, whatever -dump_requests says. Refusals
+      # and errors are logged at warn and above.
+      - -log_level=warn
     volumes:
       - ${LAB_STATE_DIR:-./local}/public:/var/lab-issuer:ro
     depends_on:

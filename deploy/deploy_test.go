@@ -119,6 +119,21 @@ func TestEnvExampleListsEveryVariable(t *testing.T) {
 	}
 }
 
+// The DSS logs no bearer token: core-service at its default level
+// (info) logs each request's headers, Authorization included, even with
+// -dump_requests off (found in the WP-L6 systems stack: 387 request
+// lines carrying a lab issuer token). It runs at warn, without
+// -dump_requests.
+func TestDSSLogsNoBearerTokens(t *testing.T) {
+	compose := read(t, "compose.yaml")
+	if !strings.Contains(compose, "- -log_level=warn") {
+		t.Error("the DSS runs at its default log level, which logs every bearer token")
+	}
+	if regexp.MustCompile(`(?m)^\s*-\s*-dump_requests`).MatchString(compose) {
+		t.Error("the DSS dumps its requests")
+	}
+}
+
 // Nothing is published: no ports: key in compose.yaml (WP-L2: one
 // isolated network; on the droplet only Caddy publishes), and no
 // absolute host path in a volume (the file is consumed as an include).
