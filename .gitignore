@@ -31,8 +31,9 @@ basemap/.tools/
 local/basemap/
 local/basemap-storybook/
 
-# WP-L7: conformance runs (the committed rehearsal record lives under
-# conformance/report/rehearsal/), the axe runner's Node tree and output.
+# WP-L7: conformance runs (the committed records of reviewed runs live
+# under conformance/report/records/), the axe runner's Node tree and
+# output.
 conformance/report/runs/
 conformance/axe/node_modules/
 conformance/axe/test-results/

@@ -308,3 +308,61 @@ func TestCISPEntryPoint(t *testing.T) {
 		t.Errorf("NAT-UNAUTH %s against a CISP that does not answer", rr.Status)
 	}
 }
+
+// TestGitignoreMatchesLayout: what a run writes by default is ignored,
+// the committed records are not, and the .gitignore's WP-L7 block names
+// the directories that exist.
+func TestGitignoreMatchesLayout(t *testing.T) {
+	git, err := exec.LookPath("git")
+	if err != nil {
+		t.Skip("git is not on PATH")
+	}
+	b, err := os.ReadFile(filepath.Join(labRoot, ".gitignore"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	block := string(b)
+	i := strings.Index(block, "# WP-L7")
+	if i < 0 {
+		t.Fatal(".gitignore has no WP-L7 block")
+	}
+	block = block[i:]
+	if j := strings.Index(block, "\n\n"); j >= 0 {
+		block = block[:j]
+	}
+	// A directory the block's comment names exists (an ignore pattern
+	// on a line of its own need not).
+	for _, line := range strings.Split(block, "\n") {
+		if !strings.HasPrefix(line, "#") {
+			continue
+		}
+		for _, f := range strings.Fields(line) {
+			f = strings.Trim(f, "(),.;:")
+			if !strings.HasPrefix(f, "conformance/") || !strings.HasSuffix(f, "/") {
+				continue
+			}
+			if st, err := os.Stat(filepath.Join(labRoot, filepath.FromSlash(f))); err != nil || !st.IsDir() {
+				t.Errorf(".gitignore's WP-L7 comment names %s, which is not a directory of this repository", f)
+			}
+		}
+	}
+	ignored := func(p string) bool {
+		cmd := exec.Command(git, "-C", labRoot, "check-ignore", "-q", "--no-index", p)
+		return cmd.Run() == nil
+	}
+	for _, p := range []string{"conformance/report/runs/20261004T221103Z-cisp/report.json", "conformance/axe/axe-results.json", "conformance/axe/node_modules/x"} {
+		if !ignored(p) {
+			t.Errorf("%s is not ignored", p)
+		}
+	}
+	recs, _ := filepath.Glob(filepath.Join(labRoot, "conformance", "report", "records", "*", "report.json"))
+	if len(recs) == 0 {
+		t.Fatal("no committed record under conformance/report/records/")
+	}
+	for _, r := range recs {
+		rel, _ := filepath.Rel(labRoot, r)
+		if ignored(filepath.ToSlash(rel)) {
+			t.Errorf("the committed record %s is ignored", rel)
+		}
+	}
+}
