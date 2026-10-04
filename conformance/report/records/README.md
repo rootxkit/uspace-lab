@@ -59,3 +59,61 @@ answered 401. Cause, read at the pinned commit and observed on a token:
 mock_uss compares `aud` as a string, the lab issuer writes a one-element
 array. See `conformance/uss_qualifier/README.md` and
 `docs/decisions/2026-10-05-conformance-findings.md` (C3).
+
+## `*-demo/`: the ANSP, the authority and the USSP on the systems stack
+
+The three national systems as `make demo` runs them (`deploy/demo-up.sh`,
+compose project `uspace-conf`, images of `deploy/demo.env.example`
+at this branch): each behind the lab Caddy with the lab CA, tokens from
+the lab issuer (`lab-01`). The suite at uspace-lab `578a737` (clean;
+the reports name it) ran from the host; that commit was re-made as
+`3b9f4fe` with a shorter subject before it was pushed, same tree. It
+ran with target files that are the committed ones plus `ca_file` (the stack's CA) and `resolve` (the `*.uspace.test` hosts at
+127.0.0.1), and with the contract at each image's own commit, so that
+the run measures the image and not the distance between the image and
+`conformance/national/contracts/PINS`:
+
+| Record | Image | Contract | Verdict |
+|---|---|---|---|
+| `20261004T230115Z-ansp-demo/` | `uspace-lab/uspace-ansp:d02b09a` (built by `demo-up.sh` from `d02b09a`; local image id `sha256:01ed9677...`) | uspace-ansp `d02b09a` `api/openapi.yaml` (`sha256:e66744c8...`) with its `schemas/` | fail: 2 pass, 3 fail, 3 n/a |
+| `20261004T230117Z-authority-demo/` | `ghcr.io/rootxkit/uspace-authority@sha256:8663cac1...` (revision label `a2bfeaa`) | uspace-authority `a2bfeaa` (`sha256:3dffc218...`) | fail: 1 pass, 4 fail, 4 n/a |
+| `20261004T230122Z-ussp-demo/` | `ghcr.io/rootxkit/uspace-ussp@sha256:07718be4...` (uspace-deploy `compose/images.env`: `6ec6238`) | uspace-ussp `6ec6238` (`sha256:acc47d6f...`); the committed overrides less the five operations that commit does not have | fail: 1 pass, 3 fail, 7 n/a |
+
+Each report is signed with that stack's issuer key; `issuer-jwks.json`
+beside it verifies it (`conformance verify`). No session, operator token
+or fixture was configured, so the session operations, REG-NOPII on the
+USSP and NAT-PRECONDITION are not applicable with those reasons; no
+InterUSS test interface is exposed, so F3411/F3548 are not applicable.
+
+Two defects of the suite showed on the first runs and are fixed on this
+branch before these records: a non-JSON body sent without its
+Content-Type (the ANSP answered 415 to `receiveCisNotification`), and a
+WebSocket marked only by its 101 sent as a plain GET (426 on the
+authority's and the USSP's streams).
+
+What the failures are, as observed (the defects of the systems are
+`docs/decisions/2026-10-05-conformance-findings.md` C4 to C8):
+
+- The lab Caddy answers 404 to `/metrics` on every host (as the
+  droplet's routes do; `deploy/systems/Caddyfile`), so NAT-SUCCESS fails
+  `getMetrics` on the ANSP and the authority: the lab's front, not the
+  systems (the ANSP's api answers 200 on it inside the stack).
+- ANSP: an upgrade without credential or Origin is 403 `forbidden`, not
+  401 (C4); `login` and `verifyMfa` answer an empty body 401, not the
+  declared 400 (C5).
+- Authority: `/healthz` and `/readyz` answer 404 `not_found` (from
+  authority-api, where the lab Caddy routes them); six operations answer
+  the request without a credential 400 `validation`, not 401 (C6);
+  `postDPISANotification` answers 401 and 403 with a `{"message"}` body
+  where its contract declares none (C7); `getPictureWS` is 403 `origin` without an Origin (C4);
+  `postRIDObservations` is 502 from the lab Caddy (cause not
+  determined); `validateRegistry` is 400 without an operator
+  registration to ask about (no `AUTHORITY_CONFORMANCE_OPERATOR`), so
+  NAT-SUCCESS fails and REG-NOPII has nothing to inspect.
+- USSP: `openTelemetryStream` and `openTrafficStream` answer a
+  handshake with no credential 101, not 401 (C8);
+  `openAlertStream` answers it 400 `validation` (C6);
+  `openAuthorityFlights` is 404 from `ussp-rid-sp` at `6ec6238`.
+
+None of these targets has a baseline: they are evidence that the suite
+runs against each system, not a reviewed state CI gates on.

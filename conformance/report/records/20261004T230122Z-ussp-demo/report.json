@@ -1,0 +1,769 @@
+{
+  "format": "conformance-report/v1",
+  "run": "20261004T230122Z-ussp-demo",
+  "wording": "Proposed format (docs/PLAN.md §7.1 L-Q12, pending GCAA): this report states what the suite observed; it certifies nothing.",
+  "target": {
+    "system": "ussp",
+    "name": "ussp-demo",
+    "role": "own",
+    "base_url": "https://ussp.uspace.test"
+  },
+  "started_at": "2026-10-04T23:01:22.5554431Z",
+  "ended_at": "2026-10-04T23:01:22.6927378Z",
+  "commits": {
+    "lab": "578a73732058f43dd853136718117eb897bd711e",
+    "lab_dirty": false,
+    "core": "v1.3.0",
+    "go": "go1.27.1"
+  },
+  "images": {
+    "ussp": "ghcr.io/rootxkit/uspace-ussp@sha256:07718be47340f621936b744b0209de686f1b974ec690588cf59d98450d913a7f"
+  },
+  "interuss": {
+    "repo": "https://github.com/interuss/monitoring.git",
+    "tag": "interuss/monitoring/v0.36.0",
+    "commit": "0fabe238ef177f66266eba6048545ae1e6bbb4a0",
+    "image": "docker.io/interuss/monitoring:v0.36.0",
+    "image_digest": "sha256:a771c82cda62b83be707e650ddd2550bbabf6790120c4a57f76153a8f5504bb7"
+  },
+  "contract": {
+    "file": "C:/Users/LBEROZ~1/AppData/Local/Temp/claude/C--Users-LBEROZASHVILI-Desktop-projects-utm/998dd165-8c2a-48ff-9c12-8652208618de/scratchpad/img/ussp/api/openapi.yaml",
+    "sha256": "sha256:acc47d6fb0215cf41d95059cc391d37febdf761567060796ae42437cc2a576a4",
+    "title": "uspace-ussp national USSP API",
+    "version": "0.1.0"
+  },
+  "policy": {
+    "format": "conformance-policy/v1",
+    "policy_version": 1,
+    "informative": {
+      "status": "pending GCAA (L-Q3, L-Q10)",
+      "requirements": [
+        "F3411-DP",
+        "A11Y-PUBLIC"
+      ]
+    },
+    "report_signature": {
+      "status": "pending GCAA (L-Q12)",
+      "alg": "RS256",
+      "form": "RFC 7797 detached JWS over the report file's bytes"
+    },
+    "accessibility": {
+      "status": "pending GCAA (L-Q10)",
+      "standard": "WCAG 2.2 AA",
+      "axe_tags": [
+        "wcag2a",
+        "wcag2aa",
+        "wcag21a",
+        "wcag21aa",
+        "wcag22aa"
+      ]
+    },
+    "cisp": {
+      "status": "pending GCAA (spec 09 §2: 1 s CIS change notification target, 300 s stale bound)",
+      "change_notification_s": 1,
+      "heartbeat_interval_s": 15,
+      "stale_tolerance_s": 2
+    },
+    "personal_data_fields": {
+      "status": "pending GCAA DPO (spec Q8)",
+      "names": [
+        "name",
+        "given_name",
+        "family_name",
+        "full_name",
+        "first_name",
+        "last_name",
+        "email",
+        "e_mail",
+        "phone",
+        "telephone",
+        "address",
+        "street",
+        "postal_code",
+        "date_of_birth",
+        "birth_date",
+        "dob",
+        "national_id",
+        "personal_number",
+        "id_number",
+        "passport",
+        "passport_number"
+      ]
+    },
+    "ed318_fixture": {
+      "centre_lat_deg": 41.7151,
+      "centre_lon_deg": 44.8271,
+      "half_side_m": 300,
+      "upper_agl_m": 120,
+      "upper_amsl_ft": 2500
+    }
+  },
+  "summary": {
+    "pass": 1,
+    "fail": 3,
+    "not_applicable": 7,
+    "verdict": "fail"
+  },
+  "requirements": [
+    {
+      "id": "NAT-UNAUTH",
+      "title": "Every operation that takes a credential refuses a request without one with 401 and a problem/v1 body",
+      "source": "spec 02 §1 (error body, M28), 06 §3; decision record M18",
+      "role": "gate",
+      "status": "fail",
+      "reasons": [
+        "answered 101, want 401",
+        "answered 400, want 401",
+        "answered 404, want 401"
+      ],
+      "outcomes": {
+        "pass": 16,
+        "fail": 4,
+        "not_applicable": 0
+      }
+    },
+    {
+      "id": "NAT-SCOPE",
+      "title": "A valid token without the operation's scope is refused with 403 and a problem/v1 body",
+      "source": "spec 06 §3 (scope catalogue, M23), 02 §1",
+      "role": "gate",
+      "status": "fail",
+      "reasons": [
+        "answered 404, want 403"
+      ],
+      "outcomes": {
+        "pass": 0,
+        "fail": 1,
+        "not_applicable": 11
+      }
+    },
+    {
+      "id": "NAT-NOTFOUND",
+      "title": "An unknown identifier is answered 404 with a problem/v1 body where the contract declares 404",
+      "source": "spec 02 §1",
+      "role": "gate",
+      "status": "not_applicable",
+      "reasons": [
+        "no value for path parameter client_id",
+        "the target file supplies no console or portal session",
+        "the target file supplies no operator token (the contract states no scope)"
+      ],
+      "outcomes": {
+        "pass": 0,
+        "fail": 0,
+        "not_applicable": 3
+      }
+    },
+    {
+      "id": "NAT-PRECONDITION",
+      "title": "A stale If-Match is refused with the 409 or 412 the contract declares, and nothing changes",
+      "source": "spec 02 §1 (Retries and conflicts: a 409 is permanent), 02 F1",
+      "role": "gate",
+      "status": "not_applicable",
+      "reasons": [
+        "no check of this run applied (decided by national.stale_precondition)"
+      ],
+      "outcomes": {
+        "pass": 0,
+        "fail": 0,
+        "not_applicable": 0
+      }
+    },
+    {
+      "id": "NAT-INVALID",
+      "title": "An invalid body is refused with the 400 or 422 the contract declares, with a problem/v1 body naming the fields in errors[]",
+      "source": "spec 02 §1 (error body, M28), 06 T9",
+      "role": "gate",
+      "status": "pass",
+      "outcomes": {
+        "pass": 2,
+        "fail": 0,
+        "not_applicable": 8
+      }
+    },
+    {
+      "id": "NAT-SUCCESS",
+      "title": "The success case answers a declared 2xx whose body matches the published OpenAPI contract",
+      "source": "spec 00 §7 (national API publication), 02 §1",
+      "role": "gate",
+      "status": "fail",
+      "reasons": [
+        "the WebSocket handshake was answered 404, not 101"
+      ],
+      "outcomes": {
+        "pass": 3,
+        "fail": 1,
+        "not_applicable": 9
+      }
+    },
+    {
+      "id": "REG-NOPII",
+      "title": "The registry validation answers status only, never a name, address, phone or e-mail",
+      "source": "spec 02 F8, 06 §5; 2021/664 Art. 3(5)",
+      "role": "gate",
+      "status": "not_applicable",
+      "reasons": [
+        "the target file supplies no operator token (the contract states no scope)"
+      ],
+      "outcomes": {
+        "pass": 0,
+        "fail": 0,
+        "not_applicable": 1
+      }
+    },
+    {
+      "id": "F3411-SP",
+      "title": "F3411-22a Network Remote ID Service Provider: uss_qualifier's checks attributed to the target",
+      "source": "spec 09 §1.4 (F3411 Net-RID SP rows)",
+      "role": "gate",
+      "status": "not_applicable",
+      "reasons": [
+        "the target exposes no InterUSS rid_injection interface (target file interfaces)"
+      ],
+      "outcomes": {
+        "pass": 0,
+        "fail": 0,
+        "not_applicable": 1
+      }
+    },
+    {
+      "id": "F3548-SCD",
+      "title": "F3548-21 strategic coordination: uss_qualifier's checks attributed to the target",
+      "source": "spec 09 §1.5 (operational intents, USS endpoints)",
+      "role": "gate",
+      "status": "not_applicable",
+      "reasons": [
+        "the target exposes no InterUSS flight_planning interface (target file interfaces)"
+      ],
+      "outcomes": {
+        "pass": 0,
+        "fail": 0,
+        "not_applicable": 1
+      }
+    },
+    {
+      "id": "F3548-CP",
+      "title": "F3548-21 constraint processing: uss_qualifier's checks attributed to the target",
+      "source": "spec 09 §1.5 (constraint references, utm.constraint_processing)",
+      "role": "gate",
+      "status": "not_applicable",
+      "reasons": [
+        "uss_qualifier v0.36.0 has no constraint processing requirement set (requirements/astm/f3548/v21 holds dss_provider and scd only)"
+      ],
+      "outcomes": {
+        "pass": 0,
+        "fail": 0,
+        "not_applicable": 1
+      }
+    },
+    {
+      "id": "A11Y-PUBLIC",
+      "title": "The public pages the suite loads pass axe at the policy's accessibility bar",
+      "source": "docs/PLAN.md §7.1 L-Q10 (WCAG 2.2 AA assumed)",
+      "role": "informative",
+      "status": "not_applicable",
+      "reasons": [
+        "the target file names no public page"
+      ],
+      "outcomes": {
+        "pass": 0,
+        "fail": 0,
+        "not_applicable": 1
+      }
+    }
+  ],
+  "qualifier": [
+    {
+      "config": "f3411-sp.yaml",
+      "requirement": "F3411-SP",
+      "ran": false,
+      "reason": "the target exposes no InterUSS rid_injection interface (target file interfaces)"
+    },
+    {
+      "config": "",
+      "requirement": "F3548-CP",
+      "ran": false,
+      "reason": "uss_qualifier v0.36.0 has no constraint processing requirement set (requirements/astm/f3548/v21 holds dss_provider and scd only)"
+    },
+    {
+      "config": "f3548-scd.yaml",
+      "requirement": "F3548-SCD",
+      "ran": false,
+      "reason": "the target exposes no InterUSS flight_planning interface (target file interfaces)"
+    }
+  ],
+  "outcomes": [
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getJWKS GET /.well-known/jwks.json",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "schema-valid application/json"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getHealthz GET /healthz",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "schema-valid application/json"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "requestToken POST /oauth/token",
+      "status": "not_applicable",
+      "reason": "the body is not JSON"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getReadyz GET /readyz",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "schema-valid application/json"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "login POST /v1/accounts/login",
+      "status": "pass",
+      "http_status": 400,
+      "detail": "sent an empty object (missing realm, username, password); https://schemas.uspace.ge/problems/validation"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "logout POST /v1/accounts/logout",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "getMe GET /v1/accounts/me",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getMe GET /v1/accounts/me",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "registerOperator POST /v1/accounts/operators",
+      "status": "pass",
+      "http_status": 400,
+      "detail": "sent an empty object (missing registration_number, display_name, contact_email, admin_username, admin_password); https://schemas.uspace.ge/problems/validation"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "getOperator GET /v1/accounts/operators/{operator_id}",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "getOperator GET /v1/accounts/operators/{operator_id}",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getOperator GET /v1/accounts/operators/{operator_id}",
+      "status": "not_applicable",
+      "reason": "the target file names no existing operator_id"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "updateOperator PATCH /v1/accounts/operators/{operator_id}",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "updateOperator PATCH /v1/accounts/operators/{operator_id}",
+      "status": "not_applicable",
+      "reason": "the target file names no existing operator_id"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "createClient POST /v1/accounts/operators/{operator_id}/clients",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "createClient POST /v1/accounts/operators/{operator_id}/clients",
+      "status": "not_applicable",
+      "reason": "the target file names no existing operator_id"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "rotateClientSecret POST /v1/accounts/operators/{operator_id}/clients/{client_id}/rotate",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "bindSerial POST /v1/accounts/operators/{operator_id}/clients/{client_id}/serials",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "bindSerial POST /v1/accounts/operators/{operator_id}/clients/{client_id}/serials",
+      "status": "not_applicable",
+      "reason": "the target file names no existing operator_id"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "unbindSerial DELETE /v1/accounts/operators/{operator_id}/clients/{client_id}/serials/{serial}",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "unbindSerial DELETE /v1/accounts/operators/{operator_id}/clients/{client_id}/serials/{serial}",
+      "status": "not_applicable",
+      "reason": "no value for path parameter client_id"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "openAlertStream GET /v1/alerts",
+      "status": "fail",
+      "reason": "answered 400, want 401",
+      "http_status": 400,
+      "detail": "https://schemas.uspace.ge/problems/validation"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "openAlertStream GET /v1/alerts",
+      "status": "not_applicable",
+      "reason": "the target file supplies no operator token without ussp.traffic"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "openAlertStream GET /v1/alerts",
+      "status": "not_applicable",
+      "reason": "no value for required query parameter intent_id"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "ackAlert POST /v1/alerts/{alert_id}/ack",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "ackAlert POST /v1/alerts/{alert_id}/ack",
+      "status": "not_applicable",
+      "reason": "the contract does not state the operation's scope"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "openAuthorityFlights GET /v1/authority/flights",
+      "status": "fail",
+      "reason": "answered 404, want 401",
+      "http_status": 404,
+      "detail": "https://schemas.uspace.ge/problems/not_found"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "openAuthorityFlights GET /v1/authority/flights",
+      "status": "fail",
+      "reason": "answered 404, want 403",
+      "http_status": 404,
+      "detail": "token scopes police.query; https://schemas.uspace.ge/problems/not_found"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "openAuthorityFlights GET /v1/authority/flights",
+      "status": "fail",
+      "reason": "the WebSocket handshake was answered 404, not 101",
+      "http_status": 404,
+      "detail": "https://schemas.uspace.ge/problems/not_found"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "receiveCISNotification POST /v1/cis/notifications",
+      "status": "not_applicable",
+      "reason": "the body is not JSON"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "listIntents GET /v1/intents",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "listIntents GET /v1/intents",
+      "status": "not_applicable",
+      "reason": "the contract does not state the operation's scope"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "listIntents GET /v1/intents",
+      "status": "not_applicable",
+      "reason": "the target file supplies no operator token (the contract states no scope)"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "createIntent POST /v1/intents",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "createIntent POST /v1/intents",
+      "status": "not_applicable",
+      "reason": "the contract does not state the operation's scope"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "createIntent POST /v1/intents",
+      "status": "not_applicable",
+      "reason": "the target file supplies no operator token (the contract states no scope)"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "getIntent GET /v1/intents/{intent_id}",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "getIntent GET /v1/intents/{intent_id}",
+      "status": "not_applicable",
+      "reason": "the contract does not state the operation's scope"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "getIntent GET /v1/intents/{intent_id}",
+      "status": "not_applicable",
+      "reason": "the target file supplies no operator token (the contract states no scope)"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getIntent GET /v1/intents/{intent_id}",
+      "status": "not_applicable",
+      "reason": "the target file names no existing intent_id"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "changeIntent PATCH /v1/intents/{intent_id}",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "changeIntent PATCH /v1/intents/{intent_id}",
+      "status": "not_applicable",
+      "reason": "the contract does not state the operation's scope"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "changeIntent PATCH /v1/intents/{intent_id}",
+      "status": "not_applicable",
+      "reason": "the target file names no existing intent_id"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "validateRegistry GET /v1/registry/validate",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "validateRegistry GET /v1/registry/validate",
+      "status": "not_applicable",
+      "reason": "the contract does not state the operation's scope"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "validateRegistry GET /v1/registry/validate",
+      "status": "not_applicable",
+      "reason": "the target file supplies no operator token (the contract states no scope)"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "openTelemetryStream GET /v1/telemetry",
+      "status": "fail",
+      "reason": "answered 101, want 401",
+      "http_status": 101
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "openTelemetryStream GET /v1/telemetry",
+      "status": "not_applicable",
+      "reason": "the target file supplies no operator token without ussp.telemetry"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "openTelemetryStream GET /v1/telemetry",
+      "status": "not_applicable",
+      "reason": "the target file supplies no operator token with ussp.telemetry"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "postTelemetryBatch POST /v1/telemetry/batch",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "postTelemetryBatch POST /v1/telemetry/batch",
+      "status": "not_applicable",
+      "reason": "the contract does not state the operation's scope"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "postTelemetryBatch POST /v1/telemetry/batch",
+      "status": "not_applicable",
+      "reason": "the target file supplies no operator token (the contract states no scope)"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "openTrafficStream GET /v1/traffic",
+      "status": "fail",
+      "reason": "answered 101, want 401",
+      "http_status": 101
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "openTrafficStream GET /v1/traffic",
+      "status": "not_applicable",
+      "reason": "the target file supplies no operator token without ussp.traffic"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "openTrafficStream GET /v1/traffic",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "getTrafficSnapshot GET /v1/traffic/snapshot",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "getTrafficSnapshot GET /v1/traffic/snapshot",
+      "status": "not_applicable",
+      "reason": "the target file supplies no operator token without ussp.traffic"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getTrafficSnapshot GET /v1/traffic/snapshot",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "REG-NOPII",
+      "check": "no_pii",
+      "subject": "validateRegistry GET /v1/registry/validate",
+      "status": "not_applicable",
+      "reason": "the target file supplies no operator token (the contract states no scope)"
+    },
+    {
+      "requirement": "F3411-SP",
+      "check": "uss_qualifier",
+      "subject": "F3411-SP",
+      "status": "not_applicable",
+      "reason": "the target exposes no InterUSS rid_injection interface (target file interfaces)"
+    },
+    {
+      "requirement": "F3548-CP",
+      "check": "uss_qualifier",
+      "subject": "F3548-CP",
+      "status": "not_applicable",
+      "reason": "uss_qualifier v0.36.0 has no constraint processing requirement set (requirements/astm/f3548/v21 holds dss_provider and scd only)"
+    },
+    {
+      "requirement": "F3548-SCD",
+      "check": "uss_qualifier",
+      "subject": "F3548-SCD",
+      "status": "not_applicable",
+      "reason": "the target exposes no InterUSS flight_planning interface (target file interfaces)"
+    },
+    {
+      "requirement": "A11Y-PUBLIC",
+      "check": "axe",
+      "subject": "ussp-demo",
+      "status": "not_applicable",
+      "reason": "the target file names no public page"
+    }
+  ]
+}

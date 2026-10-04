@@ -1,0 +1,989 @@
+{
+  "format": "conformance-report/v1",
+  "run": "20261004T230115Z-ansp-demo",
+  "wording": "Proposed format (docs/PLAN.md §7.1 L-Q12, pending GCAA): this report states what the suite observed; it certifies nothing.",
+  "target": {
+    "system": "ansp",
+    "name": "ansp-demo",
+    "role": "own",
+    "base_url": "https://ansp.uspace.test"
+  },
+  "started_at": "2026-10-04T23:01:15.1727826Z",
+  "ended_at": "2026-10-04T23:01:17.2794374Z",
+  "commits": {
+    "lab": "578a73732058f43dd853136718117eb897bd711e",
+    "lab_dirty": false,
+    "core": "v1.3.0",
+    "go": "go1.27.1"
+  },
+  "images": {
+    "ansp": "uspace-lab/uspace-ansp:d02b09a@sha256:01ed96774ccb981f75923b07cbc383ef95fed2685b1c03a21440894664362f9e"
+  },
+  "interuss": {
+    "repo": "https://github.com/interuss/monitoring.git",
+    "tag": "interuss/monitoring/v0.36.0",
+    "commit": "0fabe238ef177f66266eba6048545ae1e6bbb4a0",
+    "image": "docker.io/interuss/monitoring:v0.36.0",
+    "image_digest": "sha256:a771c82cda62b83be707e650ddd2550bbabf6790120c4a57f76153a8f5504bb7"
+  },
+  "contract": {
+    "file": "C:/Users/LBEROZ~1/AppData/Local/Temp/claude/C--Users-LBEROZASHVILI-Desktop-projects-utm/998dd165-8c2a-48ff-9c12-8652208618de/scratchpad/img/ansp/api/openapi.yaml",
+    "sha256": "sha256:e66744c8fe57566af273d446c74a023437c1e0492e135553dd42ee5f5a75b869",
+    "title": "uspace-ansp national API",
+    "version": "1.0.0"
+  },
+  "policy": {
+    "format": "conformance-policy/v1",
+    "policy_version": 1,
+    "informative": {
+      "status": "pending GCAA (L-Q3, L-Q10)",
+      "requirements": [
+        "F3411-DP",
+        "A11Y-PUBLIC"
+      ]
+    },
+    "report_signature": {
+      "status": "pending GCAA (L-Q12)",
+      "alg": "RS256",
+      "form": "RFC 7797 detached JWS over the report file's bytes"
+    },
+    "accessibility": {
+      "status": "pending GCAA (L-Q10)",
+      "standard": "WCAG 2.2 AA",
+      "axe_tags": [
+        "wcag2a",
+        "wcag2aa",
+        "wcag21a",
+        "wcag21aa",
+        "wcag22aa"
+      ]
+    },
+    "cisp": {
+      "status": "pending GCAA (spec 09 §2: 1 s CIS change notification target, 300 s stale bound)",
+      "change_notification_s": 1,
+      "heartbeat_interval_s": 15,
+      "stale_tolerance_s": 2
+    },
+    "personal_data_fields": {
+      "status": "pending GCAA DPO (spec Q8)",
+      "names": [
+        "name",
+        "given_name",
+        "family_name",
+        "full_name",
+        "first_name",
+        "last_name",
+        "email",
+        "e_mail",
+        "phone",
+        "telephone",
+        "address",
+        "street",
+        "postal_code",
+        "date_of_birth",
+        "birth_date",
+        "dob",
+        "national_id",
+        "personal_number",
+        "id_number",
+        "passport",
+        "passport_number"
+      ]
+    },
+    "ed318_fixture": {
+      "centre_lat_deg": 41.7151,
+      "centre_lon_deg": 44.8271,
+      "half_side_m": 300,
+      "upper_agl_m": 120,
+      "upper_amsl_ft": 2500
+    }
+  },
+  "summary": {
+    "pass": 2,
+    "fail": 3,
+    "not_applicable": 3,
+    "verdict": "fail"
+  },
+  "requirements": [
+    {
+      "id": "NAT-UNAUTH",
+      "title": "Every operation that takes a credential refuses a request without one with 401 and a problem/v1 body",
+      "source": "spec 02 §1 (error body, M28), 06 §3; decision record M18",
+      "role": "gate",
+      "status": "fail",
+      "reasons": [
+        "answered 403, want 401"
+      ],
+      "outcomes": {
+        "pass": 36,
+        "fail": 3,
+        "not_applicable": 0
+      }
+    },
+    {
+      "id": "NAT-SCOPE",
+      "title": "A valid token without the operation's scope is refused with 403 and a problem/v1 body",
+      "source": "spec 06 §3 (scope catalogue, M23), 02 §1",
+      "role": "gate",
+      "status": "pass",
+      "outcomes": {
+        "pass": 9,
+        "fail": 0,
+        "not_applicable": 0
+      }
+    },
+    {
+      "id": "NAT-NOTFOUND",
+      "title": "An unknown identifier is answered 404 with a problem/v1 body where the contract declares 404",
+      "source": "spec 02 §1",
+      "role": "gate",
+      "status": "pass",
+      "outcomes": {
+        "pass": 3,
+        "fail": 0,
+        "not_applicable": 4
+      }
+    },
+    {
+      "id": "NAT-PRECONDITION",
+      "title": "A stale If-Match is refused with the 409 or 412 the contract declares, and nothing changes",
+      "source": "spec 02 §1 (Retries and conflicts: a 409 is permanent), 02 F1",
+      "role": "gate",
+      "status": "not_applicable",
+      "reasons": [
+        "no check of this run applied (decided by national.stale_precondition)"
+      ],
+      "outcomes": {
+        "pass": 0,
+        "fail": 0,
+        "not_applicable": 0
+      }
+    },
+    {
+      "id": "NAT-INVALID",
+      "title": "An invalid body is refused with the 400 or 422 the contract declares, with a problem/v1 body naming the fields in errors[]",
+      "source": "spec 02 §1 (error body, M28), 06 T9",
+      "role": "gate",
+      "status": "fail",
+      "reasons": [
+        "answered 401, want 400"
+      ],
+      "outcomes": {
+        "pass": 0,
+        "fail": 2,
+        "not_applicable": 16
+      }
+    },
+    {
+      "id": "NAT-SUCCESS",
+      "title": "The success case answers a declared 2xx whose body matches the published OpenAPI contract",
+      "source": "spec 00 §7 (national API publication), 02 §1",
+      "role": "gate",
+      "status": "fail",
+      "reasons": [
+        "answered 404, not a 2xx"
+      ],
+      "outcomes": {
+        "pass": 4,
+        "fail": 1,
+        "not_applicable": 19
+      }
+    },
+    {
+      "id": "F3548-CM",
+      "title": "F3548-21 constraint management: uss_qualifier's checks attributed to the target",
+      "source": "spec 09 §1.5 (the ANSP is the constraint manager, utm.constraint_management)",
+      "role": "gate",
+      "status": "not_applicable",
+      "reasons": [
+        "uss_qualifier v0.36.0 has no constraint management requirement set or suite (requirements/astm/f3548/v21 holds dss_provider and scd only)"
+      ],
+      "outcomes": {
+        "pass": 0,
+        "fail": 0,
+        "not_applicable": 1
+      }
+    },
+    {
+      "id": "A11Y-PUBLIC",
+      "title": "The public pages the suite loads pass axe at the policy's accessibility bar",
+      "source": "docs/PLAN.md §7.1 L-Q10 (WCAG 2.2 AA assumed)",
+      "role": "informative",
+      "status": "not_applicable",
+      "reasons": [
+        "the target file names no public page"
+      ],
+      "outcomes": {
+        "pass": 0,
+        "fail": 0,
+        "not_applicable": 1
+      }
+    }
+  ],
+  "qualifier": [
+    {
+      "config": "",
+      "requirement": "F3548-CM",
+      "ran": false,
+      "reason": "uss_qualifier v0.36.0 has no constraint management requirement set or suite (requirements/astm/f3548/v21 holds dss_provider and scd only)"
+    }
+  ],
+  "outcomes": [
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getJwks GET /.well-known/jwks.json",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "schema-valid application/jwk-set+json"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getHealthz GET /healthz",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "schema-valid application/json"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getMetrics GET /metrics",
+      "status": "fail",
+      "reason": "answered 404, not a 2xx",
+      "http_status": 404
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getReadyz GET /readyz",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "schema-valid application/json"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "getConstraintDetails GET /uss/v1/constraints/{entityid}",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "getConstraintDetails GET /uss/v1/constraints/{entityid}",
+      "status": "pass",
+      "http_status": 403,
+      "detail": "token scopes police.query; https://schemas.uspace.ge/problems/forbidden"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "getConstraintDetails GET /uss/v1/constraints/{entityid}",
+      "status": "pass",
+      "http_status": 404,
+      "detail": "entityid=7f3a9c2e-0c0f-4e2d-9b1a-000000000000; https://schemas.uspace.ge/problems/not_found"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getConstraintDetails GET /uss/v1/constraints/{entityid}",
+      "status": "not_applicable",
+      "reason": "nothing at the path parameter values the contract enumerates (404 https://schemas.uspace.ge/problems/not_found)"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "listAdapters GET /v1/adapters",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "listAdapters GET /v1/adapters",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "getAdapter GET /v1/adapters/{id}",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "getAdapter GET /v1/adapters/{id}",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getAdapter GET /v1/adapters/{id}",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "listAudit GET /v1/audit",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "listAudit GET /v1/audit",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "login POST /v1/auth/login",
+      "status": "fail",
+      "reason": "answered 401, want 400",
+      "http_status": 401,
+      "detail": "sent an empty object (missing username, password); https://schemas.uspace.ge/problems/invalid_credentials"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "logout POST /v1/auth/logout",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "getMe GET /v1/auth/me",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getMe GET /v1/auth/me",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "verifyMfa POST /v1/auth/mfa",
+      "status": "fail",
+      "reason": "answered 401, want 400",
+      "http_status": 401,
+      "detail": "sent an empty object (missing mfa_token, code); https://schemas.uspace.ge/problems/mfa_refused"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "receiveCisNotification POST /v1/cis/notifications",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/signature"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "receiveCisNotification POST /v1/cis/notifications",
+      "status": "not_applicable",
+      "reason": "the body is not JSON"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "listCoordinationInbox GET /v1/coordination/inbox",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "listCoordinationInbox GET /v1/coordination/inbox",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "acknowledgeCoordinationNotice POST /v1/coordination/inbox/{id}/acknowledge",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "acknowledgeCoordinationNotice POST /v1/coordination/inbox/{id}/acknowledge",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "submitCoordinationNotice POST /v1/coordination/notices",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "submitCoordinationNotice POST /v1/coordination/notices",
+      "status": "pass",
+      "http_status": 403,
+      "detail": "token scopes police.query; https://schemas.uspace.ge/problems/forbidden"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "submitCoordinationNotice POST /v1/coordination/notices",
+      "status": "not_applicable",
+      "reason": "the body schema refuses nothing the suite can construct offline"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "getCoordinationNotice GET /v1/coordination/notices/{ack_id}",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "getCoordinationNotice GET /v1/coordination/notices/{ack_id}",
+      "status": "pass",
+      "http_status": 403,
+      "detail": "token scopes police.query; https://schemas.uspace.ge/problems/forbidden"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "getCoordinationNotice GET /v1/coordination/notices/{ack_id}",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getCoordinationNotice GET /v1/coordination/notices/{ack_id}",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "streamCoordination GET /v1/coordination/stream",
+      "status": "fail",
+      "reason": "answered 403, want 401",
+      "http_status": 403,
+      "detail": "https://schemas.uspace.ge/problems/forbidden"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "streamCoordination GET /v1/coordination/stream",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "listDeliveryAlarms GET /v1/delivery-alarms",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "listDeliveryAlarms GET /v1/delivery-alarms",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "acknowledgeDeliveryAlarm POST /v1/delivery-alarms/{id}/acknowledge",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "acknowledgeDeliveryAlarm POST /v1/delivery-alarms/{id}/acknowledge",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "getMannedTrafficSnapshot GET /v1/manned-traffic/snapshot",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "getMannedTrafficSnapshot GET /v1/manned-traffic/snapshot",
+      "status": "pass",
+      "http_status": 403,
+      "detail": "token scopes police.query; https://schemas.uspace.ge/problems/forbidden"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getMannedTrafficSnapshot GET /v1/manned-traffic/snapshot",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "streamMannedTraffic GET /v1/manned-traffic/stream",
+      "status": "fail",
+      "reason": "answered 403, want 401",
+      "http_status": 403,
+      "detail": "https://schemas.uspace.ge/problems/forbidden"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "streamMannedTraffic GET /v1/manned-traffic/stream",
+      "status": "pass",
+      "http_status": 403,
+      "detail": "token scopes police.query; https://schemas.uspace.ge/problems/forbidden"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "streamMannedTraffic GET /v1/manned-traffic/stream",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "createOccurrence POST /v1/occurrences",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "createOccurrence POST /v1/occurrences",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "getPolicy GET /v1/policy",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getPolicy GET /v1/policy",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "putPolicy PUT /v1/policy",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "putPolicy PUT /v1/policy",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "createRestrictionRequest POST /v1/restriction-requests",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "createRestrictionRequest POST /v1/restriction-requests",
+      "status": "pass",
+      "http_status": 403,
+      "detail": "token scopes police.query; https://schemas.uspace.ge/problems/forbidden"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "createRestrictionRequest POST /v1/restriction-requests",
+      "status": "not_applicable",
+      "reason": "the body schema refuses nothing the suite can construct offline"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "getRestrictionRequest GET /v1/restriction-requests/{id}",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "getRestrictionRequest GET /v1/restriction-requests/{id}",
+      "status": "pass",
+      "http_status": 403,
+      "detail": "token scopes police.query; https://schemas.uspace.ge/problems/forbidden"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "getRestrictionRequest GET /v1/restriction-requests/{id}",
+      "status": "pass",
+      "http_status": 404,
+      "detail": "id=01JZZZZZZZZZZZZZZZZZZZZZZZ; https://schemas.uspace.ge/problems/not_found"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getRestrictionRequest GET /v1/restriction-requests/{id}",
+      "status": "not_applicable",
+      "reason": "nothing at the path parameter values the contract enumerates (404 https://schemas.uspace.ge/problems/not_found)"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "acceptRestrictionRequest POST /v1/restriction-requests/{id}/accept",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "acceptRestrictionRequest POST /v1/restriction-requests/{id}/accept",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "declineRestrictionRequest POST /v1/restriction-requests/{id}/decline",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "declineRestrictionRequest POST /v1/restriction-requests/{id}/decline",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "listRestrictions GET /v1/restrictions",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "listRestrictions GET /v1/restrictions",
+      "status": "pass",
+      "http_status": 403,
+      "detail": "token scopes police.query; https://schemas.uspace.ge/problems/forbidden"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "listRestrictions GET /v1/restrictions",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "schema-valid application/json"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "createRestriction POST /v1/restrictions",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "createRestriction POST /v1/restrictions",
+      "status": "not_applicable",
+      "reason": "the body schema refuses nothing the suite can construct offline"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "streamRestrictions GET /v1/restrictions/stream",
+      "status": "fail",
+      "reason": "answered 403, want 401",
+      "http_status": 403,
+      "detail": "https://schemas.uspace.ge/problems/forbidden"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "streamRestrictions GET /v1/restrictions/stream",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "getRestriction GET /v1/restrictions/{id}",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "getRestriction GET /v1/restrictions/{id}",
+      "status": "pass",
+      "http_status": 403,
+      "detail": "token scopes police.query; https://schemas.uspace.ge/problems/forbidden"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "getRestriction GET /v1/restrictions/{id}",
+      "status": "pass",
+      "http_status": 404,
+      "detail": "id=01JZZZZZZZZZZZZZZZZZZZZZZZ; https://schemas.uspace.ge/problems/not_found"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getRestriction GET /v1/restrictions/{id}",
+      "status": "not_applicable",
+      "reason": "nothing at the path parameter values the contract enumerates (404 https://schemas.uspace.ge/problems/not_found)"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "activateRestriction POST /v1/restrictions/{id}/activate",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "activateRestriction POST /v1/restrictions/{id}/activate",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "cancelRestriction POST /v1/restrictions/{id}/cancel",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "cancelRestriction POST /v1/restrictions/{id}/cancel",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "endRestriction POST /v1/restrictions/{id}/end",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "endRestriction POST /v1/restrictions/{id}/end",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "extendRestriction POST /v1/restrictions/{id}/extend",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "extendRestriction POST /v1/restrictions/{id}/extend",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "listRestrictionVersions GET /v1/restrictions/{id}/versions",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "listRestrictionVersions GET /v1/restrictions/{id}/versions",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "listRestrictionVersions GET /v1/restrictions/{id}/versions",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "getRestrictionVersion GET /v1/restrictions/{id}/versions/{version}",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "getRestrictionVersion GET /v1/restrictions/{id}/versions/{version}",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getRestrictionVersion GET /v1/restrictions/{id}/versions/{version}",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "listSources GET /v1/sources",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "listSources GET /v1/sources",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "setSourceControl PUT /v1/sources/{type}/{instance}",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "setSourceControl PUT /v1/sources/{type}/{instance}",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "listUsers GET /v1/users",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "listUsers GET /v1/users",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "createUser POST /v1/users",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "createUser POST /v1/users",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "disableUser POST /v1/users/{id}/disable",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "resetUserMfa POST /v1/users/{id}/reset-mfa",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "F3548-CM",
+      "check": "uss_qualifier",
+      "subject": "F3548-CM",
+      "status": "not_applicable",
+      "reason": "uss_qualifier v0.36.0 has no constraint management requirement set or suite (requirements/astm/f3548/v21 holds dss_provider and scd only)"
+    },
+    {
+      "requirement": "A11Y-PUBLIC",
+      "check": "axe",
+      "subject": "ansp-demo",
+      "status": "not_applicable",
+      "reason": "the target file names no public page"
+    }
+  ]
+}

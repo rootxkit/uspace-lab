@@ -436,3 +436,32 @@ func TestBaselineNotesAreTracked(t *testing.T) {
 		}
 	}
 }
+
+// TestRecordsVerifyAndAreDescribed: every committed record is described
+// in records/README.md, and every signed one verifies against the
+// issuer JWKS committed beside it (a record is evidence only while its
+// signature holds).
+func TestRecordsVerifyAndAreDescribed(t *testing.T) {
+	dir := filepath.Join(labRoot, "conformance", "report", "records")
+	readme, err := os.ReadFile(filepath.Join(dir, "README.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	recs, _ := filepath.Glob(filepath.Join(dir, "*", "report.json"))
+	if len(recs) == 0 {
+		t.Fatal("no committed record")
+	}
+	for _, rep := range recs {
+		name := filepath.Base(filepath.Dir(rep))
+		if !strings.Contains(string(readme), name) {
+			t.Errorf("records/README.md does not describe %s", name)
+		}
+		if _, err := os.Stat(rep + report.SignatureSuffix); err != nil {
+			continue
+		}
+		jwks := filepath.Join(filepath.Dir(rep), "issuer-jwks.json")
+		if code, log := runCmd(t, "verify", "--report", rep, "--jwks", jwks); code != 0 {
+			t.Errorf("%s does not verify against %s: %s", name, jwks, log)
+		}
+	}
+}
