@@ -184,3 +184,10 @@ manager, and sim-ussp does not fetch it from that USS.
 - The compose file has no absolute path and no host in it; include it
   from the droplet compose (docs/deploy/PLAN.md WP-D1) and set the
   variables of `.env.example` there.
+- Tokens from the authority's token service: the DSS trusts only the
+  files of `DSS_PUBLIC_KEY_FILES` (default: the lab issuer's key). Put
+  the public half of the authority's token key under
+  `LAB_STATE_DIR/public/` and list it beside the lab issuer's key; the
+  DSS still checks the audience (`dss`, `DSS_PUBLIC_HOST`) and the scopes
+  of every request. The files are read once at start, so a rotation of
+  the authority's key needs the new public key listed and a DSS restart.

@@ -7,6 +7,11 @@ request (docs/PLAN.md §5).
 
 ### Added
 
+- WP-L2: `DSS_PUBLIC_KEY_FILES` lists the keys the DSS trusts
+  (`-public_key_files`), defaulting to the lab issuer's key as before. A
+  deployment lists the authority's token key beside it, so the DSS
+  accepts the ecosystem issuer's tokens (plan D5's open item: on the
+  staging droplet the DSS refused every authority-issued token).
 - WP-L5 (KT-4): SITL, the simulators and the scenario runner.
   `sim/`: `run_sitl.sh` / `stop_sitl.sh` (`make sim N=…`, `make sim-down`;
   per-instance working directories, a refusal on a port another fleet
