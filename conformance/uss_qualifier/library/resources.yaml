@@ -1,0 +1,169 @@
+# Resources that define the tests, not the systems under test
+# (uss_qualifier's "baseline"): areas, flights and evaluation settings.
+# Keys read at the commit SOURCE pins. Areas and flights are around the
+# lab's SITL_HOME (sim/sitl.env.example, Tbilisi); coordinates are
+# configuration (INV-03).
+
+netrid_observation_evaluation_configuration:
+  $content_schema: monitoring/uss_qualifier/resources/definitions/ResourceDeclaration.json
+  resource_type: resources.netrid.EvaluationConfigurationResource
+  specification: { }
+
+id_generator:
+  $content_schema: monitoring/uss_qualifier/resources/definitions/ResourceDeclaration.json
+  resource_type: resources.interuss.IDGeneratorResource
+  dependencies:
+    client_identity: utm_client_identity
+  specification: { }
+
+# Six adjacent circular flights of 30 s inside a small box east of the
+# SITL home (UTM zone 38).
+tbilisi_flights_data:
+  $content_schema: monitoring/uss_qualifier/resources/definitions/ResourceDeclaration.json
+  resource_type: resources.netrid.FlightDataResource
+  specification:
+    adjacent_circular_flights_simulation_source:
+      minx: 44.8271
+      miny: 41.7151
+      maxx: 44.8321
+      maxy: 41.7181
+      utm_zone: 38
+      num_flights: 6
+      duration: 30
+    flight_start_delay: 5s
+
+tbilisi_service_area_volume:
+  $content_schema: monitoring/uss_qualifier/resources/definitions/ResourceDeclaration.json
+  resource_type: resources.VolumeResource
+  specification:
+    template:
+      outline_polygon:
+        vertices:
+          - lat: 41.7100
+            lng: 44.8200
+          - lat: 41.7250
+            lng: 44.8200
+          - lat: 41.7250
+            lng: 44.8400
+          - lat: 41.7100
+            lng: 44.8400
+      altitude_lower:
+        value: 0
+        reference: W84
+        units: M
+      altitude_upper:
+        value: 3048
+        reference: W84
+        units: M
+      start_time:
+        offset_from:
+          starting_from:
+            time_during_test: TimeOfEvaluation
+          offset: 1s
+      end_time:
+        offset_from:
+          starting_from:
+            time_during_test: TimeOfEvaluation
+          offset: 1h0m1s
+
+tbilisi_service_area:
+  $content_schema: monitoring/uss_qualifier/resources/definitions/ResourceDeclaration.json
+  resource_type: resources.netrid.ServiceAreaResource
+  dependencies:
+    volume: tbilisi_service_area_volume
+  specification:
+    base_url: https://testdummy.interuss.org/uspace-lab/conformance/tbilisi_service_area
+
+tbilisi_planning_area_volume:
+  $content_schema: monitoring/uss_qualifier/resources/definitions/ResourceDeclaration.json
+  resource_type: resources.VolumeResource
+  specification:
+    template:
+      outline_polygon:
+        vertices:
+          - lat: 41.7100
+            lng: 44.8200
+          - lat: 41.7250
+            lng: 44.8200
+          - lat: 41.7250
+            lng: 44.8400
+          - lat: 41.7100
+            lng: 44.8400
+      altitude_lower:
+        value: 0
+        reference: W84
+        units: M
+      altitude_upper:
+        value: 3048
+        reference: W84
+        units: M
+
+tbilisi_planning_area:
+  $content_schema: monitoring/uss_qualifier/resources/definitions/ResourceDeclaration.json
+  resource_type: resources.PlanningAreaResource
+  dependencies:
+    volume: tbilisi_planning_area_volume
+  specification:
+    base_url: https://testdummy.interuss.org/uspace-lab/conformance/tbilisi_planning_area
+
+# An area far too big for any system to accept a query over.
+problematically_big_area:
+  $content_schema: monitoring/uss_qualifier/resources/definitions/ResourceDeclaration.json
+  resource_type: resources.VolumeResource
+  specification:
+    template:
+      outline_polygon:
+        vertices:
+          - lat: 42.5
+            lng: 43.0
+          - lat: 41.0
+            lng: 43.0
+          - lat: 41.0
+            lng: 46.0
+          - lat: 42.5
+            lng: 46.0
+
+# The flight intents packaged in the image, moved to the SITL home. The
+# ground there is about 605 m AMSL (sim/sitl.env.example) and the
+# EGM2008 geoid about 17 m above the ellipsoid, so about 622 m W84: an
+# input of the test, not a judgement.
+conflicting_flights:
+  resource_type: resources.flight_planning.FlightIntentsResource
+  specification:
+    file:
+      path: file://./test_data/flight_intents/standard/conflicting_flights.yaml
+    transformations:
+      - relative_translation:
+          degrees_north: 41.7151
+          degrees_east: 44.8271
+          meters_up: 622
+
+invalid_flight_intents:
+  resource_type: resources.flight_planning.FlightIntentsResource
+  specification:
+    intent_collection:
+      $ref: test_data.flight_intents.standard.invalid_flight_intents
+    transformations:
+      - relative_translation:
+          degrees_north: 41.7151
+          degrees_east: 44.8271
+          meters_up: 622
+
+non_conflicting_flights:
+  resource_type: resources.flight_planning.FlightIntentsResource
+  specification:
+    file:
+      path: file://./test_data/flight_intents/standard/non_conflicting.yaml
+    transformations:
+      - relative_translation:
+          degrees_north: 41.7151
+          degrees_east: 44.8271
+          meters_up: 622
+
+# The lab is plain HTTP on private addresses.
+test_exclusions:
+  $content_schema: monitoring/uss_qualifier/resources/definitions/ResourceDeclaration.json
+  resource_type: resources.dev.TestExclusionsResource
+  specification:
+    allow_private_addresses: true
+    allow_cleartext_queries: true

@@ -1,0 +1,46 @@
+# The InterUSS monitoring release the conformance suite runs uss_qualifier
+# and mock_uss from (docs/WORKPACKAGES/WP-L7.md, docs/PLAN.md D5: never
+# patched). Bump the tag, the commit and the digest together, re-read
+# every configuration key used under conformance/uss_qualifier/ at the
+# new commit (E-04) and re-run the validation (make conformance-qualifier-check).
+repo = https://github.com/interuss/monitoring.git
+tag = interuss/monitoring/v0.36.0
+commit = 0fabe238ef177f66266eba6048545ae1e6bbb4a0
+image = docker.io/interuss/monitoring:v0.36.0
+image_digest = sha256:a771c82cda62b83be707e650ddd2550bbabf6790120c4a57f76153a8f5504bb7
+fetched_at = 2026-10-05
+#
+# Observed, not assumed: the image's environment carries
+# MONITORING_VERSION=0.36.0 and GIT_COMMIT_HASH=0fabe238ef17... (docker
+# image inspect, 2026-10-05).
+#
+# Read at that commit:
+# - configuration format: monitoring/uss_qualifier/configurations/
+#   configuration.py and dev/netrid_v22a.yaml, dev/f3548_self_contained.yaml,
+#   dev/library/{environment_containers,resources,validation}.yaml; $refs
+#   are relative to the file holding them; file:// configurations.
+# - suites: suites/astm/netrid/f3411_22a.yaml (resources service_providers,
+#   observers, mock_uss_dp, mock_uss_sp, dss_instances, flights_data, ...),
+#   suites/astm/utm/f3548_21.yaml (flight_planners, mock_uss, dss, ...).
+# - resources: resources/netrid/service_providers.py (participant_id,
+#   injection_base_url), resources/netrid/observers.py (participant_id,
+#   observation_base_url), resources/netrid/flight_data.py
+#   (adjacent_circular_flights_simulation_source: minx, miny, maxx, maxy,
+#   utm_zone, num_flights, duration), resources/interuss/mock_uss/client.py.
+# - auth: monitorlib/auth.py ClientIdClientSecret(token_endpoint,
+#   client_id, client_secret, send_request_as_data) posts grant_type,
+#   client_id, client_secret, audience and scope; AUTH_SPEC is read from
+#   the environment, never from a file.
+# - mock_uss: mock_uss/config.py MOCK_USS_PUBLIC_KEY,
+#   MOCK_USS_TOKEN_AUDIENCE, MOCK_USS_BASE_URL, MOCK_USS_AUTH_SPEC,
+#   MOCK_USS_SERVICES, MOCK_USS_DSS_URL; mock_uss/docker-compose.yaml
+#   (MOCK_USS_RID_VERSION=F3411-22a, MOCK_USS_PORT, start.sh).
+# - report: reports/report.py TestRunReport (codebase_version,
+#   commit_hash, report) with passed_checks and failed_checks per test
+#   step (name, requirements, participants; severity and summary on a
+#   failure) and execution_error per scenario.
+# - requirement sets: requirements/astm/f3411/v22a/{service_provider,
+#   display_provider,dss_provider}.md; requirements/astm/f3548/v21/
+#   {dss_provider,scd}.md. There is no constraint processing and no
+#   constraint management requirement set at this commit: F3548-CP and
+#   F3548-CM are not applicable to uss_qualifier (coverage.yaml).

@@ -1,0 +1,105 @@
+# The systems under test and where they are (uss_qualifier's
+# "environment"), rendered by `conformance qualifier-render` from the
+# ${VAR} values the run supplies (conformance/uss_qualifier/README.md).
+# Participant ids are the client ids of decision record M24; audiences
+# are hosts (M18). No secret is here: AUTH_SPEC is an environment
+# variable of the uss_qualifier container.
+
+utm_auth:
+  $content_schema: monitoring/uss_qualifier/resources/definitions/ResourceDeclaration.json
+  resource_type: resources.communications.AuthAdapterResource
+  specification:
+    environment_variable_containing_auth_spec: AUTH_SPEC
+    scopes_authorized:
+      - rid.inject_test_data
+      - dss.read.identification_service_areas
+      - rid.service_provider
+      - rid.display_provider
+      - dp.observe
+      - interuss.flight_planning.direct_automated_test
+      - interuss.flight_planning.plan
+      - utm.strategic_coordination
+      - utm.conformance_monitoring_sa
+      - utm.availability_arbitration
+      - utm.constraint_management
+
+utm_client_identity:
+  $content_schema: monitoring/uss_qualifier/resources/definitions/ResourceDeclaration.json
+  resource_type: resources.communications.ClientIdentityResource
+  dependencies:
+    auth_adapter: utm_auth
+  specification:
+    whoami_audience: ${QUALIFIER_DSS_HOST}
+    whoami_scope: rid.display_provider
+
+netrid_dss_instances_v22a:
+  $content_schema: monitoring/uss_qualifier/resources/definitions/ResourceDeclaration.json
+  resource_type: resources.astm.f3411.DSSInstancesResource
+  dependencies:
+    auth_adapter: utm_auth
+  specification:
+    dss_instances:
+      - participant_id: lab-dss
+        rid_version: F3411-22a
+        base_url: ${QUALIFIER_DSS_URL}/rid/v2
+
+scd_dss:
+  $content_schema: monitoring/uss_qualifier/resources/definitions/ResourceDeclaration.json
+  resource_type: resources.astm.f3548.v21.DSSInstanceResource
+  dependencies:
+    auth_adapter: utm_auth
+  specification:
+    participant_id: lab-dss
+    base_url: ${QUALIFIER_DSS_URL}
+    supports_ovn_request: true
+
+scd_dss_instances:
+  $content_schema: monitoring/uss_qualifier/resources/definitions/ResourceDeclaration.json
+  resource_type: resources.astm.f3548.v21.DSSInstancesResource
+  dependencies:
+    auth_adapter: utm_auth
+  specification:
+    dss_instances:
+      - participant_id: lab-dss
+        user_participant_ids: [mock_uss, "${QUALIFIER_PARTICIPANT}"]
+        base_url: ${QUALIFIER_DSS_URL}
+        supports_ovn_request: true
+
+# The InterUSS mock USS beside the system under test
+# (conformance/uss_qualifier/compose.yaml): the Service Provider the
+# Display Provider tests inject into, the Display Provider the Service
+# Provider tests observe through, and the second USS of F3548.
+mock_uss_sp:
+  resource_type: resources.interuss.mock_uss.client.MockUSSResource
+  dependencies:
+    auth_adapter: utm_auth
+  specification:
+    participant_id: mock_uss
+    mock_uss_base_url: ${QUALIFIER_MOCK_RIDSP_URL}
+
+mock_uss_dp:
+  resource_type: resources.interuss.mock_uss.client.MockUSSResource
+  dependencies:
+    auth_adapter: utm_auth
+  specification:
+    participant_id: mock_uss
+    mock_uss_base_url: ${QUALIFIER_MOCK_RIDDP_URL}
+
+mock_uss_scd:
+  resource_type: resources.interuss.mock_uss.client.MockUSSResource
+  dependencies:
+    auth_adapter: utm_auth
+  specification:
+    participant_id: mock_uss
+    mock_uss_base_url: ${QUALIFIER_MOCK_SCD_URL}
+
+uss_identification:
+  resource_type: resources.interuss.uss_identification.USSIdentificationResource
+  specification:
+    uss_identifiers:
+      "${QUALIFIER_PARTICIPANT}":
+        server_url_regexes:
+          - '${QUALIFIER_TARGET_URL_REGEX}'
+      mock_uss:
+        server_url_regexes:
+          - '${QUALIFIER_MOCK_URL_REGEX}'
