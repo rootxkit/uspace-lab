@@ -1,0 +1,74 @@
+{
+  "format": "conformance-baseline/v1",
+  "target": "cisp",
+  "from_run": "20261004T221103Z-cisp",
+  "from_digest": "sha256:3cc34dc67369972299452e4b2c6205f2d492621cdffd226969d6d8265c728247",
+  "requirements": {
+    "A11Y-PUBLIC": {
+      "status": "not_applicable"
+    },
+    "ED318-APPLICABILITY": {
+      "status": "pass"
+    },
+    "ED318-CHANGES": {
+      "status": "pass"
+    },
+    "ED318-HEARTBEAT": {
+      "status": "pass"
+    },
+    "ED318-SCHEMA": {
+      "status": "pass"
+    },
+    "ED318-VERSIONING": {
+      "status": "pass"
+    },
+    "ED318-VERTICAL": {
+      "status": "pass"
+    },
+    "ED318-WEBHOOK": {
+      "status": "not_applicable"
+    },
+    "NAT-INVALID": {
+      "status": "fail",
+      "note": "uspace-cisp: the same 503 console_unavailable body without errors[] on POST /v1/console/session and /mfa; to be filed on rootxkit/uspace-cisp",
+      "failing": [
+        "invalid_body createConsoleSession POST /v1/console/session",
+        "invalid_body createConsoleSessionMfa POST /v1/console/session/mfa"
+      ]
+    },
+    "NAT-NOTFOUND": {
+      "status": "pass"
+    },
+    "NAT-PRECONDITION": {
+      "status": "not_applicable"
+    },
+    "NAT-SCOPE": {
+      "status": "pass"
+    },
+    "NAT-SUCCESS": {
+      "status": "pass"
+    },
+    "NAT-UNAUTH": {
+      "status": "fail",
+      "note": "uspace-cisp: the 503 console_unavailable problem body has no errors[] (problem/v1 requires it); seen on the chaos stack, where the console is not configured; to be filed on rootxkit/uspace-cisp",
+      "failing": [
+        "unauthenticated createConsoleAccount POST /v1/console/accounts",
+        "unauthenticated deleteConsoleSession DELETE /v1/console/session",
+        "unauthenticated getConsoleMe GET /v1/console/me",
+        "unauthenticated getConsolePublicationDiff GET /v1/console/publications/{id}/diff",
+        "unauthenticated getConsoleStatus GET /v1/console/status",
+        "unauthenticated listConsoleAccounts GET /v1/console/accounts",
+        "unauthenticated listConsoleAudit GET /v1/console/audit",
+        "unauthenticated listConsoleDeliveries GET /v1/console/subscriptions/{id}/deliveries",
+        "unauthenticated listConsolePublications GET /v1/console/publications",
+        "unauthenticated listConsoleRestrictions GET /v1/console/restrictions",
+        "unauthenticated listConsoleSubscriptions GET /v1/console/subscriptions",
+        "unauthenticated patchConsoleAccount PATCH /v1/console/accounts/{id}",
+        "unauthenticated republishConsolePublication POST /v1/console/publications/{id}/republish",
+        "unauthenticated resumeConsoleSubscription POST /v1/console/subscriptions/{id}/resume",
+        "unauthenticated retryConsoleDelivery POST /v1/console/subscriptions/{id}/deliveries/{delivery_id}/retry",
+        "unauthenticated suspendConsoleSubscription POST /v1/console/subscriptions/{id}/suspend"
+      ]
+    }
+  }
+}
