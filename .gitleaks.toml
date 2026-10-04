@@ -26,6 +26,18 @@ paths = ['''^knowledge/vectors/[^/]+\.json$''']
 regexTarget = "line"
 regexes = ['''"compare_key"\s*:''']
 
+# internal/seed/seed_test.go checks the seed's TOTP against RFC 6238
+# Appendix B, whose shared secret is the published ASCII
+# "12345678901234567890" (base32 GEZDGNBVGY3TQOJQ...): a test vector of
+# the RFC, not a credential. Limited to this rule, that file and lines
+# holding that value.
+[[rules.allowlists]]
+description = "the RFC 6238 test secret in the seed's TOTP test"
+condition = "AND"
+paths = ['''^internal/seed/seed_test\.go$''']
+regexTarget = "line"
+regexes = ['''GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ''']
+
 # jwt_verify.json carries test JWTs signed by a key generated at run time
 # by uspace-core's auth/internal/genvectors and discarded, so they grant
 # nothing anywhere. Limited to the jwt rule and to that one file.
