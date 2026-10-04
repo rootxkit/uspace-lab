@@ -11,6 +11,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/rootxkit/uspace-core/core"
+	"github.com/rootxkit/uspace-core/ed269"
 )
 
 const scenariosDir = "../../scenarios"
@@ -248,6 +249,27 @@ func TestLandingsTheSystemsRunSawLate(t *testing.T) {
 		if st.Do == DoLand && sc21.DurationS-*st.AtS < 75 {
 			t.Errorf("sc-21: %.0f s for B's landing from the lower ground, under 75 s", sc21.DurationS-*st.AtS)
 		}
+	}
+}
+
+// A scenario zone names a zone authority: ED-318 requires one, and
+// uspace-authority refuses a zones import without it.
+func TestZonesNameAZoneAuthority(t *testing.T) {
+	lab, err := LoadLab("../../sim/sitl.env.example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := load(t, "sc-03-zone-entry-exit.yaml")
+	gz, err := ED269Zone(s, lab, s.Zones[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(gz.ZoneAuthority) == 0 || gz.ZoneAuthority[0].Name == nil || gz.ZoneAuthority[0].Purpose == nil {
+		t.Fatalf("zone authority %+v", gz.ZoneAuthority)
+	}
+	b, err := ed269.Export(&ed269.Document{Zones: []ed269.GeoZone{gz}, Wrapper: ed269.WrapperFeatures})
+	if err != nil || !strings.Contains(string(b), `"zoneAuthority":[{`) {
+		t.Fatalf("%v %s", err, b)
 	}
 }
 

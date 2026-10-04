@@ -177,7 +177,13 @@ func ED269Zone(s *Scenario, lab *Lab, z Zone) (ed269.GeoZone, error) {
 		period = ed269.Period{Start: &start, End: &end}
 	}
 	name := z.ID
+	// ED-318 requires at least one zone authority, and the authority
+	// refuses an import without one (seen importing a scenario's zones
+	// into uspace-authority in the WP-L6 systems stack): the lab names
+	// itself, for authorisation.
+	authName, purpose := "uspace-lab scenario "+s.ID, ed269.PurposeAuthorization
 	return ed269.GeoZone{
+		ZoneAuthority: []ed269.Authority{{Name: &authName, Purpose: &purpose}},
 		Identifier:    z.ID,
 		Country:       s.Country,
 		Name:          &name,
