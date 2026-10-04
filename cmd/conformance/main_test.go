@@ -277,6 +277,14 @@ func TestCISPEntryPoint(t *testing.T) {
 	}
 	if code, out, _ := run("CISP_BASE_URL=http://127.0.0.1:1"); code != 3 || !strings.Contains(out, "no contract to test against") {
 		t.Errorf("without a contract: exit %d, want 3 (incomplete) and the reason:\n%s", code, out)
+	} else {
+		// The reason says how to supply one: the variable, the pinned
+		// fetch, and where the procedure is written down.
+		for _, want := range []string{"CONFORMANCE_CISP_OPENAPI", "conformance/national/fetch-contracts.sh", "conformance/README.md"} {
+			if !strings.Contains(out, want) {
+				t.Errorf("the reason does not name %s:\n%s", want, out)
+			}
+		}
 	}
 	code, out, rep := run("CISP_BASE_URL=http://127.0.0.1:1", "CONFORMANCE_ALLOW_INCOMPLETE=1")
 	if code != 0 || !strings.Contains(out, "no contract to test against") {

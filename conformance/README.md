@@ -56,6 +56,38 @@ exits 3, never 0. `--allow-incomplete` (`CONFORMANCE_ALLOW_INCOMPLETE=1`)
 accepts an incomplete run when that is what the operator means, as the
 onboarding rehearsal does.
 
+### Contracts
+
+The national and ED-318 tests read a system's OpenAPI file: the
+target's `contract.openapi` (`CONFORMANCE_<SYSTEM>_OPENAPI`, with
+`CONFORMANCE_<SYSTEM>_SCHEMAS` for the schemas it references), by
+default the aggregate's mirror `api/<system>/openapi.yaml`. The mirrors
+are not pinned yet (WP-L1), so without the variable every national and
+ED-318 requirement is not applicable and the run exits 3 (incomplete).
+
+Until they are, use the contract the suite already pins:
+`conformance/national/contracts/PINS` names each system's commit and the
+file's SHA-256, and
+
+```sh
+conformance/national/fetch-contracts.sh /tmp/contracts   # fetch, check the digest, classify
+CONFORMANCE_ANSP_OPENAPI=/tmp/contracts/ansp.yaml make conformance TARGET=ansp
+```
+
+tests against exactly that file (the report records its digest). A
+system's own entry point may pass its checkout's file instead, as
+`conformance/cisp/run` does for the CISP; the report then names that
+file and digest. When a contract moves, bump its `PINS` line and the
+overrides beside it in one commit.
+
+Pinning the mirror itself is WP-L1's `scripts/pin.sh <system> <commit>`,
+in a `build(contracts): pin <system> at <short commit>` commit of its
+own with the regenerated index (`make index clients`). It copies the
+system's whole `schemas/` (Go files and its copy of `schemas/common/`
+included), so what the mirror keeps (`--schemas-path`) is WP-L1's
+decision, not the default's. Once
+`api/<system>/openapi.yaml` exists, the targets use it with no variable.
+
 ### National contract tests
 
 Every operation of the system's OpenAPI file (the aggregate's

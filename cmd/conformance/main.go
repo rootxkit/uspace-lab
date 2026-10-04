@@ -305,7 +305,8 @@ func (s *suite) national(ctx context.Context) ([]result.Outcome, *report.Contrac
 	}
 	openapi, schemas, ovPath := tf.ContractPaths(s.root)
 	if _, statErr := os.Stat(openapi); statErr != nil {
-		why := fmt.Sprintf("no contract to test against: %s is absent (the aggregate's mirror is unpinned and the target names no contract.openapi)", openapi)
+		why := fmt.Sprintf("no contract to test against: %s is absent (the aggregate's mirror is unpinned): set CONFORMANCE_%s_OPENAPI, e.g. to the file conformance/national/fetch-contracts.sh fetches at the pinned commit (conformance/README.md, Contracts)",
+			openapi, strings.ToUpper(tf.System))
 		return append(skipAll(natReqs, why), skipAll(edReqs, why)...), nil, nil //nolint:nilerr // an absent contract is reported, not an error
 	}
 	ov, err := national.LoadOverrides(ovPath)
