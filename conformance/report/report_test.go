@@ -167,8 +167,15 @@ func TestGateBothWays(t *testing.T) {
 			t.Errorf("%s: no regression found: %+v", tc.name, fs)
 		}
 	}
+	// A known-failing requirement that fails on another check too: the
+	// new failure is a regression (a known failure hides nothing).
+	r, _ := Build(cat, pol, tg, []result.Outcome{result.Passed("NAT-UNAUTH", "unauthenticated", "a", 401, ""),
+		result.Failed("NAT-INVALID", "invalid_body", "d", 200, "accepted", ""), result.Failed("NAT-INVALID", "invalid_body", "e", 200, "accepted", "")})
+	if fs, _ := Gate(r, bl); !Regressed(fs) {
+		t.Errorf("a new failing check inside a known failure was not a regression: %+v", fs)
+	}
 	// An improvement is reported, not a regression.
-	r, _ := Build(cat, pol, tg, []result.Outcome{result.Passed("NAT-UNAUTH", "unauthenticated", "a", 401, ""), result.Passed("NAT-INVALID", "invalid_body", "d", 400, "")})
+	r, _ = Build(cat, pol, tg, []result.Outcome{result.Passed("NAT-UNAUTH", "unauthenticated", "a", 401, ""), result.Passed("NAT-INVALID", "invalid_body", "d", 400, "")})
 	fs, _ = Gate(r, bl)
 	if Regressed(fs) {
 		t.Errorf("an improvement regressed: %+v", fs)

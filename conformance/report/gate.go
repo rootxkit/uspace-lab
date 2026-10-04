@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 
@@ -29,6 +30,23 @@ type Baseline struct {
 type BaselineEntry struct {
 	Status result.Status `json:"status"`
 	Note   string        `json:"note,omitempty"`
+	// Failing lists, for a known failure, each failed check as
+	// "<check> <subject>": a failure outside the list is a regression
+	// even though the requirement was already failing.
+	Failing []string `json:"failing,omitempty"`
+}
+
+// failing is the sorted "<check> <subject>" of a requirement's failed
+// outcomes.
+func failing(r *Report, id string) []string {
+	var out []string
+	for _, o := range r.Outcomes {
+		if o.Requirement == id && o.Status == result.Fail {
+			out = append(out, o.Check+" "+o.Subject)
+		}
+	}
+	sort.Strings(out)
+	return slices.Compact(out)
 }
 
 // ReadBaseline reads and checks a baseline file.
@@ -66,6 +84,9 @@ func NewBaseline(r *Report, digest string, notes map[string]string) (*Baseline, 
 	for i := range r.Requirements {
 		rr := &r.Requirements[i]
 		e := BaselineEntry{Status: rr.Status, Note: notes[rr.ID]}
+		if rr.Status == result.Fail {
+			e.Failing = failing(r, rr.ID)
+		}
 		if rr.Status == result.Fail && e.Note == "" && rr.Role == RoleGate {
 			missing = append(missing, rr.ID)
 		}
@@ -107,9 +128,19 @@ func Gate(r *Report, bl *Baseline) ([]Finding, error) {
 		}
 		f := Finding{Requirement: rr.ID, Was: was, Now: rr.Status}
 		gate := rr.Role == RoleGate
+		var fresh []string
+		if rr.Status == result.Fail && was == result.Fail {
+			for _, x := range failing(r, rr.ID) {
+				if !slices.Contains(e.Failing, x) {
+					fresh = append(fresh, x)
+				}
+			}
+		}
 		switch {
 		case rr.Status == result.Fail && was != result.Fail:
 			f.Regression, f.Why = gate, "a failure the baseline does not record"
+		case len(fresh) > 0:
+			f.Regression, f.Why = gate, "a known failure with new failing checks: "+strings.Join(firstN(fresh, 5), "; ")
 		case was == result.Pass && rr.Status != result.Pass:
 			f.Regression, f.Why = gate, "passed in the baseline, "+string(rr.Status)+" now"
 		case was == result.Fail && rr.Status == result.Pass:

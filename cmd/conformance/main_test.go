@@ -200,7 +200,10 @@ func TestCISPEntryPoint(t *testing.T) {
 		rep := t.TempDir()
 		cmd := exec.Command(bash, script)
 		cmd.Dir = t.TempDir() // not a CISP checkout
-		cmd.Env = append(os.Environ(), append([]string{"CONFORMANCE_REPORT=" + rep, "CISP_BASE_URL=", "CONFORMANCE_CISP_OPENAPI="}, env...)...)
+		// A name of its own: conformance/baseline/cisp.json judges the
+		// real CISP's runs, not these.
+		cmd.Env = append(os.Environ(), append([]string{"CONFORMANCE_REPORT=" + rep, "CISP_BASE_URL=", "CONFORMANCE_CISP_OPENAPI=",
+			"CONFORMANCE_TARGET_NAME=cisp-entry-point"}, env...)...)
 		out, err := cmd.CombinedOutput()
 		code := 0
 		var ee *exec.ExitError
@@ -219,6 +222,14 @@ func TestCISPEntryPoint(t *testing.T) {
 		t.Errorf("without a contract: exit %d, want 0 and the reason:\n%s", code, out)
 	} else if rr := status(t, onlyReport(t, rep), "NAT-UNAUTH"); rr.Status != result.NotApplicable {
 		t.Errorf("NAT-UNAUTH %s without a contract", rr.Status)
+	}
+	// Judged against the committed CISP baseline, a run in which nothing
+	// could be checked is a regression: CI fails on it.
+	if _, err := os.Stat(filepath.Join(labRoot, "conformance", "baseline", "cisp.json")); err == nil {
+		code, out, _ := run("CISP_BASE_URL=http://127.0.0.1:1", "CONFORMANCE_TARGET_NAME=cisp")
+		if code != 1 || !strings.Contains(out, "REGRESSION") {
+			t.Errorf("against the CISP baseline with nothing checked: exit %d, want 1 and a regression:\n%s", code, out)
+		}
 	}
 	dir := os.Getenv("CONFORMANCE_CONTRACTS_DIR")
 	if dir == "" {
