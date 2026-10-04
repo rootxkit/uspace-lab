@@ -66,10 +66,11 @@ qualifier and the mock USS request (`rid.inject_test_data`,
   writes `aud` as a one-element array. The DSS accepts both. A system
   under test verifies with uspace-core and is not affected; running the
   mock USS against the lab issuer needs a single-string audience (a
-  uspace-core change, open).
+  uspace-core change, open: `docs/decisions/2026-10-05-conformance-findings.md` C3).
 - The InterUSS observation interface's scope at the pinned commit is
   `dss.read.identification_service_areas`
   (`uas_standards.interuss.automated_testing.rid.v1.constants.Scope.Observe`),
   not the `dp.observe` decision record Q-A7 names for the authority's
   hook: uss_qualifier will be refused by an authority that admits only
-  `dp.observe` (open, for the authority and the decision record).
+  `dp.observe` (open, for the authority and the decision record:
+  `docs/decisions/2026-10-05-conformance-findings.md` C2).

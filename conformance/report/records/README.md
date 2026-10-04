@@ -34,8 +34,8 @@ Verdict **fail**: 9 pass, 2 fail, 3 not applicable.
   `503 console_unavailable` on this stack (the console is not
   configured), and that problem body has no `errors` member, which
   `schemas/common/problem/v1` requires. NAT-UNAUTH (16 operations) and
-  NAT-INVALID (`POST /v1/console/session`, `/mfa`) fail on it. Not filed
-  as an issue by this work package; recorded as a known failure in
+  NAT-INVALID (`POST /v1/console/session`, `/mfa`) fail on it. Recorded
+  in `docs/decisions/2026-10-05-conformance-findings.md` (C1) and as a known failure in
   `conformance/baseline/cisp.json`.
 - Not applicable: NAT-PRECONDITION (no operation with `If-Match` has an
   example body the contract offers), ED318-WEBHOOK (the chaos stack's
@@ -57,4 +57,5 @@ the mock Display Provider; F3411-SP **failed** for the candidate on 7
 checks (NET0500 and the injection API requirements), every injection
 answered 401. Cause, read at the pinned commit and observed on a token:
 mock_uss compares `aud` as a string, the lab issuer writes a one-element
-array. See `conformance/uss_qualifier/README.md`.
+array. See `conformance/uss_qualifier/README.md` and
+`docs/decisions/2026-10-05-conformance-findings.md` (C3).

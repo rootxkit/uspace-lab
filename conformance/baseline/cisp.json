@@ -30,7 +30,7 @@
     },
     "NAT-INVALID": {
       "status": "fail",
-      "note": "uspace-cisp: the same 503 console_unavailable body without errors[] on POST /v1/console/session and /mfa; to be filed on rootxkit/uspace-cisp",
+      "note": "uspace-cisp: the same 503 console_unavailable body without errors[] on POST /v1/console/session and /mfa; tracked in docs/decisions/2026-10-05-conformance-findings.md#c1-cisp-503-body-without-errors",
       "failing": [
         "invalid_body createConsoleSession POST /v1/console/session",
         "invalid_body createConsoleSessionMfa POST /v1/console/session/mfa"
@@ -50,7 +50,7 @@
     },
     "NAT-UNAUTH": {
       "status": "fail",
-      "note": "uspace-cisp: the 503 console_unavailable problem body has no errors[] (problem/v1 requires it); seen on the chaos stack, where the console is not configured; to be filed on rootxkit/uspace-cisp",
+      "note": "uspace-cisp: the 503 console_unavailable problem body has no errors[] (problem/v1 requires it); seen on the chaos stack, where the console is not configured; tracked in docs/decisions/2026-10-05-conformance-findings.md#c1-cisp-503-body-without-errors",
       "failing": [
         "unauthenticated createConsoleAccount POST /v1/console/accounts",
         "unauthenticated deleteConsoleSession DELETE /v1/console/session",

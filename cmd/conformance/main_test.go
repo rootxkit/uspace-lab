@@ -366,3 +366,65 @@ func TestGitignoreMatchesLayout(t *testing.T) {
 		}
 	}
 }
+
+// TestBaselineNotesAreTracked: every known failure a committed baseline
+// accepts says where it is tracked, and that place is in this
+// repository: a file that exists and, with #anchor, a heading of it.
+// Issues are not filed from the lab, so "to be filed" is no tracking.
+func TestBaselineNotesAreTracked(t *testing.T) {
+	files, _ := filepath.Glob(filepath.Join(labRoot, "conformance", "baseline", "*.json"))
+	if len(files) == 0 {
+		t.Fatal("no committed baseline")
+	}
+	slug := func(h string) string {
+		var b strings.Builder
+		for _, r := range strings.ToLower(strings.TrimSpace(h)) {
+			switch {
+			case r >= 'a' && r <= 'z', r >= '0' && r <= '9', r == '-', r == '_':
+				b.WriteRune(r)
+			case r == ' ':
+				b.WriteRune('-')
+			}
+		}
+		return b.String()
+	}
+	for _, f := range files {
+		bl, err := report.ReadBaseline(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for id, e := range bl.Requirements {
+			if e.Status != result.Fail {
+				continue
+			}
+			var ref string
+			for _, w := range strings.Fields(e.Note) {
+				if strings.HasPrefix(w, "docs/") || strings.HasPrefix(w, "conformance/") {
+					ref = strings.TrimRight(w, ".,;)")
+				}
+			}
+			if ref == "" {
+				t.Errorf("%s %s: the note names no document of this repository: %q", filepath.Base(f), id, e.Note)
+				continue
+			}
+			path, anchor, _ := strings.Cut(ref, "#")
+			b, err := os.ReadFile(filepath.Join(labRoot, filepath.FromSlash(path)))
+			if err != nil {
+				t.Errorf("%s %s: %s: %v", filepath.Base(f), id, path, err)
+				continue
+			}
+			if anchor == "" {
+				continue
+			}
+			found := false
+			for _, line := range strings.Split(string(b), "\n") {
+				if strings.HasPrefix(line, "#") && slug(strings.TrimLeft(line, "#")) == anchor {
+					found = true
+				}
+			}
+			if !found {
+				t.Errorf("%s %s: %s has no heading #%s", filepath.Base(f), id, path, anchor)
+			}
+		}
+	}
+}
