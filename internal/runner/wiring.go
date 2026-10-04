@@ -603,15 +603,34 @@ func (r *run) request(ctx context.Context, q *scenario.Request) (string, error) 
 		if err != nil {
 			return "", err
 		}
-		body = bytes.NewReader([]byte(r.placeholders(sub(string(b)))))
+		filled := r.placeholders(sub(string(b)))
+		if err := refuseUnfilled("the body", filled); err != nil {
+			return "", err
+		}
+		body = bytes.NewReader([]byte(filled))
 	}
-	req, err := http.NewRequestWithContext(ctx, q.Method, strings.TrimRight(auth.BaseURL, "/")+sub(q.Path), body)
+	path := sub(q.Path)
+	if err := refuseUnfilled("the path", path); err != nil {
+		return "", err
+	}
+	headers := make(map[string]string, len(q.Headers))
+	for k, v := range q.Headers {
+		if err := refuseUnfilled("a header name", k); err != nil {
+			return "", err
+		}
+		filled := r.textPlaceholders(sub(v))
+		if err := refuseUnfilled("header "+k, filled); err != nil {
+			return "", err
+		}
+		headers[k] = filled
+	}
+	req, err := http.NewRequestWithContext(ctx, q.Method, strings.TrimRight(auth.BaseURL, "/")+path, body)
 	if err != nil {
 		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	for k, v := range q.Headers {
-		req.Header.Set(k, r.textPlaceholders(sub(v)))
+	for k, v := range headers {
+		req.Header.Set(k, v)
 	}
 	switch {
 	case auth.Bearer != nil:
@@ -678,6 +697,20 @@ var (
 	placeLatLngText = regexp.MustCompile(`\$\{(lat|lng):(-?[0-9]+(?:\.[0-9]+)?),(-?[0-9]+(?:\.[0-9]+)?)\}`)
 	placeTime       = regexp.MustCompile(`\$\{time:(-?[0-9]+)\}`)
 )
+
+// placeUnfilled is any ${...} left once a request is filled.
+var placeUnfilled = regexp.MustCompile(`\$\{[^}]*\}`)
+
+// refuseUnfilled refuses a request part still holding a placeholder (a
+// capture never made, an extra the targets file lacks, a malformed lab
+// value): sent, it would reach the system as literal text, as wp12's
+// Idempotency-Key once did with "${time:0}".
+func refuseUnfilled(where, s string) error {
+	if m := placeUnfilled.FindString(s); m != "" {
+		return fmt.Errorf("%s holds the unfilled placeholder %s: the request is not sent", where, m)
+	}
+	return nil
+}
 
 // placeholders fills a request body's lab values: "${lat:N,E}" and
 // "${lng:N,E}" become the number of the offset N metres north and E east

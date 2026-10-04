@@ -12,6 +12,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -101,6 +102,51 @@ func TestRequestFillsTheLabPlaceholdersInHeaders(t *testing.T) {
 	o := lab.At(scenario.Offset{})
 	if want := strconv.FormatFloat(o.LatDeg, 'f', 7, 64) + "," + strconv.FormatFloat(o.LonDeg, 'f', 7, 64); where != want {
 		t.Fatalf("X-Lab-Where %q, want %q", where, want)
+	}
+}
+
+// A request still holding a ${...} the runner could not fill (a capture
+// an earlier step never made, an extra the targets file lacks, a
+// malformed placeholder) is refused before it is sent, naming where it
+// stands, instead of reaching the system as literal text. Beside it the
+// same request filled is sent.
+func TestRequestRefusesAnUnfilledPlaceholder(t *testing.T) {
+	var hits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		hits.Add(1)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+	lab, err := scenario.LoadLab("../../sim/sitl.env.example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := &run{opt: Options{Run: "run-7"}, captures: map[string]string{"rid": "r1"}, lab: lab, t0: time.Unix(1_791_100_000, 0),
+		tg: &Targets{Requests: map[string]RequestAuth{"ansp": {BaseURL: srv.URL}}, Extra: map[string]any{"air": "ua-1"}}}
+	filled := func() *scenario.Request {
+		return &scenario.Request{System: "ansp", Method: http.MethodPost, Path: "/v1/restrictions/${rid}/end",
+			Headers: map[string]string{"Idempotency-Key": "lab-${run}-${time:0}"},
+			Body:    map[string]any{"airspace": "${extra:air}", "at": "${time:5}", "lat": "${lat:0,0}"}}
+	}
+	if _, err := r.request(context.Background(), filled()); err != nil || hits.Load() != 1 {
+		t.Fatalf("filled: hits %d, %v", hits.Load(), err)
+	}
+	for name, spoil := range map[string]func(q *scenario.Request){
+		"path":       func(q *scenario.Request) { q.Path = "/v1/restrictions/${restriction_id}/end" },
+		"header":     func(q *scenario.Request) { q.Headers["Idempotency-Key"] = "lab-${time:soon}" },
+		"header key": func(q *scenario.Request) { q.Headers["X-${run_id}"] = "v" },
+		"body":       func(q *scenario.Request) { q.Body["airspace"] = "${extra:missing}" },
+		"body lat":   func(q *scenario.Request) { q.Body["lat"] = "${lat:north}" },
+	} {
+		q := filled()
+		spoil(q)
+		_, err := r.request(context.Background(), q)
+		if err == nil || !strings.Contains(err.Error(), "unfilled placeholder") {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+	if n := hits.Load(); n != 1 {
+		t.Fatalf("a request with an unfilled placeholder was sent: %d hits", n)
 	}
 }
 
