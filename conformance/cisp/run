@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# The CISP's entry point into the lab's conformance suite (uspace-cisp
+# docs/PLAN.md §15 Q47, tools/conformance.sh): the national contract
+# tests and the ED-318 publication tests against the CISP at
+# CISP_BASE_URL. Its exit status is the verdict: 0 pass or incomplete
+# (nothing failed; what did not apply is in the report), 1 a failure
+# (or, when conformance/baseline/<target>.json exists, a regression
+# against it), 2 a configuration error.
+#
+#   CISP_BASE_URL       the CISP under test (required)
+#   CONFORMANCE_ENV     KEY=VALUE lines with the stack's tokens, keys and
+#                       identities (CISP_AUTHORITY_TOKEN, CISP_ANSP_TOKEN,
+#                       CISP_READER_TOKEN, CISP_*_SIGNING_KEY_FILE/_KID,
+#                       CISP_JWKS_URL, CISP_ISSUER_URL); may be empty
+#   CONFORMANCE_REPORT  where report/<run>/ is written (default
+#                       conformance/report/runs in this repository)
+#   CONFORMANCE_PUBLISH true lets the ED-318 tests publish their fixture
+#                       (they replace the zones dataset: a disposable
+#                       stack only); default false
+#   CONFORMANCE_CISP_OPENAPI  the contract; default the aggregate's
+#                       api/cisp/openapi.yaml, else the calling CISP
+#                       checkout's api/openapi.yaml
+#   CONFORMANCE_SIGN_KEY the lab issuer's signing key: sign the report
+#   GO                  the go command (default go)
+set -euo pipefail
+
+if [ -z "${CISP_BASE_URL:-}" ]; then
+  echo "conformance/cisp/run: CISP_BASE_URL is required" >&2
+  exit 2
+fi
+caller="$PWD"
+lab="$(cd "$(dirname "$0")/../.." && pwd)"
+GO="${GO:-go}"
+
+# The contract: the aggregate's pinned mirror, else the CISP checkout
+# that called us (its tools/conformance.sh runs from inside it).
+if [ -z "${CONFORMANCE_CISP_OPENAPI:-}" ] && [ ! -f "$lab/api/cisp/openapi.yaml" ]; then
+  top="$(git -C "$caller" rev-parse --show-toplevel 2>/dev/null || true)"
+  if [ -n "$top" ] && [ -f "$top/api/openapi.yaml" ] && grep -q '^  title: uspace-cisp' "$top/api/openapi.yaml"; then
+    export CONFORMANCE_CISP_OPENAPI="$top/api/openapi.yaml"
+    export CONFORMANCE_CISP_SCHEMAS="$top/schemas"
+    echo "conformance/cisp/run: contract $CONFORMANCE_CISP_OPENAPI (the aggregate's api/cisp is unpinned)"
+  fi
+fi
+
+args=(run --lab-root "$lab" --target "$lab/conformance/targets/cisp.yaml"
+  --out "${CONFORMANCE_REPORT:-$lab/conformance/report/runs}")
+if [ -n "${CONFORMANCE_ENV:-}" ]; then
+  args+=(--env-file "$CONFORMANCE_ENV")
+fi
+name="${CONFORMANCE_TARGET_NAME:-cisp}"
+if [ -f "$lab/conformance/baseline/$name.json" ]; then
+  args+=(--baseline "$lab/conformance/baseline/$name.json")
+fi
+
+cd "$lab"
+rc=0
+"$GO" run ./cmd/conformance "${args[@]}" || rc=$?
+exit "$rc"

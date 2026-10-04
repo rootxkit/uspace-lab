@@ -187,3 +187,32 @@ basemap-verify:
 
 basemap-storybook:
 	basemap/storybook.sh local/basemap-storybook $(BUILD)
+
+# --- WP-L7 conformance suite (conformance/) ------------------------------------
+.PHONY: conformance conformance-test conformance-qualifier-check conformance-axe-test conformance-axe
+
+# The whole suite for one target: make conformance TARGET=ansp (the
+# target file conformance/targets/$(TARGET).yaml names what it needs from
+# the environment; conformance/README.md). Gated on
+# conformance/baseline/$(TARGET).json when it exists.
+TARGET ?=
+conformance:
+	@if [ -z "$(TARGET)" ]; then echo "make conformance TARGET=<ansp|authority|cisp|ussp|sim-ussp>"; exit 2; fi
+	GO=$(GO) conformance/run-target.sh $(TARGET)
+
+# The suite's own tests, both ways (offline; CONFORMANCE_CONTRACTS_DIR
+# adds the systems' contracts).
+conformance-test:
+	$(GO) test -count=1 -shuffle=on ./conformance/... ./cmd/conformance/
+
+# Every uss_qualifier configuration validated by the pinned image (Docker).
+conformance-qualifier-check:
+	GO=$(GO) conformance/uss_qualifier/check.sh
+
+# The axe runner's own Playwright test (Node, Chromium).
+conformance-axe-test:
+	cd conformance/axe && npm ci && npx playwright install chromium && npx playwright test tests/runner.spec.ts
+
+# axe over CONFORMANCE_PAGES into conformance/axe/axe-results.json (informative, L-Q10).
+conformance-axe:
+	cd conformance/axe && npx playwright test tests/pages.spec.ts
