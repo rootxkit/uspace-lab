@@ -99,6 +99,72 @@ func TestZonesDoc(t *testing.T) {
 	}
 }
 
+// --zones-away-north-m takes a scenario's zones off the area (bf8229e):
+// the same zones, under the same identifiers and limits (so each import
+// is a newer version that supersedes the one in force), placed that far
+// north, and the lab the run goes on with is left where it was.
+func TestZonesAwayAreTheSameZonesFarNorth(t *testing.T) {
+	ss, lab := scenarios(t)
+	origin := lab.Origin
+	type zone struct {
+		Identifier string `json:"identifier"`
+		Geometry   []struct {
+			Lower      float64 `json:"lowerLimit"`
+			LowerRef   string  `json:"lowerVerticalReference"`
+			Upper      float64 `json:"upperLimit"`
+			UpperRef   string  `json:"upperVerticalReference"`
+			Projection struct {
+				Coordinates [][][2]float64 `json:"coordinates"`
+			} `json:"horizontalProjection"`
+		} `json:"geometry"`
+	}
+	read := func(lab *scenario.Lab) []zone {
+		t.Helper()
+		b, err := zonesDoc(ss, []string{"sc-03-zone-entry-exit", "authority-sc08-rid-switch"}, lab)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var doc struct {
+			Features []zone `json:"features"`
+		}
+		if err := json.Unmarshal(b, &doc); err != nil || len(doc.Features) != 2 {
+			t.Fatalf("%v %s", err, b)
+		}
+		return doc.Features
+	}
+	if zonesLab(lab, 0) != lab {
+		t.Fatal("no distance moved the zones")
+	}
+	here := read(lab)
+	const awayM = 60000
+	away := read(zonesLab(lab, awayM))
+	if lab.Origin != origin {
+		t.Fatalf("the lab's origin moved: %+v, was %+v", lab.Origin, origin)
+	}
+	for i := range here {
+		h, a := here[i], away[i]
+		if len(h.Geometry) != 1 || len(a.Geometry) != 1 {
+			t.Fatalf("zone %d: %d volumes away, %d here", i, len(a.Geometry), len(h.Geometry))
+		}
+		hv, av := h.Geometry[0], a.Geometry[0]
+		if h.Identifier != a.Identifier || hv.Lower != av.Lower || hv.LowerRef != av.LowerRef || hv.Upper != av.Upper || hv.UpperRef != av.UpperRef {
+			t.Fatalf("zone %d changed more than its place: %+v against %+v", i, a, h)
+		}
+		ring, ringAway := hv.Projection.Coordinates[0], av.Projection.Coordinates[0]
+		if len(ring) != len(ringAway) {
+			t.Fatalf("zone %s: %d vertices away, %d here", h.Identifier, len(ringAway), len(ring))
+		}
+		for k := range ring {
+			// 60 km north is about 0.54 degrees of latitude; the
+			// longitude stays within the metres a meridian converges.
+			dLat, dLon := ringAway[k][1]-ring[k][1], ringAway[k][0]-ring[k][0]
+			if dLat < 0.53 || dLat > 0.55 || dLon < -0.001 || dLon > 0.001 {
+				t.Fatalf("zone %s vertex %d moved %.5f deg north, %.5f deg east", h.Identifier, k, dLat, dLon)
+			}
+		}
+	}
+}
+
 // The U-space airspace is a closed square about its centre, USPACE,
 // in the deployment's country.
 func TestUSpaceFeature(t *testing.T) {

@@ -221,18 +221,7 @@ func Run(ctx context.Context, o Options) error {
 		if err != nil {
 			return err
 		}
-		zlab := lab
-		if o.ZonesAwayNorthM != 0 {
-			// The zones published again far off the area (a new version
-			// of each): the authority keeps a published zone until a newer
-			// version supersedes it, and the next scenario flies where the
-			// old one was.
-			moved := *lab
-			p := lab.At(scenario.Offset{NorthM: o.ZonesAwayNorthM})
-			moved.Origin.LatDeg, moved.Origin.LonDeg = p.LatDeg, p.LonDeg
-			zlab = &moved
-		}
-		doc, err := zonesDoc(o.Scenarios, o.ZoneScenarios, zlab)
+		doc, err := zonesDoc(o.Scenarios, o.ZoneScenarios, zonesLab(lab, o.ZonesAwayNorthM))
 		if err != nil {
 			return err
 		}
@@ -351,6 +340,23 @@ func receivers(ss []*scenario.Scenario) []scenario.Receiver {
 		}
 	}
 	return out
+}
+
+// zonesLab is the lab the zones are placed by: the lab itself, or, with
+// awayNorthM not zero, a copy whose origin is that far north. That is
+// how a zone is taken off the area: published again far away under the
+// same identifier, a new version of it, because the authority keeps a
+// published zone until a newer version supersedes it and the next
+// scenario flies where the old one was. The lab passed in is not
+// changed.
+func zonesLab(lab *scenario.Lab, awayNorthM float64) *scenario.Lab {
+	if awayNorthM == 0 {
+		return lab
+	}
+	moved := *lab
+	p := lab.At(scenario.Offset{NorthM: awayNorthM})
+	moved.Origin.LatDeg, moved.Origin.LonDeg = p.LatDeg, p.LonDeg
+	return &moved
 }
 
 // zonesDoc is the ED-269 file of the named scenarios' zones, placed by
