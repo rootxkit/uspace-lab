@@ -15,3 +15,11 @@ targets/local-*.yaml
 # public key outputs) and the local env file. Never committed (spec 06 §4).
 deploy/.env
 deploy/local/
+
+# WP-L6: the demo stack's env file and generated state (keys, passwords,
+# the lab CA, the issuer's state, the seed's state, the runner binary).
+deploy/demo.env
+deploy/local-demo/
+
+# cmd/results output (make results)
+site/

@@ -1,0 +1,94 @@
+# The lab Caddy (deploy/systems/compose.yaml): one TLS front for the four
+# systems, the DSS and the lab issuer, with the routes of uspace-deploy's
+# caddy/sites/*.caddy at 8a242ec (the droplet's), less the web consoles
+# and the mTLS routes (mTLS is off in the lab). The certificate is the
+# lab CA's wildcard for the demo domain (deploy/systems/gen-secrets.sh);
+# no ACME, no internal issuer.
+{
+	admin localhost:2019
+	auto_https disable_redirects
+	log {
+		output stdout
+		format json
+	}
+}
+
+(lab_tls) {
+	tls /etc/caddy/tls/cert.pem /etc/caddy/tls/key.pem
+	request_header -X-Client-Cert-Subject
+	@metrics path /metrics /metrics/*
+	handle @metrics {
+		respond 404
+	}
+}
+
+{$AUTHORITY_HOST} {
+	import lab_tls
+	@rid path /v1/rid/observations
+	handle @rid {
+		reverse_proxy authority-rid-ingest:8081
+	}
+	@picture path /v1/picture/*
+	handle @picture {
+		reverse_proxy authority-picture-ws:8083
+	}
+	@dp path /uss/* /v1/dp/observations/*
+	handle @dp {
+		reverse_proxy authority-dp-poller:8082
+	}
+	handle {
+		reverse_proxy authority-api:8080
+	}
+}
+
+{$CISP_HOST} {
+	import lab_tls
+	handle {
+		reverse_proxy cisp-api:8080
+	}
+}
+
+{$USSP_HOST} {
+	import lab_tls
+	@telemetry path /v1/telemetry /v1/telemetry/*
+	handle @telemetry {
+		reverse_proxy ussp-telemetry-ingest:8081
+	}
+	@ridsp path /uss/flights /uss/flights/* /uss/identification_service_areas/* /v1/authority/flights
+	handle @ridsp {
+		reverse_proxy ussp-rid-sp:8082
+	}
+	@traffic path /v1/traffic /v1/traffic/* /v1/alerts
+	handle @traffic {
+		reverse_proxy ussp-traffic-ws:8084
+	}
+	handle {
+		reverse_proxy ussp-api:8080
+	}
+}
+
+{$ANSP_HOST} {
+	import lab_tls
+	@feed path /v1/manned-traffic/*
+	handle @feed {
+		reverse_proxy ansp-manned-feed:8080
+	}
+	handle {
+		reverse_proxy ansp-api:8080
+	}
+}
+
+{$LAB_HOST} {
+	import lab_tls
+	@dss path /rid/* /dss/* /aux/* /healthy
+	handle @dss {
+		reverse_proxy dss:8082
+	}
+	@issuer path /oauth/token /.well-known/jwks.json /healthz
+	handle @issuer {
+		reverse_proxy lab-issuer:8080
+	}
+	handle {
+		respond 404
+	}
+}

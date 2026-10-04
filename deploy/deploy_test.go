@@ -148,3 +148,38 @@ func TestNothingPublishedNoAbsolutePaths(t *testing.T) {
 		}
 	}
 }
+
+// The systems profile takes every image from demo.env, and demo.env
+// pins each by digest except the ANSP's, which is built locally from a
+// named commit (it publishes none). A literal image in the compose file
+// or a tag-only reference in demo.env fails (shown with a tag below).
+func TestSystemsImagesFromTheEnvByDigest(t *testing.T) {
+	compose := read(t, "systems/compose.yaml")
+	for _, m := range imageLine.FindAllStringSubmatch(compose, -1) {
+		if !strings.HasPrefix(m[1], "${") {
+			t.Errorf("systems/compose.yaml names image %s literally", m[1])
+		}
+	}
+	env := read(t, "demo.env.example")
+	n := 0
+	for _, line := range strings.Split(env, "\n") {
+		name, v, ok := strings.Cut(line, "=")
+		if !ok || strings.HasPrefix(line, "#") || !strings.HasSuffix(name, "_IMAGE") {
+			continue
+		}
+		n++
+		local := name == "ANSP_GO_IMAGE" || name == "LAB_ISSUER_IMAGE" || name == "LAB_SIM_USSP_IMAGE"
+		if !local && !digest.MatchString(v) {
+			t.Errorf("demo.env.example %s=%s is not pinned by digest", name, v)
+		}
+	}
+	if n < 8 {
+		t.Fatalf("only %d images in demo.env.example", n)
+	}
+	if digest.MatchString("caddy:2.10.2-alpine") {
+		t.Fatal("the digest check accepts a tag")
+	}
+	if !strings.Contains(env, "ANSP_SOURCE_COMMIT=") {
+		t.Error("the locally built ANSP image names no source commit")
+	}
+}
