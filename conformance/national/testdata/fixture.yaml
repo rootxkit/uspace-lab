@@ -144,6 +144,28 @@ paths:
       responses:
         "202": {description: Taken.}
         "401": {$ref: "#/components/responses/Problem"}
+  /v1/things/stream:
+    get:
+      operationId: streamThings
+      x-auth: token:things.read
+      x-websocket: true
+      security: [{ecosystemToken: []}]
+      responses:
+        "101": {description: Switched to the WebSocket protocol.}
+        "401": {$ref: "#/components/responses/Problem"}
+        "403": {$ref: "#/components/responses/Problem"}
+  /v1/things/feed:
+    get:
+      # A WebSocket the contract marks only by its 101 (the authority's
+      # and the USSP's style), not by x-websocket.
+      operationId: feedThings
+      x-auth: token:things.read
+      security: [{ecosystemToken: []}]
+      responses:
+        "101": {description: Switched to the WebSocket protocol.}
+        "401": {$ref: "#/components/responses/Problem"}
+        "403": {$ref: "#/components/responses/Problem"}
+        "426": {$ref: "#/components/responses/Problem"}
   /v1/receivers/frames:
     post:
       operationId: postFrames

@@ -43,6 +43,14 @@ type faults struct {
 // double serves the fixture contract correctly unless a fault is set.
 func double(t *testing.T, f faults) *httptest.Server {
 	t.Helper()
+	srv := httptest.NewServer(doubleHandler(f))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+// doubleHandler is the double's handler, for a server of the test's
+// choosing.
+func doubleHandler(f faults) http.Handler {
 	problem := func(w http.ResponseWriter, status int, slug string, errs []map[string]string) {
 		if status == http.StatusUnauthorized && f.plain401 {
 			w.Header().Set("Content-Type", "text/plain")
@@ -212,9 +220,33 @@ func double(t *testing.T, f faults) *httptest.Server {
 		}
 		problem(w, 401, "unauthenticated", nil)
 	})
-	srv := httptest.NewServer(mux)
-	t.Cleanup(srv.Close)
-	return srv
+	// A WebSocket handshake is HTTP/1.1 (RFC 6455): over HTTP/2 the
+	// Upgrade header does not exist, and a real server (behind the lab's
+	// Caddy, as the authority and the USSP are) answers 426.
+	stream := func(w http.ResponseWriter, r *http.Request) {
+		if r.ProtoMajor != 1 || !strings.EqualFold(r.Header.Get("Upgrade"), "websocket") {
+			problem(w, http.StatusUpgradeRequired, "upgrade_required", nil)
+			return
+		}
+		if !needScope(w, r, "things.read", false) {
+			return
+		}
+		hj, ok := w.(http.Hijacker)
+		if !ok {
+			problem(w, 500, "internal", nil)
+			return
+		}
+		conn, buf, err := hj.Hijack()
+		if err != nil {
+			return
+		}
+		defer func() { _ = conn.Close() }()
+		_, _ = buf.WriteString("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n")
+		_ = buf.Flush()
+	}
+	mux.HandleFunc("GET /v1/things/stream", stream)
+	mux.HandleFunc("GET /v1/things/feed", stream)
+	return mux
 }
 
 // fakeCreds mints the double's tokens: "tok:<scopes>".
@@ -362,6 +394,52 @@ func TestDoubleFaults(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestUpgradeOverHTTP1: an operation is a WebSocket when the contract
+// says x-websocket or declares a 101 (feedThings, as the authority's and
+// the USSP's contracts do); its checks are handshakes. Against a TLS
+// target that offers HTTP/2 (the lab's Caddy does) the handshakes still
+// go out as HTTP/1.1, so the refusal and the 101 are observed rather
+// than a 426 that only says no handshake arrived.
+func TestUpgradeOverHTTP1(t *testing.T) {
+	srv := httptest.NewUnstartedServer(doubleHandler(faults{}))
+	srv.EnableHTTP2 = true
+	srv.StartTLS()
+	t.Cleanup(srv.Close)
+	r := fixtureRunner(t, srv, fakeCreds{session: true, offers: []string{"police.query"}})
+	r.BaseURL, r.HTTP = srv.URL, srv.Client()
+	r.Only = []string{"streamThings", "feedThings", "listThings"}
+	out := r.Run(context.Background())
+	for _, op := range []string{"streamThings", "feedThings"} {
+		seen := map[string]bool{}
+		for _, o := range out {
+			if !strings.HasPrefix(o.Subject, op+" ") {
+				continue
+			}
+			seen[o.Check] = true
+			if o.Status != result.Pass {
+				dump(t, out)
+				t.Errorf("%s %s: %s %d, want pass", op, o.Check, o.Status, o.HTTPStatus)
+			}
+		}
+		for _, c := range []string{CheckUnauthenticated, CheckWrongScope, CheckSuccess} {
+			if !seen[c] {
+				dump(t, out)
+				t.Errorf("%s: no %s check", op, c)
+			}
+		}
+	}
+	// The server does speak HTTP/2 to the suite's other requests: the
+	// test exercises the case it names.
+	resp, err := srv.Client().Get(srv.URL + "/healthz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = resp.Body.Close()
+	if resp.ProtoMajor != 2 {
+		t.Fatalf("the test server answered HTTP/%d, want 2", resp.ProtoMajor)
 	}
 }
 

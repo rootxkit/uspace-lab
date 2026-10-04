@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"mime"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -326,6 +327,12 @@ func (c *Contract) operation(path, method string, raw, item map[string]any, ptr 
 		n, rptr := c.deref(ptr + "/responses/" + escape(code))
 		rm, _ := n.(map[string]any)
 		op.Responses[code] = Response{Content: c.content(rm, rptr)}
+	}
+	// A WebSocket is marked x-websocket (the ANSP) or only by its 101
+	// Switching Protocols (the authority, the USSP): either way its
+	// checks are handshakes, and a plain GET would be refused 426.
+	if _, ok := op.Responses["101"]; ok && op.Method == http.MethodGet {
+		op.WebSocket = true
 	}
 	auth, err := c.classify(op, raw, ov)
 	if err != nil {
