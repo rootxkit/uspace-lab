@@ -1,6 +1,6 @@
 format: scenario/v1
 id: ussp-wp12-restriction
-title: "uspace-ussp WP-12 (N-M1, S-M4): an ANSP restriction over an activated intent raises restriction_activated within one tick"
+title: "uspace-ussp WP-12 (N-M1, S-M4): an ANSP restriction over an activated intent raises restriction_activated within one tick of its activation and clears at its end"
 source: "uspace-ussp docs/RUNBOOKS/WP-12.md, 'Lab run (owed)'; spec 07 N-M1, S-M4"
 owners: [ussp, ansp, cisp]
 policy: policy/demo.yaml
@@ -99,6 +99,11 @@ expect:
     system: ussp
     kind: restriction_activated
     aircraft: a
+    # Raised by the activation, never by the plan: a planned restriction
+    # is not in force (spec 02 F2; the plan step raised it in the re-run
+    # of 20261004 against uspace-ussp before its fix). Cleared resolved
+    # once the ANSP ends it and the CISP publishes the end.
     raise: {after: activate, min_s: 0, max_s: 10}
+    clear: {after: end, min_s: 0, max_s: 15, reason: resolved}
 judged_kinds: ["ussp:restriction_activated"]
 measure: [latency, ledger]
