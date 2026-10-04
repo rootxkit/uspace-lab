@@ -1,0 +1,4 @@
+conformance 20261004T221305Z-mock-ridsp-candidate: mock-ridsp-candidate (sim-ussp) at http://mock-ridsp: fail, 0 pass, 1 fail, 2 not applicable
+  fail           F3411-SP             0/4/0  1 failed check(s); 5 failed check(s); 6 failed check(s)
+  not_applicable F3548-SCD            0/0/1  the target exposes no InterUSS flight_planning interface (target file interfaces)
+  not_applicable F3548-CP             0/0/1  uss_qualifier v0.36.0 has no constraint processing requirement set (requirements/astm/f3548/v21 holds dss_provider and scd only)

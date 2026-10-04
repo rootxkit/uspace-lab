@@ -25,7 +25,7 @@ make conformance-axe-test               # the axe runner's Playwright test
 | `ed318/` | the CISP's ED-318 publication test (schema, vertical references, `?at=` / `?applies_at=`, versions and `ETag`, `/v1/changes`, the signed webhook, the heartbeat and stale rule) |
 | `uss_qualifier/` | InterUSS `uss_qualifier` configurations at the pinned commit (`SOURCE`), the mock USS, the run and check scripts, `coverage.yaml` |
 | `axe/` | the informative accessibility run (Playwright and axe) |
-| `report/` | the combined report, its signature and the regression gate |
+| `report/` | the combined report, its signature and the regression gate; `report/records/` the reports kept as evidence |
 | `targets/<name>.yaml` | each system's conformance target: base URL, contract, credentials, all from the environment |
 | `baseline/<name>.json` | the reviewed status of each requirement per target: CI fails on a regression against it |
 | `cisp/run` | the CISP's entry point (its `make conformance`, uspace-cisp `docs/PLAN.md §15 Q47`) |

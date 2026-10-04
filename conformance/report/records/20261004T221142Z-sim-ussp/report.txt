@@ -1,0 +1,4 @@
+conformance 20261004T221142Z-sim-ussp: sim-ussp (sim-ussp) at http://sim-ussp:8093: incomplete, 0 pass, 0 fail, 3 not applicable
+  not_applicable F3411-SP             0/0/1  the target exposes no InterUSS rid_injection interface (target file interfaces)
+  not_applicable F3548-SCD            0/0/1  the target exposes no InterUSS flight_planning interface (target file interfaces)
+  not_applicable F3548-CP             0/0/1  uss_qualifier v0.36.0 has no constraint processing requirement set (requirements/astm/f3548/v21 holds dss_provider and scd only)

@@ -22,6 +22,32 @@ request (docs/PLAN.md §5).
 
 ### Added
 
+- WP-L7 (L-M4): the conformance suite (`conformance/`, `cmd/conformance`,
+  `make conformance TARGET=<name>`, `conformance.yml`). It runs against
+  a system's conformance target and reports pass, fail or not applicable
+  per requirement of `conformance/requirements.yaml` in one signed JSON
+  report: the national contract tests (every operation of the system's
+  OpenAPI file classified by its credential, fail closed, and exercised
+  both ways: 401, 403, 404, stale `If-Match`, invalid bodies with
+  `errors[]`, the success case against the contract, no personal data
+  in the registry validation), the CISP's ED-318 publication tests
+  (schema, vertical references, `?at=` / `?applies_at=` against
+  uspace-core's judgement, versions and `ETag`, `/v1/changes`, the
+  signed webhook, the heartbeat and stale rule), uss_qualifier at
+  InterUSS v0.36.0 (`f3411-sp`, `f3411-dp`, `f3548-scd`, the mock USS,
+  each configuration validated by the pinned image), and an informative
+  axe run. The defaults GCAA has not answered are in
+  `conformance/policy.yaml`, marked pending GCAA. CI runs the suite's
+  tests both ways and the CISP's chaos stack gated on
+  `conformance/baseline/cisp.json`; dispatch and system releases run a
+  named target. The first CISP run found a defect (its 503
+  `console_unavailable` body has no `errors[]`); the onboarding
+  rehearsal with sim-ussp and a uss_qualifier pipeline run are in
+  `conformance/report/records/`.
+- WP-L7: the lab issuer issues the InterUSS automated-testing scopes
+  (`rid.inject_test_data`, `dss.read.identification_service_areas`,
+  `interuss.flight_planning.*`) to `lab-01` only.
+
 - WP-L2: `DSS_PUBLIC_KEY_FILES` lists the keys the DSS trusts
   (`-public_key_files`), defaulting to the lab issuer's key as before. A
   deployment lists the authority's token key beside it, so the DSS

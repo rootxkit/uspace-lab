@@ -1,0 +1,216 @@
+{
+  "format": "conformance-report/v1",
+  "run": "20261004T221305Z-mock-ridsp-candidate",
+  "wording": "Proposed format (docs/PLAN.md §7.1 L-Q12, pending GCAA): this report states what the suite observed; it certifies nothing.",
+  "target": {
+    "system": "sim-ussp",
+    "name": "mock-ridsp-candidate",
+    "role": "candidate",
+    "base_url": "http://mock-ridsp"
+  },
+  "started_at": "2026-10-04T22:13:05.4251469Z",
+  "ended_at": "2026-10-04T22:13:05.4566568Z",
+  "commits": {
+    "lab": "d6b4cf12b3fcaf9b180816e8cf0063c345062bc1",
+    "lab_dirty": false,
+    "core": "v1.3.0",
+    "go": "go1.27.1"
+  },
+  "interuss": {
+    "repo": "https://github.com/interuss/monitoring.git",
+    "tag": "interuss/monitoring/v0.36.0",
+    "commit": "0fabe238ef177f66266eba6048545ae1e6bbb4a0",
+    "image": "docker.io/interuss/monitoring:v0.36.0",
+    "image_digest": "sha256:a771c82cda62b83be707e650ddd2550bbabf6790120c4a57f76153a8f5504bb7"
+  },
+  "policy": {
+    "format": "conformance-policy/v1",
+    "policy_version": 1,
+    "informative": {
+      "status": "pending GCAA (L-Q3, L-Q10)",
+      "requirements": [
+        "F3411-DP",
+        "A11Y-PUBLIC"
+      ]
+    },
+    "report_signature": {
+      "status": "pending GCAA (L-Q12)",
+      "alg": "RS256",
+      "form": "RFC 7797 detached JWS over the report file's bytes"
+    },
+    "accessibility": {
+      "status": "pending GCAA (L-Q10)",
+      "standard": "WCAG 2.2 AA",
+      "axe_tags": [
+        "wcag2a",
+        "wcag2aa",
+        "wcag21a",
+        "wcag21aa",
+        "wcag22aa"
+      ]
+    },
+    "cisp": {
+      "status": "pending GCAA (spec 09 §2: 1 s CIS change notification target, 300 s stale bound)",
+      "change_notification_s": 1,
+      "heartbeat_interval_s": 15,
+      "stale_tolerance_s": 2
+    },
+    "personal_data_fields": {
+      "status": "pending GCAA DPO (spec Q8)",
+      "names": [
+        "name",
+        "given_name",
+        "family_name",
+        "full_name",
+        "first_name",
+        "last_name",
+        "email",
+        "e_mail",
+        "phone",
+        "telephone",
+        "address",
+        "street",
+        "postal_code",
+        "date_of_birth",
+        "birth_date",
+        "dob",
+        "national_id",
+        "personal_number",
+        "id_number",
+        "passport",
+        "passport_number"
+      ]
+    },
+    "ed318_fixture": {
+      "centre_lat_deg": 41.7151,
+      "centre_lon_deg": 44.8271,
+      "half_side_m": 300,
+      "upper_agl_m": 120,
+      "upper_amsl_ft": 2500
+    }
+  },
+  "summary": {
+    "pass": 0,
+    "fail": 1,
+    "not_applicable": 2,
+    "verdict": "fail"
+  },
+  "requirements": [
+    {
+      "id": "F3411-SP",
+      "title": "F3411-22a Network Remote ID Service Provider: uss_qualifier's checks attributed to the target",
+      "source": "spec 09 §1.4 (F3411 Net-RID SP rows)",
+      "role": "gate",
+      "status": "fail",
+      "reasons": [
+        "1 failed check(s)",
+        "5 failed check(s)",
+        "6 failed check(s)"
+      ],
+      "outcomes": {
+        "pass": 0,
+        "fail": 4,
+        "not_applicable": 0
+      }
+    },
+    {
+      "id": "F3548-SCD",
+      "title": "F3548-21 strategic coordination: uss_qualifier's checks attributed to the target",
+      "source": "spec 09 §1.5 (operational intents, USS endpoints)",
+      "role": "gate",
+      "status": "not_applicable",
+      "reasons": [
+        "the target exposes no InterUSS flight_planning interface (target file interfaces)"
+      ],
+      "outcomes": {
+        "pass": 0,
+        "fail": 0,
+        "not_applicable": 1
+      }
+    },
+    {
+      "id": "F3548-CP",
+      "title": "F3548-21 constraint processing: uss_qualifier's checks attributed to the target",
+      "source": "spec 09 §1.5 (constraint references, utm.constraint_processing)",
+      "role": "gate",
+      "status": "not_applicable",
+      "reasons": [
+        "uss_qualifier v0.36.0 has no constraint processing requirement set (requirements/astm/f3548/v21 holds dss_provider and scd only)"
+      ],
+      "outcomes": {
+        "pass": 0,
+        "fail": 0,
+        "not_applicable": 1
+      }
+    }
+  ],
+  "qualifier": [
+    {
+      "config": "f3411-sp.yaml",
+      "requirement": "F3411-SP",
+      "ran": true,
+      "report_sha256": "sha256:f14e7d704317b583f766f1667d97f9b38e16f812a7a2e42f1cd554b137256c72",
+      "commit_hash": "0fabe238ef177f66266eba6048545ae1e6bbb4a0"
+    },
+    {
+      "config": "",
+      "requirement": "F3548-CP",
+      "ran": false,
+      "reason": "uss_qualifier v0.36.0 has no constraint processing requirement set (requirements/astm/f3548/v21 holds dss_provider and scd only)"
+    },
+    {
+      "config": "f3548-scd.yaml",
+      "requirement": "F3548-SCD",
+      "ran": false,
+      "reason": "the target exposes no InterUSS flight_planning interface (target file interfaces)"
+    }
+  ],
+  "outcomes": [
+    {
+      "requirement": "F3411-SP",
+      "check": "uss_qualifier",
+      "subject": "astm.f3411.v22a.NET0500",
+      "status": "fail",
+      "reason": "6 failed check(s)",
+      "detail": "Successful injection (High): Error while trying to inject test flight; Successful injection (High): Error while trying to inject test flight; Successful user notifications retrieval (High): Error while trying to retrieve user notifications; Successful injection (High): Error while trying to inject test flight; Successful injection (High): Error while trying to inject test flight; and 1 more"
+    },
+    {
+      "requirement": "F3411-SP",
+      "check": "uss_qualifier",
+      "subject": "interuss.automated_testing.rid.injection.DeleteTestSuccess",
+      "status": "fail",
+      "reason": "1 failed check(s)",
+      "detail": "Successful user notifications retrieval (Medium): Error while trying to retrieve user notifications"
+    },
+    {
+      "requirement": "F3411-SP",
+      "check": "uss_qualifier",
+      "subject": "interuss.automated_testing.rid.injection.UpsertTestSuccess",
+      "status": "fail",
+      "reason": "5 failed check(s)",
+      "detail": "Successful injection (High): Error while trying to inject test flight; Successful injection (High): Error while trying to inject test flight; Successful injection (High): Error while trying to inject test flight; Successful injection (High): Error while trying to inject test flight; Successful injection (High): Error while trying to inject test flight"
+    },
+    {
+      "requirement": "F3411-SP",
+      "check": "uss_qualifier",
+      "subject": "interuss.automated_testing.rid.injection.UserNotificationsSuccess",
+      "status": "fail",
+      "reason": "1 failed check(s)",
+      "detail": "Successful user notifications retrieval (High): Error while trying to retrieve user notifications"
+    },
+    {
+      "requirement": "F3548-CP",
+      "check": "uss_qualifier",
+      "subject": "F3548-CP",
+      "status": "not_applicable",
+      "reason": "uss_qualifier v0.36.0 has no constraint processing requirement set (requirements/astm/f3548/v21 holds dss_provider and scd only)"
+    },
+    {
+      "requirement": "F3548-SCD",
+      "check": "uss_qualifier",
+      "subject": "F3548-SCD",
+      "status": "not_applicable",
+      "reason": "the target exposes no InterUSS flight_planning interface (target file interfaces)"
+    }
+  ]
+}
