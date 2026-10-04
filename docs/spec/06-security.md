@@ -31,11 +31,11 @@
 
 | Boundary | Mechanism | Scopes (examples) |
 |---|---|---|
-| Humans → any console | local accounts (argon2id) in the system's `api`, OIDC-ready, MFA mandatory for authority, ANSP and admin roles; the Next.js BFF route exchanges the login for an `HttpOnly`, `SameSite=Strict` cookie holding the session JWT and forwards it as a bearer to `api` and the WS processes; CSRF tokens; no credential is ever handled in browser JavaScript; all verification in `uspace-core/auth` | role-based per system (`01`) |
+| Humans → any console | local accounts (argon2id) in the system's `api`, OIDC-ready, MFA mandatory for authority, ANSP and admin roles; the Next.js BFF route exchanges the login for an `HttpOnly`, `Secure`, `SameSite=Strict` cookie `uspace_session` holding the session JWT (`aud` = the system's own host, `scope = "session"`, `roles[]`, `realm`; `02 §1`) and forwards it as a bearer to `api`; a browser WebSocket presents the cookie on a same-origin upgrade checked against an `Origin` allow-list; CSRF tokens in `uspace_csrf` / `X-CSRF-Token`; no credential is ever handled in browser JavaScript; all verification in `uspace-core/auth` | role-based per system (`01`) |
 | Operators (humans) → USSP portal | USSP's own OIDC | `operator_admin`, `remote_pilot`, `viewer` |
 | Operator systems → USSP | OAuth2 client credentials at the USSP issuer; client bound to registration number and serial list | `ussp.intents`, `ussp.telemetry`, `ussp.traffic`, `ussp.geo` |
-| System ↔ system | ecosystem issuer at the authority; JWT RS256; `aud` = target system (the DSS audience for DSS calls); mTLS where stated | `cis.read`, `cis.publish:*`, `registry.validate`, `ussp.records`, `ansp.traffic`, `occurrences.write`, `certificates.status`; F3548 `utm.strategic_coordination`, `utm.constraint_processing`, `utm.constraint_management`, `utm.conformance_monitoring_sa`, `utm.availability_arbitration`; F3411 `rid.service_provider`, `rid.display_provider` |
-| Receivers → authority | bearer key + HMAC | `rid.observe` |
+| System ↔ system | ecosystem issuer at the authority; JWT RS256; `aud` = the host of the target's base URL (the DSS's host for DSS calls; `02 §1`); mTLS where stated | the catalogue, held by the authority's token service (a system adding a scope opens a PR there first): `cis.read`, `cis.publish:zones`, `cis.publish:uspace`, `cis.publish:ussp_list`, `cis.publish:restrictions`, `cis.publish:ats_data` (reserved), `registry.validate`, `ussp.records`, `ansp.traffic`, `ansp.coordination`, `ansp.requests`, `occurrences.write`, `certificates.status`, `police.query`, `dp.observe` (issued to the lab client only); F3548 `utm.strategic_coordination`, `utm.constraint_processing`, `utm.constraint_management`, `utm.conformance_monitoring_sa`, `utm.availability_arbitration`; F3411 `rid.service_provider`, `rid.display_provider` |
+| Receivers → authority | bearer key + HMAC (not a JWT, so no scope) | none |
 | Police → authority | separate realm, MFA, IP allow-list | `police.query` |
 
 Every token issuance and every refusal is an `events` row at the issuer. Scopes are least-privilege per client; a USSP's client for the authority has `registry.validate` and `occurrences.write` and nothing else.
@@ -73,3 +73,11 @@ GDPR does not apply in Georgia as such; the Law of Georgia on Personal Data Prot
 - USSP service records sent to the authority contain registration numbers, serials and authorisation numbers, not names.
 - Occurrence reports: personal details are visible to the incident officers only, never recorded in the national database export (376 Art. 16(3)), and never joined to violations.
 - Evidence packs are produced on demand, hash-sealed, and their creation and every download are audited with the requester's purpose.
+
+## Errata
+
+| Date | Where | Change | Source |
+|---|---|---|---|
+| 2026-10-04 | §3, `System ↔ system` row | The scope catalogue is the decision record's Appendix B: added `ansp.coordination`, `ansp.requests`, `dp.observe` (lab client only) and the reserved `cis.publish:ats_data`; `aud` = the target's host. | `docs/decisions/2026-10-02-cross-plan.md` M18, M23, Appendix B |
+| 2026-10-04 | §3, `Receivers → authority` row | `rid.observe` is removed from the JWT catalogue: receivers authenticate with a bearer key and an HMAC, which carry no scope. | `docs/decisions/2026-10-02-cross-plan.md` M23 |
+| 2026-10-04 | §3, `Humans → any console` row | Session cookie `uspace_session` (and `uspace_csrf`); session claims `scope = "session"`, `roles[]`, `realm`; WebSockets authenticate with the cookie on a same-origin upgrade. | `docs/decisions/2026-10-02-cross-plan.md` M20, M21, M22 |
