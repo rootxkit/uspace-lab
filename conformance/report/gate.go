@@ -61,40 +61,63 @@ func ReadBaseline(path string) (*Baseline, error) {
 	if err := dec.Decode(&bl); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
-	if bl.Format != BaselineFormat || bl.Target == "" {
-		return nil, fmt.Errorf("%s: format %q and a target are required", path, bl.Format)
-	}
-	for id, e := range bl.Requirements {
-		if !e.Status.Valid() {
-			return nil, fmt.Errorf("%s: %s: status %q", path, id, e.Status)
-		}
-		if e.Status == result.Fail && e.Note == "" {
-			return nil, fmt.Errorf("%s: %s: a known failure needs a note saying where it is tracked", path, id)
-		}
+	if err := bl.validate(); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	return &bl, nil
 }
 
+// validate is the one rule set a baseline obeys, whether NewBaseline
+// makes it or ReadBaseline reads it: the format, a target, a valid
+// status per requirement, and a note on every known failure (gate or
+// informative: an accepted failure says where it is tracked).
+func (bl *Baseline) validate() error {
+	if bl.Format != BaselineFormat || bl.Target == "" {
+		return fmt.Errorf("format %q and a target are required", bl.Format)
+	}
+	var missing []string
+	for id, e := range bl.Requirements {
+		if !e.Status.Valid() {
+			return fmt.Errorf("%s: status %q", id, e.Status)
+		}
+		if e.Status == result.Fail && e.Note == "" {
+			missing = append(missing, id)
+		}
+	}
+	if len(missing) > 0 {
+		sort.Strings(missing)
+		return fmt.Errorf("known failures without a note saying where each is tracked: %s", strings.Join(missing, ", "))
+	}
+	return nil
+}
+
 // NewBaseline is the baseline a reviewed report sets. Known failures
 // get the note given per id (a failure without one is refused: it must
-// be tracked before it is accepted).
+// be tracked before it is accepted), and a note for a requirement the
+// report does not have is refused as a typo. What it returns,
+// ReadBaseline reads.
 func NewBaseline(r *Report, digest string, notes map[string]string) (*Baseline, error) {
 	bl := &Baseline{Format: BaselineFormat, Target: r.Target.Name, FromRun: r.Run, FromDigest: digest, Requirements: map[string]BaselineEntry{}}
-	var missing []string
 	for i := range r.Requirements {
 		rr := &r.Requirements[i]
 		e := BaselineEntry{Status: rr.Status, Note: notes[rr.ID]}
 		if rr.Status == result.Fail {
 			e.Failing = failing(r, rr.ID)
 		}
-		if rr.Status == result.Fail && e.Note == "" && rr.Role == RoleGate {
-			missing = append(missing, rr.ID)
-		}
 		bl.Requirements[rr.ID] = e
 	}
-	if len(missing) > 0 {
-		sort.Strings(missing)
-		return nil, fmt.Errorf("failures without a note (where each is tracked): %s", strings.Join(missing, ", "))
+	var unknown []string
+	for id := range notes {
+		if _, ok := bl.Requirements[id]; !ok {
+			unknown = append(unknown, id)
+		}
+	}
+	if len(unknown) > 0 {
+		sort.Strings(unknown)
+		return nil, fmt.Errorf("notes for requirements the report does not have: %s", strings.Join(unknown, ", "))
+	}
+	if err := bl.validate(); err != nil {
+		return nil, err
 	}
 	return bl, nil
 }

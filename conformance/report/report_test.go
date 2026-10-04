@@ -341,3 +341,69 @@ func TestWriteStaysInDir(t *testing.T) {
 		t.Errorf("written at %s, want under %s", p, dir)
 	}
 }
+
+// TestBaselineRoundTrip: what NewBaseline writes, ReadBaseline reads,
+// and what ReadBaseline refuses, NewBaseline does not write. A failure
+// the baseline accepts needs a note saying where it is tracked, gate or
+// informative alike.
+func TestBaselineRoundTrip(t *testing.T) {
+	cat, pol := load(t)
+	tg := Target{System: "cisp", Name: "cisp-test"}
+	write := func(bl *Baseline) string {
+		b, err := json.MarshalIndent(bl, "", "  ")
+		if err != nil {
+			t.Fatal(err)
+		}
+		p := filepath.Join(t.TempDir(), "baseline.json")
+		if err := os.WriteFile(p, b, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	gateFail := result.Failed("NAT-INVALID", "invalid_body", "d", 200, "accepted", "")
+	infoFail := result.Failed("A11Y-PUBLIC", "axe", "/en/", 0, "contrast", "")
+	cases := []struct {
+		name  string
+		outs  []result.Outcome
+		notes map[string]string
+		ok    bool
+	}{
+		{"a pass", []result.Outcome{result.Passed("NAT-UNAUTH", "unauthenticated", "a", 401, "")}, nil, true},
+		{"a gate failure with a note", []result.Outcome{gateFail}, map[string]string{"NAT-INVALID": "tracked at x"}, true},
+		{"a gate failure without one", []result.Outcome{gateFail}, nil, false},
+		{"an informative failure with a note", []result.Outcome{infoFail}, map[string]string{"A11Y-PUBLIC": "tracked at y"}, true},
+		{"an informative failure without one", []result.Outcome{infoFail}, nil, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r, err := Build(cat, pol, tg, tc.outs)
+			if err != nil {
+				t.Fatal(err)
+			}
+			r.Run = "run-1"
+			bl, err := NewBaseline(r, "sha256:x", tc.notes)
+			if (err == nil) != tc.ok {
+				t.Fatalf("NewBaseline: %v, want ok=%v", err, tc.ok)
+			}
+			if err != nil {
+				return
+			}
+			if _, err := ReadBaseline(write(bl)); err != nil {
+				t.Fatalf("NewBaseline wrote what ReadBaseline refuses: %v", err)
+			}
+		})
+	}
+	// A note for a requirement the report does not have is a typo, not
+	// a tracked failure: refused.
+	r, _ := Build(cat, pol, tg, []result.Outcome{gateFail})
+	r.Run = "run-1"
+	if _, err := NewBaseline(r, "sha256:x", map[string]string{"NAT-INVALID": "x", "NAT-NOPE": "y"}); err == nil {
+		t.Error("NewBaseline took a note for a requirement the report does not have")
+	}
+	// A report without a name makes no baseline (ReadBaseline needs a
+	// target).
+	r.Target.Name = ""
+	if _, err := NewBaseline(r, "sha256:x", map[string]string{"NAT-INVALID": "x"}); err == nil {
+		t.Error("NewBaseline wrote a baseline without a target")
+	}
+}
