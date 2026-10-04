@@ -187,6 +187,10 @@ func ReadEnvFile(path string) (map[string]string, error) {
 var (
 	envName = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 	envRef  = regexp.MustCompile(`\$\{([A-Za-z_][A-Za-z0-9_]*)(:-([^}]*))?\}`)
+	// NamePattern is a target name: it becomes the report directory's
+	// name and the baseline's file name, so it is one plain path element
+	// (no separator, no "..", no drive letter, no space).
+	NamePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
 )
 
 // Load reads a target file, expands every ${VAR} and ${VAR:-default} in
@@ -290,6 +294,9 @@ func (f *File) check() error {
 	}
 	if f.Name == "" {
 		f.Name = f.System
+	}
+	if !NamePattern.MatchString(f.Name) || strings.Contains(f.Name, "..") {
+		return fmt.Errorf("name %q: want letters, digits, '.', '_' and '-' (it names the report directory and the baseline file)", f.Name)
 	}
 	switch f.Role {
 	case "":

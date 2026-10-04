@@ -360,8 +360,12 @@ func RunID(now time.Time, name string) string {
 }
 
 // Write writes report.json under dir/<run>/ and returns its path and
-// bytes.
+// bytes. The run id must be one plain path element: a run that would
+// write outside dir is refused.
 func (r *Report) Write(dir string) (string, []byte, error) {
+	if r.Run == "" || r.Run != filepath.Base(r.Run) || strings.ContainsAny(r.Run, `/\:`) || strings.Contains(r.Run, "..") {
+		return "", nil, fmt.Errorf("run id %q is not a plain directory name", r.Run)
+	}
 	out := filepath.Join(dir, r.Run)
 	if err := os.MkdirAll(out, 0o750); err != nil {
 		return "", nil, err

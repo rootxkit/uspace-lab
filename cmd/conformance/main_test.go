@@ -176,6 +176,32 @@ func TestCandidateRunAndGate(t *testing.T) {
 	}
 }
 
+// TestTargetNameIsNotAPath: the run's name comes from the environment
+// (CONFORMANCE_TARGET_NAME) and names the report's directory; one that
+// would leave --out is refused before anything is written.
+func TestTargetNameIsNotAPath(t *testing.T) {
+	t.Setenv("SIM_USSP_CONFORMANCE_BASE_URL", "http://127.0.0.1:1")
+	base := t.TempDir()
+	out := filepath.Join(base, "runs")
+	for _, name := range []string{"../escape", "../../escape", "a/b"} {
+		t.Setenv("CONFORMANCE_TARGET_NAME", name)
+		code, log := runCmd(t, "run", "--lab-root", labRoot, "--target", filepath.Join(labRoot, "conformance", "targets", "sim-ussp.yaml"), "--out", out, "--allow-incomplete")
+		if code != 2 || !strings.Contains(log, "name") {
+			t.Errorf("name %q: exit %d, want 2 naming the name:\n%s", name, code, log)
+		}
+	}
+	var written []string
+	_ = filepath.WalkDir(base, func(p string, d os.DirEntry, err error) error {
+		if err == nil && !d.IsDir() {
+			written = append(written, p)
+		}
+		return nil
+	})
+	if len(written) != 0 {
+		t.Errorf("a refused name wrote %v", written)
+	}
+}
+
 func TestSignVerifyCommands(t *testing.T) {
 	t.Setenv("SIM_USSP_CONFORMANCE_BASE_URL", "http://127.0.0.1:1")
 	dir := t.TempDir()

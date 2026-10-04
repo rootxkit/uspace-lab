@@ -100,6 +100,13 @@ func TestRefusesUnknownMembersAndValues(t *testing.T) {
 		"bad-url.yaml":        "system: ansp\nbase_url: ftp://a\n",
 		"bad-interface.yaml":  "system: ussp\nbase_url: http://a\ninterfaces: {scd_injection: http://x}\n",
 		"bad-publish.yaml":    "system: cisp\nbase_url: http://a\ned318: {publish: maybe}\n",
+		// The name becomes a directory of the report: never a path.
+		"name-parent.yaml":    "system: ansp\nname: ../../escape\nbase_url: http://a\n",
+		"name-slash.yaml":     "system: ansp\nname: a/b\nbase_url: http://a\n",
+		"name-backslash.yaml": "system: ansp\nname: 'a\\\\b'\nbase_url: http://a\n",
+		"name-dots.yaml":      "system: ansp\nname: '..'\nbase_url: http://a\n",
+		"name-drive.yaml":     "system: ansp\nname: 'C:x'\nbase_url: http://a\n",
+		"name-space.yaml":     "system: ansp\nname: 'a b'\nbase_url: http://a\n",
 	} {
 		p := filepath.Join(dir, name)
 		if err := os.WriteFile(p, []byte(body), 0o600); err != nil {

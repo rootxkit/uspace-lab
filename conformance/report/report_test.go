@@ -317,3 +317,27 @@ func TestUnreviewedBothWays(t *testing.T) {
 		t.Error("a run that checked nothing was accepted against a baseline that checked nothing")
 	}
 }
+
+// TestWriteStaysInDir: a run id that is not one plain directory name is
+// refused before anything is written; a plain one is written under dir.
+func TestWriteStaysInDir(t *testing.T) {
+	base := t.TempDir()
+	dir := filepath.Join(base, "runs")
+	for _, run := range []string{"", "..", "../escape", "x/../../escape", "a/b", "C:x"} {
+		r := &Report{Format: Format, Run: run}
+		if _, _, err := r.Write(dir); err == nil {
+			t.Errorf("run id %q written", run)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(base, "escape")); err == nil {
+		t.Error("a refused run id wrote outside dir")
+	}
+	r := &Report{Format: Format, Run: RunID(time.Unix(0, 0), "cisp")}
+	p, _, err := r.Write(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if filepath.Dir(filepath.Dir(p)) != dir {
+		t.Errorf("written at %s, want under %s", p, dir)
+	}
+}
