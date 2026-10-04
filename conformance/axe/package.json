@@ -1,0 +1,15 @@
+{
+  "name": "uspace-lab-conformance-axe",
+  "private": true,
+  "description": "The informative axe run of the conformance suite over the public pages a target names (docs/PLAN.md section 7.1 L-Q10).",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "axe": "playwright test tests/pages.spec.ts"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0"
+  }
+}
