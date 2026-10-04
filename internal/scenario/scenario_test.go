@@ -414,3 +414,102 @@ func TestCompilePlansAndZones(t *testing.T) {
 		t.Fatal("the zone's box does not hold its centre")
 	}
 }
+
+// The pairs a USSP owes (SC-01, SC-02, SC-21) each file their own
+// volume, and every point either aircraft flies through, from its home
+// on, lies inside its own: a USSP that deconflicts authorises only the
+// first of two overlapping intents (results/20261004-systems finding 7),
+// and an aircraft outside its volume is nonconforming.
+func TestOwedPairsFlyInsideTheirOwnVolumes(t *testing.T) {
+	lab, err := LoadLab("../../sim/sitl.env.example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range []string{"sc-01-hover-inside-minima.yaml", "sc-02-head-on-and-short-return.yaml", "sc-21-slow-to-hover.yaml"} {
+		s := load(t, f)
+		a, b := s.AircraftByName("a"), s.AircraftByName("b")
+		if a.Operator.Intent.Overlaps(b.Operator.Intent) {
+			t.Errorf("%s: a's and b's intents overlap", f)
+		}
+		for _, ac := range []*Aircraft{a, b} {
+			in := ac.Operator.Intent
+			at := Offset{EastM: float64(lab.Index(ac.Sysid)) * lab.SpacingM}
+			for _, st := range s.Steps {
+				if st.Do != DoGoto || !slices.Contains(st.Aircraft, ac.Name) {
+					continue
+				}
+				// Every 1 m of the straight leg (the union of boxes is not
+				// convex).
+				d := math.Hypot(st.To.NorthM-at.NorthM, st.To.EastM-at.EastM)
+				for k := 0.0; k <= d; k++ {
+					p := Offset{NorthM: at.NorthM + (st.To.NorthM-at.NorthM)*k/math.Max(d, 1), EastM: at.EastM + (st.To.EastM-at.EastM)*k/math.Max(d, 1)}
+					if !in.Contains(p) {
+						t.Errorf("%s: %s's leg to %s leaves its volume at %+v", f, ac.Name, st.ID, p)
+						break
+					}
+				}
+				at = *st.To
+			}
+		}
+	}
+}
+
+// Overlap of circles and boxes; touching is not overlapping, and
+// intents apart in height or time do not overlap.
+func TestIntentOverlaps(t *testing.T) {
+	band := func(in Intent) *Intent {
+		in.AltLowerRelM, in.AltUpperRelM, in.StartsBeforeS, in.LastsS = -10, 100, 60, 3600
+		return &in
+	}
+	circle := func(n, e, r float64) *Intent { return band(Intent{Center: Offset{NorthM: n, EastM: e}, RadiusM: r}) }
+	box := func(s, n, w, e float64) *Intent {
+		return band(Intent{Boxes: []Box{{SouthM: s, NorthM: n, WestM: w, EastM: e}}})
+	}
+	for name, c := range map[string]struct {
+		a, b *Intent
+		want bool
+	}{
+		"circles apart":        {circle(0, 0, 10), circle(0, 25, 10), false},
+		"circles touching":     {circle(0, 0, 10), circle(0, 20, 10), false},
+		"circles overlapping":  {circle(0, 0, 10), circle(0, 19, 10), true},
+		"boxes touching":       {box(0, 10, 0, 10), box(0, 10, 10, 20), false},
+		"boxes overlapping":    {box(0, 10, 0, 10), box(5, 15, 5, 15), true},
+		"circle over a corner": {circle(0, 0, 10), box(7, 20, 7, 20), true},
+		"circle over an edge":  {circle(0, 0, 10), box(-5, 5, 9, 20), true},
+		"circle clear":         {circle(0, 0, 10), box(7.5, 20, 7.5, 20), false},
+	} {
+		if got := c.a.Overlaps(c.b); got != c.want || c.b.Overlaps(c.a) != c.want {
+			t.Errorf("%s: %v, want %v", name, got, c.want)
+		}
+	}
+	high := circle(0, 0, 10)
+	high.AltLowerRelM, high.AltUpperRelM = 100, 200
+	if circle(0, 0, 10).Overlaps(high) {
+		t.Error("bands that only touch overlapped")
+	}
+	later := circle(0, 0, 10)
+	later.StartsBeforeS = -3540 // starts when the other ends
+	if circle(0, 0, 10).Overlaps(later) {
+		t.Error("windows that only touch overlapped")
+	}
+}
+
+// A scenario a USSP owes is refused when two aircraft file overlapping
+// intents, unless it expects the second refused (uspace-ussp WP-7's
+// first come, first served).
+func TestOverlappingIntentsAreRefusedUnlessExpected(t *testing.T) {
+	s := load(t, "sc-01-hover-inside-minima.yaml")
+	b := s.AircraftByName("b")
+	shared := *s.AircraftByName("a").Operator.Intent
+	b.Operator.Intent = &shared
+	if err := s.Validate(); err == nil || !strings.Contains(err.Error(), "overlaps aircraft a's") {
+		t.Fatalf("one volume for both: %v", err)
+	}
+	s.ExpectIntents = []IntentExpect{{Aircraft: "a", Decision: "authorised"}, {Aircraft: "b", Decision: "rejected"}}
+	if err := s.Validate(); err != nil {
+		t.Fatalf("b expected rejected: %v", err)
+	}
+	if err := load(t, "ussp-wp7-authorisation.yaml").Validate(); err != nil {
+		t.Fatalf("wp7: %v", err)
+	}
+}

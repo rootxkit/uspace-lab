@@ -52,17 +52,24 @@ type Volume4D struct {
 	TimeEnd   IntentTime `json:"time_end"`
 }
 
-// Volume3D is the volume member.
+// Volume3D is the volume member: a circle or a polygon outline.
 type Volume3D struct {
-	OutlineCircle *Circle        `json:"outline_circle,omitempty"`
-	AltitudeLower IntentAltitude `json:"altitude_lower"`
-	AltitudeUpper IntentAltitude `json:"altitude_upper"`
+	OutlineCircle  *Circle        `json:"outline_circle,omitempty"`
+	OutlinePolygon *Polygon       `json:"outline_polygon,omitempty"`
+	AltitudeLower  IntentAltitude `json:"altitude_lower"`
+	AltitudeUpper  IntentAltitude `json:"altitude_upper"`
 }
 
 // Circle is outline_circle.
 type Circle struct {
 	Center Point  `json:"center"`
 	Radius Radius `json:"radius"`
+}
+
+// Polygon is outline_polygon: three or more vertices, the last not
+// repeating the first (F3548 Polygon).
+type Polygon struct {
+	Vertices []Point `json:"vertices"`
 }
 
 // Radius is the circle radius in metres.

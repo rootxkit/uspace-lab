@@ -72,20 +72,48 @@ func (r *run) operatorTokens(a *scenario.Aircraft) (*oauth.ClientCredentials, er
 }
 
 // intentRequest builds the Annex IV request for an aircraft: a circle
-// about an offset, the band relative to the aircraft's home ground as
-// WGS84 heights (AMSL + N), the window around t0.
+// about an offset or one polygon per box, the band relative to the
+// aircraft's home ground as WGS84 heights (AMSL + N at each outline's
+// centre), the window around t0.
 func (r *run) intentRequest(a *scenario.Aircraft) (simop.IntentRequest, error) {
 	in := a.Operator.Intent
 	home := r.lab.Home(a.Sysid)
-	c := r.lab.At(in.Center)
-	n, err := r.geo.UndulationM(c)
-	if err != nil {
-		return simop.IntentRequest{}, fmt.Errorf("geoid at the intent: %w", err)
-	}
-	lower := geoid.HAEFromAMSL(home.AltAMSLM+in.AltLowerRelM, n)
-	upper := geoid.HAEFromAMSL(home.AltAMSLM+in.AltUpperRelM, n)
 	start := r.t0.Add(-seconds(in.StartsBeforeS)).UTC()
 	end := start.Add(seconds(in.LastsS))
+	volume := func(centre scenario.Offset, v simop.Volume3D) (simop.Volume4D, error) {
+		n, err := r.geo.UndulationM(r.lab.At(centre))
+		if err != nil {
+			return simop.Volume4D{}, fmt.Errorf("geoid at the intent: %w", err)
+		}
+		v.AltitudeLower = simop.IntentAltitude{Value: geoid.HAEFromAMSL(home.AltAMSLM+in.AltLowerRelM, n), Reference: "W84", Units: "M"}
+		v.AltitudeUpper = simop.IntentAltitude{Value: geoid.HAEFromAMSL(home.AltAMSLM+in.AltUpperRelM, n), Reference: "W84", Units: "M"}
+		return simop.Volume4D{
+			Volume:    v,
+			TimeStart: simop.IntentTime{Value: start.Format(time.RFC3339), Format: "RFC3339"},
+			TimeEnd:   simop.IntentTime{Value: end.Format(time.RFC3339), Format: "RFC3339"},
+		}, nil
+	}
+	var vols []simop.Volume4D
+	if len(in.Boxes) == 0 {
+		c := r.lab.At(in.Center)
+		v, err := volume(in.Center, simop.Volume3D{OutlineCircle: &simop.Circle{Center: simop.Point{Lat: c.LatDeg, Lng: c.LonDeg}, Radius: simop.Radius{Value: in.RadiusM, Units: "M"}}})
+		if err != nil {
+			return simop.IntentRequest{}, err
+		}
+		vols = append(vols, v)
+	}
+	for _, b := range in.Boxes {
+		var poly simop.Polygon
+		for _, o := range []scenario.Offset{{NorthM: b.SouthM, EastM: b.WestM}, {NorthM: b.SouthM, EastM: b.EastM}, {NorthM: b.NorthM, EastM: b.EastM}, {NorthM: b.NorthM, EastM: b.WestM}} {
+			p := r.lab.At(o)
+			poly.Vertices = append(poly.Vertices, simop.Point{Lat: p.LatDeg, Lng: p.LonDeg})
+		}
+		v, err := volume(scenario.Offset{NorthM: (b.SouthM + b.NorthM) / 2, EastM: (b.WestM + b.EastM) / 2}, simop.Volume3D{OutlinePolygon: &poly})
+		if err != nil {
+			return simop.IntentRequest{}, err
+		}
+		vols = append(vols, v)
+	}
 	pick := func(v, def string) string {
 		if v == "" {
 			return def
@@ -96,15 +124,7 @@ func (r *run) intentRequest(a *scenario.Aircraft) (simop.IntentRequest, error) {
 		ClientRef: clientRef(r.opt.Run, r.sc.ID, a.Name, r.t0), UASSerial: a.Serial,
 		Mode: pick(in.Mode, "VLOS"), FlightType: "normal", Category: pick(in.Category, "open"),
 		Subcategory: in.Subcategory, ClassLabel: in.ClassLabel,
-		Volumes: []simop.Volume4D{{
-			Volume: simop.Volume3D{
-				OutlineCircle: &simop.Circle{Center: simop.Point{Lat: c.LatDeg, Lng: c.LonDeg}, Radius: simop.Radius{Value: in.RadiusM, Units: "M"}},
-				AltitudeLower: simop.IntentAltitude{Value: lower, Reference: "W84", Units: "M"},
-				AltitudeUpper: simop.IntentAltitude{Value: upper, Reference: "W84", Units: "M"},
-			},
-			TimeStart: simop.IntentTime{Value: start.Format(time.RFC3339), Format: "RFC3339"},
-			TimeEnd:   simop.IntentTime{Value: end.Format(time.RFC3339), Format: "RFC3339"},
-		}},
+		Volumes:                  vols,
 		IdentificationTechnology: pick(in.Identification, "network"), ConnectivityMethods: []string{"lte"},
 		EnduranceS: int(in.LastsS) + 600, LossOfC2Procedure: "return to the take-off point and land",
 		OperatorReg: a.OperatorReg, Takeoff: &simop.Point{Lat: home.LatDeg, Lng: home.LonDeg},

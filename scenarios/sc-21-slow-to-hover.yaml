@@ -7,28 +7,34 @@ policy: policy/demo.yaml
 systems: [ussp]
 reference: true
 note: >-
-  A hovers at 300 m north; B approaches from 300 m south of it at 10 m/s
-  and decelerates to hover 40 m from A. Expected: a conflict no later
-  than B's first sample inside 60 m (C-03 holds it while inside), never
-  cleared while B hovers there. How late the raise is relative to B
-  crossing 60 m is in the result (the vehicles' steps and the raise
-  times); it is the number SC-21 asks for. Owed by uspace-ussp WP-11.
-duration_s: 230
-# 230 s, not 200: B lands 260 m north, where the SITL ground is lower
-# than at home (578 m to the north against 605 m, sim/README.md), so B
-# descends up to about 57 m, not 30; the systems run of 20261004 did not
-# confirm B's landing within the 60 s it had, so it has 90 s.
+  A hovers 10 m west of the origin; B, 300 m east of it, flies straight
+  at A at 10 m/s and decelerates to hover 40 m from it (30 m east of the
+  origin). Expected: a conflict no later than B's first sample inside
+  60 m (C-03 holds it while inside), never cleared while B hovers there.
+  How late the raise is relative to B crossing 60 m is in the result
+  (the vehicles' steps and the raise times); it is the number SC-21
+  asks for. Owed by uspace-ussp WP-11. Each aircraft files its own
+  volume, 9 m apart between the homes (A's west of 8 m east, B's east
+  of 17 m east): a USSP deconflicts intents strategically and
+  authorises only the first of two that overlap, which left B with no
+  flight to alert on (results/20261004-systems finding 7). B meets A
+  from the east, across the shared edge, rather than from the south as
+  before, because both homes are on one east-west line. At 80 m: the
+  SITL ground rises to the east of home (over 624 m 100 m east against
+  605 m, sim/README.md).
+duration_s: 240
+# B lands 30 m east of home from 80 m: about 73 s (LandS); 80 s left
+# after the landing's at_s.
 tail_s: 5
 aircraft:
   - name: a
     sysid: 1
     serial: LABX9SC21A0001
     operator_reg: GEOLAB000001
-    operator: &op
+    operator:
       system: ussp
       intent:
-        center: {north_m: 150, east_m: 0}
-        radius_m: 1000
+        boxes: [{south_m: -100, north_m: 100, west_m: -150, east_m: 8}]
         alt_lower_rel_m: -20
         alt_upper_rel_m: 120
         starts_before_s: 60
@@ -40,35 +46,45 @@ aircraft:
     sysid: 2
     serial: LABX9SC21B0002
     operator_reg: GEOLAB000001
-    operator: *op
+    operator:
+      system: ussp
+      intent:
+        boxes: [{south_m: -100, north_m: 100, west_m: 17, east_m: 350}]
+        alt_lower_rel_m: -20
+        alt_upper_rel_m: 120
+        starts_before_s: 60
+        lasts_s: 3600
+        category: open
+        subcategory: A2
+        class_label: C2
 steps:
   - id: climb
     at_s: 0
     aircraft: [a, b]
     do: takeoff
-    alt_rel_m: 30
+    alt_rel_m: 80
   - id: a-station
     aircraft: [a]
     do: goto
-    to: {north_m: 300, east_m: 0}
-    speed_ms: 8
+    to: {north_m: 0, east_m: -10}
+    speed_ms: 3
   - id: b-start
     aircraft: [b]
     do: goto
-    to: {north_m: 0, east_m: 25}
-    speed_ms: 5
+    to: {north_m: 0, east_m: 290}
+    speed_ms: 8
   - id: approach
-    at_s: 70
+    at_s: 85
     aircraft: [b]
     do: goto
-    to: {north_m: 260, east_m: 0}
+    to: {north_m: 0, east_m: 30}
     speed_ms: 10
   - id: beside
     aircraft: [b]
     do: hold
     for_s: 30
   - id: down
-    at_s: 140
+    at_s: 160
     aircraft: [a, b]
     do: land
 expect:
@@ -100,5 +116,8 @@ expect:
     peer: a
     raise: {after: approach.start, min_s: 0, max_s: 35}
     hold_until: {after: beside, min_s: 0, max_s: 0}
+expect_intents:
+  - {aircraft: a, decision: authorised, state: activated}
+  - {aircraft: b, decision: authorised, state: activated}
 judged_kinds: ["ussp:proximity"]
 measure: [latency, ledger]

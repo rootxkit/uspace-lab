@@ -103,10 +103,19 @@ func Compile(s *Scenario, lab *Lab, t0 time.Time) (*Compiled, error) {
 		if a.Operator == nil || a.Operator.Intent == nil || len(c.Plans[a.Name].Steps) == 0 {
 			continue
 		}
+		in := a.Operator.Intent
+		if len(in.Boxes) > 0 {
+			// Homes are due east of the origin (Lab.Home).
+			home := Offset{EastM: float64(lab.Index(a.Sysid)) * lab.SpacingM}
+			if !in.Contains(home) {
+				return nil, fmt.Errorf("aircraft %s takes off %.0f m east of the origin, outside every box of its intent", a.Name, home.EastM)
+			}
+			continue
+		}
 		h := lab.Home(a.Sysid)
-		d, err := geodesy.DistanceM(core.LatLon{LatDeg: h.LatDeg, LonDeg: h.LonDeg}, lab.At(a.Operator.Intent.Center))
-		if err == nil && d > a.Operator.Intent.RadiusM {
-			return nil, fmt.Errorf("aircraft %s takes off %.0f m from its intent's centre, outside its %.0f m circle", a.Name, d, a.Operator.Intent.RadiusM)
+		d, err := geodesy.DistanceM(core.LatLon{LatDeg: h.LatDeg, LonDeg: h.LonDeg}, lab.At(in.Center))
+		if err == nil && d > in.RadiusM {
+			return nil, fmt.Errorf("aircraft %s takes off %.0f m from its intent's centre, outside its %.0f m circle", a.Name, d, in.RadiusM)
 		}
 	}
 	sort.SliceStable(c.Timeline, func(i, j int) bool { return c.Timeline[i].AtS < c.Timeline[j].AtS })

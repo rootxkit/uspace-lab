@@ -16,7 +16,7 @@ runs one and writes `results/<run>/<scenario>.json`.
 | `reference` | `true`: runnable against the lab's reference target (CI); `false`: only against the systems (the kind it expects is a system's own judgement). The runner refuses, before starting, a scenario the targets cannot judge. |
 | `country` | ED-269 country of the scenario's zones. |
 | `duration_s`, `tail_s` | Hard bound after t0; time kept after the last vehicle finishes. |
-| `aircraft[]` | `name`, `sysid` (the SITL instance), `serial`, `operator_reg`, `operator_id`; `operator` (sim-operator streams it to a USSP: `system`, `client`, `transport`, an `intent` filed and activated before t0, `drop_rate`, `latency_s`); `receivers` (the receivers that hear its Remote ID); `mark_alt_invalid` (S-36). |
+| `aircraft[]` | `name`, `sysid` (the SITL instance), `serial`, `operator_reg`, `operator_id`; `operator` (sim-operator streams it to a USSP: `system`, `client`, `transport`, an `intent` filed and activated before t0 (a `center` and `radius_m`, or `boxes` of `south_m`, `north_m`, `west_m`, `east_m`, one polygon volume each), `drop_rate`, `latency_s`); `receivers` (the receivers that hear its Remote ID); `mark_alt_invalid` (S-36). |
 | `receivers[]` | sim-receiver: `id` (registered at the authority), `at`, `transport` (`pack` or `single`), `hae` (`geoid` or `gps`), `drop_rate`, `latency_s`, `seed`, `rssi_dbm`. |
 | `feeds[]` | Manned traffic: `kind` `ansp_stream` (sim-ansp-feed) or `adsb_file` (sim-adsb), with `tracks` (straight legs) or a `recording`. |
 | `zones[]` | `id`, `type`, a `square` or `circle`, `lower`/`upper` with their reference (`AGL`, `AMSL`, `WGS84`), an optional `window`. The reference target loads them; for a systems run they are written beside the result as `<scenario>.zones.ed269.json` for import. |
@@ -48,6 +48,11 @@ backlog), `operator_stream: stop|start` (connected, silent: the USSP's
 lost link), `receiver: down|up` for `receivers`, `feed: live|stale|outage`
 for `feeds`, and `serial` / `address` for an aircraft's transmitter
 (SC-10, SC-11).
+
+In a scenario a USSP owes (`owners` names `ussp`), two aircraft may not
+file overlapping intents unless `expect_intents` expects one of them
+`rejected`: a USSP that deconflicts strategically authorises only the
+first, and the second has no flight to alert on.
 
 ## The verdict
 
