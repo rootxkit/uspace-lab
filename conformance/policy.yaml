@@ -1,0 +1,67 @@
+# The figures and choices the conformance suite applies that only GCAA
+# can fix (docs/PLAN.md §7.1 L-Q3, L-Q10, L-Q12; spec 08 Q7, Q15). Each is
+# the spec's or the plan's default and is marked "pending GCAA": the
+# suite reports against these values and prints them in every report;
+# it decides nothing (docs/WORKPACKAGES/WP-L7.md). Change a value here,
+# never in code (INV-03).
+format: conformance-policy/v1
+policy_version: 1
+
+# L-Q3 (ussp Q13, spec Q7): which suites a candidate must pass. Default:
+# F3411 v22a Service Provider and F3548 strategic coordination and
+# constraint processing are the gate; the Display Provider suite runs and
+# is reported as informative. The national contract tests and the ED-318
+# publication tests gate the systems that publish those contracts
+# (spec 00 §7). Requirements listed here are informative: they are
+# reported and never fail a run or the CI regression gate.
+informative:
+  status: pending GCAA (L-Q3, L-Q10)
+  requirements: [F3411-DP, A11Y-PUBLIC]
+
+# L-Q12 (spec Q7): the report is the uss_qualifier report plus the
+# national report, hashed (SHA-256 over the report bytes) and signed by
+# the lab issuer's key as an RFC 7797 detached JWS. "Proposed" wording:
+# GCAA has not adopted a format.
+report_signature:
+  status: pending GCAA (L-Q12)
+  alg: RS256
+  form: RFC 7797 detached JWS over the report file's bytes
+
+# L-Q10 (ui Q11, spec Q15): the accessibility bar axe is run against on
+# the public pages the suite loads. Informative only.
+accessibility:
+  status: pending GCAA (L-Q10)
+  standard: WCAG 2.2 AA
+  axe_tags: [wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa]
+
+# Spec 09 §2 national choices the CISP tests time against (02 F3; 1 s
+# change notification target, the 15 s heartbeat and the stale bound).
+cisp:
+  status: "pending GCAA (spec 09 §2: 1 s CIS change notification target, 300 s stale bound)"
+  change_notification_s: 1
+  heartbeat_interval_s: 15
+  # Tolerance on the stale judgement of GET /v1/status (clock skew and
+  # the time between the read and the CISP's own clock).
+  stale_tolerance_s: 2
+
+# Spec 06 §5 and 02 F8: the registry validation answers status only,
+# never a name, address, phone or e-mail. Member names (case-insensitive)
+# that are personal data wherever they appear in that answer.
+personal_data_fields:
+  status: pending GCAA DPO (spec Q8)
+  names: [name, given_name, family_name, full_name, first_name, last_name, email, e_mail, phone, telephone,
+    address, street, postal_code, date_of_birth, birth_date, dob, national_id, personal_number, id_number,
+    passport, passport_number]
+
+# The publication fixture of the ED-318 tests (conformance/ed318): two
+# square zones of half_side_m around this centre, one applying now and
+# one whose applicability ended yesterday. Coordinates are configuration
+# (INV-03); the centre is SITL_HOME of sim/sitl.env.example. The zones are
+# PROHIBITED test zones and are published only to a disposable stack
+# (ed318.publish in the target file).
+ed318_fixture:
+  centre_lat_deg: 41.7151
+  centre_lon_deg: 44.8271
+  half_side_m: 300
+  upper_agl_m: 120
+  upper_amsl_ft: 2500

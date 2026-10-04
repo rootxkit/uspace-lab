@@ -1,0 +1,13 @@
+# The authority states every operation's access in x-scope, x-roles,
+# x-session, x-receiver, x-cis-delivery or x-dp
+# (conformance/national/classify.go); only its schemes are named here.
+system: authority
+schemes:
+  sessionCookie: {kind: session}
+  ecosystemToken: {kind: token, issuer: ecosystem}
+  receiverKey: {kind: special, note: "a Remote ID receiver's bearer key and the HMAC of the body"}
+# The dp-poller operations (x-dp) state their scope in the description.
+scopes:
+  getDPDisplayData: [dp.observe]
+  getDPFlightDetails: [dp.observe]
+  postDPISANotification: [rid.service_provider]

@@ -1,0 +1,118 @@
+# The requirements the conformance suite decides, one status each per
+# run: pass, fail or not_applicable (docs/WORKPACKAGES/WP-L7.md). Every
+# id is decided by the checks named in `decided_by`; a requirement no
+# check applied to is not_applicable with that reason, never a pass.
+# `source` is where the requirement comes from (spec sections, the
+# conformance matrix of spec 09, the decision record). Whether a
+# requirement gates certification is conformance/policy.yaml's
+# `informative` list (pending GCAA, L-Q3).
+#
+# F3411 and F3548 rows are what uss_qualifier checks at the pinned
+# InterUSS commit (conformance/uss_qualifier/SOURCE), nothing more
+# (spec 09 §3: the requirement texts were not accessible).
+format: conformance-requirements/v1
+requirements:
+  # --- national contract tests (conformance/national) -------------------
+  - id: NAT-UNAUTH
+    title: Every operation that takes a credential refuses a request without one with 401 and a problem/v1 body
+    source: "spec 02 §1 (error body, M28), 06 §3; decision record M18"
+    systems: [ansp, authority, cisp, ussp]
+    decided_by: [national.unauthenticated]
+  - id: NAT-SCOPE
+    title: A valid token without the operation's scope is refused with 403 and a problem/v1 body
+    source: "spec 06 §3 (scope catalogue, M23), 02 §1"
+    systems: [ansp, authority, cisp, ussp]
+    decided_by: [national.wrong_scope]
+  - id: NAT-NOTFOUND
+    title: An unknown identifier is answered 404 with a problem/v1 body where the contract declares 404
+    source: "spec 02 §1"
+    systems: [ansp, authority, cisp, ussp]
+    decided_by: [national.not_found]
+  - id: NAT-PRECONDITION
+    title: A stale If-Match is refused with the 409 or 412 the contract declares, and nothing changes
+    source: "spec 02 §1 (Retries and conflicts: a 409 is permanent), 02 F1"
+    systems: [ansp, authority, cisp, ussp]
+    decided_by: [national.stale_precondition]
+  - id: NAT-INVALID
+    title: An invalid body is refused with the 400 or 422 the contract declares, with a problem/v1 body naming the fields in errors[]
+    source: "spec 02 §1 (error body, M28), 06 T9"
+    systems: [ansp, authority, cisp, ussp]
+    decided_by: [national.invalid_body]
+  - id: NAT-SUCCESS
+    title: The success case answers a declared 2xx whose body matches the published OpenAPI contract
+    source: "spec 00 §7 (national API publication), 02 §1"
+    systems: [ansp, authority, cisp, ussp]
+    decided_by: [national.success]
+  - id: REG-NOPII
+    title: The registry validation answers status only, never a name, address, phone or e-mail
+    source: "spec 02 F8, 06 §5; 2021/664 Art. 3(5)"
+    systems: [authority, ussp]
+    decided_by: [national.no_pii]
+  # --- ED-318 publication tests (conformance/ed318) ---------------------
+  - id: ED318-SCHEMA
+    title: Published datasets match the contract and are read whole by uspace-core's ED-318 reader
+    source: "spec 09 §1.6 (ED-318 UASZone), 02 F1, F3"
+    systems: [cisp]
+    decided_by: [ed318]
+  - id: ED318-VERTICAL
+    title: Every vertical limit names an ED-318 reference (AGL, AMSL, WGS84) in m or ft
+    source: "spec 09 §1.6 (CodeVerticalReferenceType, UomDistance), 02 F1"
+    systems: [cisp]
+    decided_by: [ed318]
+  - id: ED318-APPLICABILITY
+    title: "?at= keeps what applies (and what cannot be evaluated, marked unknown); ?applies_at= annotates every feature; malformed filters are 400"
+    source: "spec 09 §1.6 (TimePeriod, DailyPeriod), 02 F3; uspace-core ed318.Applies"
+    systems: [cisp]
+    decided_by: [ed318]
+  - id: ED318-VERSIONING
+    title: Versions and ETags, If-None-Match 304, signed snapshots, 428 without and 412 on a stale If-Match, a refused publication leaves the version unchanged
+    source: "spec 02 F1, F3, 06 T9; spec 09 §1.6 (Metadata)"
+    systems: [cisp]
+    decided_by: [ed318]
+  - id: ED318-CHANGES
+    title: A publication appears in /v1/changes as a cis/change/v1 record
+    source: "spec 02 F3 (pull and change feed)"
+    systems: [cisp]
+    decided_by: [ed318]
+  - id: ED318-WEBHOOK
+    title: A subscriber receives the change as a compact JWS it can verify, within the change-notification target
+    source: "spec 02 F3, decision record M19; spec 09 §2 (1 s target, national choice)"
+    systems: [cisp]
+    decided_by: [ed318]
+  - id: ED318-HEARTBEAT
+    title: A publisher heartbeat is recorded and the status document applies the stale rule
+    source: "spec 02 F3 (15 s heartbeat), 09 §2 (stale bound)"
+    systems: [cisp]
+    decided_by: [ed318]
+  # --- uss_qualifier (conformance/uss_qualifier) -------------------------
+  - id: F3411-SP
+    title: "F3411-22a Network Remote ID Service Provider: uss_qualifier's checks attributed to the target"
+    source: "spec 09 §1.4 (F3411 Net-RID SP rows)"
+    systems: [ussp, sim-ussp]
+    decided_by: [qualifier.f3411-sp]
+  - id: F3411-DP
+    title: "F3411-22a Network Remote ID Display Provider: uss_qualifier's checks attributed to the target"
+    source: "spec 09 §1.4 (F3411 Net-RID DP rows); decision record Q-A7"
+    systems: [authority]
+    decided_by: [qualifier.f3411-dp]
+  - id: F3548-SCD
+    title: "F3548-21 strategic coordination: uss_qualifier's checks attributed to the target"
+    source: "spec 09 §1.5 (operational intents, USS endpoints)"
+    systems: [ussp, sim-ussp]
+    decided_by: [qualifier.f3548-scd]
+  - id: F3548-CP
+    title: "F3548-21 constraint processing: uss_qualifier's checks attributed to the target"
+    source: "spec 09 §1.5 (constraint references, utm.constraint_processing)"
+    systems: [ussp, sim-ussp]
+    decided_by: [qualifier.f3548-cp]
+  - id: F3548-CM
+    title: "F3548-21 constraint management: uss_qualifier's checks attributed to the target"
+    source: "spec 09 §1.5 (the ANSP is the constraint manager, utm.constraint_management)"
+    systems: [ansp]
+    decided_by: [qualifier.f3548-cm]
+  # --- accessibility (conformance/axe), informative ---------------------
+  - id: A11Y-PUBLIC
+    title: The public pages the suite loads pass axe at the policy's accessibility bar
+    source: "docs/PLAN.md §7.1 L-Q10 (WCAG 2.2 AA assumed)"
+    systems: [ansp, authority, cisp, ussp]
+    decided_by: [axe]

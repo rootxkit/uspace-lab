@@ -1,0 +1,208 @@
+openapi: 3.1.0
+info:
+  title: conformance fixture
+  version: 0.0.1
+  description: |
+    A small contract for the national checks' own tests: one operation
+    of each kind the checks exercise, in the access styles the systems
+    use (x-auth, x-scope, security with the overrides' schemes).
+paths:
+  /healthz:
+    get:
+      operationId: getHealthz
+      x-auth: public
+      security: []
+      responses:
+        "200":
+          description: Alive.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Health"}
+  /v1/things:
+    get:
+      operationId: listThings
+      x-auth: token:things.read
+      security: [{ecosystemToken: []}]
+      responses:
+        "200":
+          description: The things.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ThingList"}
+        "401": {$ref: "#/components/responses/Problem"}
+        "403": {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createThing
+      x-auth: token:things.write
+      security: [{ecosystemToken: []}]
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ThingCreate"}
+            example: {name: lamp}
+      responses:
+        "201":
+          description: Created.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Thing"}
+        "400": {$ref: "#/components/responses/Problem"}
+        "401": {$ref: "#/components/responses/Problem"}
+        "403": {$ref: "#/components/responses/Problem"}
+  /v1/things/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {$ref: "#/components/schemas/ULID"}
+    get:
+      operationId: getThing
+      x-auth: token:things.read or session
+      security: [{ecosystemToken: []}, {consoleSession: []}]
+      responses:
+        "200":
+          description: The thing.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Thing"}
+        "401": {$ref: "#/components/responses/Problem"}
+        "403": {$ref: "#/components/responses/Problem"}
+        "404": {$ref: "#/components/responses/Problem"}
+    patch:
+      operationId: patchThing
+      x-auth: token:things.write
+      security: [{ecosystemToken: []}]
+      parameters:
+        - name: If-Match
+          in: header
+          required: true
+          schema: {type: string}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ThingPatch"}
+            example: {name: lantern}
+      responses:
+        "200":
+          description: Changed.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Thing"}
+        "400": {$ref: "#/components/responses/Problem"}
+        "401": {$ref: "#/components/responses/Problem"}
+        "403": {$ref: "#/components/responses/Problem"}
+        "404": {$ref: "#/components/responses/Problem"}
+        "412": {$ref: "#/components/responses/Problem"}
+  /v1/registry/validate:
+    get:
+      operationId: validateRegistry
+      x-scope: registry.validate
+      security: [{ecosystemToken: []}]
+      parameters:
+        - name: registration
+          in: query
+          required: true
+          schema: {type: string, minLength: 1}
+          example: GEOabcdefgh12345
+      responses:
+        "200":
+          description: Status only.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: {type: string, enum: [valid, suspended, revoked, unknown]}
+        default: {$ref: "#/components/responses/Problem"}
+  /v1/console/me:
+    get:
+      operationId: getConsoleMe
+      x-roles: [viewer]
+      security: [{sessionCookie: []}]
+      responses:
+        "200":
+          description: The account.
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Problem"}
+  /v1/receivers/observations:
+    post:
+      operationId: postObservations
+      x-receiver: true
+      security: [{receiverKey: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "202": {description: Taken.}
+        "401": {$ref: "#/components/responses/Problem"}
+components:
+  securitySchemes:
+    ecosystemToken: {type: http, scheme: bearer}
+    consoleSession: {type: http, scheme: bearer}
+    sessionCookie: {type: apiKey, in: cookie, name: uspace_session}
+    receiverKey: {type: http, scheme: bearer}
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: {type: string, minLength: 1, maxLength: 128, pattern: "^[A-Za-z0-9._:-]+$"}
+  responses:
+    Problem:
+      description: The error body.
+      content:
+        application/problem+json:
+          schema: {$ref: "#/components/schemas/Problem"}
+  schemas:
+    ULID: {type: string, pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"}
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status: {type: string, const: ok}
+    Thing:
+      type: object
+      required: [id, name]
+      properties:
+        id: {$ref: "#/components/schemas/ULID"}
+        name: {type: string, minLength: 1}
+    ThingList:
+      type: object
+      required: [things]
+      properties:
+        things:
+          type: array
+          items: {$ref: "#/components/schemas/Thing"}
+    ThingCreate:
+      type: object
+      required: [name]
+      properties:
+        name: {type: string, minLength: 1}
+    ThingPatch:
+      type: object
+      properties:
+        name: {type: string, minLength: 1}
+    Problem:
+      type: object
+      required: [type, title, status, errors]
+      properties:
+        type: {type: string}
+        title: {type: string}
+        status: {type: integer}
+        errors:
+          type: array
+          items:
+            type: object
+            required: [field, reason]
+            properties:
+              field: {type: string}
+              reason: {type: string}
