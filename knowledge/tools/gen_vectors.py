@@ -2803,7 +2803,7 @@ def gen_lifecycle() -> None:
         {"zones": [timed], "clear_after_s": 3.0},
         [obs(end_s - 1.0, id="A", north_m=0), obs(end_s + 1.0, id="A", north_m=0), obs(end_s + 5.0, id="A", north_m=0)],
         "Applicability is judged at the placed time in UTC. The window ends while the aircraft sits inside; the alert clears resolved.",
-        owner=["authority", "ussp", "cisp"],
+        owner=["authority", "ussp"],
         source="test_monitor_geozones.py::test_a_zone_that_stops_applying_clears_its_alert",
     )
     seq(
@@ -2811,7 +2811,7 @@ def gen_lifecycle() -> None:
         {"zones": [timed], "live_max_age_s": 10.0},
         [{"t_s": end_s + 4.0, "op": "observe", "aircraft": {"id": "A", "north_m": 0, "captured_at_s": end_s - 1.0}}],
         "Captured inside the window, judged 5 s later after it ended: the aircraft WAS in the zone while it applied.",
-        owner=["authority", "ussp", "cisp"],
+        owner=["authority", "ussp"],
         source="test_monitor_geozones.py::test_applicability_is_judged_at_the_placed_time_not_the_arrival",
     )
     band = zone_feature("Z3", lower=(400, "AMSL"), upper=(600, "AMSL"))

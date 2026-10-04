@@ -35,7 +35,7 @@ Rules: ingest processes hold no per-aircraft state beyond a short dedupe window 
 
 ## 3. Partitioning and NATS subject design
 
-Partition key (internal only; no standard governs it — a design choice): **H3 cell at resolution 5** (`cell5`, average edge ≈ 8.5 km, area ≈ 250 km²; Georgia ≈ 280 cells) with the parent **resolution 3** (`cell3`, ≈ 12 cells for the country) as the coarse key. H3 cells never appear on an external interface; external areas are F3411 views, F3548 volumes and ED-318 geometries. A track's cell is computed at ingest from its position; a consumer owning a set of `cell5`s also subscribes to their ring-1 neighbours for CPA (800 m search radius ≪ cell edge, so one ring suffices).
+Partition key (internal only; no standard governs it — a design choice): **a fixed latitude/longitude grid, `uspace-core/geodesy/cell`**: `cell5` = 0.1° × 0.1° (about 11 km north–south and 8 km east–west at Tbilisi), named `c5:<lat_idx>:<lon_idx>`, with the parent `cell3` = 1° × 1°, named `c3:<lat_idx>:<lon_idx>`, as the coarse key; `lat_idx = floor((lat_deg + 90) × n)` and `lon_idx = floor((lon_deg + 180) × n)` with n = 10 for `cell5` and 1 for `cell3`, and each `cell3` holds exactly 100 `cell5`s. The country's bounding box (`basemap/regions.yaml`) spans 24 `cell3`s. The grid is pure Go, with no cgo. Cells never appear on an external interface; external areas are F3411 views, F3548 volumes and ED-318 geometries. A track's cell is computed at ingest from its position; a consumer owning a set of `cell5`s also subscribes to their ring-1 neighbours for CPA (800 m search radius ≪ cell edge, so one ring suffices).
 
 Subjects (one NATS cluster per system; JetStream for durable subjects, core NATS for high-rate ephemeral ones):
 
@@ -54,7 +54,7 @@ Subjects (one NATS cluster per system; JetStream for durable subjects, core NATS
 The table is the reference shape, not a contract: NATS never crosses a system (`02 §1`), so each system's plan may deviate internally and does (see Errata, M30). The one rule kept is that a subject carrying an `04` message carries the `04 §2` envelope.
 | `ingest.v1.<cell3>` | JetStream work queue, 10 min | raw ingest handoff when the ingest tier must shed to a durable queue under backpressure |
 
-Consumer scaling: CPA / conformance / detector workers form a JetStream consumer group per `cell3` at small scale (12 workers cover the country) and per `cell5` group at 5000 drones; ownership is a config map in KV, rebalanced by an operator action, not by auto-discovery (predictability over elegance). Consoles subscribe only to the `cell5`s intersecting their viewport plus a margin, and are throttled server-side to ≤ 2 Hz per track when a viewport holds > 200 tracks.
+Consumer scaling: CPA / conformance / detector workers form a JetStream consumer group per `cell3` at small scale (one worker per `cell3` covers the country) and per `cell5` group at 5000 drones; ownership is a config map in KV, rebalanced by an operator action, not by auto-discovery (predictability over elegance). Consoles subscribe only to the `cell5`s intersecting their viewport plus a margin, and are throttled server-side to ≤ 2 Hz per track when a viewport holds > 200 tracks.
 
 ## 4. Storage, retention and compression
 
@@ -104,7 +104,7 @@ Capacity on the single staging droplet: at 100 drones every system together writ
 | Token service | tokens valid for their TTL (≤ 1 h), JWKS cached 24 h; new tokens fail → systems alarm; a second issuer instance is the first scaling step | — |
 | The whole droplet (staging) | everything; flights are unaffected because nothing commands them | — |
 
-Deployment (staging): one DigitalOcean droplet, Caddy terminating TLS for `uspace-authority.chikox.net`, `uspace-cisp.chikox.net`, `uspace-ussp.chikox.net`, `uspace-ansp.chikox.net`, `uspace-lab.chikox.net`; `courier.chikox.net` is the operator. The old `utm.chikox.net` and `ingest.chikox.net` stay with the predecessor until the new authority replaces it. Each system runs its own docker-compose project (its Go processes from one image with different entrypoints, `web` Next.js, PostgreSQL+PostGIS, TimescaleDB, NATS) on an isolated network; the only shared component is Caddy. Production domains will be state-owned; nothing in a repo may hardcode a hostname.
+Deployment (staging): one DigitalOcean droplet, Caddy terminating TLS for `uspace-authority.chikox.net`, `uspace-cisp.chikox.net`, `uspace-ussp.chikox.net`, `uspace-ansp.chikox.net`, `uspace-lab.chikox.net`; `courier.chikox.net` is the operator. The old `utm.chikox.net` and `ingest.chikox.net` stay with the predecessor until the new authority replaces it. Each system runs its own docker-compose project (its Go processes from one image with different entrypoints, `web` Next.js, one `timescale/timescaledb-ha:pg16` container holding both its databases, since the image ships PostGIS, and NATS) on an isolated network; a system moves its databases to two hosts only when it outgrows one (`§4`). The only shared component is Caddy. Production domains will be state-owned; nothing in a repo may hardcode a hostname.
 
 ## 7. What a load test must prove
 
@@ -131,3 +131,5 @@ Run from `uspace-lab` against the staging images with simulated operators, recei
 | Date | Where | Change | Source |
 |---|---|---|---|
 | 2026-10-02 | §3, subjects table | Accepted internal deviations: the ANSP uses `man.v1.<adapter>.<icao24>` with no cells (tens of aircraft); the authority adds `tsw.v1.<table>`, `zones.v1.changed`, `registry.v1.changed`; the USSP adds `conf.v1`, `peer.v1`, `traffic.product.v1`; the CISP uses `cis.v1.change.<dataset>` internally while consumers see `cis.v1.<dataset>`. No cross-plan conflict. | `docs/decisions/2026-10-02-cross-plan.md` M30 |
+| 2026-10-04 | §3, partition key | The partition key is core's pure-Go `geodesy/cell` grid (`cell5` 0.1° × 0.1°, `cell3` 1° × 1°, names `c5:<lat_idx>:<lon_idx>` / `c3:<lat_idx>:<lon_idx>`, ring-1 neighbours, bbox → cell set), not H3 r5/r3; the ANSP and the CISP do not partition. | `docs/decisions/2026-10-02-cross-plan.md` M35; authority Q-A3, ussp Q2 |
+| 2026-10-04 | §6, deployment paragraph | On the droplet one `timescale/timescaledb-ha:pg16` container per system holds both of its databases (the pair and the two migration trees stay). | `docs/decisions/2026-10-02-cross-plan.md` M37; cisp Q12 |

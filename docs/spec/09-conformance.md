@@ -183,7 +183,7 @@ Provisions checked: F3548 — 12 rows (operations, enums and 40 constants from `
 | ED-318 `CodeVerticalReferenceType`: AGL, AMSL, WGS84; `UomDistance`: m, ft | | all | `02 F1`; `03` | met | property names of the vertical limits in the geometry object *unverified* |
 | ED-318 `TimePeriod`, `DailyPeriod` (with `startEvent` / `endEvent` BMCT, SR, SS, EECT), `CodeWeekDayType` | Time applicability | authority, cisp, ussp | `02 F1`; `03` | met (fixed) | daylight events added |
 | ED-318 `Authority` (`purpose` AUTHORIZATION / NOTIFICATION / INFORMATION, `intervalBefore`, contact) | | authority | `03` `zone_authority` | met | |
-| ED-318 `Metadata` (`creationDateTime`, `updateDateTime`, `originator`), `DatasetMetadata` | | cisp | `04 §3.4`; `02 F3` | met | |
+| ED-318 `Metadata` as `uspace-core/ed318.Metadata` carries it (`issued`, `provider`, `validFrom`, `validTo`, `description`), `DatasetMetadata` | | cisp | `04 §3.4`; `02 F3` | met | the version and time of update are the CISP's top-level `cis_version`, `cis_updated_at` and the `ETag` |
 | ED-318 `extendedProperties` | Extension mechanism | authority, cisp | `04 §4` | met | used for the Art. 3(4) requirements block |
 | ED-269 `restriction` (REQ_AUTHORISATION spelling), `uomDimensions` M / FT, vertical reference AGL / AMSL only, `applicability` | Import mapping | authority | `02 F1` | met (fixed) | |
 | ED-318 U-space data provision services (beyond the zone model) | CIS service interfaces | cisp | `02 F3` | unverified | standard text not accessible; the REST/pull/push design follows Annex II |
@@ -264,7 +264,7 @@ Provisions checked: GDPR — 8 rows.
 | Optional 1 Hz USSP → authority flight push | 2021/664 Art. 18(b) lets the authority determine live traffic data | an extension on top of the F3411 DP baseline, never a substitute; a USSP without it is still conformant |
 | Informing the authority of conformance deviations | Art. 13(2) names operators, USSPs and ATS units only | oversight value; delivered through records and occurrences, not as a real-time dependency |
 | F3411, F3548, ED-318 as the "common secure interoperable open protocols" | 2021/664 Art. 7(5)(b), Annex II(3), Annex V(4) name no standard | the de-facto EU U-space choice; InterUSS reference implementation available |
-| H3 resolution 5 / 3 partitioning | internal; no standard governs it | never crosses an external interface |
+| `geodesy/cell` grid partitioning (`cell5` 0.1° × 0.1°, `cell3` 1° × 1°) | internal; no standard governs it | never crosses an external interface; pure Go, no cgo |
 | Public subset of network identification | Art. 8(4)(a): "as deemed public in accordance with applicable Union and national rules" | the broadcast-equivalent items without the remote pilot position, pending national rules |
 | Police access levels and lawful basis | Art. 18(b)–(c); national data-protection law | purpose-logged realm pending the legal basis (Q8) |
 
@@ -282,3 +282,10 @@ Provisions checked: GDPR — 8 rows.
 | 2019/945 Parts 5 (C5) and C6 direct-RID points | not re-read | whether C5/C6 broadcast content differs | engineering |
 | Law of Georgia on Personal Data Protection | not read; GDPR used as the model | lawful basis for police access, retention ceilings, DPIA obligation | GCAA DPO (Q8) |
 | Georgian adoption of 2021/664–666 and any designation | national legal status (Q1, Q2, Q17) | whether the U-space layer has legal force and its per-airspace requirements | Ministry / GCAA |
+
+## Errata
+
+| Date | Where | Change | Source |
+|---|---|---|---|
+| 2026-10-04 | §1.6, ED-318 `Metadata` row | The row names core's metadata members, not `creationDateTime`, `updateDateTime`, `originator`; status unchanged. | `docs/decisions/2026-10-02-cross-plan.md` M15 |
+| 2026-10-04 | §2, partitioning row | The grid of `05 §3` replaces H3 resolution 5 / 3; the choice stays internal. | `docs/decisions/2026-10-02-cross-plan.md` M35 |

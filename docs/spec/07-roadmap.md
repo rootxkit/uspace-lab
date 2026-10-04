@@ -25,7 +25,7 @@ Build order: knowledge transfer → `uspace-core` → cisp (with `uspace-ui`) �
 
 | Milestone | Done when |
 |---|---|
-| **C-M1 Publish and read** (first demo) | the authority-role test client publishes an ED-318 zone set and a U-space airspace with its Art. 3(4) requirements, adjacency and USSP list with terms; `GET /v1/zones?bbox=` returns them with `ETag` and `updateDateTime`; a second publication yields a diff in `/v1/changes`; a webhook subscriber receives the signed change within 1 s and the public map shows the zones; an ED-269 file round-trips through the import mapping |
+| **C-M1 Publish and read** (first demo) | the authority-role test client publishes an ED-318 zone set and a U-space airspace with its Art. 3(4) requirements, adjacency and USSP list with terms; `GET /v1/zones?bbox=` returns them with `ETag` and `cis_updated_at`; a second publication yields a diff in `/v1/changes`; a webhook subscriber receives the signed change within 1 s and the public map shows the zones; an ED-269 file round-trips through the import mapping |
 | C-M2 Restrictions | ANSP-role client activates a restriction; subscribers notified within 1 s; the same restriction appears as an F3548 constraint in the lab DSS; `ended` and `cancelled` lifecycle; history by version and `at=` |
 | C-M3 Hardening | 60 s reconciliation pull proven by killing the subscriber during a change; delivery log; rate-limited public API; CISP console (publications, subscriptions, deliveries) |
 | **U-M1 `uspace-ui` first release** (with C-M1) | shadcn/ui theme and tokens, MapLibre map with the zone symbology, `ka`/`en` with Noto Sans Georgian, BFF session helpers; the CISP public map and console are built on it and nothing else |
@@ -112,3 +112,9 @@ Build order: knowledge transfer → `uspace-core` → cisp (with `uspace-ui`) �
 | P5-19 height limit as alert to operators | 120 m alert in the monitor | authority violation (947 Art. 18(k)); USSP height conformance is against the authorised volume and the airspace's Art. 3(4)(c) constraints, which cap the volume, so inside U-space airspace the two agree | re-scoped |
 | P5-17 OpenUTM evaluation | adopt or build | decided: InterUSS DSS adopted; USSP services built | closed |
 | D-01..D-04 demo readiness | `make demo`, soak, staging check, script | lab L-M1..L-M3 | kept |
+
+## Errata
+
+| Date | Where | Change | Source |
+|---|---|---|---|
+| 2026-10-04 | §1 Phase 2, C-M1 row | The read returns `ETag` and `cis_updated_at`, not `updateDateTime` (ED-318 metadata follows `uspace-core/ed318.Metadata`). | `docs/decisions/2026-10-02-cross-plan.md` M15 |

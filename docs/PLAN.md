@@ -312,3 +312,8 @@ projection tables (Q-A4); `06 §3` scope catalogue additions (M23); `02
 §1` the schema-ownership rule (M14); `09` rows that cite the old names;
 `knowledge/vectors/alert_lifecycle.json` owners without `cisp` (cisp
 Q18; a header change, no expected value moves, so no major).
+
+Applied by WP-L4 (branch `docs/WP-L4-spec-errata`), together with the
+contract errata the merged system PRs found; each change has a dated
+row in the touched file's errata table. The vector change turned out to
+be two cases' `owner` lists: the file header already omitted `cisp`.
