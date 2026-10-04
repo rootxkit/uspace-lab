@@ -79,16 +79,23 @@ func qualifierReport(t *testing.T, participant string, failed bool) string {
 
 // TestCandidateRunAndGate: the onboarding candidate (no national
 // contract) runs end to end: what uss_qualifier cannot decide says why,
-// a failing qualifier report fails the run, and the baseline gate turns
-// that into a regression while the reviewed run itself passes the gate.
+// an incomplete run is not a pass unless accepted explicitly or by a
+// reviewed baseline, a failing qualifier report fails the run, and the
+// baseline gate turns that into a regression while the reviewed run
+// itself passes the gate.
 func TestCandidateRunAndGate(t *testing.T) {
 	t.Setenv("SIM_USSP_CONFORMANCE_BASE_URL", "http://127.0.0.1:1")
 	target := filepath.Join(labRoot, "conformance", "targets", "sim-ussp.yaml")
 
+	// Nothing a gate depends on was checked: exit 3, naming the way out.
+	code, log := runCmd(t, "run", "--lab-root", labRoot, "--target", target, "--out", t.TempDir())
+	if code != 3 || !strings.Contains(log, "incomplete") || !strings.Contains(log, "--allow-incomplete") {
+		t.Fatalf("exit %d, want 3 (incomplete) naming --allow-incomplete:\n%s", code, log)
+	}
 	out := t.TempDir()
-	code, log := runCmd(t, "run", "--lab-root", labRoot, "--target", target, "--out", out)
+	code, log = runCmd(t, "run", "--lab-root", labRoot, "--target", target, "--out", out, "--allow-incomplete")
 	if code != 0 {
-		t.Fatalf("exit %d, want 0 (incomplete):\n%s", code, log)
+		t.Fatalf("exit %d with --allow-incomplete, want 0:\n%s", code, log)
 	}
 	rep := onlyReport(t, out)
 	if rr := status(t, rep, "F3411-SP"); rr.Status != result.NotApplicable || !strings.Contains(strings.Join(rr.Reasons, " "), "rid_injection") {
@@ -106,9 +113,14 @@ func TestCandidateRunAndGate(t *testing.T) {
 	}
 
 	// The reviewed run with a passing qualifier report is the baseline.
+	// It is still incomplete (no national contract), so it is accepted
+	// only explicitly.
 	out2 := t.TempDir()
-	code, log = runCmd(t, "run", "--lab-root", labRoot, "--target", target, "--out", out2,
-		"--qualifier-report", "F3411-SP="+qualifierReport(t, "sim-ussp-01", false))
+	passArgs := []string{"run", "--lab-root", labRoot, "--target", target, "--qualifier-report", "F3411-SP=" + qualifierReport(t, "sim-ussp-01", false)}
+	if code, log := runCmd(t, append(passArgs, "--out", t.TempDir())...); code != 3 {
+		t.Fatalf("exit %d with a passing qualifier report and the rest not applicable, want 3:\n%s", code, log)
+	}
+	code, log = runCmd(t, append(passArgs, "--out", out2, "--allow-incomplete")...)
 	if code != 0 {
 		t.Fatalf("exit %d with a passing qualifier report:\n%s", code, log)
 	}
@@ -122,6 +134,25 @@ func TestCandidateRunAndGate(t *testing.T) {
 	}
 	if code, log := runCmd(t, "gate", "--report", passing, "--baseline", bl); code != 0 {
 		t.Fatalf("the baseline's own run does not pass the gate: %d\n%s", code, log)
+	}
+	// The baseline reviewed what was not applicable: the same run against
+	// it passes without --allow-incomplete ...
+	if code, log := runCmd(t, append(passArgs, "--out", t.TempDir(), "--baseline", bl)...); code != 0 {
+		t.Fatalf("against its reviewed baseline: exit %d, want 0:\n%s", code, log)
+	}
+	// ... and a baseline that does not record a not applicable gate
+	// requirement did not review it.
+	rb, err := report.ReadBaseline(bl)
+	if err != nil {
+		t.Fatal(err)
+	}
+	delete(rb.Requirements, "F3548-SCD")
+	partialBL := filepath.Join(t.TempDir(), "sim-ussp.json")
+	if err := writeJSON(partialBL, rb); err != nil {
+		t.Fatal(err)
+	}
+	if code, log := runCmd(t, append(passArgs, "--out", t.TempDir(), "--baseline", partialBL)...); code != 3 || !strings.Contains(log, "F3548-SCD") {
+		t.Fatalf("against a baseline without F3548-SCD: exit %d, want 3 naming it:\n%s", code, log)
 	}
 
 	// A failing qualifier report: the verdict fails the run, and against
@@ -164,7 +195,7 @@ func TestSignVerifyCommands(t *testing.T) {
 	_ = os.WriteFile(jwks, jb, 0o600)
 
 	out := t.TempDir()
-	code, log := runCmd(t, "run", "--lab-root", labRoot, "--target", filepath.Join(labRoot, "conformance", "targets", "sim-ussp.yaml"), "--out", out, "--sign-key", keyFile)
+	code, log := runCmd(t, "run", "--lab-root", labRoot, "--target", filepath.Join(labRoot, "conformance", "targets", "sim-ussp.yaml"), "--out", out, "--sign-key", keyFile, "--allow-incomplete")
 	if code != 0 || !strings.Contains(log, "signed: sha256:") {
 		t.Fatalf("exit %d:\n%s", code, log)
 	}
@@ -182,8 +213,9 @@ func TestSignVerifyCommands(t *testing.T) {
 // TestCISPEntryPoint runs conformance/cisp/run as uspace-cisp's
 // tools/conformance.sh calls it (Q47): without CISP_BASE_URL it refuses
 // (2); against a CISP that does not answer, with the CISP contract, the
-// checks fail and so does the run (1); without any contract it says so
-// and nothing passes (0, incomplete).
+// checks fail and so does the run (1); without any contract it says so,
+// nothing passes and the run is incomplete (3), which only
+// CONFORMANCE_ALLOW_INCOMPLETE=1 accepts (0).
 func TestCISPEntryPoint(t *testing.T) {
 	bash, err := exec.LookPath("bash")
 	if err != nil {
@@ -217,9 +249,12 @@ func TestCISPEntryPoint(t *testing.T) {
 	if code, out, _ := run(); code != 2 {
 		t.Errorf("without CISP_BASE_URL: exit %d, want 2:\n%s", code, out)
 	}
-	code, out, rep := run("CISP_BASE_URL=http://127.0.0.1:1")
+	if code, out, _ := run("CISP_BASE_URL=http://127.0.0.1:1"); code != 3 || !strings.Contains(out, "no contract to test against") {
+		t.Errorf("without a contract: exit %d, want 3 (incomplete) and the reason:\n%s", code, out)
+	}
+	code, out, rep := run("CISP_BASE_URL=http://127.0.0.1:1", "CONFORMANCE_ALLOW_INCOMPLETE=1")
 	if code != 0 || !strings.Contains(out, "no contract to test against") {
-		t.Errorf("without a contract: exit %d, want 0 and the reason:\n%s", code, out)
+		t.Errorf("without a contract, incomplete accepted: exit %d, want 0 and the reason:\n%s", code, out)
 	} else if rr := status(t, onlyReport(t, rep), "NAT-UNAUTH"); rr.Status != result.NotApplicable {
 		t.Errorf("NAT-UNAUTH %s without a contract", rr.Status)
 	}

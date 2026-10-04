@@ -45,6 +45,17 @@ The verdict of a run: **fail** when a gate requirement failed;
 **incomplete** when nothing failed but some gate requirement did not
 apply (not a pass); **pass** otherwise.
 
+The exit status of `conformance run` (and of `make conformance`,
+`conformance/cisp/run`): 0 pass; 1 a gate requirement failed (with a
+baseline: a regression against it); 2 a usage or configuration error;
+3 incomplete: a gate requirement was not checked and no reviewed
+baseline records it not applicable, or no gate requirement applied at
+all. An absent contract, an unset optional variable or a missing
+interface all make checks not applicable, so a run that checked nothing
+exits 3, never 0. `--allow-incomplete` (`CONFORMANCE_ALLOW_INCOMPLETE=1`)
+accepts an incomplete run when that is what the operator means, as the
+onboarding rehearsal does.
+
 ### National contract tests
 
 Every operation of the system's OpenAPI file (the aggregate's

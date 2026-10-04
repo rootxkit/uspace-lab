@@ -2,10 +2,11 @@
 # The CISP's entry point into the lab's conformance suite (uspace-cisp
 # docs/PLAN.md §15 Q47, tools/conformance.sh): the national contract
 # tests and the ED-318 publication tests against the CISP at
-# CISP_BASE_URL. Its exit status is the verdict: 0 pass or incomplete
-# (nothing failed; what did not apply is in the report), 1 a failure
+# CISP_BASE_URL. Its exit status is the verdict: 0 pass, 1 a failure
 # (or, when conformance/baseline/<target>.json exists, a regression
-# against it), 2 a configuration error.
+# against it), 2 a configuration error, 3 incomplete: a gate requirement
+# was not checked and no reviewed baseline records it so (what did not
+# apply, and why, is in the report).
 #
 #   CISP_BASE_URL       the CISP under test (required)
 #   CONFORMANCE_ENV     KEY=VALUE lines with the stack's tokens, keys and
@@ -21,6 +22,7 @@
 #                       api/cisp/openapi.yaml, else the calling CISP
 #                       checkout's api/openapi.yaml
 #   CONFORMANCE_SIGN_KEY the lab issuer's signing key: sign the report
+#   CONFORMANCE_ALLOW_INCOMPLETE 1 accepts an incomplete run (0, not 3)
 #   GO                  the go command (default go)
 set -euo pipefail
 
@@ -48,12 +50,20 @@ args=(run --lab-root "$lab" --target "$lab/conformance/targets/cisp.yaml"
 if [ -n "${CONFORMANCE_ENV:-}" ]; then
   args+=(--env-file "$CONFORMANCE_ENV")
 fi
+if [ "${CONFORMANCE_ALLOW_INCOMPLETE:-}" = 1 ]; then
+  args+=(--allow-incomplete)
+fi
 name="${CONFORMANCE_TARGET_NAME:-cisp}"
 if [ -f "$lab/conformance/baseline/$name.json" ]; then
   args+=(--baseline "$lab/conformance/baseline/$name.json")
 fi
 
 cd "$lab"
+# Built, not `go run`: go run turns every non-zero exit into 1, and the
+# status is the verdict (1 failed, 2 misconfigured, 3 incomplete).
+bin="$(mktemp -d)"
+trap 'rm -rf "$bin"' EXIT
+"$GO" build -o "$bin/conformance.exe" ./cmd/conformance
 rc=0
-"$GO" run ./cmd/conformance "${args[@]}" || rc=$?
+"$bin/conformance.exe" "${args[@]}" || rc=$?
 exit "$rc"

@@ -176,3 +176,34 @@ func Regressed(fs []Finding) bool {
 	}
 	return false
 }
+
+// Unreviewed lists the gate requirements of r that were not applicable
+// and that no reviewed baseline accepts as such: a run with any of them
+// is incomplete, not a pass. bl may be nil (no baseline: every not
+// applicable gate requirement is unreviewed). A run in which no gate
+// requirement applied at all checked nothing, so every one of them is
+// listed whatever the baseline says.
+func Unreviewed(r *Report, bl *Baseline) []string {
+	applied := false
+	for i := range r.Requirements {
+		rr := &r.Requirements[i]
+		if rr.Role == RoleGate && rr.Status != result.NotApplicable {
+			applied = true
+		}
+	}
+	var out []string
+	for i := range r.Requirements {
+		rr := &r.Requirements[i]
+		if rr.Role != RoleGate || rr.Status != result.NotApplicable {
+			continue
+		}
+		if applied && bl != nil {
+			if e, ok := bl.Requirements[rr.ID]; ok && e.Status == result.NotApplicable {
+				continue
+			}
+		}
+		out = append(out, rr.ID)
+	}
+	sort.Strings(out)
+	return out
+}

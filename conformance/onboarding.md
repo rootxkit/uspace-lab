@@ -32,7 +32,8 @@ certifies nothing.
 The report's verdict is **pass** only when no gate requirement failed and
 every gate requirement applied; **incomplete** when nothing failed but a
 gate requirement could not be exercised; **fail** otherwise. An
-incomplete report is not a pass.
+incomplete report is not a pass: the run exits 3 (`conformance/README.md`),
+and only `--allow-incomplete` makes it exit 0.
 
 ## The report
 
@@ -56,6 +57,7 @@ Desktop):
    them on a query (the script's own proof).
 2. `conformance run --target conformance/targets/sim-ussp.yaml
    --sign-key deploy/local/signing-key.pem` at uspace-lab `d6b4cf1`
+   (today it needs `--allow-incomplete` to exit 0)
    (clean tree; sim-ussp image `sha256:b1174ae7...`): verdict
    **incomplete**, nothing passed and nothing failed. F3411-SP and
    F3548-SCD are not applicable: sim-ussp exposes neither the RID

@@ -258,3 +258,62 @@ func TestSignVerifyBothWays(t *testing.T) {
 		t.Error("a changed report verified")
 	}
 }
+
+// TestUnreviewedBothWays: a run in which a gate requirement was not
+// applicable is not a pass unless a reviewed baseline records that same
+// requirement as not applicable; a run in which no gate requirement
+// applied at all is never accepted, baseline or not.
+func TestUnreviewedBothWays(t *testing.T) {
+	cat, pol := load(t)
+	tg := Target{System: "cisp", Name: "cisp-test"}
+	var all []result.Outcome
+	for _, req := range cat.Requirements {
+		for _, sys := range req.Systems {
+			if sys == "cisp" {
+				all = append(all, result.Passed(req.ID, "x", "a", 200, ""))
+			}
+		}
+	}
+	full, err := Build(cat, pol, tg, all)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := Unreviewed(full, nil); len(got) != 0 {
+		t.Errorf("everything passed, unreviewed %v", got)
+	}
+
+	// One gate requirement not applicable, no baseline: unreviewed.
+	i := 0
+	for pol.IsInformative(all[i].Requirement) {
+		i++
+	}
+	missing := all[i].Requirement
+	partial, _ := Build(cat, pol, tg, append(append([]result.Outcome{}, all[:i]...), all[i+1:]...))
+	if got := Unreviewed(partial, nil); len(got) != 1 || got[0] != missing {
+		t.Fatalf("unreviewed %v, want [%s]", got, missing)
+	}
+	// A baseline that records it not applicable reviewed it ...
+	bl, err := NewBaseline(partial, "sha256:x", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := Unreviewed(partial, bl); len(got) != 0 {
+		t.Errorf("reviewed in the baseline, unreviewed %v", got)
+	}
+	// ... one that does not, did not.
+	delete(bl.Requirements, missing)
+	if got := Unreviewed(partial, bl); len(got) != 1 {
+		t.Errorf("absent from the baseline, unreviewed %v", got)
+	}
+
+	// Nothing applied: every gate requirement is unreviewed, even with a
+	// baseline that records the same emptiness.
+	empty, _ := Build(cat, pol, tg, nil)
+	ebl, err := NewBaseline(empty, "sha256:y", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := Unreviewed(empty, ebl); len(got) == 0 {
+		t.Error("a run that checked nothing was accepted against a baseline that checked nothing")
+	}
+}

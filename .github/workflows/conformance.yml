@@ -14,7 +14,10 @@ name: conformance
 # that system's conformance target. The CISP builds its own stack; the
 # other targets are reached with the CONFORMANCE_TARGETS_ENV secret
 # (KEY=VALUE lines resolving conformance/targets/<name>.yaml); without it
-# the run fails and names what is unset.
+# the run fails and names what is unset. A run in which a gate
+# requirement could not be checked (an unpinned contract, an unset
+# optional variable) is incomplete and fails the job (exit 3): it is
+# never reported as green.
 on:
   push:
     branches: [main]
@@ -210,4 +213,4 @@ jobs:
         with:
           name: conformance-${{ steps.t.outputs.target }}
           path: ${{ runner.temp }}/conformance-report
-          if-no-files-found: warn
+          if-no-files-found: error

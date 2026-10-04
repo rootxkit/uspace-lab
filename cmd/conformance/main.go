@@ -5,6 +5,7 @@
 //	conformance run --target conformance/targets/ansp.yaml [--env-file F] [--out DIR]
 //	    [--qualifier-report F3411-DP=report.json ...] [--axe axe.json]
 //	    [--sign-key deploy/local/signing-key.pem] [--baseline conformance/baseline/ansp.json]
+//	    [--allow-incomplete]
 //	conformance sign --report R --key K [--kid KID]
 //	conformance verify --report R --jwks deploy/local/public/jwks.json
 //	conformance gate --report R --baseline B
@@ -12,11 +13,16 @@
 //	conformance qualifier-render --target T --config f3411-dp.yaml --out DIR
 //	conformance contract-check --system S --openapi F
 //
-// run exits 0 when the verdict is pass or incomplete, 1 when a gate
-// requirement failed, and with --baseline 1 only on a regression against
-// the baseline; 2 on a usage or configuration error. Nothing is passed
-// that was not observed (E-04): a check that cannot run is reported as
-// not applicable with its reason.
+// run exits 0 when the verdict is pass, 1 when a gate requirement
+// failed (with --baseline: only on a regression against the baseline),
+// 2 on a usage or configuration error, and 3 when the run is incomplete:
+// a gate requirement was not applicable and no reviewed baseline records
+// it so, or no gate requirement applied at all. An incomplete run is not
+// a pass: an unpinned contract or an unset variable skips checks, and a
+// run that checked nothing must not look like one that passed.
+// --allow-incomplete accepts it (exit 0) when that is what the operator
+// means. Nothing is passed that was not observed (E-04): a check that
+// cannot run is reported as not applicable with its reason.
 package main
 
 import (
@@ -166,6 +172,7 @@ func cmdRun(args []string, stdout io.Writer) (int, error) {
 	signKID := fs.String("sign-kid", "", "the key's kid when the PEM has no Kid header")
 	baseline := fs.String("baseline", "", "the baseline to gate on (exit 1 only on a regression)")
 	timeout := fs.Duration("timeout", 30*time.Minute, "bound on the whole run")
+	allowIncomplete := fs.Bool("allow-incomplete", false, "exit 0 on an incomplete run (gate requirements not applicable) instead of 3")
 	var qreports multi
 	fs.Var(&qreports, "qualifier-report", "REQUIREMENT=report.json of a uss_qualifier run (repeatable)")
 	if err := fs.Parse(args); err != nil {
@@ -240,8 +247,9 @@ func cmdRun(args []string, stdout io.Writer) (int, error) {
 		_, _ = fmt.Fprintln(stdout, "signed: no (no --sign-key)")
 	}
 	summary(text)
+	var bl *report.Baseline
 	if *baseline != "" {
-		bl, err := report.ReadBaseline(*baseline)
+		bl, err = report.ReadBaseline(*baseline)
 		if err != nil {
 			return 2, err
 		}
@@ -253,12 +261,29 @@ func cmdRun(args []string, stdout io.Writer) (int, error) {
 		if report.Regressed(fsd) {
 			return 1, nil
 		}
-		return 0, nil
-	}
-	if rep.Summary.Verdict == report.VerdictFail {
+	} else if rep.Summary.Verdict == report.VerdictFail {
 		return 1, nil
 	}
-	return 0, nil
+	return incomplete(stdout, report.Unreviewed(rep, bl), *baseline, *allowIncomplete), nil
+}
+
+// incomplete says which gate requirements were not checked and returns
+// the exit status: 3, or 0 when the operator accepted it.
+func incomplete(w io.Writer, ids []string, baseline string, allow bool) int {
+	if len(ids) == 0 {
+		return 0
+	}
+	where := "no baseline was given"
+	if baseline != "" {
+		where = baseline + " does not record them not applicable"
+	}
+	_, _ = fmt.Fprintf(w, "incomplete: %d gate requirements not checked (%s): %s\n", len(ids), where, strings.Join(ids, ", "))
+	if allow {
+		_, _ = fmt.Fprintln(w, "incomplete: accepted (--allow-incomplete)")
+		return 0
+	}
+	_, _ = fmt.Fprintln(w, "incomplete: not a pass; the reasons are in the report. --allow-incomplete (CONFORMANCE_ALLOW_INCOMPLETE=1) accepts it")
+	return 3
 }
 
 // national runs the contract tests and, for the CISP, the ED-318 tests.
