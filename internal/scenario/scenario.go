@@ -1,6 +1,8 @@
 package scenario
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"math"
 	"os"
@@ -68,6 +70,10 @@ type Scenario struct {
 	Dir string `yaml:"-" json:"-"`
 	// PolicyDoc is the loaded policy.
 	PolicyDoc *Policy `yaml:"-" json:"-"`
+	// Digest is "sha256:" and the hex SHA-256 of the scenario file's
+	// bytes as loaded, which a result records to tie its verdict to the
+	// committed scenario (files are LF on every platform, .gitattributes).
+	Digest string `yaml:"-" json:"-"`
 }
 
 // Aircraft is one simulated vehicle and how the systems hear it.
@@ -101,11 +107,15 @@ type Operator struct {
 }
 
 // Intent is the operational intent filed for an aircraft: a circle about
-// an offset, an AMSL band relative to the aircraft's home ground, and a
-// window around the run.
+// an offset, or the union of boxes, an AMSL band relative to the
+// aircraft's home ground, and a window around the run.
 type Intent struct {
-	Center         Offset  `yaml:"center" json:"center"`
-	RadiusM        float64 `yaml:"radius_m" json:"radius_m"`
+	Center  Offset  `yaml:"center" json:"center"`
+	RadiusM float64 `yaml:"radius_m" json:"radius_m,omitempty"`
+	// Boxes, instead of center and radius_m, file one volume per box
+	// (an outline_polygon of its four corners): how two aircraft that
+	// fly close get volumes that do not overlap.
+	Boxes          []Box   `yaml:"boxes" json:"boxes,omitempty"`
 	AltLowerRelM   float64 `yaml:"alt_lower_rel_m" json:"alt_lower_rel_m"`
 	AltUpperRelM   float64 `yaml:"alt_upper_rel_m" json:"alt_upper_rel_m"`
 	StartsBeforeS  float64 `yaml:"starts_before_s" json:"starts_before_s"`
@@ -115,6 +125,86 @@ type Intent struct {
 	ClassLabel     string  `yaml:"class_label" json:"class_label,omitempty"`
 	Mode           string  `yaml:"mode" json:"mode"`
 	Identification string  `yaml:"identification" json:"identification"`
+}
+
+// Box is a north-south, east-west rectangle in metres from the origin.
+type Box struct {
+	SouthM float64 `yaml:"south_m" json:"south_m"`
+	NorthM float64 `yaml:"north_m" json:"north_m"`
+	WestM  float64 `yaml:"west_m" json:"west_m"`
+	EastM  float64 `yaml:"east_m" json:"east_m"`
+}
+
+// Contains reports whether the intent's outline holds the offset.
+func (in *Intent) Contains(o Offset) bool {
+	if len(in.Boxes) == 0 {
+		return math.Hypot(o.NorthM-in.Center.NorthM, o.EastM-in.Center.EastM) <= in.RadiusM
+	}
+	for _, b := range in.Boxes {
+		if o.NorthM >= b.SouthM && o.NorthM <= b.NorthM && o.EastM >= b.WestM && o.EastM <= b.EastM {
+			return true
+		}
+	}
+	return false
+}
+
+// Overlaps reports whether two intents share any airspace at a shared
+// time: their windows and bands overlap and their outlines do. The
+// outlines are compared in metres on the plane of the offsets, which is
+// within centimetres of the geodesic outlines a USSP judges over the few
+// kilometres a scenario spans. Touching is not overlapping.
+func (in *Intent) Overlaps(o *Intent) bool {
+	if in.AltLowerRelM >= o.AltUpperRelM || o.AltLowerRelM >= in.AltUpperRelM {
+		return false
+	}
+	if -in.StartsBeforeS+in.LastsS <= -o.StartsBeforeS || -o.StartsBeforeS+o.LastsS <= -in.StartsBeforeS {
+		return false
+	}
+	for _, a := range in.shapes() {
+		for _, b := range o.shapes() {
+			if a.overlaps(b) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// shape is a circle (r > 0) or a box.
+type shape struct {
+	c   Offset
+	r   float64
+	box Box
+}
+
+func (in *Intent) shapes() []shape {
+	if len(in.Boxes) == 0 {
+		return []shape{{c: in.Center, r: in.RadiusM}}
+	}
+	out := make([]shape, len(in.Boxes))
+	for i, b := range in.Boxes {
+		out[i] = shape{box: b}
+	}
+	return out
+}
+
+func (a shape) overlaps(b shape) bool {
+	switch {
+	case a.r > 0 && b.r > 0:
+		return math.Hypot(a.c.NorthM-b.c.NorthM, a.c.EastM-b.c.EastM) < a.r+b.r
+	case a.r > 0:
+		return b.boxOverlapsCircle(a)
+	case b.r > 0:
+		return a.boxOverlapsCircle(b)
+	}
+	return a.box.SouthM < b.box.NorthM && b.box.SouthM < a.box.NorthM && a.box.WestM < b.box.EastM && b.box.WestM < a.box.EastM
+}
+
+// boxOverlapsCircle compares the box of a with the circle of c.
+func (a shape) boxOverlapsCircle(c shape) bool {
+	n := math.Max(a.box.SouthM, math.Min(c.c.NorthM, a.box.NorthM))
+	e := math.Max(a.box.WestM, math.Min(c.c.EastM, a.box.EastM))
+	return math.Hypot(c.c.NorthM-n, c.c.EastM-e) < c.r
 }
 
 // Receiver is one simulated Remote ID receiver (sim-receiver).
@@ -249,6 +339,10 @@ type Matcher struct {
 	Peer     string `yaml:"peer" json:"peer,omitempty"`
 	// Subject matches a non-aircraft subject (a zone id, a source slug).
 	Subject string `yaml:"subject" json:"subject,omitempty"`
+	// Detail matches members of the raise's detail, each equal to the
+	// value given (Z-09: limit_not_judged true where a limit cannot be
+	// judged). A member the raise does not carry does not match.
+	Detail map[string]any `yaml:"detail" json:"detail,omitempty"`
 }
 
 // Expect is one expected alert: its raise and, when given, its clear.
@@ -321,6 +415,8 @@ func Load(path string) (*Scenario, error) {
 		return nil, fmt.Errorf("scenario %s: %w", path, err)
 	}
 	s.Dir = filepath.Dir(path)
+	sum := sha256.Sum256(b)
+	s.Digest = "sha256:" + hex.EncodeToString(sum[:])
 	if err := s.Validate(); err != nil {
 		return nil, fmt.Errorf("scenario %s: %w", path, err)
 	}
@@ -383,8 +479,21 @@ func (s *Scenario) Validate() error {
 				return core.Fieldf(f+".operator", "drop_rate in [0, 1), latency_s >= 0")
 			}
 			if in := a.Operator.Intent; in != nil {
-				if !(in.RadiusM > 0) || in.AltUpperRelM <= in.AltLowerRelM || !(in.LastsS > 0) || in.StartsBeforeS < 0 {
-					return core.Fieldf(f+".operator.intent", "radius_m > 0, alt_upper_rel_m > alt_lower_rel_m, lasts_s > 0")
+				if in.AltUpperRelM <= in.AltLowerRelM || !(in.LastsS > 0) || in.StartsBeforeS < 0 {
+					return core.Fieldf(f+".operator.intent", "alt_upper_rel_m > alt_lower_rel_m, lasts_s > 0")
+				}
+				switch {
+				case len(in.Boxes) == 0 && !(in.RadiusM > 0):
+					return core.Fieldf(f+".operator.intent", "radius_m > 0, or boxes")
+				case len(in.Boxes) > 0 && (in.RadiusM != 0 || in.Center != Offset{}):
+					return core.Fieldf(f+".operator.intent", "boxes or center and radius_m, not both")
+				case len(in.Boxes) > maxIntentBoxes:
+					return core.Fieldf(f+".operator.intent.boxes", "at most %d (the USSP's volumes per intent)", maxIntentBoxes)
+				}
+				for k, b := range in.Boxes {
+					if !(b.NorthM > b.SouthM) || !(b.EastM > b.WestM) {
+						return core.Fieldf(fmt.Sprintf("%s.operator.intent.boxes[%d]", f, k), "north_m > south_m and east_m > west_m")
+					}
 				}
 				// The USSP refuses an intent whose serial is not valid for
 				// its class (uspace-ussp internal/intent/validate.go,
@@ -562,6 +671,13 @@ func (s *Scenario) Validate() error {
 		if m.Peer != "" && names[m.Peer] == nil && !icaos[m.Peer] {
 			return core.Fieldf(f, "%q is neither an aircraft nor a feed track's icao24", m.Peer)
 		}
+		for k, v := range m.Detail {
+			switch v.(type) {
+			case bool, string, int, int64, uint64, float64:
+			default:
+				return core.Fieldf(f+".detail."+k, "a boolean, a number or a string")
+			}
+		}
 		return nil
 	}
 	expNames := map[string]bool{}
@@ -592,14 +708,42 @@ func (s *Scenario) Validate() error {
 			return err
 		}
 	}
+	rejected := map[string]bool{}
 	for i, ie := range s.ExpectIntents {
 		a := names[ie.Aircraft]
 		if a == nil || a.Operator == nil || a.Operator.Intent == nil || ie.Decision == "" {
 			return core.Fieldf(fmt.Sprintf("expect_intents[%d]", i), "an aircraft with an operator intent, and a decision")
 		}
+		rejected[ie.Aircraft] = ie.Decision == "rejected"
+	}
+	// A run a USSP owes must be flyable under its strategic
+	// deconfliction: of two aircraft that file overlapping intents only
+	// the first is authorised (intent_filed_first), and the second has no
+	// flight, no alert stream and no peer to name (results/
+	// 20261004-systems finding 7). Unless the scenario expects that
+	// refusal, each aircraft files its own volume.
+	if slices.Contains(s.Owners, SystemUSSP) {
+		for i := range s.Aircraft {
+			a := &s.Aircraft[i]
+			for j := i + 1; j < len(s.Aircraft); j++ {
+				b := &s.Aircraft[j]
+				if a.Operator == nil || b.Operator == nil || a.Operator.Intent == nil || b.Operator.Intent == nil ||
+					a.Operator.System != b.Operator.System || rejected[a.Name] || rejected[b.Name] {
+					continue
+				}
+				if a.Operator.Intent.Overlaps(b.Operator.Intent) {
+					return core.Fieldf(fmt.Sprintf("aircraft[%d].operator.intent", j),
+						"overlaps aircraft %s's: a USSP that deconflicts authorises only the first; give each its own volume, or expect the second rejected", a.Name)
+				}
+			}
+		}
 	}
 	return nil
 }
+
+// maxIntentBoxes is the USSP's bound on the volumes of one intent
+// (uspace-ussp internal/intent/validate.go MaxVolumes).
+const maxIntentBoxes = 16
 
 func knownSystem(s string) bool {
 	switch s {

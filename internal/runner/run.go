@@ -67,7 +67,16 @@ type Options struct {
 // referenceKinds are what the reference target judges, per system.
 var referenceKinds = map[string]map[string]bool{
 	scenario.SystemUSSP:      {"proximity": true, "zone_incursion": true, "lost_link": true, observe.KindDegraded: true},
-	scenario.SystemAuthority: {"zone_incursion": true, "height_120m": true, observe.KindDegraded: true},
+	scenario.SystemAuthority: {"zone_incursion": true, "height_120m": true, "unregistered": true, observe.KindDegraded: true},
+}
+
+// referenceNeverOnly are the kinds of referenceKinds the reference target
+// can only be asked never to raise. It gives the authority monitor no
+// registry, so no track carries an identification and uspace-core never
+// raises its identification alert (unregistered): a never on it holds by
+// construction, and an expectation that it is raised could never pass.
+var referenceNeverOnly = map[string]map[string]bool{
+	scenario.SystemAuthority: {"unregistered": true},
 }
 
 // CheckRunnable refuses, before anything starts, a scenario the targets
@@ -82,6 +91,11 @@ func CheckRunnable(s *scenario.Scenario, t *Targets) error {
 				if !referenceKinds[sys][k] {
 					return fmt.Errorf("%w: the reference target does not judge %s %s", ErrNotRunnable, sys, k)
 				}
+			}
+		}
+		for i := range s.Expect {
+			if e := &s.Expect[i]; referenceNeverOnly[e.System][e.Kind] {
+				return fmt.Errorf("%w: the reference target never raises %s %s; it can only be asked never to", ErrNotRunnable, e.System, e.Kind)
 			}
 		}
 		return nil
@@ -501,7 +515,7 @@ func (r *run) marks() verdict.Marks {
 }
 
 func (r *run) result(drain context.Context, started time.Time) *Result {
-	res := &Result{Format: ResultFormat, Run: r.opt.Run, Scenario: r.sc.ID, Title: r.sc.Title, Source: r.sc.Source,
+	res := &Result{Format: ResultFormat, Run: r.opt.Run, Scenario: r.sc.ID, ScenarioDigest: r.sc.Digest, Title: r.sc.Title, Source: r.sc.Source,
 		Owners: r.sc.Owners, StartedAt: started, T0: r.t0, Images: r.tg.Images, PolicyVersion: r.sc.PolicyDoc.PolicyVersion,
 		Policy: r.sc.PolicyDoc, Geoid: r.geoDesc}
 	res.Mode.Vehicles, res.Mode.Targets, res.Mode.Name = r.opt.Vehicles, r.tg.Mode, r.tg.Name
@@ -590,14 +604,15 @@ func (r *run) result(drain context.Context, started time.Time) *Result {
 			res.Failures = append(res.Failures, fmt.Sprintf("receiver %s ledger does not balance: observed %d, sent %d, accepted %d + duplicates %d + refused %d, pending %d", l.ReceiverID, l.Observed, l.Sent, l.Accepted, l.Duplicates, l.Refused, l.Pending))
 		}
 	}
-	for _, in := range res.Intents {
-		if in.Error != "" {
+	for i := range res.Intents {
+		if in := &res.Intents[i]; in.Error != "" {
 			res.Failures = append(res.Failures, fmt.Sprintf("intent of %s: %s", in.Aircraft, in.Error))
 		}
 	}
 	for _, ie := range r.sc.ExpectIntents {
 		found := false
-		for _, in := range res.Intents {
+		for i := range res.Intents {
+			in := &res.Intents[i]
 			if in.Aircraft != ie.Aircraft {
 				continue
 			}

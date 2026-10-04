@@ -273,18 +273,34 @@ func (t *Target) locationLocked(mac string, tx *transmitter, loc *odid.Location,
 	t.emitAuthority(t.authority.Observe(tr, unixS(arrival)), arrival)
 }
 
+// violationKind is the violation/v1 kind of a monitor alert kind, as
+// uspace-authority's detect names them (its detectsvc: zone ->
+// zone_incursion, height -> height_120m, identification ->
+// unregistered); false for a kind that is never a violation (conflicts,
+// authority plan D5).
+func violationKind(k string) (string, bool) {
+	switch k {
+	case alerting.KindZone:
+		return "zone_incursion", true
+	case alerting.KindHeight:
+		return "height_120m", true
+	case alerting.KindIdentification:
+		// uspace-core raises it only for an identification that says
+		// unknown_operator or unidentified inside an incident zone; with
+		// no identification (no registry) it raises nothing (SC-22).
+		return "unregistered", true
+	}
+	return "", false
+}
+
 // emitAuthority turns the authority monitor's events into violation/v1
-// frames: zone incursions and the 120 m height limit (conflicts are never
-// violations, authority plan D5; SkipConflicts is set).
+// frames: zone incursions, the 120 m height limit and unregistered
+// aircraft (conflicts are never violations, authority plan D5;
+// SkipConflicts is set).
 func (t *Target) emitAuthority(ev alerting.Events, now time.Time) {
 	for _, a := range ev.Raised {
-		var kind string
-		switch a.Kind {
-		case alerting.KindZone:
-			kind = "zone_incursion"
-		case alerting.KindHeight:
-			kind = "height_120m"
-		default:
+		kind, ok := violationKind(a.Kind)
+		if !ok {
 			continue
 		}
 		key := "authority|" + a.Key

@@ -2,12 +2,16 @@ package runner
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/rootxkit/uspace-lab/internal/scenario"
 )
 
 const root = "../.."
@@ -84,6 +88,14 @@ func TestCorrectExpectationPasses(t *testing.T) {
 	if res.Verdict != "pass" {
 		t.Fatalf("%s", res.Summary())
 	}
+	b, err := os.ReadFile(opts(t, "sc-22-missing-inputs-visible.yaml").Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(b)
+	if want := "sha256:" + hex.EncodeToString(sum[:]); res.ScenarioDigest != want {
+		t.Fatalf("scenario digest %q, want %q", res.ScenarioDigest, want)
+	}
 	if res.Commits.Core == "" || res.PolicyVersion != 1 || res.Mode.Targets != ModeReference || !strings.Contains(res.Evidence, "never evidence") {
 		t.Fatalf("result metadata %+v", res.Commits)
 	}
@@ -98,6 +110,26 @@ func TestNotRunnableIsRefusedBeforeAnythingStarts(t *testing.T) {
 	o.Vehicles = VehiclesSITL
 	if _, err := Run(context.Background(), o); !errors.Is(err, ErrNotRunnable) {
 		t.Fatalf("SITL without sitl commands: %v", err)
+	}
+}
+
+// The reference target never raises unregistered (it has no registry), so
+// a scenario may ask it never to, and is refused when it expects a raise.
+func TestReferenceUnregisteredIsNeverOnly(t *testing.T) {
+	tg := &Targets{Mode: ModeReference}
+	m := scenario.Matcher{System: scenario.SystemAuthority, Kind: "unregistered"}
+	never := &scenario.Scenario{ID: "never", Reference: true, Never: []scenario.Matcher{m}}
+	if err := CheckRunnable(never, tg); err != nil {
+		t.Fatalf("a never on unregistered: %v", err)
+	}
+	expect := &scenario.Scenario{ID: "expect", Reference: true, Expect: []scenario.Expect{{Name: "raised", Matcher: m}}}
+	if err := CheckRunnable(expect, tg); !errors.Is(err, ErrNotRunnable) {
+		t.Fatalf("an expected unregistered: %v", err)
+	}
+	zone := &scenario.Scenario{ID: "zone", Reference: true, Expect: []scenario.Expect{{Name: "raised",
+		Matcher: scenario.Matcher{System: scenario.SystemAuthority, Kind: "zone_incursion"}}}}
+	if err := CheckRunnable(zone, tg); err != nil {
+		t.Fatalf("an expected zone incursion: %v", err)
 	}
 }
 

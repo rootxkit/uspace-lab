@@ -94,6 +94,13 @@ func LoadState(path string) (*State, error) {
 	if s.USSPOperators == nil {
 		s.USSPOperators = map[string]*USSPOperator{}
 	}
+	// An operator saved before any serial was bound has no serials
+	// member (omitempty); a seed resumed after a failure binds into it.
+	for _, op := range s.USSPOperators {
+		if op != nil && op.Serials == nil {
+			op.Serials = map[string]bool{}
+		}
+	}
 	if s.Zones == nil {
 		s.Zones = map[string]int{}
 	}

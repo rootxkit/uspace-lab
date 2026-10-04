@@ -7,14 +7,22 @@ policy: policy/demo.yaml
 systems: [ussp]
 reference: true
 note: >-
-  Two aircraft at 30 m about 590 m apart fly towards each other at
-  10 m/s (closing 20 m/s): raised before t_cpa reaches 60 s, cleared
-  resolved past 60 m plus the hysteresis. Then b flies at a, which holds,
-  and stops 204 m short: the straight-line prediction closes inside 60 m,
-  so it is raised, and it clears once b has slowed enough that t_cpa
-  passes 60 s, the hysteresis later: around the stop, not after it
-  (C-10; measured on the reference target: 2.2 s before b's arrival was
-  confirmed within 3 m). The window is from the start of the return.
+  Two aircraft about 590 m apart fly towards each other at 10 m/s
+  (closing 20 m/s) on parallel east-west lines 40 m apart (a 20 m
+  north of the origin's line, b 20 m south): the CPA is 40 m, inside
+  the 60 m minimum, so it is raised before t_cpa reaches 60 s and
+  cleared resolved past 60 m plus the hysteresis. Then b flies back
+  along its line towards a, which holds, and stops 204 m short of
+  abeam: the straight-line prediction closes inside 60 m, so it is
+  raised, and it clears once b has slowed enough that t_cpa passes
+  60 s, the hysteresis later: around the stop, not after it (C-10).
+  The window is from the start of the return. The 40 m offset is what
+  lets each aircraft file its own volume: a deconflicting USSP
+  authorises only the first of two overlapping intents, which left b
+  with no flight to alert on (results/20261004-systems finding 7). a's
+  volume holds the homes' line west of 10 m east and everything north
+  of 10 m north; b's the line east of 15 m east and everything south of
+  12 m south; they are 4 m apart where nearest.
   USSP proximity alerts (the authority raises no conflicts). At 80 m
   rather than 30 m:
   SITL simulates the ground: around the example home (605 m) its terrain
@@ -29,11 +37,12 @@ aircraft:
     sysid: 1
     serial: LABX9SC02A0001
     operator_reg: GEOLAB000001
-    operator: &op
+    operator:
       system: ussp
       intent:
-        center: {north_m: 0, east_m: 0}
-        radius_m: 1500
+        boxes:
+          - {south_m: -8, north_m: 100, west_m: -400, east_m: 10}
+          - {south_m: 10, north_m: 100, west_m: 10, east_m: 400}
         alt_lower_rel_m: -20
         alt_upper_rel_m: 120
         starts_before_s: 60
@@ -45,49 +54,57 @@ aircraft:
     sysid: 2
     serial: LABX9SC02B0002
     operator_reg: GEOLAB000001
-    operator: *op
+    operator:
+      system: ussp
+      intent:
+        boxes:
+          - {south_m: -100, north_m: -12, west_m: -400, east_m: 15}
+          - {south_m: -100, north_m: 6, west_m: 15, east_m: 400}
+        alt_lower_rel_m: -20
+        alt_upper_rel_m: 120
+        starts_before_s: 60
+        lasts_s: 3600
+        category: open
+        subcategory: A2
+        class_label: C2
 steps:
   - id: climb
     at_s: 0
     aircraft: [a, b]
     do: takeoff
     alt_rel_m: 80
-  # Out to the start points, 590 m apart on one east-west line.
+  # Out to the start points, 590 m apart along the lines.
   - id: out-a
     aircraft: [a]
     do: goto
-    to: {north_m: 0, east_m: -290}
+    to: {north_m: 20, east_m: -290}
     speed_ms: 10
   - id: out-b
     aircraft: [b]
     do: goto
-    to: {north_m: 0, east_m: 300}
+    to: {north_m: -20, east_m: 300}
     speed_ms: 10
   # 1-2. Towards each other at 10 m/s, and through the pass; at_s starts
   #      both at once (each reaches its start point at its own time).
   - id: run
     at_s: 80
-    aircraft: [a, b]
-    do: goto
-    to: {north_m: 0, east_m: 0}
-    speed_ms: 10
-    tolerance_m: 400
-  - id: pass-a
     aircraft: [a]
     do: goto
-    to: {north_m: 0, east_m: 300}
+    to: {north_m: 20, east_m: 300}
     speed_ms: 10
-  - id: pass-b
+  - id: run-b
+    at_s: 80
     aircraft: [b]
     do: goto
-    to: {north_m: 0, east_m: -290}
+    to: {north_m: -20, east_m: -290}
     speed_ms: 10
-  # 3. a holds at 300 m east; b flies at it and stops 204 m short.
+  # 3. a holds at 300 m east; b flies back towards it and stops 204 m
+  #    short of abeam.
   - id: return
     at_s: 180
     aircraft: [b]
     do: goto
-    to: {north_m: 0, east_m: 96}
+    to: {north_m: -20, east_m: 96}
     speed_ms: 10
   - id: stop
     aircraft: [b]
@@ -142,5 +159,8 @@ expect:
     peer: a
     raise: {after: climb, min_s: -40, max_s: 5}
     clear: {after: climb, min_s: 0, max_s: 60, reason: resolved}
+expect_intents:
+  - {aircraft: a, decision: authorised, state: activated}
+  - {aircraft: b, decision: authorised, state: activated}
 judged_kinds: ["ussp:proximity"]
 measure: [latency, ledger]

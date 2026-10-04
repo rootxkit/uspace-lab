@@ -113,7 +113,7 @@ images:
   authority: %s
   cisp: %s
   ussp: %s
-  ansp: %s (built locally from uspace-ansp %s; not published)
+  ansp: %s
   dss: interuss/dss:v0.23.0@sha256:0781042bef785f6c968efd4b4e1e85854db9bf361116916d0673d2c89db91582
 geoid: %s
 lab: %s
@@ -146,7 +146,7 @@ requests:
 %sextra:
   uspace_airspace_id: %s
 `, filepath.ToSlash(o.SecretsDir),
-		env["AUTHORITY_IMAGE"], env["CISP_GO_IMAGE"], env["USSP_GO_IMAGE"], env["ANSP_GO_IMAGE"], env["ANSP_SOURCE_COMMIT"],
+		env["AUTHORITY_IMAGE"], env["CISP_GO_IMAGE"], env["USSP_GO_IMAGE"], anspImage(env),
 		o.Geoid, relTo(o.TargetsOut, o.Lab),
 		usspBlock,
 		u(ah), w(ah), u(ah), files["authority.session"], rx.String(),
@@ -190,4 +190,15 @@ func relTo(file, p string) string {
 		return filepath.ToSlash(p)
 	}
 	return filepath.ToSlash(r)
+}
+
+// anspImage is how a result names the ANSP image: by its digest when
+// demo.env pulls it from a registry (the ANSP publishes images since
+// its 85436de), and as built locally from ANSP_SOURCE_COMMIT otherwise.
+func anspImage(env map[string]string) string {
+	img := env["ANSP_GO_IMAGE"]
+	if strings.Contains(img, "@sha256:") {
+		return img
+	}
+	return fmt.Sprintf("%s (built locally from uspace-ansp %s; not published)", img, env["ANSP_SOURCE_COMMIT"])
 }

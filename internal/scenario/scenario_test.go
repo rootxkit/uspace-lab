@@ -1,6 +1,8 @@
 package scenario
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"math"
 	"os"
 	"path/filepath"
@@ -267,6 +269,43 @@ func TestLandingsTheSystemsRunSawLate(t *testing.T) {
 	}
 }
 
+// SC-22 asks a deployment for what it can lack and must show. The
+// authority publishes its switch state at start, so
+// source_control_unknown can never show on a deployment (results/
+// 20261004-systems finding 6); without terrain an AGL limit cannot be
+// judged, and the warning must say so (Z-09).
+func TestSC22AsksForWhatADeploymentCanLack(t *testing.T) {
+	s := load(t, "sc-22-missing-inputs-visible.yaml")
+	agl := map[string]bool{}
+	for _, z := range s.Zones {
+		if z.Lower.Ref == "AGL" || z.Upper.Ref == "AGL" {
+			agl[z.ID] = true
+		}
+	}
+	var registry, notJudged bool
+	for _, e := range s.Expect {
+		if e.Subject == "source_control_unknown" {
+			t.Errorf("%s expects source_control_unknown, which a deployment never shows", e.Name)
+		}
+		registry = registry || (e.System == SystemAuthority && e.Kind == "degraded" && e.Subject == "registry_projection_absent")
+		notJudged = notJudged || (e.System == SystemAuthority && e.Kind == "zone_incursion" && agl[e.Subject] &&
+			e.Detail["limit_not_judged"] == true && e.Clear != nil)
+	}
+	if !registry {
+		t.Error("no expectation that the absent registry projection is shown")
+	}
+	if !notJudged {
+		t.Error("no zone_incursion on an AGL zone expecting limit_not_judged, raised and cleared")
+	}
+	// Identification is null where there is no projection: nothing may
+	// call the aircraft unregistered.
+	if !slices.ContainsFunc(s.Never, func(m Matcher) bool {
+		return m.System == SystemAuthority && m.Kind == "unregistered" && (m.Aircraft == "" || m.Aircraft == "a")
+	}) {
+		t.Error("no never on an unregistered violation without a registry")
+	}
+}
+
 // A scenario zone names a zone authority: ED-318 requires one, and
 // uspace-authority refuses a zones import without it.
 func TestZonesNameAZoneAuthority(t *testing.T) {
@@ -309,6 +348,38 @@ func TestUnknownMembersAreRefused(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(dir, "policy", "demo.yaml"), pol, 0o600)
 	if _, err := Load(filepath.Join(dir, "x.yaml")); err == nil {
 		t.Fatal("an unknown member was accepted")
+	}
+}
+
+// The digest is the SHA-256 of the file's bytes, and any edit, even one
+// that leaves the scenario's meaning alone, changes it.
+func TestDigestIsTheFileHash(t *testing.T) {
+	src := filepath.Join(scenariosDir, "sc-22-missing-inputs-visible.yaml")
+	b, err := os.ReadFile(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := Load(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(b)
+	if want := "sha256:" + hex.EncodeToString(sum[:]); s.Digest != want {
+		t.Fatalf("digest %s, want %s", s.Digest, want)
+	}
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "x.yaml"), append(b, []byte("# edited\n")...), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	pol, _ := os.ReadFile(filepath.Join(scenariosDir, "policy", "demo.yaml"))
+	_ = os.MkdirAll(filepath.Join(dir, "policy"), 0o750)
+	_ = os.WriteFile(filepath.Join(dir, "policy", "demo.yaml"), pol, 0o600)
+	e, err := Load(filepath.Join(dir, "x.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e.Digest == s.Digest || !strings.HasPrefix(e.Digest, "sha256:") {
+		t.Fatalf("an edited file kept the digest %s", e.Digest)
 	}
 }
 
@@ -382,5 +453,181 @@ func TestCompilePlansAndZones(t *testing.T) {
 	in := lab.At(Offset{NorthM: 300})
 	if !c.Zones[0].BBox.Contains(in) {
 		t.Fatal("the zone's box does not hold its centre")
+	}
+}
+
+// The pairs a USSP owes (SC-01, SC-02, SC-21) each file their own
+// volume, and every point either aircraft flies through, from its home
+// on, lies inside its own: a USSP that deconflicts authorises only the
+// first of two overlapping intents (results/20261004-systems finding 7),
+// and an aircraft outside its volume is nonconforming.
+func TestOwedPairsFlyInsideTheirOwnVolumes(t *testing.T) {
+	lab, err := LoadLab("../../sim/sitl.env.example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range []string{"sc-01-hover-inside-minima.yaml", "sc-02-head-on-and-short-return.yaml", "sc-21-slow-to-hover.yaml"} {
+		s := load(t, f)
+		a, b := s.AircraftByName("a"), s.AircraftByName("b")
+		if a.Operator.Intent.Overlaps(b.Operator.Intent) {
+			t.Errorf("%s: a's and b's intents overlap", f)
+		}
+		for _, ac := range []*Aircraft{a, b} {
+			in := ac.Operator.Intent
+			at := Offset{EastM: float64(lab.Index(ac.Sysid)) * lab.SpacingM}
+			for _, st := range s.Steps {
+				if st.Do != DoGoto || !slices.Contains(st.Aircraft, ac.Name) {
+					continue
+				}
+				// Every 1 m of the straight leg (the union of boxes is not
+				// convex).
+				d := math.Hypot(st.To.NorthM-at.NorthM, st.To.EastM-at.EastM)
+				for k := 0.0; k <= d; k++ {
+					p := Offset{NorthM: at.NorthM + (st.To.NorthM-at.NorthM)*k/math.Max(d, 1), EastM: at.EastM + (st.To.EastM-at.EastM)*k/math.Max(d, 1)}
+					if !in.Contains(p) {
+						t.Errorf("%s: %s's leg to %s leaves its volume at %+v", f, ac.Name, st.ID, p)
+						break
+					}
+				}
+				at = *st.To
+			}
+		}
+	}
+}
+
+// Overlap of circles and boxes; touching is not overlapping, and
+// intents apart in height or time do not overlap.
+func TestIntentOverlaps(t *testing.T) {
+	band := func(in Intent) *Intent {
+		in.AltLowerRelM, in.AltUpperRelM, in.StartsBeforeS, in.LastsS = -10, 100, 60, 3600
+		return &in
+	}
+	circle := func(n, e, r float64) *Intent { return band(Intent{Center: Offset{NorthM: n, EastM: e}, RadiusM: r}) }
+	box := func(s, n, w, e float64) *Intent {
+		return band(Intent{Boxes: []Box{{SouthM: s, NorthM: n, WestM: w, EastM: e}}})
+	}
+	for name, c := range map[string]struct {
+		a, b *Intent
+		want bool
+	}{
+		"circles apart":        {circle(0, 0, 10), circle(0, 25, 10), false},
+		"circles touching":     {circle(0, 0, 10), circle(0, 20, 10), false},
+		"circles overlapping":  {circle(0, 0, 10), circle(0, 19, 10), true},
+		"boxes touching":       {box(0, 10, 0, 10), box(0, 10, 10, 20), false},
+		"boxes overlapping":    {box(0, 10, 0, 10), box(5, 15, 5, 15), true},
+		"circle over a corner": {circle(0, 0, 10), box(7, 20, 7, 20), true},
+		"circle over an edge":  {circle(0, 0, 10), box(-5, 5, 9, 20), true},
+		"circle clear":         {circle(0, 0, 10), box(7.5, 20, 7.5, 20), false},
+	} {
+		if got := c.a.Overlaps(c.b); got != c.want || c.b.Overlaps(c.a) != c.want {
+			t.Errorf("%s: %v, want %v", name, got, c.want)
+		}
+	}
+	high := circle(0, 0, 10)
+	high.AltLowerRelM, high.AltUpperRelM = 100, 200
+	if circle(0, 0, 10).Overlaps(high) {
+		t.Error("bands that only touch overlapped")
+	}
+	later := circle(0, 0, 10)
+	later.StartsBeforeS = -3540 // starts when the other ends
+	if circle(0, 0, 10).Overlaps(later) {
+		t.Error("windows that only touch overlapped")
+	}
+}
+
+// A scenario a USSP owes is refused when two aircraft file overlapping
+// intents, unless it expects the second refused (uspace-ussp WP-7's
+// first come, first served).
+func TestOverlappingIntentsAreRefusedUnlessExpected(t *testing.T) {
+	s := load(t, "sc-01-hover-inside-minima.yaml")
+	b := s.AircraftByName("b")
+	shared := *s.AircraftByName("a").Operator.Intent
+	b.Operator.Intent = &shared
+	if err := s.Validate(); err == nil || !strings.Contains(err.Error(), "overlaps aircraft a's") {
+		t.Fatalf("one volume for both: %v", err)
+	}
+	s.ExpectIntents = []IntentExpect{{Aircraft: "a", Decision: "authorised"}, {Aircraft: "b", Decision: "rejected"}}
+	if err := s.Validate(); err != nil {
+		t.Fatalf("b expected rejected: %v", err)
+	}
+	if err := load(t, "ussp-wp7-authorisation.yaml").Validate(); err != nil {
+		t.Fatalf("wp7: %v", err)
+	}
+}
+
+// A landing that follows the aircraft's previous step (no at_s) must
+// finish inside the run as SITL flies it (sitlEndS). The re-run of
+// ussp-wp7-authorisation confirmed the climb 37.5 s after t0, and its
+// landing, started at +65 s, was not confirmed by the end at +95 s.
+func TestUntimedLandingsFinishInsideTheRun(t *testing.T) {
+	files, err := filepath.Glob(filepath.Join(scenariosDir, "*.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range files {
+		s, err := Load(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, st := range s.Steps {
+			if st.Do != DoLand || st.AtS != nil {
+				continue
+			}
+			for _, a := range st.Aircraft {
+				if end := sitlEndS(s, a, st.ID); end > s.DurationS {
+					t.Errorf("%s: %s lands by about %.0f s, after duration_s %.0f", filepath.Base(f), a, end, s.DurationS)
+				}
+			}
+		}
+	}
+}
+
+// An ANSP restriction's end and cancel carry a reason (uspace-ansp
+// ReasonRequest): a run whose end is refused leaves the restriction
+// active over the origin for every scenario after it.
+func TestANSPEndsCarryAReason(t *testing.T) {
+	files, err := filepath.Glob(filepath.Join(scenariosDir, "*.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range files {
+		s, err := Load(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, st := range s.Steps {
+			r := st.Request
+			if r == nil || r.System != SystemANSP || (!strings.HasSuffix(r.Path, "/end") && !strings.HasSuffix(r.Path, "/cancel")) {
+				continue
+			}
+			if reason, _ := r.Body["reason"].(string); reason == "" {
+				t.Errorf("%s step %s: %s %s carries no reason", filepath.Base(f), st.ID, r.Method, r.Path)
+			}
+		}
+	}
+}
+
+// An idempotency key names one execution: a request body carries t0's
+// times, so a key without them is answered 409 when the scenario runs
+// again under the same run id (the runner's intents do the same with
+// their client_ref).
+func TestIdempotencyKeysAreOnePerExecution(t *testing.T) {
+	files, err := filepath.Glob(filepath.Join(scenariosDir, "*.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range files {
+		s, err := Load(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, st := range s.Steps {
+			if st.Request == nil {
+				continue
+			}
+			if k, ok := st.Request.Headers["Idempotency-Key"]; ok && !strings.Contains(k, "${time:") {
+				t.Errorf("%s step %s: Idempotency-Key %q is the same on every execution", filepath.Base(f), st.ID, k)
+			}
+		}
 	}
 }

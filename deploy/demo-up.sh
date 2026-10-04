@@ -59,13 +59,21 @@ dc() {
 
 # ---- 3. the ANSP image -------------------------------------------------------
 ansp_image="$(val ANSP_GO_IMAGE)"
-if ! docker image inspect "$ansp_image" >/dev/null 2>&1; then
-  commit="$(val ANSP_SOURCE_COMMIT)"
-  src="${ANSP_SOURCE_DIR:-https://github.com/rootxkit/uspace-ansp.git#$commit}"
-  say "building $ansp_image from $src (the ANSP publishes no image yet)"
-  docker build -q -f deploy/Dockerfile --build-arg VERSION="${commit:0:7}" -t "$ansp_image" "$src" >/dev/null
-fi
-say "ANSP image $ansp_image ($(docker image inspect -f '{{.Id}}' "$ansp_image"), built locally)"
+case "$ansp_image" in
+  *@sha256:*)
+    # Published (the ANSP's CI pushes images since its 85436de): pulled
+    # by digest like every other system.
+    docker image inspect "$ansp_image" >/dev/null 2>&1 || docker pull -q "$ansp_image" >/dev/null
+    say "ANSP image $ansp_image (pulled by digest)" ;;
+  *)
+    if ! docker image inspect "$ansp_image" >/dev/null 2>&1; then
+      commit="$(val ANSP_SOURCE_COMMIT)"
+      src="${ANSP_SOURCE_DIR:-https://github.com/rootxkit/uspace-ansp.git#$commit}"
+      say "building $ansp_image from $src"
+      docker build -q -f deploy/Dockerfile --build-arg VERSION="${commit:0:7}" -t "$ansp_image" "$src" >/dev/null
+    fi
+    say "ANSP image $ansp_image ($(docker image inspect -f '{{.Id}}' "$ansp_image"), built locally)" ;;
+esac
 
 # ---- 4. the DSS and the issuer ------------------------------------------------
 start="$(date +%s)"

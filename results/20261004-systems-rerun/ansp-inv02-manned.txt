@@ -1,0 +1,13 @@
+scenario ansp-inv02-manned (20261004-systems-rerun, sitl vehicles, systems targets): FAIL
+  observed alerts (6):
+    ussp      degraded                          on cis raised +-15.2s
+    ussp      degraded                          on dss raised +-15.2s
+    ussp      degraded                          on manned raised +-15.2s
+    ussp      degraded                          on policy raised +-15.2s
+    ussp      degraded                          on source_control raised +-15.2s
+    ansp      degraded                          on adapters_silent raised +-15.2s cleared not_degraded +22.8s
+  missed 2, false 0
+  operator LABX9ANSPA0001: sent 175 = accepted 175 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  FAIL ansp-shows-the-manned-track: no ansp manned_track raise for any aircraft on f0c001 in [03:19:47.000, 03:20:17.000]
+  FAIL ussp-proximity-with-the-manned-peer: no ussp proximity raise for a with f0c001 in [03:19:52.000, 03:20:42.000]
+  result: results/20261004-systems-rerun/ansp-inv02-manned.json

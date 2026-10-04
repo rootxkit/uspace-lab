@@ -1,0 +1,30 @@
+scenario ussp-wp10-conformance (20261004-systems-rerun, sitl vehicles, systems targets): PASS
+  observed alerts (23):
+    ussp      degraded                          on dss raised +-15.9s
+    ussp      degraded                          on manned raised +-15.9s
+    ussp      degraded                          on policy raised +-15.9s
+    ussp      degraded                          on source_control raised +-15.9s
+    ussp      proximity              a          peer b raised +26.2s cleared resolved +50.1s
+    ussp      proximity              b          peer a raised +26.2s cleared resolved +50.1s
+    ussp      nonconformance         a          raised +51.1s cleared resolved +90.1s
+    ussp      nonconformance_nearby  b          raised +51.1s cleared resolved +90.1s
+    ussp      proximity              a          peer b raised +71.1s cleared resolved +122.2s
+    ussp      proximity              b          peer a raised +71.1s cleared resolved +122.2s
+    ussp      nonconformance         a          raised +130.1s cleared resolved +169.1s
+    ussp      nonconformance_nearby  b          raised +130.1s cleared resolved +169.1s
+    ussp      proximity              a          peer b raised +146.1s cleared resolved +193.1s
+    ussp      proximity              b          peer a raised +146.1s cleared resolved +193.1s
+    ussp      degraded                          on cis raised +168.1s
+    ussp      nonconformance         a          raised +194.1s cleared resolved +296.1s
+    ussp      nonconformance_nearby  b          raised +194.1s cleared resolved +296.1s
+    ussp      proximity              a          peer b raised +276.1s cleared stale +414.0s
+    ussp      proximity              b          peer a raised +276.1s cleared stale +414.0s
+    ussp      nonconformance_nearby  b          raised +414.1s cleared resolved +425.1s
+    ussp      lost_link              a          raised +414.1s cleared resolved +425.1s
+    ussp      proximity              a          peer b raised +425.1s
+    ussp      proximity              b          peer a raised +425.1s
+  missed 0, false 0
+  operator LABX9WP10A0001: sent 430 = accepted 430 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  operator LABX9WP10B0002: sent 453 = accepted 453 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  latency ussp: n 18, p50 0.201 s, p95 15.188 s, max 15.188 s
+  result: results/20261004-systems-rerun/ussp-wp10-conformance.json

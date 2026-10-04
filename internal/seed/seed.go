@@ -58,6 +58,15 @@ type Options struct {
 	// pending_dss: the runs that need an authorised intent are flown
 	// with the airspace moved off the area (docs/RUNBOOKS/demo.md).
 	USpaceCenter scenario.Offset
+	// USpaceCeilingAboveOriginM puts the U-space airspace's ceiling,
+	// an AMSL limit, this far above the origin's AMSL altitude
+	// (sitl.env). An AMSL ceiling is judged without terrain; a ceiling
+	// above the ground (max_height_agl_m) is not, and the lab stack has
+	// no terrain: the USSP refuses every intent under it,
+	// airspace_ceiling_not_judged (results/20261004-systems-try2). The
+	// AGL case the lab keeps is SC-22's zone, which expects
+	// limit_not_judged.
+	USpaceCeilingAboveOriginM float64
 	// ZonesAwayNorthM, when not zero, publishes the ZoneScenarios' zones
 	// that far north of their place: how a zone is taken off the area
 	// before the next scenario (a newer version supersedes it).
@@ -206,7 +215,10 @@ func Run(ctx context.Context, o Options) error {
 
 	if has[StepUSpace] {
 		id := def(o.USpaceID, "LABUSP1")
-		f, err := uspaceFeature(lab, id, env["DEMO_COUNTRY"], o.USpaceHalfSideM, o.USpaceCenter)
+		if err := ceilingCovers(o.Scenarios, lab.Origin.AltAMSLM, o.USpaceCeilingAboveOriginM); err != nil {
+			return err
+		}
+		f, err := uspaceFeature(lab, id, env["DEMO_COUNTRY"], o.USpaceHalfSideM, o.USpaceCenter, o.USpaceCeilingAboveOriginM)
 		if err != nil {
 			return err
 		}
@@ -221,18 +233,7 @@ func Run(ctx context.Context, o Options) error {
 		if err != nil {
 			return err
 		}
-		zlab := lab
-		if o.ZonesAwayNorthM != 0 {
-			// The zones published again far off the area (a new version
-			// of each): the authority keeps a published zone until a newer
-			// version supersedes it, and the next scenario flies where the
-			// old one was.
-			moved := *lab
-			p := lab.At(scenario.Offset{NorthM: o.ZonesAwayNorthM})
-			moved.Origin.LatDeg, moved.Origin.LonDeg = p.LatDeg, p.LonDeg
-			zlab = &moved
-		}
-		doc, err := zonesDoc(o.Scenarios, o.ZoneScenarios, zlab)
+		doc, err := zonesDoc(o.Scenarios, o.ZoneScenarios, zonesLab(lab, o.ZonesAwayNorthM))
 		if err != nil {
 			return err
 		}
@@ -353,6 +354,23 @@ func receivers(ss []*scenario.Scenario) []scenario.Receiver {
 	return out
 }
 
+// zonesLab is the lab the zones are placed by: the lab itself, or, with
+// awayNorthM not zero, a copy whose origin is that far north. That is
+// how a zone is taken off the area: published again far away under the
+// same identifier, a new version of it, because the authority keeps a
+// published zone until a newer version supersedes it and the next
+// scenario flies where the old one was. The lab passed in is not
+// changed.
+func zonesLab(lab *scenario.Lab, awayNorthM float64) *scenario.Lab {
+	if awayNorthM == 0 {
+		return lab
+	}
+	moved := *lab
+	p := lab.At(scenario.Offset{NorthM: awayNorthM})
+	moved.Origin.LatDeg, moved.Origin.LonDeg = p.LatDeg, p.LonDeg
+	return &moved
+}
+
 // zonesDoc is the ED-269 file of the named scenarios' zones, placed by
 // the lab's origin (the runner writes the same zones beside a result).
 func zonesDoc(ss []*scenario.Scenario, ids []string, lab *scenario.Lab) ([]byte, error) {
@@ -393,12 +411,66 @@ func keys(m map[string]bool) []string {
 	return out
 }
 
+// ceilingCovers refuses a U-space ceiling (metres above the origin,
+// whose altitude is originAMSLM) at or below the top of a scenario's
+// intent, or below the AMSL top of a restriction a scenario asks the
+// ANSP for: the intent would reach out of the airspace it is meant to
+// be judged in, and the ANSP refuses a restriction above the airspace's
+// upper limit (restriction_invalid, seen in the re-run of
+// ussp-wp12-restriction). An intent's band is relative to its
+// aircraft's home, which is at the origin's altitude (scenario.Lab.Home).
+func ceilingCovers(ss []*scenario.Scenario, originAMSLM, aboveOriginM float64) error {
+	if !(aboveOriginM > 0) {
+		return fmt.Errorf("seed: the U-space ceiling must be above the origin (got %v m)", aboveOriginM)
+	}
+	ceiling := originAMSLM + aboveOriginM
+	for _, s := range ss {
+		for _, st := range s.Steps {
+			if st.Request == nil || st.Request.Body["upper_ref"] != "AMSL" {
+				continue
+			}
+			if top, ok := amslNumber(st.Request.Body["upper_m"]); ok && top > ceiling {
+				return fmt.Errorf("seed: %s step %s asks for a restriction up to %.0f m AMSL, above the U-space ceiling %.0f m AMSL",
+					s.ID, st.ID, top, ceiling)
+			}
+		}
+		for _, a := range s.Aircraft {
+			if a.Operator == nil || a.Operator.Intent == nil {
+				continue
+			}
+			if top := a.Operator.Intent.AltUpperRelM; top >= aboveOriginM {
+				return fmt.Errorf("seed: %s aircraft %s files an intent up to %.0f m above home, not under the U-space ceiling %.0f m above the origin",
+					s.ID, a.Name, top, aboveOriginM)
+			}
+		}
+	}
+	return nil
+}
+
+// amslNumber reads a number as YAML gives it.
+func amslNumber(v any) (float64, bool) {
+	switch n := v.(type) {
+	case int:
+		return float64(n), true
+	case int64:
+		return float64(n), true
+	case uint64:
+		return float64(n), true
+	case float64:
+		return n, true
+	}
+	return 0, false
+}
+
 // uspaceFeature is an ED-318 USPACE feature: a square of half side h
-// about the lab's origin, from 0 m to 3000 m AMSL (every flight of the
-// suite is inside it, whatever the ground).
-func uspaceFeature(lab *scenario.Lab, id, country string, h float64, c scenario.Offset) ([]byte, error) {
+// about the lab's origin, from 0 m AMSL (below any ground) up to an AMSL
+// ceiling aboveOriginM over the origin's altitude.
+func uspaceFeature(lab *scenario.Lab, id, country string, h float64, c scenario.Offset, aboveOriginM float64) ([]byte, error) {
 	if h <= 0 {
 		return nil, fmt.Errorf("seed: the U-space airspace's half side must be above 0")
+	}
+	if !(aboveOriginM > 0) {
+		return nil, fmt.Errorf("seed: the U-space ceiling must be above the origin")
 	}
 	if country == "" {
 		return nil, fmt.Errorf("seed: DEMO_COUNTRY is not set")
@@ -411,10 +483,11 @@ func uspaceFeature(lab *scenario.Lab, id, country string, h float64, c scenario.
 	for _, p := range ring {
 		coords = append(coords, fmt.Sprintf("[%.7f,%.7f]", p.LonDeg, p.LatDeg))
 	}
+	ceiling := lab.Origin.AltAMSLM + aboveOriginM
 	return []byte(fmt.Sprintf(`{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[%s]],`+
-		`"layer":{"lower":0,"lowerReference":"AMSL","upper":3000,"upperReference":"AMSL","uom":"m"}},`+
+		`"layer":{"lower":0,"lowerReference":"AMSL","upper":%s,"upperReference":"AMSL","uom":"m"}},`+
 		`"properties":{"identifier":%q,"country":%q,"name":[{"text":"uspace-lab demo U-space","lang":"en-GB"}],`+
 		`"type":"USPACE","variant":"COMMON","reason":["OTHER"],`+
 		`"zoneAuthority":[{"name":[{"text":"uspace-lab demo authority","lang":"en-GB"}],"purpose":"AUTHORIZATION"}]}}`,
-		strings.Join(coords, ","), id, country)), nil
+		strings.Join(coords, ","), strconv.FormatFloat(ceiling, 'f', -1, 64), id, country)), nil
 }

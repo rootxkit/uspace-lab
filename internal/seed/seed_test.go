@@ -3,6 +3,7 @@ package seed
 import (
 	"context"
 	"encoding/json"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -99,17 +100,89 @@ func TestZonesDoc(t *testing.T) {
 	}
 }
 
+// --zones-away-north-m takes a scenario's zones off the area (bf8229e):
+// the same zones, under the same identifiers and limits (so each import
+// is a newer version that supersedes the one in force), placed that far
+// north, and the lab the run goes on with is left where it was.
+func TestZonesAwayAreTheSameZonesFarNorth(t *testing.T) {
+	ss, lab := scenarios(t)
+	origin := lab.Origin
+	type zone struct {
+		Identifier string `json:"identifier"`
+		Geometry   []struct {
+			Lower      float64 `json:"lowerLimit"`
+			LowerRef   string  `json:"lowerVerticalReference"`
+			Upper      float64 `json:"upperLimit"`
+			UpperRef   string  `json:"upperVerticalReference"`
+			Projection struct {
+				Coordinates [][][2]float64 `json:"coordinates"`
+			} `json:"horizontalProjection"`
+		} `json:"geometry"`
+	}
+	read := func(lab *scenario.Lab) []zone {
+		t.Helper()
+		b, err := zonesDoc(ss, []string{"sc-03-zone-entry-exit", "authority-sc08-rid-switch"}, lab)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var doc struct {
+			Features []zone `json:"features"`
+		}
+		if err := json.Unmarshal(b, &doc); err != nil || len(doc.Features) != 2 {
+			t.Fatalf("%v %s", err, b)
+		}
+		return doc.Features
+	}
+	if zonesLab(lab, 0) != lab {
+		t.Fatal("no distance moved the zones")
+	}
+	here := read(lab)
+	const awayM = 60000
+	away := read(zonesLab(lab, awayM))
+	if lab.Origin != origin {
+		t.Fatalf("the lab's origin moved: %+v, was %+v", lab.Origin, origin)
+	}
+	for i := range here {
+		h, a := here[i], away[i]
+		if len(h.Geometry) != 1 || len(a.Geometry) != 1 {
+			t.Fatalf("zone %d: %d volumes away, %d here", i, len(a.Geometry), len(h.Geometry))
+		}
+		hv, av := h.Geometry[0], a.Geometry[0]
+		if h.Identifier != a.Identifier || hv.Lower != av.Lower || hv.LowerRef != av.LowerRef || hv.Upper != av.Upper || hv.UpperRef != av.UpperRef {
+			t.Fatalf("zone %d changed more than its place: %+v against %+v", i, a, h)
+		}
+		ring, ringAway := hv.Projection.Coordinates[0], av.Projection.Coordinates[0]
+		if len(ring) != len(ringAway) {
+			t.Fatalf("zone %s: %d vertices away, %d here", h.Identifier, len(ringAway), len(ring))
+		}
+		for k := range ring {
+			// 60 km north is about 0.54 degrees of latitude; the
+			// longitude stays within the metres a meridian converges.
+			dLat, dLon := ringAway[k][1]-ring[k][1], ringAway[k][0]-ring[k][0]
+			if dLat < 0.53 || dLat > 0.55 || dLon < -0.001 || dLon > 0.001 {
+				t.Fatalf("zone %s vertex %d moved %.5f deg north, %.5f deg east", h.Identifier, k, dLat, dLon)
+			}
+		}
+	}
+}
+
 // The U-space airspace is a closed square about its centre, USPACE,
 // in the deployment's country.
 func TestUSpaceFeature(t *testing.T) {
 	_, lab := scenarios(t)
-	f, err := uspaceFeature(lab, "LABUSP1", "GEO", 1000, scenario.Offset{NorthM: 60000})
+	f, err := uspaceFeature(lab, "LABUSP1", "GEO", 1000, scenario.Offset{NorthM: 60000}, 150)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var v struct {
 		Geometry struct {
 			Coordinates [][][2]float64 `json:"coordinates"`
+			Layer       struct {
+				Lower    *float64 `json:"lower"`
+				LowerRef string   `json:"lowerReference"`
+				Upper    *float64 `json:"upper"`
+				UpperRef string   `json:"upperReference"`
+			} `json:"layer"`
 		} `json:"geometry"`
 		Properties struct {
 			Identifier, Country, Type string
@@ -125,7 +198,85 @@ func TestUSpaceFeature(t *testing.T) {
 	if ring[0][1] < lab.Origin.LatDeg+0.5 {
 		t.Fatalf("the square is not 60 km north: %v", ring[0])
 	}
-	if _, err := uspaceFeature(lab, "X", "", 1000, scenario.Offset{}); err == nil {
+	// The ceiling is AMSL, 150 m over the origin's altitude (sitl.env):
+	// judged without terrain, which the lab stack does not have.
+	l := v.Geometry.Layer
+	if l.Lower == nil || *l.Lower != 0 || l.LowerRef != "AMSL" || l.Upper == nil || *l.Upper != lab.Origin.AltAMSLM+150 || l.UpperRef != "AMSL" {
+		t.Fatalf("layer %+v, want 0 to %.0f m AMSL", l, lab.Origin.AltAMSLM+150)
+	}
+	if _, err := uspaceFeature(lab, "X", "", 1000, scenario.Offset{}, 150); err == nil {
 		t.Fatal("no country was accepted")
 	}
+	if _, err := uspaceFeature(lab, "X", "GEO", 1000, scenario.Offset{}, 0); err == nil {
+		t.Fatal("a ceiling at the origin was accepted")
+	}
+}
+
+// The ceiling must clear the top of every intent the scenarios file and
+// of every AMSL restriction they ask the ANSP for (ussp-wp12-restriction
+// asks for one up to 2000 m AMSL).
+func TestUSpaceCeilingCoversTheIntents(t *testing.T) {
+	files, err := filepath.Glob("../../scenarios/*.yaml")
+	if err != nil || len(files) == 0 {
+		t.Fatalf("%v %v", files, err)
+	}
+	var ss []*scenario.Scenario
+	for _, f := range files {
+		s, err := scenario.Load(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ss = append(ss, s)
+	}
+	const origin = 605
+	if err := ceilingCovers(ss, origin, 1500); err != nil {
+		t.Fatalf("the demo default: %v", err)
+	}
+	if err := ceilingCovers(ss, origin, 150); err == nil || !strings.Contains(err.Error(), "ussp-wp12-restriction step plan asks for a restriction up to 2000 m AMSL") {
+		t.Fatalf("a ceiling below wp12's restriction: %v", err)
+	}
+	if err := ceilingCovers(ss, 5000, 120); err == nil || !strings.Contains(err.Error(), "not under the U-space ceiling") {
+		t.Fatalf("a ceiling at an intent's top: %v", err)
+	}
+	if err := ceilingCovers(ss, origin, 0); err == nil {
+		t.Fatal("no ceiling was accepted")
+	}
+}
+
+// A result names the ANSP image as demo.env gives it: a registry digest
+// as it is, a local build with the commit it was built from.
+func TestANSPImageAsTheResultNamesIt(t *testing.T) {
+	const digest = "ghcr.io/rootxkit/uspace-ansp@sha256:8e6a7e11d543fbbe28c7d1708437a835aab9c19b815a026ba2fc8997d89d9336"
+	if got := anspImage(map[string]string{"ANSP_GO_IMAGE": digest, "ANSP_SOURCE_COMMIT": "d02b09a"}); got != digest {
+		t.Errorf("published: %q", got)
+	}
+	if got := anspImage(map[string]string{"ANSP_GO_IMAGE": "uspace-lab/uspace-ansp:d02b09a", "ANSP_SOURCE_COMMIT": "d02b09a"}); got != "uspace-lab/uspace-ansp:d02b09a (built locally from uspace-ansp d02b09a; not published)" {
+		t.Errorf("local: %q", got)
+	}
+}
+
+// A seed resumed after a failure finds the USSP operator it saved before
+// binding any serial, with no serials member (omitempty), and binds into
+// it: seen in the re-run of 20261004, where the first try stopped at an
+// operator left pending_validation and the second panicked on the nil
+// map.
+func TestResumedStateBindsSerials(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "seed-state.json")
+	st, err := LoadState(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st.USSPOperators["GEOLAB000001"] = &USSPOperator{ID: "op", AdminUser: "lab-geolab000001", Serials: map[string]bool{}}
+	if err := st.Save(); err != nil {
+		t.Fatal(err)
+	}
+	again, err := LoadState(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	op := again.USSPOperators["GEOLAB000001"]
+	if op == nil || op.Serials == nil {
+		t.Fatalf("operator after reload: %+v", op)
+	}
+	op.Serials["LABX9SC01A0001"] = true
 }

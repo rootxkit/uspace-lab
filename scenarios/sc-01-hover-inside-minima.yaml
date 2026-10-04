@@ -15,7 +15,12 @@ note: >-
   runs from 578 m to the north to over 624 m 100 m east (TERRAIN_REPORT,
   measured 2026-10-03), and a vehicle at 20 m above home flew into it
   and held there at full lean. The flights here are at a height that
-  clears it.
+  clears it. Each aircraft files its own volume, the two 9 m apart
+  between the homes (a box west of 8 m east, b's east of 17 m east): a
+  USSP deconflicts intents strategically and authorises only the first
+  of two that overlap, which left b with no flight to alert on
+  (results/20261004-systems finding 7). Adjacent volumes flown close to
+  their shared edge are the case the tactical check is for.
 duration_s: 280
 tail_s: 8
 aircraft:
@@ -23,11 +28,10 @@ aircraft:
     sysid: 1
     serial: LABX9SC01A0001
     operator_reg: GEOLAB000001
-    operator: &op
+    operator:
       system: ussp
       intent:
-        center: {north_m: 0, east_m: 0}
-        radius_m: 1000
+        boxes: [{south_m: -100, north_m: 100, west_m: -150, east_m: 8}]
         alt_lower_rel_m: -20
         alt_upper_rel_m: 120
         starts_before_s: 60
@@ -39,7 +43,17 @@ aircraft:
     sysid: 2
     serial: LABX9SC01B0002
     operator_reg: GEOLAB000001
-    operator: *op
+    operator:
+      system: ussp
+      intent:
+        boxes: [{south_m: -100, north_m: 100, west_m: 17, east_m: 200}]
+        alt_lower_rel_m: -20
+        alt_upper_rel_m: 120
+        starts_before_s: 60
+        lasts_s: 3600
+        category: open
+        subcategory: A2
+        class_label: C2
 steps:
   # 1. Arm both and climb both (60 m: see the note).
   - id: climb
@@ -92,5 +106,8 @@ expect:
     raise: {after: climb, min_s: -40, max_s: 5}
     hold_until: {after: hover, min_s: 0, max_s: 0}
     clear: {after: apart.start, min_s: 3, max_s: 40, reason: resolved}
+expect_intents:
+  - {aircraft: a, decision: authorised, state: activated}
+  - {aircraft: b, decision: authorised, state: activated}
 judged_kinds: ["ussp:proximity"]
 measure: [latency, ledger]

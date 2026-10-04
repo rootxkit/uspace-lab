@@ -1,0 +1,14 @@
+scenario sc-22-missing-inputs-visible (20261004-systems-rerun, sitl vehicles, systems targets): FAIL
+  observed alerts (6):
+    authority degraded                          on dp_unavailable raised +-15.3s
+    authority degraded                          on no_subscription raised +-15.3s cleared not_degraded +-15.3s
+    authority degraded                          on registry_projection_absent raised +-15.3s
+    authority degraded                          on cis_stale raised +-10.4s
+    authority zone_incursion         a          on SC22Z raised +54.6s cleared resolved +95.6s
+    authority unregistered           a          on SC22Z raised +54.6s cleared resolved +95.6s
+  missed 0, false 1
+  receiver lab-rx-1: observed 135, sent 135 = accepted 135 + duplicates 0 + refused 0 (balanced true)
+  latency authority: n 2, p50 0.528 s, p95 0.528 s, max 0.528 s
+  FAIL false alert: authority unregistered 01M42B2E3T0EAHE79G0RWKVG74 (aircraft "a", peer "", subject "SC22Z") raised at 02:14:45.627
+  FAIL never authority unregistered for a: raised 01M42B2E3T0EAHE79G0RWKVG74 at 02:14:45.627
+  result: results/20261004-systems-rerun/sc-22-missing-inputs-visible.json

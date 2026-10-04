@@ -1,0 +1,295 @@
+{
+  "format": "result/v1",
+  "run": "20261004-systems-rerun",
+  "scenario": "ussp-wp12-restriction",
+  "title": "uspace-ussp WP-12 (N-M1, S-M4): an ANSP restriction over an activated intent raises restriction_activated within one tick",
+  "source": "uspace-ussp docs/RUNBOOKS/WP-12.md, 'Lab run (owed)'; spec 07 N-M1, S-M4",
+  "owners": [
+    "ussp",
+    "ansp",
+    "cisp"
+  ],
+  "started_at": "2026-10-04T04:02:46.519209735Z",
+  "ended_at": "2026-10-04T04:05:57.008540187Z",
+  "t0": "2026-10-04T04:03:02Z",
+  "mode": {
+    "vehicles": "sitl",
+    "targets": "systems",
+    "targets_name": "lab-demo"
+  },
+  "evidence": "systems under test with SITL vehicles flown by sim/fly.py: INV-02 evidence when the images are pinned by digest",
+  "commits": {
+    "lab": "98fb3626b075dfa36d4dfaa1478ac881c5de9f9e",
+    "lab_dirty": true,
+    "core": "v1.3.0",
+    "go": "go1.27.1"
+  },
+  "images": {
+    "ansp": "ghcr.io/rootxkit/uspace-ansp@sha256:8e6a7e11d543fbbe28c7d1708437a835aab9c19b815a026ba2fc8997d89d9336",
+    "authority": "ghcr.io/rootxkit/uspace-authority@sha256:3f8a821bbe9747942db0b7ff7bf0ae9735806b46c370dafbaeaf72f9698dd5a0",
+    "cisp": "ghcr.io/rootxkit/uspace-cisp@sha256:63a02a8da983a530744663e52bdd82dac31b4c9f36b5ecfd572bd529e83978cd",
+    "dss": "interuss/dss:v0.23.0@sha256:0781042bef785f6c968efd4b4e1e85854db9bf361116916d0673d2c89db91582",
+    "ussp": "ghcr.io/rootxkit/uspace-ussp@sha256:a5838e08138d65777749d8d2d1aa87cbe2c185da12479002f918b88080fd3305"
+  },
+  "policy_version": 1,
+  "policy": {
+    "policy_version": 1,
+    "source": "docs/PLAN.md §7.1 L-Q4 (owner-only, open; GCAA answers); knowledge/scenarios.md conventions",
+    "deviation": {
+      "h_m": 50,
+      "v_m": 15,
+      "t_s": 60
+    },
+    "telemetry_lost_s": 5,
+    "lost_link_s": 15,
+    "nonconformance_nearby_radius_m": 2000,
+    "cpa": {
+      "t_cpa_max_s": 60,
+      "d_horizontal_min_m": 60,
+      "d_vertical_min_m": 20,
+      "neighbour_radius_m": 800,
+      "neighbour_max_age_s": 10
+    },
+    "height_limit_agl_m": 120,
+    "monitor": {
+      "clear_after_s": 3,
+      "stale_after_s": 15,
+      "live_max_age_s": 10,
+      "pressure_uncertainty_m": 250,
+      "conditional_severity": "warning"
+    }
+  },
+  "lab": {
+    "file": "sim/sitl.env",
+    "origin_lat_deg": 41.7151,
+    "origin_lon_deg": 44.8271,
+    "origin_alt_amsl_m": 605,
+    "spacing_m": 25
+  },
+  "geoid": "WGS84 EGM2008, 2.5-minute grid",
+  "marks": {
+    "climb": "2026-10-04T04:03:43.526885271Z",
+    "climb.start": "2026-10-04T04:03:02.000364542Z",
+    "down": "2026-10-04T04:05:51.548379659Z",
+    "down.start": "2026-10-04T04:05:13.523367881Z",
+    "hover": "2026-10-04T04:05:13.523298025Z",
+    "hover.start": "2026-10-04T04:03:43.526962757Z",
+    "t0": "2026-10-04T04:03:02Z"
+  },
+  "steps": [
+    {
+      "sysid": 1,
+      "step": 0,
+      "action": "arm",
+      "state": "started",
+      "at_unix_s": 1791086582.0003645
+    },
+    {
+      "sysid": 1,
+      "step": 0,
+      "action": "arm",
+      "state": "confirmed",
+      "at_unix_s": 1791086607.5171623,
+      "observed": {
+        "alt_rel_m": 0.003,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7151,
+        "lon_deg": 44.827100099999996,
+        "time_boot_ms": 44319
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 1,
+      "action": "takeoff",
+      "state": "started",
+      "at_unix_s": 1791086607.5172353
+    },
+    {
+      "sysid": 1,
+      "step": 1,
+      "action": "takeoff",
+      "state": "confirmed",
+      "at_unix_s": 1791086623.5268853,
+      "observed": {
+        "alt_rel_m": 29.008,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.715100199999995,
+        "lon_deg": 44.8270997,
+        "time_boot_ms": 60319
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 2,
+      "action": "hold",
+      "state": "started",
+      "at_unix_s": 1791086623.5269628
+    },
+    {
+      "sysid": 1,
+      "step": 2,
+      "action": "hold",
+      "state": "confirmed",
+      "at_unix_s": 1791086713.523298,
+      "observed": {
+        "alt_rel_m": 30.001,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.715100199999995,
+        "lon_deg": 44.8270998,
+        "time_boot_ms": 150319
+      },
+      "max_drift_m": 0.01387582166186324
+    },
+    {
+      "sysid": 1,
+      "step": 3,
+      "action": "land",
+      "state": "started",
+      "at_unix_s": 1791086713.523368
+    },
+    {
+      "sysid": 1,
+      "step": 3,
+      "action": "land",
+      "state": "confirmed",
+      "at_unix_s": 1791086751.5483797,
+      "observed": {
+        "alt_rel_m": 0.028,
+        "armed": false,
+        "custom_mode": 9,
+        "lat_deg": 41.715100199999995,
+        "lon_deg": 44.8270997,
+        "time_boot_ms": 188319
+      }
+    }
+  ],
+  "intents": [
+    {
+      "aircraft": "a",
+      "intent_id": "9a7e1537-dd24-4861-9b28-1f680a7d1f87",
+      "decision": "pending_dss",
+      "state": "pending_dss"
+    }
+  ],
+  "timeline": [
+    {
+      "step": 2,
+      "id": "plan",
+      "do": "request",
+      "at": "2026-10-04T04:03:31.998377264Z",
+      "detail": "POST /v1/restrictions -\u003e 500",
+      "error": "ansp answered 500: {\"type\":\"https://schemas.uspace.ge/problems/internal\",\"title\":\"Internal Server Error\",\"status\":500,\"detail\":\"the request could not be completed\",\"instance\":\"/v1/restrictions\",\"errors\":[]}\n"
+    },
+    {
+      "step": 3,
+      "id": "activate",
+      "do": "request",
+      "at": "2026-10-04T04:03:42.000121347Z",
+      "detail": "POST /v1/restrictions/${restriction_id}/activate -\u003e 404",
+      "error": "ansp answered 404: {\"type\":\"https://schemas.uspace.ge/problems/not_found\",\"title\":\"Not Found\",\"status\":404,\"detail\":\"no such restriction or request\",\"instance\":\"/v1/restrictions/${restriction_id}/activate\",\"errors\":[]}\n"
+    },
+    {
+      "step": 4,
+      "id": "end",
+      "do": "request",
+      "at": "2026-10-04T04:04:41.998061867Z",
+      "detail": "POST /v1/restrictions/${restriction_id}/end -\u003e 404",
+      "error": "ansp answered 404: {\"type\":\"https://schemas.uspace.ge/problems/not_found\",\"title\":\"Not Found\",\"status\":404,\"detail\":\"no such restriction or request\",\"instance\":\"/v1/restrictions/${restriction_id}/end\",\"errors\":[]}\n"
+    }
+  ],
+  "outcome": {
+    "expectations": [
+      {
+        "name": "restriction-activated-on-the-intent",
+        "matcher": {
+          "system": "ussp",
+          "kind": "restriction_activated",
+          "aircraft": "a"
+        },
+        "ok": false,
+        "why": [
+          "raise: mark \"activate\" never happened (no vehicle confirmed it, E-08)"
+        ]
+      }
+    ],
+    "missed_alerts": 1,
+    "false_alert_count": 0,
+    "alerts": [
+      {
+        "system": "ansp",
+        "kind": "degraded",
+        "alert_id": "ansp:degraded:adapters_silent",
+        "subject": "adapters_silent",
+        "raise": {
+          "system": "ansp",
+          "kind": "degraded",
+          "alert_id": "ansp:degraded:adapters_silent",
+          "phase": "raised",
+          "subject": "adapters_silent",
+          "observed_at": "2026-10-04T04:02:46.652817891Z",
+          "stream": "ansp-manned"
+        }
+      }
+    ],
+    "pass": false,
+    "failures": [
+      "restriction-activated-on-the-intent: raise: mark \"activate\" never happened (no vehicle confirmed it, E-08)"
+    ]
+  },
+  "frames": {
+    "ansp-manned": {
+      "console/snapshot/v1": 1,
+      "console/status/v1": 96
+    }
+  },
+  "stream_errors": {
+    "ussp-alerts-a": "ussp-alerts-a: upgrade refused with 404"
+  },
+  "operator_ledgers": [
+    {
+      "serial": "LABX9WP12A0001",
+      "transport": "ws",
+      "produced": 179,
+      "sent_live": 179,
+      "sent_backlog": 0,
+      "sent": 179,
+      "dropped_by_knob": 0,
+      "queue_shed": 0,
+      "pending": 0,
+      "accepted": 0,
+      "refused": 179,
+      "dropped": 0,
+      "duplicate": 0,
+      "backlog": 0,
+      "outcomes": {
+        "refused_intent_state": 179
+      },
+      "acked_seq": 178,
+      "last_seq": 178,
+      "connections": 1,
+      "resent_after_break": 0,
+      "exact": true,
+      "balanced": true,
+      "client_counters": {
+        "dials": 1,
+        "produced": 179,
+        "sent_live": 179,
+        "status_frames": 275
+      }
+    }
+  ],
+  "vehicle_samples": {
+    "a": 715
+  },
+  "verdict": "fail",
+  "failures": [
+    "restriction-activated-on-the-intent: raise: mark \"activate\" never happened (no vehicle confirmed it, E-08)",
+    "step 2 (request): ansp answered 500: {\"type\":\"https://schemas.uspace.ge/problems/internal\",\"title\":\"Internal Server Error\",\"status\":500,\"detail\":\"the request could not be completed\",\"instance\":\"/v1/restrictions\",\"errors\":[]}\n",
+    "step 3 (request): ansp answered 404: {\"type\":\"https://schemas.uspace.ge/problems/not_found\",\"title\":\"Not Found\",\"status\":404,\"detail\":\"no such restriction or request\",\"instance\":\"/v1/restrictions/${restriction_id}/activate\",\"errors\":[]}\n",
+    "step 4 (request): ansp answered 404: {\"type\":\"https://schemas.uspace.ge/problems/not_found\",\"title\":\"Not Found\",\"status\":404,\"detail\":\"no such restriction or request\",\"instance\":\"/v1/restrictions/${restriction_id}/end\",\"errors\":[]}\n"
+  ]
+}

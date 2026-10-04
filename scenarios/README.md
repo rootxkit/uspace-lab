@@ -16,12 +16,12 @@ runs one and writes `results/<run>/<scenario>.json`.
 | `reference` | `true`: runnable against the lab's reference target (CI); `false`: only against the systems (the kind it expects is a system's own judgement). The runner refuses, before starting, a scenario the targets cannot judge. |
 | `country` | ED-269 country of the scenario's zones. |
 | `duration_s`, `tail_s` | Hard bound after t0; time kept after the last vehicle finishes. |
-| `aircraft[]` | `name`, `sysid` (the SITL instance), `serial`, `operator_reg`, `operator_id`; `operator` (sim-operator streams it to a USSP: `system`, `client`, `transport`, an `intent` filed and activated before t0, `drop_rate`, `latency_s`); `receivers` (the receivers that hear its Remote ID); `mark_alt_invalid` (S-36). |
+| `aircraft[]` | `name`, `sysid` (the SITL instance), `serial`, `operator_reg`, `operator_id`; `operator` (sim-operator streams it to a USSP: `system`, `client`, `transport`, an `intent` filed and activated before t0 (a `center` and `radius_m`, or `boxes` of `south_m`, `north_m`, `west_m`, `east_m`, one polygon volume each), `drop_rate`, `latency_s`); `receivers` (the receivers that hear its Remote ID); `mark_alt_invalid` (S-36). |
 | `receivers[]` | sim-receiver: `id` (registered at the authority), `at`, `transport` (`pack` or `single`), `hae` (`geoid` or `gps`), `drop_rate`, `latency_s`, `seed`, `rssi_dbm`. |
 | `feeds[]` | Manned traffic: `kind` `ansp_stream` (sim-ansp-feed) or `adsb_file` (sim-adsb), with `tracks` (straight legs) or a `recording`. |
 | `zones[]` | `id`, `type`, a `square` or `circle`, `lower`/`upper` with their reference (`AGL`, `AMSL`, `WGS84`), an optional `window`. The reference target loads them; for a systems run they are written beside the result as `<scenario>.zones.ed269.json` for import. |
 | `steps[]` | `do`: `takeoff` (arm, then climb to `alt_rel_m`), `goto` (`to`, `speed_ms`, `tolerance_m`), `hold` (`for_s`), `land`, `knob`, `request` (`system`, `method`, `path`, `body`, `headers`, `expect`, `capture`). `at_s` delays a step to t0 + `at_s`; a flight step without it follows the aircraft's previous step. An `id` makes the step a mark. |
-| `expect[]` | `system`, `kind` (the system's own kind: `proximity`, `zone_incursion`, `violation/v1` kinds, `degraded`, `manned_track`), `aircraft`, `peer`, `subject`; `raise` and `clear` windows (`after` a mark, `min_s`, `max_s`, a clear `reason`); `hold_until` (no clear before a mark). |
+| `expect[]` | `system`, `kind` (the system's own kind: `proximity`, `zone_incursion`, `violation/v1` kinds, `degraded`, `manned_track`), `aircraft`, `peer`, `subject`, `detail` (members the raise's detail must carry with equal values, e.g. `limit_not_judged: true`); `raise` and `clear` windows (`after` a mark, `min_s`, `max_s`, a clear `reason`); `hold_until` (no clear before a mark). |
 | `never[]` | Matchers that must raise nothing. |
 | `expect_intents[]` | The decision (and state) the USSP must give an aircraft's intent. |
 | `judged_kinds` | `system:kind` pairs whose unexpected raises count as false alerts (besides the kinds `expect` and `never` name). |
@@ -48,6 +48,11 @@ backlog), `operator_stream: stop|start` (connected, silent: the USSP's
 lost link), `receiver: down|up` for `receivers`, `feed: live|stale|outage`
 for `feeds`, and `serial` / `address` for an aircraft's transmitter
 (SC-10, SC-11).
+
+In a scenario a USSP owes (`owners` names `ussp`), two aircraft may not
+file overlapping intents unless `expect_intents` expects one of them
+`rejected`: a USSP that deconflicts strategically authorises only the
+first, and the second has no flight to alert on.
 
 ## The verdict
 
@@ -98,7 +103,7 @@ scenarios here:
 | uspace-ussp WP-11 (S-M3) | `sc-01-hover-inside-minima.yaml`, `sc-02-head-on-and-short-return.yaml`, `sc-21-slow-to-hover.yaml` |
 | uspace-ussp WP-12 (N-M1, S-M4) | `ussp-wp12-restriction.yaml`, `sc-03-zone-entry-exit.yaml` (zone path) |
 | uspace-ansp INV-02 (WP-4, WP-6) | `ansp-inv02-manned.yaml` |
-| uspace-authority SC-* | `sc-03-zone-entry-exit.yaml`, `sc-22-missing-inputs-visible.yaml`, `authority-sc08-rid-switch.yaml` |
+| uspace-authority SC-* | `sc-03-zone-entry-exit.yaml`, `sc-22-missing-inputs-visible.yaml` (before the registry is seeded, its AGL zone imported), `authority-sc08-rid-switch.yaml` |
 
 To run one:
 
@@ -122,5 +127,8 @@ To run one:
    --vehicles sitl --lab sim/sitl.env scenarios/<file>.yaml`.
 6. Record the result file's path, its verdict and the observed numbers
    in the system's runbook ("Lab run (owed)"): the result names the lab
-   and core commits, the image digests as configured, the policy and
-   every raise and clear with its time.
+   and core commits, the image digests as configured, the policy, the
+   scenario file's SHA-256 (`scenario_digest`, so a PASS is tied to the
+   committed scenario: compare it with `sha256sum scenarios/<file>.yaml`
+   at the commit you cite), the volumes each intent filed, and every
+   raise and clear with its time.

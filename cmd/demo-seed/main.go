@@ -45,6 +45,7 @@ func run() int {
 		half    = flag.Float64("uspace-half-side-m", 10000, "half side of the U-space airspace square, metres")
 		north   = flag.Float64("uspace-north-m", 0, "the U-space airspace square's centre, metres north of the origin")
 		east    = flag.Float64("uspace-east-m", 0, "the U-space airspace square's centre, metres east of the origin")
+		ceiling = flag.Float64("uspace-ceiling-above-origin-m", 1500, "the U-space airspace's ceiling, an AMSL limit this many metres above the origin's altitude (sitl.env)")
 		away    = flag.Float64("zones-away-north-m", 0, "with --steps zones: publish the zones this far north of their place (takes them off the area)")
 		adsb    = flag.String("adsb-listen", "0.0.0.0:18092", "where the runner serves sim-adsb for the ANSP's adapter")
 		// The SITL commands are the operator's (docs/RUNBOOKS/demo.md
@@ -73,8 +74,9 @@ func run() int {
 	o := seed.Options{
 		Env: *env, Lab: *lab, Scenarios: ss, Steps: split(*steps), ZoneScenarios: split(*zones),
 		TargetsOut: *targets, SecretsDir: *secrets, Geoid: *geoid, USpaceID: *uspace, USpaceHalfSideM: *half,
-		USpaceCenter: scenario.Offset{NorthM: *north, EastM: *east}, ZonesAwayNorthM: *away,
-		ADSBListen: *adsb, SITLReader: shellWords(*reader), SITLFly: shellWords(*fly),
+		USpaceCenter: scenario.Offset{NorthM: *north, EastM: *east}, USpaceCeilingAboveOriginM: *ceiling,
+		ZonesAwayNorthM: *away,
+		ADSBListen:      *adsb, SITLReader: shellWords(*reader), SITLFly: shellWords(*fly),
 		Log: func(f string, a ...any) { log.Info(fmt.Sprintf(f, a...)) },
 	}
 	ctx, stop := cli.SignalContext()

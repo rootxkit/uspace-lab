@@ -251,3 +251,16 @@ func TestViolationFrameMatchesTheAuthoritySchema(t *testing.T) {
 		wiretest.Validate(t, "authority/violation-v1.json", m)
 	}
 }
+
+// The reference authority names violations as uspace-authority's detect
+// does, unregistered included, and drops conflicts.
+func TestViolationKinds(t *testing.T) {
+	for k, want := range map[string]string{alerting.KindZone: "zone_incursion", alerting.KindHeight: "height_120m", alerting.KindIdentification: "unregistered"} {
+		if got, ok := violationKind(k); !ok || got != want {
+			t.Errorf("%s: %q %v, want %q", k, got, ok, want)
+		}
+	}
+	if _, ok := violationKind(alerting.KindConflict); ok {
+		t.Error("a conflict became a violation")
+	}
+}
