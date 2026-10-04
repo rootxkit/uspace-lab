@@ -45,7 +45,9 @@ steps:
   - id: hover
     aircraft: [c]
     do: hold
-    for_s: 80
+    # 55 s: SITL confirms the climb about 41 s after t0, so an 80 s hover
+    # pushed the landing (at_s 100) past the run (systems run 20261004).
+    for_s: 55
   - id: rid-off
     at_s: 40
     do: request

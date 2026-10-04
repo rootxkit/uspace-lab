@@ -243,6 +243,21 @@ func TestLandingsTheSystemsRunSawLate(t *testing.T) {
 	if climbConfirmedS+hover > land+2 {
 		t.Errorf("ansp-inv02-manned: the hover ends at about %.0f s, after the landing's at_s %.0f", climbConfirmedS+hover, land)
 	}
+	// authority-sc08-rid-switch had the same pattern (an 80 s hover
+	// before a landing at 100 s), seen in its systems run.
+	sc08 := load(t, "authority-sc08-rid-switch.yaml")
+	hover, land = 0, 0
+	for _, st := range sc08.Steps {
+		switch {
+		case st.ID == "hover":
+			hover = st.ForS
+		case st.Do == DoLand:
+			land = *st.AtS
+		}
+	}
+	if climbConfirmedS+hover > land+2 {
+		t.Errorf("authority-sc08-rid-switch: the hover ends at about %.0f s, after the landing's at_s %.0f", climbConfirmedS+hover, land)
+	}
 	// B's landing there was not confirmed within 60 s; 75 s leaves margin.
 	sc21 := load(t, "sc-21-slow-to-hover.yaml")
 	for _, st := range sc21.Steps {
