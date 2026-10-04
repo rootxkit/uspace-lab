@@ -1,0 +1,8 @@
+scenario ansp-inv02-manned (20261004-systems-rerun-uspace-origin, sitl vehicles, systems targets): FAIL
+  observed alerts (2):
+    ansp      degraded                          on adapters_silent raised +-15.7s cleared not_degraded +22.3s
+    ansp      manned_track                      on f0c001 raised +20.4s cleared stale +104.5s
+  missed 1, false 0
+  operator LABX9ANSPA0001: sent 175 = accepted 0 + refused 175 + dropped 0 + duplicate 0 (balanced true)
+  FAIL ussp-proximity-with-the-manned-peer: no ussp proximity raise for a with f0c001 in [03:42:24.000, 03:43:14.000]
+  result: results/20261004-systems-rerun-uspace-origin/ansp-inv02-manned.json

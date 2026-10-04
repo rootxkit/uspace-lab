@@ -1,0 +1,18 @@
+scenario sc-02-head-on-and-short-return (20261004-systems-rerun, sitl vehicles, systems targets): PASS
+  observed alerts (11):
+    ussp      degraded                          on cis raised +-15.4s
+    ussp      degraded                          on dss raised +-15.4s
+    ussp      degraded                          on manned raised +-15.4s
+    ussp      degraded                          on policy raised +-15.4s
+    ussp      degraded                          on source_control raised +-15.4s
+    ussp      proximity              a          peer b raised +25.6s cleared resolved +66.6s
+    ussp      proximity              b          peer a raised +25.6s cleared resolved +66.6s
+    ussp      proximity              a          peer b raised +95.6s cleared resolved +130.6s
+    ussp      proximity              b          peer a raised +95.6s cleared resolved +130.6s
+    ussp      proximity              a          peer b raised +184.6s cleared resolved +226.6s
+    ussp      proximity              b          peer a raised +184.6s cleared resolved +226.6s
+  missed 0, false 0
+  operator LABX9SC02A0001: sent 315 = accepted 315 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  operator LABX9SC02B0002: sent 314 = accepted 314 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  latency ussp: n 6, p50 0.153 s, p95 0.162 s, max 0.162 s
+  result: results/20261004-systems-rerun/sc-02-head-on-and-short-return.json

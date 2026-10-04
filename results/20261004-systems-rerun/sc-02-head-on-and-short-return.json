@@ -1,0 +1,1768 @@
+{
+  "format": "result/v1",
+  "run": "20261004-systems-rerun",
+  "scenario": "sc-02-head-on-and-short-return",
+  "title": "SC-02: head-on pass, and a return that stops short",
+  "source": "knowledge/scenarios.md SC-02 (utm P5-07, 2026-09-29); LESSONS C-10",
+  "owners": [
+    "ussp",
+    "authority"
+  ],
+  "started_at": "2026-10-04T03:05:02.509185831Z",
+  "ended_at": "2026-10-04T03:10:29.152043206Z",
+  "t0": "2026-10-04T03:05:18Z",
+  "mode": {
+    "vehicles": "sitl",
+    "targets": "systems",
+    "targets_name": "lab-demo"
+  },
+  "evidence": "systems under test with SITL vehicles flown by sim/fly.py: INV-02 evidence when the images are pinned by digest",
+  "commits": {
+    "lab": "e3d5ab86ff590a52c0db4bd673d3f762eab6e983",
+    "lab_dirty": true,
+    "core": "v1.3.0",
+    "go": "go1.27.1"
+  },
+  "images": {
+    "ansp": "ghcr.io/rootxkit/uspace-ansp@sha256:8e6a7e11d543fbbe28c7d1708437a835aab9c19b815a026ba2fc8997d89d9336",
+    "authority": "ghcr.io/rootxkit/uspace-authority@sha256:3f8a821bbe9747942db0b7ff7bf0ae9735806b46c370dafbaeaf72f9698dd5a0",
+    "cisp": "ghcr.io/rootxkit/uspace-cisp@sha256:63a02a8da983a530744663e52bdd82dac31b4c9f36b5ecfd572bd529e83978cd",
+    "dss": "interuss/dss:v0.23.0@sha256:0781042bef785f6c968efd4b4e1e85854db9bf361116916d0673d2c89db91582",
+    "ussp": "ghcr.io/rootxkit/uspace-ussp@sha256:a5838e08138d65777749d8d2d1aa87cbe2c185da12479002f918b88080fd3305"
+  },
+  "policy_version": 1,
+  "policy": {
+    "policy_version": 1,
+    "source": "docs/PLAN.md §7.1 L-Q4 (owner-only, open; GCAA answers); knowledge/scenarios.md conventions",
+    "deviation": {
+      "h_m": 50,
+      "v_m": 15,
+      "t_s": 60
+    },
+    "telemetry_lost_s": 5,
+    "lost_link_s": 15,
+    "nonconformance_nearby_radius_m": 2000,
+    "cpa": {
+      "t_cpa_max_s": 60,
+      "d_horizontal_min_m": 60,
+      "d_vertical_min_m": 20,
+      "neighbour_radius_m": 800,
+      "neighbour_max_age_s": 10
+    },
+    "height_limit_agl_m": 120,
+    "monitor": {
+      "clear_after_s": 3,
+      "stale_after_s": 15,
+      "live_max_age_s": 10,
+      "pressure_uncertainty_m": 250,
+      "conditional_severity": "warning"
+    }
+  },
+  "lab": {
+    "file": "sim/sitl.env",
+    "origin_lat_deg": 41.7151,
+    "origin_lon_deg": 44.8271,
+    "origin_alt_amsl_m": 605,
+    "spacing_m": 25
+  },
+  "geoid": "WGS84 EGM2008, 2.5-minute grid",
+  "marks": {
+    "climb": "2026-10-04T03:06:18.02583599Z",
+    "climb.start": "2026-10-04T03:05:18.000162601Z",
+    "down": "2026-10-04T03:10:21.018059968Z",
+    "down.start": "2026-10-04T03:09:28.000190496Z",
+    "out-a": "2026-10-04T03:06:51.040692329Z",
+    "out-a.start": "2026-10-04T03:06:18.025907993Z",
+    "out-b": "2026-10-04T03:06:49.038199186Z",
+    "out-b.start": "2026-10-04T03:06:17.524844884Z",
+    "return": "2026-10-04T03:09:00.517666101Z",
+    "return.start": "2026-10-04T03:08:18.000179052Z",
+    "run": "2026-10-04T03:07:54.575665473Z",
+    "run-b": "2026-10-04T03:07:52.565837621Z",
+    "run-b.start": "2026-10-04T03:06:49.038254737Z",
+    "run.start": "2026-10-04T03:06:51.040753126Z",
+    "stop": "2026-10-04T03:09:12.516420125Z",
+    "stop.start": "2026-10-04T03:09:00.517723083Z",
+    "t0": "2026-10-04T03:05:18Z"
+  },
+  "steps": [
+    {
+      "sysid": 2,
+      "step": 0,
+      "action": "arm",
+      "state": "started",
+      "at_unix_s": 1791083118.0001626
+    },
+    {
+      "sysid": 1,
+      "step": 0,
+      "action": "arm",
+      "state": "started",
+      "at_unix_s": 1791083118.0002015
+    },
+    {
+      "sysid": 2,
+      "step": 0,
+      "action": "arm",
+      "state": "confirmed",
+      "at_unix_s": 1791083143.0101922,
+      "observed": {
+        "alt_rel_m": 0.004,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7151,
+        "lon_deg": 44.8274008,
+        "time_boot_ms": 43069
+      }
+    },
+    {
+      "sysid": 2,
+      "step": 1,
+      "action": "takeoff",
+      "state": "started",
+      "at_unix_s": 1791083143.0102608
+    },
+    {
+      "sysid": 1,
+      "step": 0,
+      "action": "arm",
+      "state": "confirmed",
+      "at_unix_s": 1791083143.0105011,
+      "observed": {
+        "alt_rel_m": 0.003,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7151,
+        "lon_deg": 44.827100099999996,
+        "time_boot_ms": 44092
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 1,
+      "action": "takeoff",
+      "state": "started",
+      "at_unix_s": 1791083143.0105717
+    },
+    {
+      "sysid": 2,
+      "step": 1,
+      "action": "takeoff",
+      "state": "confirmed",
+      "at_unix_s": 1791083177.5247724,
+      "observed": {
+        "alt_rel_m": 76.055,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7151001,
+        "lon_deg": 44.827400499999996,
+        "time_boot_ms": 77569
+      }
+    },
+    {
+      "sysid": 2,
+      "step": 2,
+      "action": "goto",
+      "state": "started",
+      "at_unix_s": 1791083177.524845
+    },
+    {
+      "sysid": 1,
+      "step": 1,
+      "action": "takeoff",
+      "state": "confirmed",
+      "at_unix_s": 1791083178.025836,
+      "observed": {
+        "alt_rel_m": 76.967,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.715100199999995,
+        "lon_deg": 44.8270998,
+        "time_boot_ms": 79094
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 2,
+      "action": "goto",
+      "state": "started",
+      "at_unix_s": 1791083178.025908
+    },
+    {
+      "sysid": 2,
+      "step": 2,
+      "action": "goto",
+      "state": "confirmed",
+      "at_unix_s": 1791083209.0381992,
+      "observed": {
+        "alt_rel_m": 80.001,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7149208,
+        "lon_deg": 44.8306866,
+        "time_boot_ms": 109069
+      }
+    },
+    {
+      "sysid": 2,
+      "step": 3,
+      "action": "goto",
+      "state": "started",
+      "at_unix_s": 1791083209.0382547
+    },
+    {
+      "sysid": 1,
+      "step": 2,
+      "action": "goto",
+      "state": "confirmed",
+      "at_unix_s": 1791083211.0406923,
+      "observed": {
+        "alt_rel_m": 80.001,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7152792,
+        "lon_deg": 44.8236348,
+        "time_boot_ms": 112094
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 3,
+      "action": "goto",
+      "state": "started",
+      "at_unix_s": 1791083211.0407531
+    },
+    {
+      "sysid": 2,
+      "step": 3,
+      "action": "goto",
+      "state": "confirmed",
+      "at_unix_s": 1791083272.5658376,
+      "observed": {
+        "alt_rel_m": 79.993,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7149201,
+        "lon_deg": 44.8236432,
+        "time_boot_ms": 172569
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 3,
+      "action": "goto",
+      "state": "confirmed",
+      "at_unix_s": 1791083274.5756655,
+      "observed": {
+        "alt_rel_m": 79.992,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7152798,
+        "lon_deg": 44.8306751,
+        "time_boot_ms": 175592
+      }
+    },
+    {
+      "sysid": 2,
+      "step": 4,
+      "action": "goto",
+      "state": "started",
+      "at_unix_s": 1791083298.000179
+    },
+    {
+      "sysid": 2,
+      "step": 4,
+      "action": "goto",
+      "state": "confirmed",
+      "at_unix_s": 1791083340.517666,
+      "observed": {
+        "alt_rel_m": 79.994,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.714919699999996,
+        "lon_deg": 44.8282354,
+        "time_boot_ms": 240569
+      }
+    },
+    {
+      "sysid": 2,
+      "step": 5,
+      "action": "hold",
+      "state": "started",
+      "at_unix_s": 1791083340.517723
+    },
+    {
+      "sysid": 2,
+      "step": 5,
+      "action": "hold",
+      "state": "confirmed",
+      "at_unix_s": 1791083352.5164201,
+      "observed": {
+        "alt_rel_m": 79.993,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7149201,
+        "lon_deg": 44.8282539,
+        "time_boot_ms": 252569
+      },
+      "max_drift_m": 2.349017670552177
+    },
+    {
+      "sysid": 1,
+      "step": 4,
+      "action": "land",
+      "state": "started",
+      "at_unix_s": 1791083368.0002093
+    },
+    {
+      "sysid": 2,
+      "step": 6,
+      "action": "land",
+      "state": "started",
+      "at_unix_s": 1791083368.0001905
+    },
+    {
+      "sysid": 1,
+      "step": 4,
+      "action": "land",
+      "state": "confirmed",
+      "at_unix_s": 1791083398.0119298,
+      "observed": {
+        "alt_rel_m": 56.28,
+        "armed": false,
+        "custom_mode": 9,
+        "lat_deg": 41.715280199999995,
+        "lon_deg": 44.830705099999996,
+        "time_boot_ms": 299094
+      }
+    },
+    {
+      "sysid": 2,
+      "step": 6,
+      "action": "land",
+      "state": "confirmed",
+      "at_unix_s": 1791083421.01806,
+      "observed": {
+        "alt_rel_m": 24.505,
+        "armed": false,
+        "custom_mode": 9,
+        "lat_deg": 41.7149198,
+        "lon_deg": 44.8282536,
+        "time_boot_ms": 321069
+      }
+    }
+  ],
+  "intents": [
+    {
+      "aircraft": "a",
+      "intent_id": "ed7a043b-ab9e-4d3a-9255-29ee4ac9b165",
+      "decision": "authorised",
+      "state": "activated",
+      "ended": "ended"
+    },
+    {
+      "aircraft": "b",
+      "intent_id": "5b2fd379-c8fa-4bd4-8189-0fa82d2ef06e",
+      "decision": "authorised",
+      "state": "activated",
+      "ended": "ended"
+    }
+  ],
+  "outcome": {
+    "expectations": [
+      {
+        "name": "head-on-a",
+        "matcher": {
+          "system": "ussp",
+          "kind": "proximity",
+          "aircraft": "a",
+          "peer": "b"
+        },
+        "raise_window": {
+          "from": "2026-10-04T03:06:51.040753126Z",
+          "to": "2026-10-04T03:07:11.040753126Z"
+        },
+        "clear_window": {
+          "from": "2026-10-04T03:07:16.040753126Z",
+          "to": "2026-10-04T03:08:01.040753126Z"
+        },
+        "raise": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "e145597e-2740-49a6-817d-20300610e681",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "a",
+          "peer": "b",
+          "observed_at": "2026-10-04T03:06:53.647435587Z",
+          "captured_at": "2026-10-04T03:06:53.494Z",
+          "raised_at": "2026-10-04T03:06:53.494Z",
+          "detail": {
+            "d_alt_m": 0,
+            "d_cpa_h_m": 40.15099328302357,
+            "d_horizontal_now_m": 576.2199478116853,
+            "evaluation_period_s": 1,
+            "los_start_s": 47.64003043146952,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "6c9d9b5b-3646-485b-9d01-ef91fc5fd444",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 51.64594658954688,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "e145597e-2740-49a6-817d-20300610e681",
+          "phase": "cleared",
+          "reason": "resolved",
+          "severity": "critical",
+          "aircraft": "a",
+          "peer": "b",
+          "observed_at": "2026-10-04T03:07:28.585600083Z",
+          "captured_at": "2026-10-04T03:07:24.491Z",
+          "raised_at": "2026-10-04T03:06:53.494Z",
+          "detail": {
+            "d_alt_m": 0,
+            "d_cpa_h_m": 53.19294914484158,
+            "d_horizontal_now_m": 53.19294914484158,
+            "evaluation_period_s": 1,
+            "los_start_s": 0,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "6c9d9b5b-3646-485b-9d01-ef91fc5fd444",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 0,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "ok": true,
+        "seen": [
+          {
+            "system": "ussp",
+            "kind": "proximity",
+            "alert_id": "8e123e79-71c6-4e17-a748-f4209fa7fb92",
+            "aircraft": "a",
+            "peer": "b",
+            "raise": {
+              "system": "ussp",
+              "kind": "proximity",
+              "alert_id": "8e123e79-71c6-4e17-a748-f4209fa7fb92",
+              "phase": "raised",
+              "severity": "critical",
+              "aircraft": "a",
+              "peer": "b",
+              "observed_at": "2026-10-04T03:05:43.648909157Z",
+              "captured_at": "2026-10-04T03:05:43.487Z",
+              "raised_at": "2026-10-04T03:05:43.487Z",
+              "detail": {
+                "d_alt_m": 0,
+                "d_cpa_h_m": 25.02402710397139,
+                "d_horizontal_now_m": 25.02402710397139,
+                "evaluation_period_s": 1,
+                "los_start_s": 0,
+                "pair_id": "4c4e0174511ce3c8cb1b6285",
+                "peer": {
+                  "source": "operator_ws",
+                  "track_id": "6c9d9b5b-3646-485b-9d01-ef91fc5fd444",
+                  "trust": "authenticated"
+                },
+                "t_cpa_s": 0,
+                "vertical_separation_known": true
+              },
+              "stream": "ussp-alerts-a"
+            },
+            "clear": {
+              "system": "ussp",
+              "kind": "proximity",
+              "alert_id": "8e123e79-71c6-4e17-a748-f4209fa7fb92",
+              "phase": "cleared",
+              "reason": "resolved",
+              "severity": "critical",
+              "aircraft": "a",
+              "peer": "b",
+              "observed_at": "2026-10-04T03:06:24.646017591Z",
+              "captured_at": "2026-10-04T03:06:21.489Z",
+              "raised_at": "2026-10-04T03:05:43.487Z",
+              "detail": {
+                "d_alt_m": 0.3831999969482922,
+                "d_cpa_h_m": 53.415029161158245,
+                "d_horizontal_now_m": 53.415029161158245,
+                "evaluation_period_s": 1,
+                "los_start_s": 0,
+                "pair_id": "4c4e0174511ce3c8cb1b6285",
+                "peer": {
+                  "source": "operator_ws",
+                  "track_id": "6c9d9b5b-3646-485b-9d01-ef91fc5fd444",
+                  "trust": "authenticated"
+                },
+                "t_cpa_s": 0,
+                "vertical_separation_known": true
+              },
+              "stream": "ussp-alerts-a"
+            }
+          }
+        ]
+      },
+      {
+        "name": "head-on-b",
+        "matcher": {
+          "system": "ussp",
+          "kind": "proximity",
+          "aircraft": "b",
+          "peer": "a"
+        },
+        "raise_window": {
+          "from": "2026-10-04T03:06:51.040753126Z",
+          "to": "2026-10-04T03:07:11.040753126Z"
+        },
+        "clear_window": {
+          "from": "2026-10-04T03:07:16.040753126Z",
+          "to": "2026-10-04T03:08:01.040753126Z"
+        },
+        "raise": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "65ae2ee2-0e1f-4231-bae2-a2ecd2b692fb",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "b",
+          "peer": "a",
+          "observed_at": "2026-10-04T03:06:53.647541641Z",
+          "captured_at": "2026-10-04T03:06:53.494Z",
+          "raised_at": "2026-10-04T03:06:53.494Z",
+          "detail": {
+            "d_alt_m": 0,
+            "d_cpa_h_m": 40.15099328302357,
+            "d_horizontal_now_m": 576.2199478116853,
+            "evaluation_period_s": 1,
+            "los_start_s": 47.64003043146952,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "37b8f300-da8c-4851-96bf-144c56cd68a4",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 51.64594658954688,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-b"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "65ae2ee2-0e1f-4231-bae2-a2ecd2b692fb",
+          "phase": "cleared",
+          "reason": "resolved",
+          "severity": "critical",
+          "aircraft": "b",
+          "peer": "a",
+          "observed_at": "2026-10-04T03:07:28.585786252Z",
+          "captured_at": "2026-10-04T03:07:24.491Z",
+          "raised_at": "2026-10-04T03:06:53.494Z",
+          "detail": {
+            "d_alt_m": 0,
+            "d_cpa_h_m": 53.19294914484158,
+            "d_horizontal_now_m": 53.19294914484158,
+            "evaluation_period_s": 1,
+            "los_start_s": 0,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "37b8f300-da8c-4851-96bf-144c56cd68a4",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 0,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-b"
+        },
+        "ok": true,
+        "seen": [
+          {
+            "system": "ussp",
+            "kind": "proximity",
+            "alert_id": "c8379c17-10ed-44f9-8151-674a3ed5230e",
+            "aircraft": "b",
+            "peer": "a",
+            "raise": {
+              "system": "ussp",
+              "kind": "proximity",
+              "alert_id": "c8379c17-10ed-44f9-8151-674a3ed5230e",
+              "phase": "raised",
+              "severity": "critical",
+              "aircraft": "b",
+              "peer": "a",
+              "observed_at": "2026-10-04T03:05:43.648910735Z",
+              "captured_at": "2026-10-04T03:05:43.487Z",
+              "raised_at": "2026-10-04T03:05:43.487Z",
+              "detail": {
+                "d_alt_m": 0,
+                "d_cpa_h_m": 25.02402710397139,
+                "d_horizontal_now_m": 25.02402710397139,
+                "evaluation_period_s": 1,
+                "los_start_s": 0,
+                "pair_id": "4c4e0174511ce3c8cb1b6285",
+                "peer": {
+                  "source": "operator_ws",
+                  "track_id": "37b8f300-da8c-4851-96bf-144c56cd68a4",
+                  "trust": "authenticated"
+                },
+                "t_cpa_s": 0,
+                "vertical_separation_known": true
+              },
+              "stream": "ussp-alerts-b"
+            },
+            "clear": {
+              "system": "ussp",
+              "kind": "proximity",
+              "alert_id": "c8379c17-10ed-44f9-8151-674a3ed5230e",
+              "phase": "cleared",
+              "reason": "resolved",
+              "severity": "critical",
+              "aircraft": "b",
+              "peer": "a",
+              "observed_at": "2026-10-04T03:06:24.646101183Z",
+              "captured_at": "2026-10-04T03:06:21.489Z",
+              "raised_at": "2026-10-04T03:05:43.487Z",
+              "detail": {
+                "d_alt_m": 0.3831999969482922,
+                "d_cpa_h_m": 53.415029161158245,
+                "d_horizontal_now_m": 53.415029161158245,
+                "evaluation_period_s": 1,
+                "los_start_s": 0,
+                "pair_id": "4c4e0174511ce3c8cb1b6285",
+                "peer": {
+                  "source": "operator_ws",
+                  "track_id": "37b8f300-da8c-4851-96bf-144c56cd68a4",
+                  "trust": "authenticated"
+                },
+                "t_cpa_s": 0,
+                "vertical_separation_known": true
+              },
+              "stream": "ussp-alerts-b"
+            }
+          }
+        ]
+      },
+      {
+        "name": "short-return-a",
+        "matcher": {
+          "system": "ussp",
+          "kind": "proximity",
+          "aircraft": "a",
+          "peer": "b"
+        },
+        "raise_window": {
+          "from": "2026-10-04T03:08:18.000179052Z",
+          "to": "2026-10-04T03:08:43.000179052Z"
+        },
+        "clear_window": {
+          "from": "2026-10-04T03:08:38.000179052Z",
+          "to": "2026-10-04T03:09:18.000179052Z"
+        },
+        "raise": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "bd0d73f4-36e6-4c44-8ae4-ffa98e0c7bc3",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "a",
+          "peer": "b",
+          "observed_at": "2026-10-04T03:08:22.640791025Z",
+          "captured_at": "2026-10-04T03:08:22.488Z",
+          "raised_at": "2026-10-04T03:08:22.488Z",
+          "detail": {
+            "d_alt_m": 0.010000000000104592,
+            "d_cpa_h_m": 40.006605202300044,
+            "d_horizontal_now_m": 570.4668935088631,
+            "evaluation_period_s": 1,
+            "los_start_s": 57.64677704751708,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "6c9d9b5b-3646-485b-9d01-ef91fc5fd444",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 62.56280052392361,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "bd0d73f4-36e6-4c44-8ae4-ffa98e0c7bc3",
+          "phase": "cleared",
+          "reason": "resolved",
+          "severity": "critical",
+          "aircraft": "a",
+          "peer": "b",
+          "observed_at": "2026-10-04T03:09:04.637658702Z",
+          "captured_at": "2026-10-04T03:09:01.456Z",
+          "raised_at": "2026-10-04T03:08:22.488Z",
+          "detail": {
+            "d_alt_m": 0,
+            "d_cpa_h_m": 39.317534805521156,
+            "d_horizontal_now_m": 206.68042600439452,
+            "evaluation_period_s": 1,
+            "los_start_s": 55.37265645435188,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "6c9d9b5b-3646-485b-9d01-ef91fc5fd444",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 71.29834543490217,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "ok": true,
+        "seen": [
+          {
+            "system": "ussp",
+            "kind": "proximity",
+            "alert_id": "8e123e79-71c6-4e17-a748-f4209fa7fb92",
+            "aircraft": "a",
+            "peer": "b",
+            "raise": {
+              "system": "ussp",
+              "kind": "proximity",
+              "alert_id": "8e123e79-71c6-4e17-a748-f4209fa7fb92",
+              "phase": "raised",
+              "severity": "critical",
+              "aircraft": "a",
+              "peer": "b",
+              "observed_at": "2026-10-04T03:05:43.648909157Z",
+              "captured_at": "2026-10-04T03:05:43.487Z",
+              "raised_at": "2026-10-04T03:05:43.487Z",
+              "detail": {
+                "d_alt_m": 0,
+                "d_cpa_h_m": 25.02402710397139,
+                "d_horizontal_now_m": 25.02402710397139,
+                "evaluation_period_s": 1,
+                "los_start_s": 0,
+                "pair_id": "4c4e0174511ce3c8cb1b6285",
+                "peer": {
+                  "source": "operator_ws",
+                  "track_id": "6c9d9b5b-3646-485b-9d01-ef91fc5fd444",
+                  "trust": "authenticated"
+                },
+                "t_cpa_s": 0,
+                "vertical_separation_known": true
+              },
+              "stream": "ussp-alerts-a"
+            },
+            "clear": {
+              "system": "ussp",
+              "kind": "proximity",
+              "alert_id": "8e123e79-71c6-4e17-a748-f4209fa7fb92",
+              "phase": "cleared",
+              "reason": "resolved",
+              "severity": "critical",
+              "aircraft": "a",
+              "peer": "b",
+              "observed_at": "2026-10-04T03:06:24.646017591Z",
+              "captured_at": "2026-10-04T03:06:21.489Z",
+              "raised_at": "2026-10-04T03:05:43.487Z",
+              "detail": {
+                "d_alt_m": 0.3831999969482922,
+                "d_cpa_h_m": 53.415029161158245,
+                "d_horizontal_now_m": 53.415029161158245,
+                "evaluation_period_s": 1,
+                "los_start_s": 0,
+                "pair_id": "4c4e0174511ce3c8cb1b6285",
+                "peer": {
+                  "source": "operator_ws",
+                  "track_id": "6c9d9b5b-3646-485b-9d01-ef91fc5fd444",
+                  "trust": "authenticated"
+                },
+                "t_cpa_s": 0,
+                "vertical_separation_known": true
+              },
+              "stream": "ussp-alerts-a"
+            }
+          },
+          {
+            "system": "ussp",
+            "kind": "proximity",
+            "alert_id": "e145597e-2740-49a6-817d-20300610e681",
+            "aircraft": "a",
+            "peer": "b",
+            "raise": {
+              "system": "ussp",
+              "kind": "proximity",
+              "alert_id": "e145597e-2740-49a6-817d-20300610e681",
+              "phase": "raised",
+              "severity": "critical",
+              "aircraft": "a",
+              "peer": "b",
+              "observed_at": "2026-10-04T03:06:53.647435587Z",
+              "captured_at": "2026-10-04T03:06:53.494Z",
+              "raised_at": "2026-10-04T03:06:53.494Z",
+              "detail": {
+                "d_alt_m": 0,
+                "d_cpa_h_m": 40.15099328302357,
+                "d_horizontal_now_m": 576.2199478116853,
+                "evaluation_period_s": 1,
+                "los_start_s": 47.64003043146952,
+                "pair_id": "4c4e0174511ce3c8cb1b6285",
+                "peer": {
+                  "source": "operator_ws",
+                  "track_id": "6c9d9b5b-3646-485b-9d01-ef91fc5fd444",
+                  "trust": "authenticated"
+                },
+                "t_cpa_s": 51.64594658954688,
+                "vertical_separation_known": true
+              },
+              "stream": "ussp-alerts-a"
+            },
+            "clear": {
+              "system": "ussp",
+              "kind": "proximity",
+              "alert_id": "e145597e-2740-49a6-817d-20300610e681",
+              "phase": "cleared",
+              "reason": "resolved",
+              "severity": "critical",
+              "aircraft": "a",
+              "peer": "b",
+              "observed_at": "2026-10-04T03:07:28.585600083Z",
+              "captured_at": "2026-10-04T03:07:24.491Z",
+              "raised_at": "2026-10-04T03:06:53.494Z",
+              "detail": {
+                "d_alt_m": 0,
+                "d_cpa_h_m": 53.19294914484158,
+                "d_horizontal_now_m": 53.19294914484158,
+                "evaluation_period_s": 1,
+                "los_start_s": 0,
+                "pair_id": "4c4e0174511ce3c8cb1b6285",
+                "peer": {
+                  "source": "operator_ws",
+                  "track_id": "6c9d9b5b-3646-485b-9d01-ef91fc5fd444",
+                  "trust": "authenticated"
+                },
+                "t_cpa_s": 0,
+                "vertical_separation_known": true
+              },
+              "stream": "ussp-alerts-a"
+            }
+          }
+        ]
+      },
+      {
+        "name": "short-return-b",
+        "matcher": {
+          "system": "ussp",
+          "kind": "proximity",
+          "aircraft": "b",
+          "peer": "a"
+        },
+        "raise_window": {
+          "from": "2026-10-04T03:08:18.000179052Z",
+          "to": "2026-10-04T03:08:43.000179052Z"
+        },
+        "clear_window": {
+          "from": "2026-10-04T03:08:38.000179052Z",
+          "to": "2026-10-04T03:09:18.000179052Z"
+        },
+        "raise": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "96768057-abef-451f-a8aa-8c0cb1fbaa6e",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "b",
+          "peer": "a",
+          "observed_at": "2026-10-04T03:08:22.640801199Z",
+          "captured_at": "2026-10-04T03:08:22.488Z",
+          "raised_at": "2026-10-04T03:08:22.488Z",
+          "detail": {
+            "d_alt_m": 0.010000000000104592,
+            "d_cpa_h_m": 40.006605202300044,
+            "d_horizontal_now_m": 570.4668935088631,
+            "evaluation_period_s": 1,
+            "los_start_s": 57.64677704751708,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "37b8f300-da8c-4851-96bf-144c56cd68a4",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 62.56280052392361,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-b"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "96768057-abef-451f-a8aa-8c0cb1fbaa6e",
+          "phase": "cleared",
+          "reason": "resolved",
+          "severity": "critical",
+          "aircraft": "b",
+          "peer": "a",
+          "observed_at": "2026-10-04T03:09:04.637910587Z",
+          "captured_at": "2026-10-04T03:09:01.456Z",
+          "raised_at": "2026-10-04T03:08:22.488Z",
+          "detail": {
+            "d_alt_m": 0,
+            "d_cpa_h_m": 39.317534805521156,
+            "d_horizontal_now_m": 206.68042600439452,
+            "evaluation_period_s": 1,
+            "los_start_s": 55.37265645435188,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "37b8f300-da8c-4851-96bf-144c56cd68a4",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 71.29834543490217,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-b"
+        },
+        "ok": true,
+        "seen": [
+          {
+            "system": "ussp",
+            "kind": "proximity",
+            "alert_id": "c8379c17-10ed-44f9-8151-674a3ed5230e",
+            "aircraft": "b",
+            "peer": "a",
+            "raise": {
+              "system": "ussp",
+              "kind": "proximity",
+              "alert_id": "c8379c17-10ed-44f9-8151-674a3ed5230e",
+              "phase": "raised",
+              "severity": "critical",
+              "aircraft": "b",
+              "peer": "a",
+              "observed_at": "2026-10-04T03:05:43.648910735Z",
+              "captured_at": "2026-10-04T03:05:43.487Z",
+              "raised_at": "2026-10-04T03:05:43.487Z",
+              "detail": {
+                "d_alt_m": 0,
+                "d_cpa_h_m": 25.02402710397139,
+                "d_horizontal_now_m": 25.02402710397139,
+                "evaluation_period_s": 1,
+                "los_start_s": 0,
+                "pair_id": "4c4e0174511ce3c8cb1b6285",
+                "peer": {
+                  "source": "operator_ws",
+                  "track_id": "37b8f300-da8c-4851-96bf-144c56cd68a4",
+                  "trust": "authenticated"
+                },
+                "t_cpa_s": 0,
+                "vertical_separation_known": true
+              },
+              "stream": "ussp-alerts-b"
+            },
+            "clear": {
+              "system": "ussp",
+              "kind": "proximity",
+              "alert_id": "c8379c17-10ed-44f9-8151-674a3ed5230e",
+              "phase": "cleared",
+              "reason": "resolved",
+              "severity": "critical",
+              "aircraft": "b",
+              "peer": "a",
+              "observed_at": "2026-10-04T03:06:24.646101183Z",
+              "captured_at": "2026-10-04T03:06:21.489Z",
+              "raised_at": "2026-10-04T03:05:43.487Z",
+              "detail": {
+                "d_alt_m": 0.3831999969482922,
+                "d_cpa_h_m": 53.415029161158245,
+                "d_horizontal_now_m": 53.415029161158245,
+                "evaluation_period_s": 1,
+                "los_start_s": 0,
+                "pair_id": "4c4e0174511ce3c8cb1b6285",
+                "peer": {
+                  "source": "operator_ws",
+                  "track_id": "37b8f300-da8c-4851-96bf-144c56cd68a4",
+                  "trust": "authenticated"
+                },
+                "t_cpa_s": 0,
+                "vertical_separation_known": true
+              },
+              "stream": "ussp-alerts-b"
+            }
+          },
+          {
+            "system": "ussp",
+            "kind": "proximity",
+            "alert_id": "65ae2ee2-0e1f-4231-bae2-a2ecd2b692fb",
+            "aircraft": "b",
+            "peer": "a",
+            "raise": {
+              "system": "ussp",
+              "kind": "proximity",
+              "alert_id": "65ae2ee2-0e1f-4231-bae2-a2ecd2b692fb",
+              "phase": "raised",
+              "severity": "critical",
+              "aircraft": "b",
+              "peer": "a",
+              "observed_at": "2026-10-04T03:06:53.647541641Z",
+              "captured_at": "2026-10-04T03:06:53.494Z",
+              "raised_at": "2026-10-04T03:06:53.494Z",
+              "detail": {
+                "d_alt_m": 0,
+                "d_cpa_h_m": 40.15099328302357,
+                "d_horizontal_now_m": 576.2199478116853,
+                "evaluation_period_s": 1,
+                "los_start_s": 47.64003043146952,
+                "pair_id": "4c4e0174511ce3c8cb1b6285",
+                "peer": {
+                  "source": "operator_ws",
+                  "track_id": "37b8f300-da8c-4851-96bf-144c56cd68a4",
+                  "trust": "authenticated"
+                },
+                "t_cpa_s": 51.64594658954688,
+                "vertical_separation_known": true
+              },
+              "stream": "ussp-alerts-b"
+            },
+            "clear": {
+              "system": "ussp",
+              "kind": "proximity",
+              "alert_id": "65ae2ee2-0e1f-4231-bae2-a2ecd2b692fb",
+              "phase": "cleared",
+              "reason": "resolved",
+              "severity": "critical",
+              "aircraft": "b",
+              "peer": "a",
+              "observed_at": "2026-10-04T03:07:28.585786252Z",
+              "captured_at": "2026-10-04T03:07:24.491Z",
+              "raised_at": "2026-10-04T03:06:53.494Z",
+              "detail": {
+                "d_alt_m": 0,
+                "d_cpa_h_m": 53.19294914484158,
+                "d_horizontal_now_m": 53.19294914484158,
+                "evaluation_period_s": 1,
+                "los_start_s": 0,
+                "pair_id": "4c4e0174511ce3c8cb1b6285",
+                "peer": {
+                  "source": "operator_ws",
+                  "track_id": "37b8f300-da8c-4851-96bf-144c56cd68a4",
+                  "trust": "authenticated"
+                },
+                "t_cpa_s": 0,
+                "vertical_separation_known": true
+              },
+              "stream": "ussp-alerts-b"
+            }
+          }
+        ]
+      },
+      {
+        "name": "on-the-ground-a",
+        "matcher": {
+          "system": "ussp",
+          "kind": "proximity",
+          "aircraft": "a",
+          "peer": "b"
+        },
+        "raise_window": {
+          "from": "2026-10-04T03:05:38.02583599Z",
+          "to": "2026-10-04T03:06:23.02583599Z"
+        },
+        "clear_window": {
+          "from": "2026-10-04T03:06:18.02583599Z",
+          "to": "2026-10-04T03:07:18.02583599Z"
+        },
+        "raise": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "8e123e79-71c6-4e17-a748-f4209fa7fb92",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "a",
+          "peer": "b",
+          "observed_at": "2026-10-04T03:05:43.648909157Z",
+          "captured_at": "2026-10-04T03:05:43.487Z",
+          "raised_at": "2026-10-04T03:05:43.487Z",
+          "detail": {
+            "d_alt_m": 0,
+            "d_cpa_h_m": 25.02402710397139,
+            "d_horizontal_now_m": 25.02402710397139,
+            "evaluation_period_s": 1,
+            "los_start_s": 0,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "6c9d9b5b-3646-485b-9d01-ef91fc5fd444",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 0,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "8e123e79-71c6-4e17-a748-f4209fa7fb92",
+          "phase": "cleared",
+          "reason": "resolved",
+          "severity": "critical",
+          "aircraft": "a",
+          "peer": "b",
+          "observed_at": "2026-10-04T03:06:24.646017591Z",
+          "captured_at": "2026-10-04T03:06:21.489Z",
+          "raised_at": "2026-10-04T03:05:43.487Z",
+          "detail": {
+            "d_alt_m": 0.3831999969482922,
+            "d_cpa_h_m": 53.415029161158245,
+            "d_horizontal_now_m": 53.415029161158245,
+            "evaluation_period_s": 1,
+            "los_start_s": 0,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "6c9d9b5b-3646-485b-9d01-ef91fc5fd444",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 0,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "ok": true
+      },
+      {
+        "name": "on-the-ground-b",
+        "matcher": {
+          "system": "ussp",
+          "kind": "proximity",
+          "aircraft": "b",
+          "peer": "a"
+        },
+        "raise_window": {
+          "from": "2026-10-04T03:05:38.02583599Z",
+          "to": "2026-10-04T03:06:23.02583599Z"
+        },
+        "clear_window": {
+          "from": "2026-10-04T03:06:18.02583599Z",
+          "to": "2026-10-04T03:07:18.02583599Z"
+        },
+        "raise": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "c8379c17-10ed-44f9-8151-674a3ed5230e",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "b",
+          "peer": "a",
+          "observed_at": "2026-10-04T03:05:43.648910735Z",
+          "captured_at": "2026-10-04T03:05:43.487Z",
+          "raised_at": "2026-10-04T03:05:43.487Z",
+          "detail": {
+            "d_alt_m": 0,
+            "d_cpa_h_m": 25.02402710397139,
+            "d_horizontal_now_m": 25.02402710397139,
+            "evaluation_period_s": 1,
+            "los_start_s": 0,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "37b8f300-da8c-4851-96bf-144c56cd68a4",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 0,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-b"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "c8379c17-10ed-44f9-8151-674a3ed5230e",
+          "phase": "cleared",
+          "reason": "resolved",
+          "severity": "critical",
+          "aircraft": "b",
+          "peer": "a",
+          "observed_at": "2026-10-04T03:06:24.646101183Z",
+          "captured_at": "2026-10-04T03:06:21.489Z",
+          "raised_at": "2026-10-04T03:05:43.487Z",
+          "detail": {
+            "d_alt_m": 0.3831999969482922,
+            "d_cpa_h_m": 53.415029161158245,
+            "d_horizontal_now_m": 53.415029161158245,
+            "evaluation_period_s": 1,
+            "los_start_s": 0,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "37b8f300-da8c-4851-96bf-144c56cd68a4",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 0,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-b"
+        },
+        "ok": true
+      }
+    ],
+    "missed_alerts": 0,
+    "false_alert_count": 0,
+    "alerts": [
+      {
+        "system": "ussp",
+        "kind": "degraded",
+        "alert_id": "ussp:degraded:cis",
+        "subject": "cis",
+        "raise": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:cis",
+          "phase": "raised",
+          "subject": "cis",
+          "observed_at": "2026-10-04T03:05:02.596081381Z",
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "degraded",
+        "alert_id": "ussp:degraded:dss",
+        "subject": "dss",
+        "raise": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:dss",
+          "phase": "raised",
+          "subject": "dss",
+          "observed_at": "2026-10-04T03:05:02.596081381Z",
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "degraded",
+        "alert_id": "ussp:degraded:manned",
+        "subject": "manned",
+        "raise": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:manned",
+          "phase": "raised",
+          "subject": "manned",
+          "observed_at": "2026-10-04T03:05:02.596081381Z",
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "degraded",
+        "alert_id": "ussp:degraded:policy",
+        "subject": "policy",
+        "raise": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:policy",
+          "phase": "raised",
+          "subject": "policy",
+          "observed_at": "2026-10-04T03:05:02.596081381Z",
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "degraded",
+        "alert_id": "ussp:degraded:source_control",
+        "subject": "source_control",
+        "raise": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:source_control",
+          "phase": "raised",
+          "subject": "source_control",
+          "observed_at": "2026-10-04T03:05:02.596081381Z",
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "proximity",
+        "alert_id": "8e123e79-71c6-4e17-a748-f4209fa7fb92",
+        "aircraft": "a",
+        "peer": "b",
+        "raise": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "8e123e79-71c6-4e17-a748-f4209fa7fb92",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "a",
+          "peer": "b",
+          "observed_at": "2026-10-04T03:05:43.648909157Z",
+          "captured_at": "2026-10-04T03:05:43.487Z",
+          "raised_at": "2026-10-04T03:05:43.487Z",
+          "detail": {
+            "d_alt_m": 0,
+            "d_cpa_h_m": 25.02402710397139,
+            "d_horizontal_now_m": 25.02402710397139,
+            "evaluation_period_s": 1,
+            "los_start_s": 0,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "6c9d9b5b-3646-485b-9d01-ef91fc5fd444",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 0,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "8e123e79-71c6-4e17-a748-f4209fa7fb92",
+          "phase": "cleared",
+          "reason": "resolved",
+          "severity": "critical",
+          "aircraft": "a",
+          "peer": "b",
+          "observed_at": "2026-10-04T03:06:24.646017591Z",
+          "captured_at": "2026-10-04T03:06:21.489Z",
+          "raised_at": "2026-10-04T03:05:43.487Z",
+          "detail": {
+            "d_alt_m": 0.3831999969482922,
+            "d_cpa_h_m": 53.415029161158245,
+            "d_horizontal_now_m": 53.415029161158245,
+            "evaluation_period_s": 1,
+            "los_start_s": 0,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "6c9d9b5b-3646-485b-9d01-ef91fc5fd444",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 0,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "proximity",
+        "alert_id": "c8379c17-10ed-44f9-8151-674a3ed5230e",
+        "aircraft": "b",
+        "peer": "a",
+        "raise": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "c8379c17-10ed-44f9-8151-674a3ed5230e",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "b",
+          "peer": "a",
+          "observed_at": "2026-10-04T03:05:43.648910735Z",
+          "captured_at": "2026-10-04T03:05:43.487Z",
+          "raised_at": "2026-10-04T03:05:43.487Z",
+          "detail": {
+            "d_alt_m": 0,
+            "d_cpa_h_m": 25.02402710397139,
+            "d_horizontal_now_m": 25.02402710397139,
+            "evaluation_period_s": 1,
+            "los_start_s": 0,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "37b8f300-da8c-4851-96bf-144c56cd68a4",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 0,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-b"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "c8379c17-10ed-44f9-8151-674a3ed5230e",
+          "phase": "cleared",
+          "reason": "resolved",
+          "severity": "critical",
+          "aircraft": "b",
+          "peer": "a",
+          "observed_at": "2026-10-04T03:06:24.646101183Z",
+          "captured_at": "2026-10-04T03:06:21.489Z",
+          "raised_at": "2026-10-04T03:05:43.487Z",
+          "detail": {
+            "d_alt_m": 0.3831999969482922,
+            "d_cpa_h_m": 53.415029161158245,
+            "d_horizontal_now_m": 53.415029161158245,
+            "evaluation_period_s": 1,
+            "los_start_s": 0,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "37b8f300-da8c-4851-96bf-144c56cd68a4",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 0,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-b"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "proximity",
+        "alert_id": "e145597e-2740-49a6-817d-20300610e681",
+        "aircraft": "a",
+        "peer": "b",
+        "raise": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "e145597e-2740-49a6-817d-20300610e681",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "a",
+          "peer": "b",
+          "observed_at": "2026-10-04T03:06:53.647435587Z",
+          "captured_at": "2026-10-04T03:06:53.494Z",
+          "raised_at": "2026-10-04T03:06:53.494Z",
+          "detail": {
+            "d_alt_m": 0,
+            "d_cpa_h_m": 40.15099328302357,
+            "d_horizontal_now_m": 576.2199478116853,
+            "evaluation_period_s": 1,
+            "los_start_s": 47.64003043146952,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "6c9d9b5b-3646-485b-9d01-ef91fc5fd444",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 51.64594658954688,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "e145597e-2740-49a6-817d-20300610e681",
+          "phase": "cleared",
+          "reason": "resolved",
+          "severity": "critical",
+          "aircraft": "a",
+          "peer": "b",
+          "observed_at": "2026-10-04T03:07:28.585600083Z",
+          "captured_at": "2026-10-04T03:07:24.491Z",
+          "raised_at": "2026-10-04T03:06:53.494Z",
+          "detail": {
+            "d_alt_m": 0,
+            "d_cpa_h_m": 53.19294914484158,
+            "d_horizontal_now_m": 53.19294914484158,
+            "evaluation_period_s": 1,
+            "los_start_s": 0,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "6c9d9b5b-3646-485b-9d01-ef91fc5fd444",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 0,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "proximity",
+        "alert_id": "65ae2ee2-0e1f-4231-bae2-a2ecd2b692fb",
+        "aircraft": "b",
+        "peer": "a",
+        "raise": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "65ae2ee2-0e1f-4231-bae2-a2ecd2b692fb",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "b",
+          "peer": "a",
+          "observed_at": "2026-10-04T03:06:53.647541641Z",
+          "captured_at": "2026-10-04T03:06:53.494Z",
+          "raised_at": "2026-10-04T03:06:53.494Z",
+          "detail": {
+            "d_alt_m": 0,
+            "d_cpa_h_m": 40.15099328302357,
+            "d_horizontal_now_m": 576.2199478116853,
+            "evaluation_period_s": 1,
+            "los_start_s": 47.64003043146952,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "37b8f300-da8c-4851-96bf-144c56cd68a4",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 51.64594658954688,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-b"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "65ae2ee2-0e1f-4231-bae2-a2ecd2b692fb",
+          "phase": "cleared",
+          "reason": "resolved",
+          "severity": "critical",
+          "aircraft": "b",
+          "peer": "a",
+          "observed_at": "2026-10-04T03:07:28.585786252Z",
+          "captured_at": "2026-10-04T03:07:24.491Z",
+          "raised_at": "2026-10-04T03:06:53.494Z",
+          "detail": {
+            "d_alt_m": 0,
+            "d_cpa_h_m": 53.19294914484158,
+            "d_horizontal_now_m": 53.19294914484158,
+            "evaluation_period_s": 1,
+            "los_start_s": 0,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "37b8f300-da8c-4851-96bf-144c56cd68a4",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 0,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-b"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "proximity",
+        "alert_id": "bd0d73f4-36e6-4c44-8ae4-ffa98e0c7bc3",
+        "aircraft": "a",
+        "peer": "b",
+        "raise": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "bd0d73f4-36e6-4c44-8ae4-ffa98e0c7bc3",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "a",
+          "peer": "b",
+          "observed_at": "2026-10-04T03:08:22.640791025Z",
+          "captured_at": "2026-10-04T03:08:22.488Z",
+          "raised_at": "2026-10-04T03:08:22.488Z",
+          "detail": {
+            "d_alt_m": 0.010000000000104592,
+            "d_cpa_h_m": 40.006605202300044,
+            "d_horizontal_now_m": 570.4668935088631,
+            "evaluation_period_s": 1,
+            "los_start_s": 57.64677704751708,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "6c9d9b5b-3646-485b-9d01-ef91fc5fd444",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 62.56280052392361,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "bd0d73f4-36e6-4c44-8ae4-ffa98e0c7bc3",
+          "phase": "cleared",
+          "reason": "resolved",
+          "severity": "critical",
+          "aircraft": "a",
+          "peer": "b",
+          "observed_at": "2026-10-04T03:09:04.637658702Z",
+          "captured_at": "2026-10-04T03:09:01.456Z",
+          "raised_at": "2026-10-04T03:08:22.488Z",
+          "detail": {
+            "d_alt_m": 0,
+            "d_cpa_h_m": 39.317534805521156,
+            "d_horizontal_now_m": 206.68042600439452,
+            "evaluation_period_s": 1,
+            "los_start_s": 55.37265645435188,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "6c9d9b5b-3646-485b-9d01-ef91fc5fd444",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 71.29834543490217,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "proximity",
+        "alert_id": "96768057-abef-451f-a8aa-8c0cb1fbaa6e",
+        "aircraft": "b",
+        "peer": "a",
+        "raise": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "96768057-abef-451f-a8aa-8c0cb1fbaa6e",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "b",
+          "peer": "a",
+          "observed_at": "2026-10-04T03:08:22.640801199Z",
+          "captured_at": "2026-10-04T03:08:22.488Z",
+          "raised_at": "2026-10-04T03:08:22.488Z",
+          "detail": {
+            "d_alt_m": 0.010000000000104592,
+            "d_cpa_h_m": 40.006605202300044,
+            "d_horizontal_now_m": 570.4668935088631,
+            "evaluation_period_s": 1,
+            "los_start_s": 57.64677704751708,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "37b8f300-da8c-4851-96bf-144c56cd68a4",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 62.56280052392361,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-b"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "proximity",
+          "alert_id": "96768057-abef-451f-a8aa-8c0cb1fbaa6e",
+          "phase": "cleared",
+          "reason": "resolved",
+          "severity": "critical",
+          "aircraft": "b",
+          "peer": "a",
+          "observed_at": "2026-10-04T03:09:04.637910587Z",
+          "captured_at": "2026-10-04T03:09:01.456Z",
+          "raised_at": "2026-10-04T03:08:22.488Z",
+          "detail": {
+            "d_alt_m": 0,
+            "d_cpa_h_m": 39.317534805521156,
+            "d_horizontal_now_m": 206.68042600439452,
+            "evaluation_period_s": 1,
+            "los_start_s": 55.37265645435188,
+            "pair_id": "4c4e0174511ce3c8cb1b6285",
+            "peer": {
+              "source": "operator_ws",
+              "track_id": "37b8f300-da8c-4851-96bf-144c56cd68a4",
+              "trust": "authenticated"
+            },
+            "t_cpa_s": 71.29834543490217,
+            "vertical_separation_known": true
+          },
+          "stream": "ussp-alerts-b"
+        }
+      }
+    ],
+    "pass": true
+  },
+  "frames": {
+    "ussp-alerts-a": {
+      "alert/v1": 16,
+      "console/status/v1": 164
+    },
+    "ussp-alerts-b": {
+      "alert/v1": 18,
+      "console/status/v1": 164
+    }
+  },
+  "operator_ledgers": [
+    {
+      "serial": "LABX9SC02A0001",
+      "transport": "ws",
+      "produced": 315,
+      "sent_live": 315,
+      "sent_backlog": 0,
+      "sent": 315,
+      "dropped_by_knob": 0,
+      "queue_shed": 0,
+      "pending": 0,
+      "accepted": 315,
+      "refused": 0,
+      "dropped": 0,
+      "duplicate": 0,
+      "backlog": 0,
+      "outcomes": {
+        "accepted": 315
+      },
+      "acked_seq": 314,
+      "last_seq": 314,
+      "connections": 1,
+      "resent_after_break": 0,
+      "exact": true,
+      "balanced": true,
+      "client_counters": {
+        "dials": 1,
+        "produced": 315,
+        "sent_live": 315,
+        "status_frames": 164
+      }
+    },
+    {
+      "serial": "LABX9SC02B0002",
+      "transport": "ws",
+      "produced": 314,
+      "sent_live": 314,
+      "sent_backlog": 0,
+      "sent": 314,
+      "dropped_by_knob": 0,
+      "queue_shed": 0,
+      "pending": 0,
+      "accepted": 314,
+      "refused": 0,
+      "dropped": 0,
+      "duplicate": 0,
+      "backlog": 0,
+      "outcomes": {
+        "accepted": 314
+      },
+      "acked_seq": 313,
+      "last_seq": 313,
+      "connections": 1,
+      "resent_after_break": 0,
+      "exact": true,
+      "balanced": true,
+      "client_counters": {
+        "dials": 1,
+        "produced": 314,
+        "sent_live": 314,
+        "status_frames": 164
+      }
+    }
+  ],
+  "vehicle_samples": {
+    "a": 1260,
+    "b": 1256
+  },
+  "latency_s": {
+    "ussp": {
+      "n": 6,
+      "p50": 0.153,
+      "p95": 0.162,
+      "max": 0.162
+    }
+  },
+  "verdict": "pass"
+}

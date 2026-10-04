@@ -1,0 +1,8 @@
+scenario ussp-wp7-authorisation (20261004-systems-rerun, sitl vehicles, systems targets): FAIL
+  observed alerts (0):
+  missed 0, false 0
+  operator LABX9WP07A0001: sent 108 = accepted 0 + refused 108 + dropped 0 + duplicate 0 (balanced true)
+  operator LABX9WP07B0002: sent 107 = accepted 0 + refused 107 + dropped 0 + duplicate 0 (balanced true)
+  FAIL intent of a: decision "pending_dss" state "pending_dss", want "authorised" "activated"
+  FAIL intent of b: decision "pending_dss" state "pending_dss", want "rejected" ""
+  result: results/20261004-systems-rerun/ussp-wp7-authorisation.json

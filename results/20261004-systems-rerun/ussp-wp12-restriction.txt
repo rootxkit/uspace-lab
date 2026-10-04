@@ -1,0 +1,13 @@
+scenario ussp-wp12-restriction (20261004-systems-rerun, sitl vehicles, systems targets): FAIL
+  observed alerts (1):
+    ansp      degraded                          on adapters_silent raised +-15.3s
+  missed 1, false 0
+  operator LABX9WP12A0001: sent 179 = accepted 0 + refused 179 + dropped 0 + duplicate 0 (balanced true)
+  FAIL restriction-activated-on-the-intent: raise: mark "activate" never happened (no vehicle confirmed it, E-08)
+  FAIL step 2 (request): ansp answered 500: {"type":"https://schemas.uspace.ge/problems/internal","title":"Internal Server Error","status":500,"detail":"the request could not be completed","instance":"/v1/restrictions","errors":[]}
+
+  FAIL step 3 (request): ansp answered 404: {"type":"https://schemas.uspace.ge/problems/not_found","title":"Not Found","status":404,"detail":"no such restriction or request","instance":"/v1/restrictions/${restriction_id}/activate","errors":[]}
+
+  FAIL step 4 (request): ansp answered 404: {"type":"https://schemas.uspace.ge/problems/not_found","title":"Not Found","status":404,"detail":"no such restriction or request","instance":"/v1/restrictions/${restriction_id}/end","errors":[]}
+
+  result: results/20261004-systems-rerun/ussp-wp12-restriction.json

@@ -1,0 +1,644 @@
+{
+  "format": "result/v1",
+  "run": "20261004-systems-rerun",
+  "scenario": "sc-03-zone-entry-exit",
+  "title": "SC-03: zone entry and exit",
+  "source": "knowledge/scenarios.md SC-03 (utm P5-15, 2026-09-29)",
+  "owners": [
+    "authority",
+    "ussp"
+  ],
+  "started_at": "2026-10-04T03:24:41.703543959Z",
+  "ended_at": "2026-10-04T03:28:09.80944674Z",
+  "t0": "2026-10-04T03:24:57Z",
+  "mode": {
+    "vehicles": "sitl",
+    "targets": "systems",
+    "targets_name": "lab-demo"
+  },
+  "evidence": "systems under test with SITL vehicles flown by sim/fly.py: INV-02 evidence when the images are pinned by digest",
+  "commits": {
+    "lab": "e3d5ab86ff590a52c0db4bd673d3f762eab6e983",
+    "lab_dirty": true,
+    "core": "v1.3.0",
+    "go": "go1.27.1"
+  },
+  "images": {
+    "ansp": "ghcr.io/rootxkit/uspace-ansp@sha256:8e6a7e11d543fbbe28c7d1708437a835aab9c19b815a026ba2fc8997d89d9336",
+    "authority": "ghcr.io/rootxkit/uspace-authority@sha256:3f8a821bbe9747942db0b7ff7bf0ae9735806b46c370dafbaeaf72f9698dd5a0",
+    "cisp": "ghcr.io/rootxkit/uspace-cisp@sha256:63a02a8da983a530744663e52bdd82dac31b4c9f36b5ecfd572bd529e83978cd",
+    "dss": "interuss/dss:v0.23.0@sha256:0781042bef785f6c968efd4b4e1e85854db9bf361116916d0673d2c89db91582",
+    "ussp": "ghcr.io/rootxkit/uspace-ussp@sha256:a5838e08138d65777749d8d2d1aa87cbe2c185da12479002f918b88080fd3305"
+  },
+  "policy_version": 1,
+  "policy": {
+    "policy_version": 1,
+    "source": "docs/PLAN.md §7.1 L-Q4 (owner-only, open; GCAA answers); knowledge/scenarios.md conventions",
+    "deviation": {
+      "h_m": 50,
+      "v_m": 15,
+      "t_s": 60
+    },
+    "telemetry_lost_s": 5,
+    "lost_link_s": 15,
+    "nonconformance_nearby_radius_m": 2000,
+    "cpa": {
+      "t_cpa_max_s": 60,
+      "d_horizontal_min_m": 60,
+      "d_vertical_min_m": 20,
+      "neighbour_radius_m": 800,
+      "neighbour_max_age_s": 10
+    },
+    "height_limit_agl_m": 120,
+    "monitor": {
+      "clear_after_s": 3,
+      "stale_after_s": 15,
+      "live_max_age_s": 10,
+      "pressure_uncertainty_m": 250,
+      "conditional_severity": "warning"
+    }
+  },
+  "lab": {
+    "file": "sim/sitl.env",
+    "origin_lat_deg": 41.7151,
+    "origin_lon_deg": 44.8271,
+    "origin_alt_amsl_m": 605,
+    "spacing_m": 25
+  },
+  "geoid": "WGS84 EGM2008, 2.5-minute grid",
+  "marks": {
+    "back": "2026-10-04T03:27:24.065355539Z",
+    "back.start": "2026-10-04T03:26:35.041041135Z",
+    "beyond": "2026-10-04T03:26:35.040977954Z",
+    "beyond.start": "2026-10-04T03:26:27.041812896Z",
+    "climb": "2026-10-04T03:25:38.018951177Z",
+    "climb.start": "2026-10-04T03:24:57.001613616Z",
+    "down": "2026-10-04T03:28:01.583625316Z",
+    "down.start": "2026-10-04T03:27:24.065425395Z",
+    "t0": "2026-10-04T03:24:57Z",
+    "through": "2026-10-04T03:26:27.041747808Z",
+    "through.start": "2026-10-04T03:25:38.019031047Z"
+  },
+  "steps": [
+    {
+      "sysid": 1,
+      "step": 0,
+      "action": "arm",
+      "state": "started",
+      "at_unix_s": 1791084297.0016136
+    },
+    {
+      "sysid": 1,
+      "step": 0,
+      "action": "arm",
+      "state": "confirmed",
+      "at_unix_s": 1791084322.5129223,
+      "observed": {
+        "alt_rel_m": 0.004,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7151,
+        "lon_deg": 44.827100099999996,
+        "time_boot_ms": 44352
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 1,
+      "action": "takeoff",
+      "state": "started",
+      "at_unix_s": 1791084322.5130007
+    },
+    {
+      "sysid": 1,
+      "step": 1,
+      "action": "takeoff",
+      "state": "confirmed",
+      "at_unix_s": 1791084338.0189512,
+      "observed": {
+        "alt_rel_m": 28.558,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.715100199999995,
+        "lon_deg": 44.8270997,
+        "time_boot_ms": 59854
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 2,
+      "action": "goto",
+      "state": "started",
+      "at_unix_s": 1791084338.019031
+    },
+    {
+      "sysid": 1,
+      "step": 2,
+      "action": "goto",
+      "state": "confirmed",
+      "at_unix_s": 1791084387.0417478,
+      "observed": {
+        "alt_rel_m": 29.994,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7191348,
+        "lon_deg": 44.8271003,
+        "time_boot_ms": 108852
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 3,
+      "action": "hold",
+      "state": "started",
+      "at_unix_s": 1791084387.041813
+    },
+    {
+      "sysid": 1,
+      "step": 3,
+      "action": "hold",
+      "state": "confirmed",
+      "at_unix_s": 1791084395.040978,
+      "observed": {
+        "alt_rel_m": 29.998,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7191523,
+        "lon_deg": 44.8270996,
+        "time_boot_ms": 116852
+      },
+      "max_drift_m": 2.7132742093054203
+    },
+    {
+      "sysid": 1,
+      "step": 4,
+      "action": "goto",
+      "state": "started",
+      "at_unix_s": 1791084395.0410411
+    },
+    {
+      "sysid": 1,
+      "step": 4,
+      "action": "goto",
+      "state": "confirmed",
+      "at_unix_s": 1791084444.0653555,
+      "observed": {
+        "alt_rel_m": 29.994,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7151176,
+        "lon_deg": 44.8270996,
+        "time_boot_ms": 165854
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 5,
+      "action": "land",
+      "state": "started",
+      "at_unix_s": 1791084444.0654254
+    },
+    {
+      "sysid": 1,
+      "step": 5,
+      "action": "land",
+      "state": "confirmed",
+      "at_unix_s": 1791084481.5836253,
+      "observed": {
+        "alt_rel_m": 0.007,
+        "armed": false,
+        "custom_mode": 9,
+        "lat_deg": 41.7151026,
+        "lon_deg": 44.8271,
+        "time_boot_ms": 203354
+      }
+    }
+  ],
+  "intents": [
+    {
+      "aircraft": "a",
+      "intent_id": "cd8f3a0d-d673-4a4e-a115-4fcb90f934d7",
+      "decision": "pending_authority",
+      "state": "pending_authority"
+    }
+  ],
+  "outcome": {
+    "expectations": [
+      {
+        "name": "ussp-entry-1",
+        "matcher": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "aircraft": "a",
+          "subject": "SC03Z"
+        },
+        "raise_window": {
+          "from": "2026-10-04T03:25:53.019031047Z",
+          "to": "2026-10-04T03:26:23.019031047Z"
+        },
+        "ok": false,
+        "why": [
+          "no ussp zone_incursion raise for a on SC03Z in [03:25:53.019, 03:26:23.019]"
+        ]
+      },
+      {
+        "name": "ussp-entry-2",
+        "matcher": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "aircraft": "a",
+          "subject": "SC03Z"
+        },
+        "raise_window": {
+          "from": "2026-10-04T03:26:40.041041135Z",
+          "to": "2026-10-04T03:27:05.041041135Z"
+        },
+        "ok": false,
+        "why": [
+          "no ussp zone_incursion raise for a on SC03Z in [03:26:40.041, 03:27:05.041]"
+        ]
+      },
+      {
+        "name": "authority-entry-1",
+        "matcher": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "aircraft": "a",
+          "subject": "SC03Z"
+        },
+        "raise_window": {
+          "from": "2026-10-04T03:25:53.019031047Z",
+          "to": "2026-10-04T03:26:23.019031047Z"
+        },
+        "clear_window": {
+          "from": "2026-10-04T03:26:08.019031047Z",
+          "to": "2026-10-04T03:26:48.019031047Z"
+        },
+        "raise": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M42F51YZ4Q409N1RZEP69ZGW",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "SC03Z",
+          "observed_at": "2026-10-04T03:26:05.795343258Z",
+          "captured_at": "2026-10-04T03:26:05.4Z",
+          "raised_at": "2026-10-04T03:26:05.4Z",
+          "detail": {
+            "identifier": "SC03Z",
+            "restriction": "REQ_AUTHORISATION"
+          },
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M42F51YZ4Q409N1RZEP69ZGW",
+          "phase": "cleared",
+          "reason": "resolved",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "SC03Z",
+          "observed_at": "2026-10-04T03:26:19.792378542Z",
+          "captured_at": "2026-10-04T03:26:19.4Z",
+          "raised_at": "2026-10-04T03:26:05.4Z",
+          "detail": {
+            "identifier": "SC03Z",
+            "restriction": "REQ_AUTHORISATION"
+          },
+          "stream": "authority-picture"
+        },
+        "ok": true
+      },
+      {
+        "name": "authority-entry-2",
+        "matcher": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "aircraft": "a",
+          "subject": "SC03Z"
+        },
+        "raise_window": {
+          "from": "2026-10-04T03:26:40.041041135Z",
+          "to": "2026-10-04T03:27:05.041041135Z"
+        },
+        "clear_window": {
+          "from": "2026-10-04T03:26:50.041041135Z",
+          "to": "2026-10-04T03:27:25.041041135Z"
+        },
+        "raise": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M42F6AZF8NB0ZT54Y9XW077H",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "SC03Z",
+          "observed_at": "2026-10-04T03:26:47.79367236Z",
+          "captured_at": "2026-10-04T03:26:46.9Z",
+          "raised_at": "2026-10-04T03:26:46.9Z",
+          "detail": {
+            "identifier": "SC03Z",
+            "restriction": "REQ_AUTHORISATION"
+          },
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M42F6AZF8NB0ZT54Y9XW077H",
+          "phase": "cleared",
+          "reason": "resolved",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "SC03Z",
+          "observed_at": "2026-10-04T03:27:01.789820049Z",
+          "captured_at": "2026-10-04T03:27:00.9Z",
+          "raised_at": "2026-10-04T03:26:46.9Z",
+          "detail": {
+            "identifier": "SC03Z",
+            "restriction": "REQ_AUTHORISATION"
+          },
+          "stream": "authority-picture"
+        },
+        "ok": true,
+        "seen": [
+          {
+            "system": "authority",
+            "kind": "zone_incursion",
+            "alert_id": "01M42F51YZ4Q409N1RZEP69ZGW",
+            "aircraft": "a",
+            "subject": "SC03Z",
+            "raise": {
+              "system": "authority",
+              "kind": "zone_incursion",
+              "alert_id": "01M42F51YZ4Q409N1RZEP69ZGW",
+              "phase": "raised",
+              "severity": "warning",
+              "aircraft": "a",
+              "subject": "SC03Z",
+              "observed_at": "2026-10-04T03:26:05.795343258Z",
+              "captured_at": "2026-10-04T03:26:05.4Z",
+              "raised_at": "2026-10-04T03:26:05.4Z",
+              "detail": {
+                "identifier": "SC03Z",
+                "restriction": "REQ_AUTHORISATION"
+              },
+              "stream": "authority-picture"
+            },
+            "clear": {
+              "system": "authority",
+              "kind": "zone_incursion",
+              "alert_id": "01M42F51YZ4Q409N1RZEP69ZGW",
+              "phase": "cleared",
+              "reason": "resolved",
+              "severity": "warning",
+              "aircraft": "a",
+              "subject": "SC03Z",
+              "observed_at": "2026-10-04T03:26:19.792378542Z",
+              "captured_at": "2026-10-04T03:26:19.4Z",
+              "raised_at": "2026-10-04T03:26:05.4Z",
+              "detail": {
+                "identifier": "SC03Z",
+                "restriction": "REQ_AUTHORISATION"
+              },
+              "stream": "authority-picture"
+            }
+          }
+        ]
+      }
+    ],
+    "missed_alerts": 2,
+    "false_alert_count": 0,
+    "alerts": [
+      {
+        "system": "authority",
+        "kind": "degraded",
+        "alert_id": "authority:degraded:cis_stale",
+        "subject": "cis_stale",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:cis_stale",
+          "phase": "raised",
+          "subject": "cis_stale",
+          "observed_at": "2026-10-04T03:24:41.814667722Z",
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "degraded",
+        "alert_id": "authority:degraded:dp_unavailable",
+        "subject": "dp_unavailable",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:dp_unavailable",
+          "phase": "raised",
+          "subject": "dp_unavailable",
+          "observed_at": "2026-10-04T03:24:41.814667722Z",
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "degraded",
+        "alert_id": "authority:degraded:no_subscription",
+        "subject": "no_subscription",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:no_subscription",
+          "phase": "raised",
+          "subject": "no_subscription",
+          "observed_at": "2026-10-04T03:24:41.814667722Z",
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:no_subscription",
+          "phase": "cleared",
+          "reason": "not_degraded",
+          "subject": "no_subscription",
+          "observed_at": "2026-10-04T03:24:41.815116887Z",
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "zone_incursion",
+        "alert_id": "01M42F51YZ4Q409N1RZEP69ZGW",
+        "aircraft": "a",
+        "subject": "SC03Z",
+        "raise": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M42F51YZ4Q409N1RZEP69ZGW",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "SC03Z",
+          "observed_at": "2026-10-04T03:26:05.795343258Z",
+          "captured_at": "2026-10-04T03:26:05.4Z",
+          "raised_at": "2026-10-04T03:26:05.4Z",
+          "detail": {
+            "identifier": "SC03Z",
+            "restriction": "REQ_AUTHORISATION"
+          },
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M42F51YZ4Q409N1RZEP69ZGW",
+          "phase": "cleared",
+          "reason": "resolved",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "SC03Z",
+          "observed_at": "2026-10-04T03:26:19.792378542Z",
+          "captured_at": "2026-10-04T03:26:19.4Z",
+          "raised_at": "2026-10-04T03:26:05.4Z",
+          "detail": {
+            "identifier": "SC03Z",
+            "restriction": "REQ_AUTHORISATION"
+          },
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "zone_incursion",
+        "alert_id": "01M42F6AZF8NB0ZT54Y9XW077H",
+        "aircraft": "a",
+        "subject": "SC03Z",
+        "raise": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M42F6AZF8NB0ZT54Y9XW077H",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "SC03Z",
+          "observed_at": "2026-10-04T03:26:47.79367236Z",
+          "captured_at": "2026-10-04T03:26:46.9Z",
+          "raised_at": "2026-10-04T03:26:46.9Z",
+          "detail": {
+            "identifier": "SC03Z",
+            "restriction": "REQ_AUTHORISATION"
+          },
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M42F6AZF8NB0ZT54Y9XW077H",
+          "phase": "cleared",
+          "reason": "resolved",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "SC03Z",
+          "observed_at": "2026-10-04T03:27:01.789820049Z",
+          "captured_at": "2026-10-04T03:27:00.9Z",
+          "raised_at": "2026-10-04T03:26:46.9Z",
+          "detail": {
+            "identifier": "SC03Z",
+            "restriction": "REQ_AUTHORISATION"
+          },
+          "stream": "authority-picture"
+        }
+      }
+    ],
+    "pass": false,
+    "failures": [
+      "ussp-entry-1: no ussp zone_incursion raise for a on SC03Z in [03:25:53.019, 03:26:23.019]",
+      "ussp-entry-2: no ussp zone_incursion raise for a on SC03Z in [03:26:40.041, 03:27:05.041]"
+    ]
+  },
+  "frames": {
+    "authority-picture": {
+      "console/snapshot/v1": 2,
+      "console/status/v1": 106,
+      "source/status/v1": 2,
+      "track/telemetry/v1": 172,
+      "violation/v1": 4
+    }
+  },
+  "stream_errors": {
+    "ussp-alerts-a": "ussp-alerts-a: upgrade refused with 404"
+  },
+  "operator_ledgers": [
+    {
+      "serial": "LABX9SC03A0001",
+      "transport": "ws",
+      "produced": 197,
+      "sent_live": 197,
+      "sent_backlog": 0,
+      "sent": 197,
+      "dropped_by_knob": 0,
+      "queue_shed": 0,
+      "pending": 0,
+      "accepted": 197,
+      "refused": 0,
+      "dropped": 0,
+      "duplicate": 0,
+      "backlog": 0,
+      "outcomes": {
+        "accepted": 197
+      },
+      "acked_seq": 196,
+      "last_seq": 196,
+      "connections": 1,
+      "resent_after_break": 0,
+      "exact": true,
+      "balanced": true,
+      "client_counters": {
+        "dials": 1,
+        "produced": 197,
+        "sent_live": 197,
+        "status_frames": 105
+      }
+    }
+  ],
+  "receiver_ledgers": [
+    {
+      "receiver_id": "lab-rx-1",
+      "observed": 172,
+      "dropped_by_knob": 0,
+      "sent": 172,
+      "accepted": 172,
+      "duplicates": 0,
+      "refused": 0,
+      "backlog_shed": 0,
+      "pending": 0,
+      "balanced": true,
+      "counters": {
+        "accepted": 172,
+        "batches": 172,
+        "duplicates": 0,
+        "locations_without_utc": 1,
+        "observations": 172,
+        "sent": 172
+      }
+    }
+  ],
+  "vehicle_samples": {
+    "a": 786
+  },
+  "latency_s": {
+    "authority": {
+      "n": 2,
+      "p50": 0.395,
+      "p95": 0.894,
+      "max": 0.894
+    }
+  },
+  "verdict": "fail",
+  "failures": [
+    "ussp-entry-1: no ussp zone_incursion raise for a on SC03Z in [03:25:53.019, 03:26:23.019]",
+    "ussp-entry-2: no ussp zone_incursion raise for a on SC03Z in [03:26:40.041, 03:27:05.041]"
+  ]
+}

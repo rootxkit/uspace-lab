@@ -1,0 +1,357 @@
+{
+  "format": "result/v1",
+  "run": "20261004-systems-rerun-uspace-origin",
+  "scenario": "ansp-inv02-manned",
+  "title": "uspace-ansp INV-02: a replayed manned track through the ANSP's adapter and feed, against a SITL aircraft at the USSP",
+  "source": "uspace-ansp CLAUDE.md INV-02 (WP-4, WP-6: the manned path); knowledge/scenarios.md SC-15 (stale), SC-05 (a manned crossing)",
+  "owners": [
+    "ansp",
+    "ussp"
+  ],
+  "started_at": "2026-10-04T03:41:48.195032412Z",
+  "ended_at": "2026-10-04T03:44:55.262441028Z",
+  "t0": "2026-10-04T03:42:04Z",
+  "mode": {
+    "vehicles": "sitl",
+    "targets": "systems",
+    "targets_name": "lab-demo"
+  },
+  "evidence": "systems under test with SITL vehicles flown by sim/fly.py: INV-02 evidence when the images are pinned by digest",
+  "commits": {
+    "lab": "044a9e6487b0738a8b476db381924ebde57a7c73",
+    "lab_dirty": true,
+    "core": "v1.3.0",
+    "go": "go1.27.1"
+  },
+  "images": {
+    "ansp": "ghcr.io/rootxkit/uspace-ansp@sha256:8e6a7e11d543fbbe28c7d1708437a835aab9c19b815a026ba2fc8997d89d9336",
+    "authority": "ghcr.io/rootxkit/uspace-authority@sha256:3f8a821bbe9747942db0b7ff7bf0ae9735806b46c370dafbaeaf72f9698dd5a0",
+    "cisp": "ghcr.io/rootxkit/uspace-cisp@sha256:63a02a8da983a530744663e52bdd82dac31b4c9f36b5ecfd572bd529e83978cd",
+    "dss": "interuss/dss:v0.23.0@sha256:0781042bef785f6c968efd4b4e1e85854db9bf361116916d0673d2c89db91582",
+    "ussp": "ghcr.io/rootxkit/uspace-ussp@sha256:a5838e08138d65777749d8d2d1aa87cbe2c185da12479002f918b88080fd3305"
+  },
+  "policy_version": 1,
+  "policy": {
+    "policy_version": 1,
+    "source": "docs/PLAN.md §7.1 L-Q4 (owner-only, open; GCAA answers); knowledge/scenarios.md conventions",
+    "deviation": {
+      "h_m": 50,
+      "v_m": 15,
+      "t_s": 60
+    },
+    "telemetry_lost_s": 5,
+    "lost_link_s": 15,
+    "nonconformance_nearby_radius_m": 2000,
+    "cpa": {
+      "t_cpa_max_s": 60,
+      "d_horizontal_min_m": 60,
+      "d_vertical_min_m": 20,
+      "neighbour_radius_m": 800,
+      "neighbour_max_age_s": 10
+    },
+    "height_limit_agl_m": 120,
+    "monitor": {
+      "clear_after_s": 3,
+      "stale_after_s": 15,
+      "live_max_age_s": 10,
+      "pressure_uncertainty_m": 250,
+      "conditional_severity": "warning"
+    }
+  },
+  "lab": {
+    "file": "sim/sitl.env",
+    "origin_lat_deg": 41.7151,
+    "origin_lon_deg": 44.8271,
+    "origin_alt_amsl_m": 605,
+    "spacing_m": 25
+  },
+  "geoid": "WGS84 EGM2008, 2.5-minute grid",
+  "marks": {
+    "climb": "2026-10-04T03:42:45.523566007Z",
+    "climb.start": "2026-10-04T03:42:04.000312566Z",
+    "down": "2026-10-04T03:44:47.019337654Z",
+    "down.start": "2026-10-04T03:44:09.000217676Z",
+    "freeze": "2026-10-04T03:43:33.994826087Z",
+    "freeze.start": "2026-10-04T03:43:33.994826087Z",
+    "hover": "2026-10-04T03:44:05.519799947Z",
+    "hover.start": "2026-10-04T03:42:45.523637294Z",
+    "t0": "2026-10-04T03:42:04Z"
+  },
+  "steps": [
+    {
+      "sysid": 1,
+      "step": 0,
+      "action": "arm",
+      "state": "started",
+      "at_unix_s": 1791085324.0003126
+    },
+    {
+      "sysid": 1,
+      "step": 0,
+      "action": "arm",
+      "state": "confirmed",
+      "at_unix_s": 1791085349.0148158,
+      "observed": {
+        "alt_rel_m": 0.003,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7151,
+        "lon_deg": 44.827100099999996,
+        "time_boot_ms": 44349
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 1,
+      "action": "takeoff",
+      "state": "started",
+      "at_unix_s": 1791085349.014894
+    },
+    {
+      "sysid": 1,
+      "step": 1,
+      "action": "takeoff",
+      "state": "confirmed",
+      "at_unix_s": 1791085365.523566,
+      "observed": {
+        "alt_rel_m": 29.059,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.715100199999995,
+        "lon_deg": 44.8270997,
+        "time_boot_ms": 60849
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 2,
+      "action": "hold",
+      "state": "started",
+      "at_unix_s": 1791085365.5236373
+    },
+    {
+      "sysid": 1,
+      "step": 2,
+      "action": "hold",
+      "state": "confirmed",
+      "at_unix_s": 1791085445.5198,
+      "observed": {
+        "alt_rel_m": 30.001,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.715100199999995,
+        "lon_deg": 44.8270998,
+        "time_boot_ms": 140849
+      },
+      "max_drift_m": 0.00830029959203445
+    },
+    {
+      "sysid": 1,
+      "step": 3,
+      "action": "land",
+      "state": "started",
+      "at_unix_s": 1791085449.0002177
+    },
+    {
+      "sysid": 1,
+      "step": 3,
+      "action": "land",
+      "state": "confirmed",
+      "at_unix_s": 1791085487.0193377,
+      "observed": {
+        "alt_rel_m": 0.034,
+        "armed": false,
+        "custom_mode": 9,
+        "lat_deg": 41.7151001,
+        "lon_deg": 44.8270997,
+        "time_boot_ms": 182349
+      }
+    }
+  ],
+  "intents": [
+    {
+      "aircraft": "a",
+      "intent_id": "6b1e87a5-3374-47ca-bfeb-8d4456c69ce5",
+      "decision": "pending_dss",
+      "state": "pending_dss"
+    }
+  ],
+  "timeline": [
+    {
+      "step": 2,
+      "id": "freeze",
+      "do": "knob",
+      "at": "2026-10-04T03:43:33.994826087Z",
+      "detail": "feed manned-1 stale"
+    }
+  ],
+  "outcome": {
+    "expectations": [
+      {
+        "name": "ansp-shows-the-manned-track",
+        "matcher": {
+          "system": "ansp",
+          "kind": "manned_track",
+          "subject": "f0c001"
+        },
+        "raise_window": {
+          "from": "2026-10-04T03:42:19Z",
+          "to": "2026-10-04T03:42:49Z"
+        },
+        "clear_window": {
+          "from": "2026-10-04T03:43:38.994826087Z",
+          "to": "2026-10-04T03:44:03.994826087Z"
+        },
+        "raise": {
+          "system": "ansp",
+          "kind": "manned_track",
+          "alert_id": "ansp-manned:f0c001",
+          "phase": "raised",
+          "subject": "f0c001",
+          "observed_at": "2026-10-04T03:42:24.424452526Z",
+          "captured_at": "2026-10-04T03:42:24.421Z",
+          "stream": "ansp-manned"
+        },
+        "clear": {
+          "system": "ansp",
+          "kind": "manned_track",
+          "alert_id": "ansp-manned:f0c001",
+          "phase": "cleared",
+          "reason": "stale",
+          "subject": "f0c001",
+          "observed_at": "2026-10-04T03:43:48.4571273Z",
+          "captured_at": "2026-10-04T03:43:33.455Z",
+          "stream": "ansp-manned"
+        },
+        "ok": true
+      },
+      {
+        "name": "ussp-proximity-with-the-manned-peer",
+        "matcher": {
+          "system": "ussp",
+          "kind": "proximity",
+          "aircraft": "a",
+          "peer": "f0c001"
+        },
+        "raise_window": {
+          "from": "2026-10-04T03:42:24Z",
+          "to": "2026-10-04T03:43:14Z"
+        },
+        "ok": false,
+        "why": [
+          "no ussp proximity raise for a with f0c001 in [03:42:24.000, 03:43:14.000]"
+        ]
+      }
+    ],
+    "missed_alerts": 1,
+    "false_alert_count": 0,
+    "alerts": [
+      {
+        "system": "ansp",
+        "kind": "degraded",
+        "alert_id": "ansp:degraded:adapters_silent",
+        "subject": "adapters_silent",
+        "raise": {
+          "system": "ansp",
+          "kind": "degraded",
+          "alert_id": "ansp:degraded:adapters_silent",
+          "phase": "raised",
+          "subject": "adapters_silent",
+          "observed_at": "2026-10-04T03:41:48.344026794Z",
+          "stream": "ansp-manned"
+        },
+        "clear": {
+          "system": "ansp",
+          "kind": "degraded",
+          "alert_id": "ansp:degraded:adapters_silent",
+          "phase": "cleared",
+          "reason": "not_degraded",
+          "subject": "adapters_silent",
+          "observed_at": "2026-10-04T03:42:26.343323088Z",
+          "stream": "ansp-manned"
+        }
+      },
+      {
+        "system": "ansp",
+        "kind": "manned_track",
+        "alert_id": "ansp-manned:f0c001",
+        "subject": "f0c001",
+        "raise": {
+          "system": "ansp",
+          "kind": "manned_track",
+          "alert_id": "ansp-manned:f0c001",
+          "phase": "raised",
+          "subject": "f0c001",
+          "observed_at": "2026-10-04T03:42:24.424452526Z",
+          "captured_at": "2026-10-04T03:42:24.421Z",
+          "stream": "ansp-manned"
+        },
+        "clear": {
+          "system": "ansp",
+          "kind": "manned_track",
+          "alert_id": "ansp-manned:f0c001",
+          "phase": "cleared",
+          "reason": "stale",
+          "subject": "f0c001",
+          "observed_at": "2026-10-04T03:43:48.4571273Z",
+          "captured_at": "2026-10-04T03:43:33.455Z",
+          "stream": "ansp-manned"
+        }
+      }
+    ],
+    "pass": false,
+    "failures": [
+      "ussp-proximity-with-the-manned-peer: no ussp proximity raise for a with f0c001 in [03:42:24.000, 03:43:14.000]"
+    ]
+  },
+  "frames": {
+    "ansp-manned": {
+      "console/snapshot/v1": 1,
+      "console/status/v1": 94,
+      "track/manned/v1": 79
+    }
+  },
+  "stream_errors": {
+    "ussp-alerts-a": "ussp-alerts-a: upgrade refused with 404"
+  },
+  "operator_ledgers": [
+    {
+      "serial": "LABX9ANSPA0001",
+      "transport": "ws",
+      "produced": 175,
+      "sent_live": 175,
+      "sent_backlog": 0,
+      "sent": 175,
+      "dropped_by_knob": 0,
+      "queue_shed": 0,
+      "pending": 0,
+      "accepted": 0,
+      "refused": 175,
+      "dropped": 0,
+      "duplicate": 0,
+      "backlog": 0,
+      "outcomes": {
+        "refused_intent_state": 175
+      },
+      "acked_seq": 174,
+      "last_seq": 174,
+      "connections": 1,
+      "resent_after_break": 0,
+      "exact": true,
+      "balanced": true,
+      "client_counters": {
+        "dials": 1,
+        "produced": 175,
+        "sent_live": 175,
+        "status_frames": 269
+      }
+    }
+  ],
+  "vehicle_samples": {
+    "a": 702
+  },
+  "verdict": "fail",
+  "failures": [
+    "ussp-proximity-with-the-manned-peer: no ussp proximity raise for a with f0c001 in [03:42:24.000, 03:43:14.000]"
+  ]
+}

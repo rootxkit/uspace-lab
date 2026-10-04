@@ -1,0 +1,14 @@
+scenario sc-01-hover-inside-minima (20261004-systems-rerun, sitl vehicles, systems targets): PASS
+  observed alerts (7):
+    ussp      degraded                          on cis raised +-15.5s
+    ussp      degraded                          on dss raised +-15.5s
+    ussp      degraded                          on manned raised +-15.5s
+    ussp      degraded                          on policy raised +-15.5s
+    ussp      degraded                          on source_control raised +-15.5s
+    ussp      proximity              a          peer b raised +25.5s cleared resolved +92.5s
+    ussp      proximity              b          peer a raised +25.5s cleared resolved +92.5s
+  missed 0, false 0
+  operator LABX9SC01A0001: sent 181 = accepted 181 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  operator LABX9SC01B0002: sent 180 = accepted 180 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  latency ussp: n 2, p50 0.153 s, p95 0.154 s, max 0.154 s
+  result: results/20261004-systems-rerun/sc-01-hover-inside-minima.json

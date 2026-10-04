@@ -1,0 +1,16 @@
+scenario sc-21-slow-to-hover (20261004-systems-rerun, sitl vehicles, systems targets): PASS
+  observed alerts (9):
+    ussp      degraded                          on cis raised +-15.0s
+    ussp      degraded                          on dss raised +-15.0s
+    ussp      degraded                          on manned raised +-15.0s
+    ussp      degraded                          on policy raised +-15.0s
+    ussp      degraded                          on source_control raised +-15.0s
+    ussp      proximity              b          peer a raised +26.0s cleared resolved +67.0s
+    ussp      proximity              a          peer b raised +26.0s cleared resolved +67.0s
+    ussp      proximity              a          peer b raised +93.0s cleared landed +231.0s
+    ussp      proximity              b          peer a raised +93.0s cleared landed +231.0s
+  missed 0, false 0
+  operator LABX9SC21A0001: sent 241 = accepted 241 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  operator LABX9SC21B0002: sent 240 = accepted 240 + refused 0 + dropped 0 + duplicate 0 (balanced true)
+  latency ussp: n 4, p50 0.005 s, p95 0.007 s, max 0.007 s
+  result: results/20261004-systems-rerun/sc-21-slow-to-hover.json
