@@ -10,7 +10,9 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -68,6 +70,83 @@ func TestRequestCarriesTheSessionAsTheSystemReadsIt(t *testing.T) {
 	}
 	if got.auth != "" || got.cookie == "" {
 		t.Fatalf("cookie only: %+v", got)
+	}
+}
+
+// A header's lab placeholders are filled as a body's are: ${time:S} as
+// the RFC 3339 time t0 + S seconds and ${lat:N,E}/${lng:N,E} as the
+// offset's number. Found by wp12, whose Idempotency-Key went out as the
+// literal "${time:0}", the same on every execution.
+func TestRequestFillsTheLabPlaceholdersInHeaders(t *testing.T) {
+	var idem, where string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		idem, where = r.Header.Get("Idempotency-Key"), r.Header.Get("X-Lab-Where")
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer srv.Close()
+	lab, err := scenario.LoadLab("../../sim/sitl.env.example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t0 := time.Date(2026, 10, 4, 9, 0, 0, 0, time.UTC)
+	r := &run{opt: Options{Run: "run-7"}, captures: map[string]string{}, lab: lab, t0: t0,
+		tg: &Targets{Requests: map[string]RequestAuth{"ansp": {BaseURL: srv.URL}}}}
+	q := &scenario.Request{System: "ansp", Method: http.MethodPost, Path: "/v1/restrictions", Expect: http.StatusCreated,
+		Headers: map[string]string{"Idempotency-Key": "lab-${run}-plan-${time:30}", "X-Lab-Where": "${lat:0,0},${lng:0,0}"}}
+	if _, err := r.request(context.Background(), q); err != nil {
+		t.Fatal(err)
+	}
+	if want := "lab-run-7-plan-2026-10-04T09:00:30Z"; idem != want {
+		t.Fatalf("Idempotency-Key %q, want %q", idem, want)
+	}
+	o := lab.At(scenario.Offset{})
+	if want := strconv.FormatFloat(o.LatDeg, 'f', 7, 64) + "," + strconv.FormatFloat(o.LonDeg, 'f', 7, 64); where != want {
+		t.Fatalf("X-Lab-Where %q, want %q", where, want)
+	}
+}
+
+// A request still holding a ${...} the runner could not fill (a capture
+// an earlier step never made, an extra the targets file lacks, a
+// malformed placeholder) is refused before it is sent, naming where it
+// stands, instead of reaching the system as literal text. Beside it the
+// same request filled is sent.
+func TestRequestRefusesAnUnfilledPlaceholder(t *testing.T) {
+	var hits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		hits.Add(1)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+	lab, err := scenario.LoadLab("../../sim/sitl.env.example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := &run{opt: Options{Run: "run-7"}, captures: map[string]string{"rid": "r1"}, lab: lab, t0: time.Unix(1_791_100_000, 0),
+		tg: &Targets{Requests: map[string]RequestAuth{"ansp": {BaseURL: srv.URL}}, Extra: map[string]any{"air": "ua-1"}}}
+	filled := func() *scenario.Request {
+		return &scenario.Request{System: "ansp", Method: http.MethodPost, Path: "/v1/restrictions/${rid}/end",
+			Headers: map[string]string{"Idempotency-Key": "lab-${run}-${time:0}"},
+			Body:    map[string]any{"airspace": "${extra:air}", "at": "${time:5}", "lat": "${lat:0,0}"}}
+	}
+	if _, err := r.request(context.Background(), filled()); err != nil || hits.Load() != 1 {
+		t.Fatalf("filled: hits %d, %v", hits.Load(), err)
+	}
+	for name, spoil := range map[string]func(q *scenario.Request){
+		"path":       func(q *scenario.Request) { q.Path = "/v1/restrictions/${restriction_id}/end" },
+		"header":     func(q *scenario.Request) { q.Headers["Idempotency-Key"] = "lab-${time:soon}" },
+		"header key": func(q *scenario.Request) { q.Headers["X-${run_id}"] = "v" },
+		"body":       func(q *scenario.Request) { q.Body["airspace"] = "${extra:missing}" },
+		"body lat":   func(q *scenario.Request) { q.Body["lat"] = "${lat:north}" },
+	} {
+		q := filled()
+		spoil(q)
+		_, err := r.request(context.Background(), q)
+		if err == nil || !strings.Contains(err.Error(), "unfilled placeholder") {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+	if n := hits.Load(); n != 1 {
+		t.Fatalf("a request with an unfilled placeholder was sent: %d hits", n)
 	}
 }
 
