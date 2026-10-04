@@ -70,6 +70,15 @@ var referenceKinds = map[string]map[string]bool{
 	scenario.SystemAuthority: {"zone_incursion": true, "height_120m": true, "unregistered": true, observe.KindDegraded: true},
 }
 
+// referenceNeverOnly are the kinds of referenceKinds the reference target
+// can only be asked never to raise. It gives the authority monitor no
+// registry, so no track carries an identification and uspace-core never
+// raises its identification alert (unregistered): a never on it holds by
+// construction, and an expectation that it is raised could never pass.
+var referenceNeverOnly = map[string]map[string]bool{
+	scenario.SystemAuthority: {"unregistered": true},
+}
+
 // CheckRunnable refuses, before anything starts, a scenario the targets
 // cannot judge.
 func CheckRunnable(s *scenario.Scenario, t *Targets) error {
@@ -82,6 +91,11 @@ func CheckRunnable(s *scenario.Scenario, t *Targets) error {
 				if !referenceKinds[sys][k] {
 					return fmt.Errorf("%w: the reference target does not judge %s %s", ErrNotRunnable, sys, k)
 				}
+			}
+		}
+		for i := range s.Expect {
+			if e := &s.Expect[i]; referenceNeverOnly[e.System][e.Kind] {
+				return fmt.Errorf("%w: the reference target never raises %s %s; it can only be asked never to", ErrNotRunnable, e.System, e.Kind)
 			}
 		}
 		return nil

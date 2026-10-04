@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/rootxkit/uspace-lab/internal/scenario"
 )
 
 const root = "../.."
@@ -98,6 +100,26 @@ func TestNotRunnableIsRefusedBeforeAnythingStarts(t *testing.T) {
 	o.Vehicles = VehiclesSITL
 	if _, err := Run(context.Background(), o); !errors.Is(err, ErrNotRunnable) {
 		t.Fatalf("SITL without sitl commands: %v", err)
+	}
+}
+
+// The reference target never raises unregistered (it has no registry), so
+// a scenario may ask it never to, and is refused when it expects a raise.
+func TestReferenceUnregisteredIsNeverOnly(t *testing.T) {
+	tg := &Targets{Mode: ModeReference}
+	m := scenario.Matcher{System: scenario.SystemAuthority, Kind: "unregistered"}
+	never := &scenario.Scenario{ID: "never", Reference: true, Never: []scenario.Matcher{m}}
+	if err := CheckRunnable(never, tg); err != nil {
+		t.Fatalf("a never on unregistered: %v", err)
+	}
+	expect := &scenario.Scenario{ID: "expect", Reference: true, Expect: []scenario.Expect{{Name: "raised", Matcher: m}}}
+	if err := CheckRunnable(expect, tg); !errors.Is(err, ErrNotRunnable) {
+		t.Fatalf("an expected unregistered: %v", err)
+	}
+	zone := &scenario.Scenario{ID: "zone", Reference: true, Expect: []scenario.Expect{{Name: "raised",
+		Matcher: scenario.Matcher{System: scenario.SystemAuthority, Kind: "zone_incursion"}}}}
+	if err := CheckRunnable(zone, tg); err != nil {
+		t.Fatalf("an expected zone incursion: %v", err)
 	}
 }
 
