@@ -282,10 +282,12 @@ func (a *Authority) USpace(ctx context.Context, admin Session, id string, featur
 			"airspace_name": name, "services_required": []string{"NID", "GEO", "FA", "TI"},
 			"uas_requirements": map[string]any{}, "operational_conditions": map[string]any{},
 			"service_performance": map[string]any{"nid_update_hz": 1, "ti_update_hz": 1, "cis_latency_s": 1},
-			// No height ceiling: a ceiling above the ground needs terrain
-			// at every system that judges it, and the lab stack has none
-			// (the USSP refuses an intent whose height against it it
-			// cannot judge, airspace_ceiling_not_judged).
+			// No max_height_agl_m: a ceiling above the ground needs
+			// terrain at every system that judges it, and the lab stack
+			// has none (the USSP refuses an intent whose height against
+			// it it cannot judge, airspace_ceiling_not_judged). The
+			// airspace's ceiling is the feature's AMSL upper limit
+			// (uspaceFeature).
 			"airspace_constraints": map[string]any{}, "in_controlled_airspace": false,
 		},
 	}

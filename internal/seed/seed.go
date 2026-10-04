@@ -58,6 +58,15 @@ type Options struct {
 	// pending_dss: the runs that need an authorised intent are flown
 	// with the airspace moved off the area (docs/RUNBOOKS/demo.md).
 	USpaceCenter scenario.Offset
+	// USpaceCeilingAboveOriginM puts the U-space airspace's ceiling,
+	// an AMSL limit, this far above the origin's AMSL altitude
+	// (sitl.env). An AMSL ceiling is judged without terrain; a ceiling
+	// above the ground (max_height_agl_m) is not, and the lab stack has
+	// no terrain: the USSP refuses every intent under it,
+	// airspace_ceiling_not_judged (results/20261004-systems-try2). The
+	// AGL case the lab keeps is SC-22's zone, which expects
+	// limit_not_judged.
+	USpaceCeilingAboveOriginM float64
 	// ZonesAwayNorthM, when not zero, publishes the ZoneScenarios' zones
 	// that far north of their place: how a zone is taken off the area
 	// before the next scenario (a newer version supersedes it).
@@ -206,7 +215,10 @@ func Run(ctx context.Context, o Options) error {
 
 	if has[StepUSpace] {
 		id := def(o.USpaceID, "LABUSP1")
-		f, err := uspaceFeature(lab, id, env["DEMO_COUNTRY"], o.USpaceHalfSideM, o.USpaceCenter)
+		if err := ceilingCovers(o.Scenarios, o.USpaceCeilingAboveOriginM); err != nil {
+			return err
+		}
+		f, err := uspaceFeature(lab, id, env["DEMO_COUNTRY"], o.USpaceHalfSideM, o.USpaceCenter, o.USpaceCeilingAboveOriginM)
 		if err != nil {
 			return err
 		}
@@ -399,12 +411,38 @@ func keys(m map[string]bool) []string {
 	return out
 }
 
+// ceilingCovers refuses a U-space ceiling (metres above the origin) at
+// or below the top of a scenario's intent: that intent would reach out
+// of the airspace it is meant to be judged in. An intent's band is
+// relative to its aircraft's home, which is at the origin's altitude
+// (scenario.Lab.Home).
+func ceilingCovers(ss []*scenario.Scenario, aboveOriginM float64) error {
+	if !(aboveOriginM > 0) {
+		return fmt.Errorf("seed: the U-space ceiling must be above the origin (got %v m)", aboveOriginM)
+	}
+	for _, s := range ss {
+		for _, a := range s.Aircraft {
+			if a.Operator == nil || a.Operator.Intent == nil {
+				continue
+			}
+			if top := a.Operator.Intent.AltUpperRelM; top >= aboveOriginM {
+				return fmt.Errorf("seed: %s aircraft %s files an intent up to %.0f m above home, not under the U-space ceiling %.0f m above the origin",
+					s.ID, a.Name, top, aboveOriginM)
+			}
+		}
+	}
+	return nil
+}
+
 // uspaceFeature is an ED-318 USPACE feature: a square of half side h
-// about the lab's origin, from 0 m to 3000 m AMSL (every flight of the
-// suite is inside it, whatever the ground).
-func uspaceFeature(lab *scenario.Lab, id, country string, h float64, c scenario.Offset) ([]byte, error) {
+// about the lab's origin, from 0 m AMSL (below any ground) up to an AMSL
+// ceiling aboveOriginM over the origin's altitude.
+func uspaceFeature(lab *scenario.Lab, id, country string, h float64, c scenario.Offset, aboveOriginM float64) ([]byte, error) {
 	if h <= 0 {
 		return nil, fmt.Errorf("seed: the U-space airspace's half side must be above 0")
+	}
+	if !(aboveOriginM > 0) {
+		return nil, fmt.Errorf("seed: the U-space ceiling must be above the origin")
 	}
 	if country == "" {
 		return nil, fmt.Errorf("seed: DEMO_COUNTRY is not set")
@@ -417,10 +455,11 @@ func uspaceFeature(lab *scenario.Lab, id, country string, h float64, c scenario.
 	for _, p := range ring {
 		coords = append(coords, fmt.Sprintf("[%.7f,%.7f]", p.LonDeg, p.LatDeg))
 	}
+	ceiling := lab.Origin.AltAMSLM + aboveOriginM
 	return []byte(fmt.Sprintf(`{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[%s]],`+
-		`"layer":{"lower":0,"lowerReference":"AMSL","upper":3000,"upperReference":"AMSL","uom":"m"}},`+
+		`"layer":{"lower":0,"lowerReference":"AMSL","upper":%s,"upperReference":"AMSL","uom":"m"}},`+
 		`"properties":{"identifier":%q,"country":%q,"name":[{"text":"uspace-lab demo U-space","lang":"en-GB"}],`+
 		`"type":"USPACE","variant":"COMMON","reason":["OTHER"],`+
 		`"zoneAuthority":[{"name":[{"text":"uspace-lab demo authority","lang":"en-GB"}],"purpose":"AUTHORIZATION"}]}}`,
-		strings.Join(coords, ","), id, country)), nil
+		strings.Join(coords, ","), strconv.FormatFloat(ceiling, 'f', -1, 64), id, country)), nil
 }

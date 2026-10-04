@@ -3,6 +3,7 @@ package seed
 import (
 	"context"
 	"encoding/json"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -169,13 +170,19 @@ func TestZonesAwayAreTheSameZonesFarNorth(t *testing.T) {
 // in the deployment's country.
 func TestUSpaceFeature(t *testing.T) {
 	_, lab := scenarios(t)
-	f, err := uspaceFeature(lab, "LABUSP1", "GEO", 1000, scenario.Offset{NorthM: 60000})
+	f, err := uspaceFeature(lab, "LABUSP1", "GEO", 1000, scenario.Offset{NorthM: 60000}, 150)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var v struct {
 		Geometry struct {
 			Coordinates [][][2]float64 `json:"coordinates"`
+			Layer       struct {
+				Lower    *float64 `json:"lower"`
+				LowerRef string   `json:"lowerReference"`
+				Upper    *float64 `json:"upper"`
+				UpperRef string   `json:"upperReference"`
+			} `json:"layer"`
 		} `json:"geometry"`
 		Properties struct {
 			Identifier, Country, Type string
@@ -191,7 +198,41 @@ func TestUSpaceFeature(t *testing.T) {
 	if ring[0][1] < lab.Origin.LatDeg+0.5 {
 		t.Fatalf("the square is not 60 km north: %v", ring[0])
 	}
-	if _, err := uspaceFeature(lab, "X", "", 1000, scenario.Offset{}); err == nil {
+	// The ceiling is AMSL, 150 m over the origin's altitude (sitl.env):
+	// judged without terrain, which the lab stack does not have.
+	l := v.Geometry.Layer
+	if l.Lower == nil || *l.Lower != 0 || l.LowerRef != "AMSL" || l.Upper == nil || *l.Upper != lab.Origin.AltAMSLM+150 || l.UpperRef != "AMSL" {
+		t.Fatalf("layer %+v, want 0 to %.0f m AMSL", l, lab.Origin.AltAMSLM+150)
+	}
+	if _, err := uspaceFeature(lab, "X", "", 1000, scenario.Offset{}, 150); err == nil {
 		t.Fatal("no country was accepted")
+	}
+	if _, err := uspaceFeature(lab, "X", "GEO", 1000, scenario.Offset{}, 0); err == nil {
+		t.Fatal("a ceiling at the origin was accepted")
+	}
+}
+
+// The ceiling must clear the top of every intent the scenarios file.
+func TestUSpaceCeilingCoversTheIntents(t *testing.T) {
+	files, err := filepath.Glob("../../scenarios/*.yaml")
+	if err != nil || len(files) == 0 {
+		t.Fatalf("%v %v", files, err)
+	}
+	var ss []*scenario.Scenario
+	for _, f := range files {
+		s, err := scenario.Load(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ss = append(ss, s)
+	}
+	if err := ceilingCovers(ss, 150); err != nil {
+		t.Fatalf("the demo default: %v", err)
+	}
+	if err := ceilingCovers(ss, 120); err == nil || !strings.Contains(err.Error(), "not under the U-space ceiling") {
+		t.Fatalf("a ceiling at an intent's top: %v", err)
+	}
+	if err := ceilingCovers(ss, 0); err == nil {
+		t.Fatal("no ceiling was accepted")
 	}
 }
