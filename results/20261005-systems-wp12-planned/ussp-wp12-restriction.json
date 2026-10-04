@@ -1,0 +1,660 @@
+{
+  "format": "result/v1",
+  "run": "20261005-systems-wp12-planned",
+  "scenario": "ussp-wp12-restriction",
+  "scenario_digest": "sha256:909f782474b05ee657f4aff6eace9625caacc25b42ad847a05a5ffc95aba7718",
+  "title": "uspace-ussp WP-12 (N-M1, S-M4): an ANSP restriction over an activated intent raises restriction_activated within one tick of its activation and clears at its end",
+  "source": "uspace-ussp docs/RUNBOOKS/WP-12.md, 'Lab run (owed)'; spec 07 N-M1, S-M4",
+  "owners": [
+    "ussp",
+    "ansp",
+    "cisp"
+  ],
+  "started_at": "2026-10-04T20:59:46.50329629Z",
+  "ended_at": "2026-10-04T21:02:52.894058733Z",
+  "t0": "2026-10-04T21:00:02Z",
+  "mode": {
+    "vehicles": "sitl",
+    "targets": "systems",
+    "targets_name": "lab-demo"
+  },
+  "evidence": "systems under test with SITL vehicles flown by sim/fly.py: INV-02 evidence when the images are pinned by digest",
+  "commits": {
+    "lab": "a4d6e67983b0e43426a0a40275ae4e86cfa469b6",
+    "lab_dirty": true,
+    "core": "v1.3.0",
+    "go": "go1.27.1"
+  },
+  "images": {
+    "ansp": "ghcr.io/rootxkit/uspace-ansp@sha256:774c15b9d8ae76a61398a6fb83aa57c8010154da13fbf5ebf1115706ab90cfe4",
+    "authority": "ghcr.io/rootxkit/uspace-authority@sha256:8663cac141d9351b7ab6e96dd85bc6402ac1c37d568c52924d706a5bf44c27ab",
+    "cisp": "ghcr.io/rootxkit/uspace-cisp@sha256:a37ab317141d750337e63154efb9c1de3ba890116a45a9b39ba6f86fbea587b1",
+    "dss": "interuss/dss:v0.23.0@sha256:0781042bef785f6c968efd4b4e1e85854db9bf361116916d0673d2c89db91582",
+    "ussp": "uspace-ussp:wp12-planned"
+  },
+  "policy_version": 1,
+  "policy": {
+    "policy_version": 1,
+    "source": "docs/PLAN.md §7.1 L-Q4 (owner-only, open; GCAA answers); knowledge/scenarios.md conventions",
+    "deviation": {
+      "h_m": 50,
+      "v_m": 15,
+      "t_s": 60
+    },
+    "telemetry_lost_s": 5,
+    "lost_link_s": 15,
+    "nonconformance_nearby_radius_m": 2000,
+    "cpa": {
+      "t_cpa_max_s": 60,
+      "d_horizontal_min_m": 60,
+      "d_vertical_min_m": 20,
+      "neighbour_radius_m": 800,
+      "neighbour_max_age_s": 10
+    },
+    "height_limit_agl_m": 120,
+    "monitor": {
+      "clear_after_s": 3,
+      "stale_after_s": 15,
+      "live_max_age_s": 10,
+      "pressure_uncertainty_m": 250,
+      "conditional_severity": "warning"
+    }
+  },
+  "lab": {
+    "file": "sim/sitl.env",
+    "origin_lat_deg": 41.7151,
+    "origin_lon_deg": 44.8271,
+    "origin_alt_amsl_m": 605,
+    "spacing_m": 25
+  },
+  "geoid": "WGS84 EGM2008, 2.5-minute grid",
+  "marks": {
+    "activate": "2026-10-04T21:00:41.997777944Z",
+    "activate.start": "2026-10-04T21:00:41.997777944Z",
+    "climb": "2026-10-04T21:00:37.132819652Z",
+    "climb.start": "2026-10-04T21:00:02.0002532Z",
+    "down": "2026-10-04T21:02:44.635204315Z",
+    "down.start": "2026-10-04T21:02:07.129466533Z",
+    "end": "2026-10-04T21:01:41.997001839Z",
+    "end.start": "2026-10-04T21:01:41.997001839Z",
+    "hover": "2026-10-04T21:02:07.129368066Z",
+    "hover.start": "2026-10-04T21:00:37.133030891Z",
+    "plan": "2026-10-04T21:00:31.991522457Z",
+    "plan.start": "2026-10-04T21:00:31.991522457Z",
+    "t0": "2026-10-04T21:00:02Z"
+  },
+  "steps": [
+    {
+      "sysid": 1,
+      "step": 0,
+      "action": "arm",
+      "state": "started",
+      "at_unix_s": 1791147602.0002532
+    },
+    {
+      "sysid": 1,
+      "step": 0,
+      "action": "arm",
+      "state": "confirmed",
+      "at_unix_s": 1791147621.0581307,
+      "observed": {
+        "alt_rel_m": 0.004,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.7151,
+        "lon_deg": 44.8271,
+        "time_boot_ms": 43334
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 1,
+      "action": "takeoff",
+      "state": "started",
+      "at_unix_s": 1791147621.058214
+    },
+    {
+      "sysid": 1,
+      "step": 1,
+      "action": "takeoff",
+      "state": "confirmed",
+      "at_unix_s": 1791147637.1328197,
+      "observed": {
+        "alt_rel_m": 28.73,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.715100199999995,
+        "lon_deg": 44.8270997,
+        "time_boot_ms": 59584
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 2,
+      "action": "hold",
+      "state": "started",
+      "at_unix_s": 1791147637.133031
+    },
+    {
+      "sysid": 1,
+      "step": 2,
+      "action": "hold",
+      "state": "confirmed",
+      "at_unix_s": 1791147727.129368,
+      "observed": {
+        "alt_rel_m": 29.998,
+        "armed": true,
+        "custom_mode": 4,
+        "lat_deg": 41.715100199999995,
+        "lon_deg": 44.8270998,
+        "time_boot_ms": 149334
+      },
+      "max_drift_m": 0.01387582166186324
+    },
+    {
+      "sysid": 1,
+      "step": 3,
+      "action": "land",
+      "state": "started",
+      "at_unix_s": 1791147727.1294665
+    },
+    {
+      "sysid": 1,
+      "step": 3,
+      "action": "land",
+      "state": "confirmed",
+      "at_unix_s": 1791147764.6352043,
+      "observed": {
+        "alt_rel_m": 0.026000000000000002,
+        "armed": false,
+        "custom_mode": 9,
+        "lat_deg": 41.7151001,
+        "lon_deg": 44.8270997,
+        "time_boot_ms": 187084
+      }
+    }
+  ],
+  "intents": [
+    {
+      "aircraft": "a",
+      "intent_id": "3b1d0a66-903f-4391-b7d1-f0f60f33004d",
+      "decision": "authorised",
+      "state": "activated",
+      "volumes": [
+        {
+          "volume": {
+            "outline_circle": {
+              "center": {
+                "lat": 41.7151,
+                "lng": 44.8271
+              },
+              "radius": {
+                "value": 400,
+                "units": "M"
+              }
+            },
+            "altitude_lower": {
+              "value": 610.91675223808,
+              "reference": "W84",
+              "units": "M"
+            },
+            "altitude_upper": {
+              "value": 720.91675223808,
+              "reference": "W84",
+              "units": "M"
+            }
+          },
+          "time_start": {
+            "value": "2026-10-04T20:59:02Z",
+            "format": "RFC3339"
+          },
+          "time_end": {
+            "value": "2026-10-04T21:59:02Z",
+            "format": "RFC3339"
+          }
+        }
+      ],
+      "ended": "ended"
+    }
+  ],
+  "timeline": [
+    {
+      "step": 2,
+      "id": "plan",
+      "do": "request",
+      "at": "2026-10-04T21:00:31.991522457Z",
+      "detail": "POST /v1/restrictions -\u003e 201"
+    },
+    {
+      "step": 3,
+      "id": "activate",
+      "do": "request",
+      "at": "2026-10-04T21:00:41.997777944Z",
+      "detail": "POST /v1/restrictions/${restriction_id}/activate -\u003e 200"
+    },
+    {
+      "step": 4,
+      "id": "end",
+      "do": "request",
+      "at": "2026-10-04T21:01:41.997001839Z",
+      "detail": "POST /v1/restrictions/${restriction_id}/end -\u003e 200"
+    }
+  ],
+  "outcome": {
+    "expectations": [
+      {
+        "name": "restriction-activated-on-the-intent",
+        "matcher": {
+          "system": "ussp",
+          "kind": "restriction_activated",
+          "aircraft": "a"
+        },
+        "raise_window": {
+          "from": "2026-10-04T21:00:41.997777944Z",
+          "to": "2026-10-04T21:00:51.997777944Z"
+        },
+        "clear_window": {
+          "from": "2026-10-04T21:01:41.997001839Z",
+          "to": "2026-10-04T21:01:56.997001839Z"
+        },
+        "raise": {
+          "system": "ussp",
+          "kind": "restriction_activated",
+          "alert_id": "203ceb47-1492-4969-8b16-14030183079b",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "a",
+          "observed_at": "2026-10-04T21:00:42.129236667Z",
+          "captured_at": "2026-10-04T21:00:42.121659Z",
+          "raised_at": "2026-10-04T21:00:42.121659Z",
+          "detail": {
+            "affected_intents": [
+              "3b1d0a66-903f-4391-b7d1-f0f60f33004d"
+            ],
+            "authorisation_updated": false,
+            "cause": "restriction",
+            "change_reason": "restriction DARUUUA",
+            "cis_version": "zones:0,uspace_airspace:1,restrictions:2",
+            "conflicts": [
+              {
+                "detail": "the volume overlaps a restriction of the ANSP in space, altitude and time",
+                "effect": "rejects",
+                "item": 5,
+                "kind": "restriction",
+                "overlap": {
+                  "h_m": 0,
+                  "t_s": 3510,
+                  "v_m": 110
+                },
+                "reason": "restriction_active",
+                "ref": "DARUUUA",
+                "volume": 0
+              }
+            ],
+            "decision": "marked",
+            "intent_state": "activated",
+            "previous_state": "activated",
+            "reason": "restriction_active",
+            "ref": "DARUUUA",
+            "restriction_id": "DARUUUA",
+            "window": {
+              "ends_at": "2026-10-04T22:00:02Z",
+              "starts_at": "2026-10-04T21:00:32Z"
+            },
+            "withdrawn": true
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "restriction_activated",
+          "alert_id": "203ceb47-1492-4969-8b16-14030183079b",
+          "phase": "cleared",
+          "reason": "resolved",
+          "severity": "critical",
+          "aircraft": "a",
+          "observed_at": "2026-10-04T21:01:43.98172516Z",
+          "captured_at": "2026-10-04T21:00:42.121659Z",
+          "raised_at": "2026-10-04T21:00:42.121659Z",
+          "detail": {
+            "affected_intents": [
+              "3b1d0a66-903f-4391-b7d1-f0f60f33004d"
+            ],
+            "authorisation_updated": false,
+            "cause": "restriction",
+            "change_reason": "restriction DARUUUA",
+            "cis_version": "zones:0,uspace_airspace:1,restrictions:2",
+            "conflicts": [
+              {
+                "detail": "the volume overlaps a restriction of the ANSP in space, altitude and time",
+                "effect": "rejects",
+                "item": 5,
+                "kind": "restriction",
+                "overlap": {
+                  "h_m": 0,
+                  "t_s": 3510,
+                  "v_m": 110
+                },
+                "reason": "restriction_active",
+                "ref": "DARUUUA",
+                "volume": 0
+              }
+            ],
+            "decision": "marked",
+            "intent_state": "activated",
+            "previous_state": "activated",
+            "reason": "restriction_active",
+            "ref": "DARUUUA",
+            "restriction_id": "DARUUUA",
+            "window": {
+              "ends_at": "2026-10-04T22:00:02Z",
+              "starts_at": "2026-10-04T21:00:32Z"
+            },
+            "withdrawn": true
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "ok": true
+      }
+    ],
+    "missed_alerts": 0,
+    "false_alert_count": 0,
+    "alerts": [
+      {
+        "system": "ussp",
+        "kind": "degraded",
+        "alert_id": "ussp:degraded:econspicuity",
+        "subject": "econspicuity",
+        "raise": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:econspicuity",
+          "phase": "raised",
+          "subject": "econspicuity",
+          "observed_at": "2026-10-04T20:59:46.8660225Z",
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "degraded",
+        "alert_id": "ussp:degraded:manned",
+        "subject": "manned",
+        "raise": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:manned",
+          "phase": "raised",
+          "subject": "manned",
+          "observed_at": "2026-10-04T20:59:46.8660225Z",
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "degraded",
+        "alert_id": "ussp:degraded:policy",
+        "subject": "policy",
+        "raise": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:policy",
+          "phase": "raised",
+          "subject": "policy",
+          "observed_at": "2026-10-04T20:59:46.8660225Z",
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "degraded",
+        "alert_id": "ussp:degraded:source_control",
+        "subject": "source_control",
+        "raise": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:source_control",
+          "phase": "raised",
+          "subject": "source_control",
+          "observed_at": "2026-10-04T20:59:46.8660225Z",
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ansp",
+        "kind": "degraded",
+        "alert_id": "ansp:degraded:adapters_silent",
+        "subject": "adapters_silent",
+        "raise": {
+          "system": "ansp",
+          "kind": "degraded",
+          "alert_id": "ansp:degraded:adapters_silent",
+          "phase": "raised",
+          "subject": "adapters_silent",
+          "observed_at": "2026-10-04T20:59:46.876035471Z",
+          "stream": "ansp-manned"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "restriction_activated",
+        "alert_id": "203ceb47-1492-4969-8b16-14030183079b",
+        "aircraft": "a",
+        "raise": {
+          "system": "ussp",
+          "kind": "restriction_activated",
+          "alert_id": "203ceb47-1492-4969-8b16-14030183079b",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "a",
+          "observed_at": "2026-10-04T21:00:42.129236667Z",
+          "captured_at": "2026-10-04T21:00:42.121659Z",
+          "raised_at": "2026-10-04T21:00:42.121659Z",
+          "detail": {
+            "affected_intents": [
+              "3b1d0a66-903f-4391-b7d1-f0f60f33004d"
+            ],
+            "authorisation_updated": false,
+            "cause": "restriction",
+            "change_reason": "restriction DARUUUA",
+            "cis_version": "zones:0,uspace_airspace:1,restrictions:2",
+            "conflicts": [
+              {
+                "detail": "the volume overlaps a restriction of the ANSP in space, altitude and time",
+                "effect": "rejects",
+                "item": 5,
+                "kind": "restriction",
+                "overlap": {
+                  "h_m": 0,
+                  "t_s": 3510,
+                  "v_m": 110
+                },
+                "reason": "restriction_active",
+                "ref": "DARUUUA",
+                "volume": 0
+              }
+            ],
+            "decision": "marked",
+            "intent_state": "activated",
+            "previous_state": "activated",
+            "reason": "restriction_active",
+            "ref": "DARUUUA",
+            "restriction_id": "DARUUUA",
+            "window": {
+              "ends_at": "2026-10-04T22:00:02Z",
+              "starts_at": "2026-10-04T21:00:32Z"
+            },
+            "withdrawn": true
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "restriction_activated",
+          "alert_id": "203ceb47-1492-4969-8b16-14030183079b",
+          "phase": "cleared",
+          "reason": "resolved",
+          "severity": "critical",
+          "aircraft": "a",
+          "observed_at": "2026-10-04T21:01:43.98172516Z",
+          "captured_at": "2026-10-04T21:00:42.121659Z",
+          "raised_at": "2026-10-04T21:00:42.121659Z",
+          "detail": {
+            "affected_intents": [
+              "3b1d0a66-903f-4391-b7d1-f0f60f33004d"
+            ],
+            "authorisation_updated": false,
+            "cause": "restriction",
+            "change_reason": "restriction DARUUUA",
+            "cis_version": "zones:0,uspace_airspace:1,restrictions:2",
+            "conflicts": [
+              {
+                "detail": "the volume overlaps a restriction of the ANSP in space, altitude and time",
+                "effect": "rejects",
+                "item": 5,
+                "kind": "restriction",
+                "overlap": {
+                  "h_m": 0,
+                  "t_s": 3510,
+                  "v_m": 110
+                },
+                "reason": "restriction_active",
+                "ref": "DARUUUA",
+                "volume": 0
+              }
+            ],
+            "decision": "marked",
+            "intent_state": "activated",
+            "previous_state": "activated",
+            "reason": "restriction_active",
+            "ref": "DARUUUA",
+            "restriction_id": "DARUUUA",
+            "window": {
+              "ends_at": "2026-10-04T22:00:02Z",
+              "starts_at": "2026-10-04T21:00:32Z"
+            },
+            "withdrawn": true
+          },
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "zone_incursion",
+        "alert_id": "c151fbd2-d1ef-48c6-b200-0f1058a78e5d",
+        "aircraft": "a",
+        "subject": "DARUUUA",
+        "raise": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "c151fbd2-d1ef-48c6-b200-0f1058a78e5d",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "a",
+          "subject": "DARUUUA",
+          "observed_at": "2026-10-04T21:00:42.85006903Z",
+          "captured_at": "2026-10-04T21:00:42.635999918Z",
+          "raised_at": "2026-10-04T21:00:42.635999918Z",
+          "detail": {
+            "cis_version": "zones:0,uspace_airspace:1,restrictions:2",
+            "dataset": "restrictions",
+            "identifier": "DARUUUA",
+            "limit_not_judged": false,
+            "restriction": "PROHIBITED",
+            "restriction_state": "active",
+            "vertical_known": true,
+            "zone_id": "DARUUUA",
+            "zone_part": "DARUUUA",
+            "zone_type": "PROHIBITED",
+            "zone_version": "restrictions:2"
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "c151fbd2-d1ef-48c6-b200-0f1058a78e5d",
+          "phase": "cleared",
+          "reason": "not_reconfirmed",
+          "severity": "critical",
+          "aircraft": "a",
+          "subject": "DARUUUA",
+          "observed_at": "2026-10-04T21:01:42.844951299Z",
+          "captured_at": "2026-10-04T21:00:42.635999918Z",
+          "raised_at": "2026-10-04T21:00:42.635999918Z",
+          "detail": {
+            "carried_since": "2026-10-04T21:01:42.843834199Z",
+            "cis_version": "zones:0,uspace_airspace:1,restrictions:2",
+            "dataset": "restrictions",
+            "identifier": "DARUUUA",
+            "limit_not_judged": false,
+            "restriction": "PROHIBITED",
+            "restriction_state": "active",
+            "vertical_known": true,
+            "zone_id": "DARUUUA",
+            "zone_part": "DARUUUA",
+            "zone_type": "PROHIBITED",
+            "zone_version": "restrictions:2"
+          },
+          "stream": "ussp-alerts-a"
+        }
+      }
+    ],
+    "pass": true
+  },
+  "frames": {
+    "ansp-manned": {
+      "console/snapshot/v1": 1,
+      "console/status/v1": 94
+    },
+    "ussp-alerts-a": {
+      "alert/v1": 16,
+      "console/status/v1": 94
+    }
+  },
+  "operator_ledgers": [
+    {
+      "serial": "LABX9WP12A0001",
+      "transport": "ws",
+      "produced": 180,
+      "sent_live": 180,
+      "sent_backlog": 0,
+      "sent": 180,
+      "dropped_by_knob": 0,
+      "queue_shed": 0,
+      "pending": 0,
+      "accepted": 180,
+      "refused": 0,
+      "dropped": 0,
+      "duplicate": 0,
+      "backlog": 0,
+      "outcomes": {
+        "accepted": 180
+      },
+      "acked_seq": 179,
+      "last_seq": 179,
+      "connections": 1,
+      "resent_after_break": 0,
+      "exact": true,
+      "balanced": true,
+      "client_counters": {
+        "dials": 1,
+        "produced": 180,
+        "sent_live": 180,
+        "status_frames": 94
+      }
+    }
+  ],
+  "vehicle_samples": {
+    "a": 720
+  },
+  "latency_s": {
+    "ussp": {
+      "n": 2,
+      "p50": 0.008,
+      "p95": 0.214,
+      "max": 0.214
+    }
+  },
+  "verdict": "pass"
+}
