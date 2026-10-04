@@ -3932,8 +3932,7 @@
    "name": "zone-stops-applying-clears",
    "owner": [
     "authority",
-    "ussp",
-    "cisp"
+    "ussp"
    ],
    "input": {
     "config": {
@@ -4082,8 +4081,7 @@
    "name": "applicability-at-placed-time-not-arrival",
    "owner": [
     "authority",
-    "ussp",
-    "cisp"
+    "ussp"
    ],
    "input": {
     "config": {
