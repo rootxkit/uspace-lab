@@ -58,6 +58,10 @@ type Options struct {
 	// pending_dss: the runs that need an authorised intent are flown
 	// with the airspace moved off the area (docs/RUNBOOKS/demo.md).
 	USpaceCenter scenario.Offset
+	// ZonesAwayNorthM, when not zero, publishes the ZoneScenarios' zones
+	// that far north of their place: how a zone is taken off the area
+	// before the next scenario (a newer version supersedes it).
+	ZonesAwayNorthM float64
 	// ADSBListen is where the runner serves sim-adsb (feed manned-1),
 	// reached by the ANSP's adapter; SITLReader and SITLFly the
 	// runner's commands for a SITL vehicle (targets.sitl).
@@ -217,7 +221,18 @@ func Run(ctx context.Context, o Options) error {
 		if err != nil {
 			return err
 		}
-		doc, err := zonesDoc(o.Scenarios, o.ZoneScenarios, lab)
+		zlab := lab
+		if o.ZonesAwayNorthM != 0 {
+			// The zones published again far off the area (a new version
+			// of each): the authority keeps a published zone until a newer
+			// version supersedes it, and the next scenario flies where the
+			// old one was.
+			moved := *lab
+			p := lab.At(scenario.Offset{NorthM: o.ZonesAwayNorthM})
+			moved.Origin.LatDeg, moved.Origin.LonDeg = p.LatDeg, p.LonDeg
+			zlab = &moved
+		}
+		doc, err := zonesDoc(o.Scenarios, o.ZoneScenarios, zlab)
 		if err != nil {
 			return err
 		}
