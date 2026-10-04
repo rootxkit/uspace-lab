@@ -5,6 +5,21 @@ request (docs/PLAN.md §5).
 
 ## [Unreleased]
 
+### Changed
+
+- WP-L4: the spec errata of decision record §3 L4 applied to `docs/spec/`
+  (`00`, `02`, `03`, `04`, `05`, `06`, `07`, `09`), each with a dated row
+  in the file's errata table: goose and its version tables, `DAR` + 4,
+  core's ED-318 metadata, the `geodesy/cell` grid, projection tables and
+  one Timescale container per system, the audience, session, cookie,
+  mTLS, problem and JWS conventions, the F2/F3/F4/F13 endpoints, the
+  scope catalogue and the schema-ownership rule. Also the contract
+  errata the system PRs found: a `409` is permanent, occurrence
+  idempotency, content binding of a CISP snapshot to its signed version,
+  the DSS's issuer keys, and client ids that keep the USSP code's case.
+- WP-L4: `alert_lifecycle.json` no longer names `cisp` as an owner of
+  two cases (cisp Q18). Regenerated; no input or expected value moved.
+
 ### Added
 
 - WP-L2: `DSS_PUBLIC_KEY_FILES` lists the keys the DSS trusts

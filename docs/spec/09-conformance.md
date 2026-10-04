@@ -264,7 +264,7 @@ Provisions checked: GDPR — 8 rows.
 | Optional 1 Hz USSP → authority flight push | 2021/664 Art. 18(b) lets the authority determine live traffic data | an extension on top of the F3411 DP baseline, never a substitute; a USSP without it is still conformant |
 | Informing the authority of conformance deviations | Art. 13(2) names operators, USSPs and ATS units only | oversight value; delivered through records and occurrences, not as a real-time dependency |
 | F3411, F3548, ED-318 as the "common secure interoperable open protocols" | 2021/664 Art. 7(5)(b), Annex II(3), Annex V(4) name no standard | the de-facto EU U-space choice; InterUSS reference implementation available |
-| `geodesy/cell` grid partitioning (`cell5` 0.1° × 0.1°, `cell3` 1° × 1°) | internal; no standard governs it | never crosses an external interface; pure Go, where the maintained H3 binding is cgo |
+| `geodesy/cell` grid partitioning (`cell5` 0.1° × 0.1°, `cell3` 1° × 1°) | internal; no standard governs it | never crosses an external interface; pure Go, no cgo |
 | Public subset of network identification | Art. 8(4)(a): "as deemed public in accordance with applicable Union and national rules" | the broadcast-equivalent items without the remote pilot position, pending national rules |
 | Police access levels and lawful basis | Art. 18(b)–(c); national data-protection law | purpose-logged realm pending the legal basis (Q8) |
 
