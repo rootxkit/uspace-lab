@@ -12,7 +12,7 @@ with the issuer JWKS that verifies it:
 
 ## `20261004T221103Z-cisp/`: the CISP's own conformance target
 
-uspace-cisp at `d89910109ac8` (main; the commit
+uspace-cisp at `d89910109ac8` (main; the commit then
 `conformance/national/contracts/PINS` names), `tools/conformance.sh`
 with `LAB_DIR` this repository at `d6b4cf1` (clean) and
 `CONFORMANCE_PUBLISH=true`: its chaos stack built from that checkout
@@ -42,8 +42,42 @@ Verdict **fail**: 9 pass, 2 fail, 3 not applicable.
   CISP delivers to HTTPS subscribers; the suite's receiver is plain HTTP
   and the target named none), A11Y-PUBLIC (no public page named).
 
-`conformance/baseline/cisp.json` is this run: CI runs the same target on
-every change to the suite and fails on a regression against it.
+`conformance/baseline/cisp.json` was this run until the next record.
+
+## `20261005T021137Z-cisp/`: the CISP after the C1 fix
+
+uspace-cisp at `24659a5` (main, the merge of uspace-cisp#27, "send
+errors on every problem body"; the commit
+`conformance/national/contracts/PINS` now names), `tools/conformance.sh`
+with `LAB_DIR` this repository at `62809d3` (clean; the report names
+it; re-made as `e603682` with a shorter subject before it was pushed,
+same tree) and `CONFORMANCE_PUBLISH=true`, as the first record: its chaos stack built
+from that checkout (`uspace-cisp:chaos-local`, `sha256:4f5809ba...`),
+the contract the checkout's `api/openapi.yaml` (`sha256:3f69439b...`).
+On Windows the stack's test executes `conformance/cisp/run` directly,
+which Windows cannot do for a shell script, so an untracked
+`conformance/cisp/run.cmd` handed it to Git Bash for this run (the
+report does not count untracked files as dirt; nothing else differed).
+
+Verdict **incomplete** by the report's own rule (gate requirements not
+applicable), **no regression** against the baseline, which accepts
+those as not applicable: 11 pass, 0 fail, 3 not applicable.
+
+- Pass: everything that passed in the first record, and now NAT-UNAUTH
+  (21 checks, the 16 console operations included) and NAT-INVALID
+  (`POST /v1/console/session`, `/mfa`): the console's `503
+  console_unavailable` body carries `errors: []`, so it is judged as
+  the declared problem. C1 is closed
+  (`docs/decisions/2026-10-05-conformance-findings.md`).
+- Not applicable, as before: NAT-PRECONDITION, ED318-WEBHOOK,
+  A11Y-PUBLIC.
+
+The gate reported both as "a known failure now passes", and
+`conformance/baseline/cisp.json` was rewritten from this run
+(`conformance baseline`): no known failure is left in it, so a 503
+without `errors[]` on any console operation is a regression again. CI
+runs the same target on every change to the suite, at the commit PINS
+names, and fails on a regression against it.
 
 ## `20261004T221305Z-mock-ridsp-candidate/`: uss_qualifier end to end
 
@@ -117,3 +151,58 @@ What the failures are, as observed (the defects of the systems are
 
 None of these targets has a baseline: they are evidence that the suite
 runs against each system, not a reviewed state CI gates on.
+
+## `20261005T0223*-demo/`: the authority and the ANSP after their fixes
+
+The two systems at the merges of their conformance fixes,
+uspace-authority#49 (`9a35cba`: C4, C6, C7) and uspace-ansp#26
+(`a26e00b`: C4, C5), on the systems stack of `deploy/systems/` at
+uspace-lab `e425025` (clean; the reports name it; re-made as `dc7b4ee`
+before it was pushed, when an earlier subject was shortened: the same
+tree but for the note on `62809d3` above), which routes their
+`/healthz`, `/readyz` and `/metrics` through the lab Caddy and judges a
+`text/plain` answer as text. Compose project `uspace-close` with
+`deploy/demo.env.example` less two images: the authority's
+`ghcr.io/rootxkit/uspace-authority@sha256:cd31db6b...` (`sha-9a35cba`,
+revision label `9a35cba`) and the ANSP's
+`ghcr.io/rootxkit/uspace-ansp@sha256:97304cfc...` (tag `a26e00b`,
+published by its CI). Only the DSS, the issuer, Caddy and those two
+systems were started (the CISP and the USSP stack were not needed);
+`gen-secrets.sh` ran with `MSYS_NO_PATHCONV=1` in the environment, the
+case that used to stop it without a word. Target files as for the first
+`*-demo` records (the committed ones plus `ca_file` and `resolve`, the
+port 9443); each contract at its image's commit.
+
+| Record | Contract | Verdict |
+|---|---|---|
+| `20261005T022343Z-authority-demo/` | uspace-authority `9a35cba` `api/openapi.yaml` (`sha256:07284432...`) | fail: 3 pass, 3 fail, 3 n/a |
+| `20261005T022348Z-ansp-demo/` | uspace-ansp `a26e00b` `api/openapi.yaml` (`sha256:1b1596cf...`) | incomplete: 5 pass, 0 fail, 3 n/a (NAT-PRECONDITION, F3548-CM: no baseline accepts them) |
+
+What changed against the first `*-demo` records:
+
+- ANSP: NAT-UNAUTH passes (39 checks: an upgrade without credential is
+  401, C4), NAT-INVALID passes (`login`, `verifyMfa` answer an empty
+  body 400, C5), NAT-SUCCESS passes (`getMetrics` reached, 200 with the
+  declared text). Nothing fails.
+- Authority: NAT-UNAUTH passes (124 checks: `getPictureWS` without
+  credential is 401, C4; the six operations of C6 answer 401 before
+  validating), NAT-SCOPE passes (`postDPISANotification`'s refusals
+  match the contract, C7), and `getHealthz`, `getReadyz`, `getMetrics`
+  pass through the lab Caddy. `postRIDObservations` is no longer 502.
+
+What still fails on the authority, all on the lab's side:
+
+- `validateRegistry` answers 400 `validation`: the target names no
+  operator registration (`AUTHORITY_CONFORMANCE_OPERATOR`), so
+  NAT-SUCCESS fails on it and REG-NOPII has nothing to inspect. The lab
+  has no operator fixture to name yet.
+- NAT-INVALID on `createOperatorOccurrence`, `submitRegistryApplication`
+  and `requestOperatorLink`: each answers an empty body 404
+  `not_found`, not 400. They are switched off: the authority's
+  `REGISTRY_APPLICATIONS` and `REGISTRY_OPERATOR_REPORTS` default to
+  `off`, which its configuration documents as "404" for these
+  operations, and the lab stack sets neither (they need a portal key and
+  URL). In the first record the suite could construct no invalid body
+  for them. Whether the lab turns them on or the suite reads a
+  switched-off 404 as not applicable, as it reads the CISP's 503, is
+  not decided here.

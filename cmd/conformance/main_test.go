@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -462,6 +463,149 @@ func TestRecordsVerifyAndAreDescribed(t *testing.T) {
 		jwks := filepath.Join(filepath.Dir(rep), "issuer-jwks.json")
 		if code, log := runCmd(t, "verify", "--report", rep, "--jwks", jwks); code != 0 {
 			t.Errorf("%s does not verify against %s: %s", name, jwks, log)
+		}
+	}
+}
+
+// TestBaselineIsTheLatestRecord: a committed baseline is the newest
+// committed record of its target, byte for byte (its from_digest), and
+// gating that record on it finds nothing, not even an improvement. A
+// newer reviewed run whose known failures now pass must rewrite the
+// baseline: kept as it was, the baseline would go on accepting the
+// failures that run shows fixed, and the gate would let them come back.
+func TestBaselineIsTheLatestRecord(t *testing.T) {
+	files, _ := filepath.Glob(filepath.Join(labRoot, "conformance", "baseline", "*.json"))
+	if len(files) == 0 {
+		t.Fatal("no committed baseline")
+	}
+	recs, _ := filepath.Glob(filepath.Join(labRoot, "conformance", "report", "records", "*", "report.json"))
+	type rec struct {
+		r   *report.Report
+		raw []byte
+	}
+	latest := map[string]rec{}
+	for _, p := range recs {
+		r, raw, err := report.Read(p)
+		if err != nil {
+			t.Fatalf("%s: %v", p, err)
+		}
+		if l, ok := latest[r.Target.Name]; !ok || r.Run > l.r.Run {
+			latest[r.Target.Name] = rec{r, raw}
+		}
+	}
+	for _, f := range files {
+		bl, err := report.ReadBaseline(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		l, ok := latest[bl.Target]
+		if !ok {
+			t.Errorf("%s: no committed record of target %s", filepath.Base(f), bl.Target)
+			continue
+		}
+		if bl.FromRun != l.r.Run {
+			t.Errorf("%s is from run %s; the newest record of %s is %s: rewrite it from that run (conformance baseline)", filepath.Base(f), bl.FromRun, bl.Target, l.r.Run)
+			continue
+		}
+		if d := report.Digest(l.raw); bl.FromDigest != d {
+			t.Errorf("%s: from_digest %s, the record is %s", filepath.Base(f), bl.FromDigest, d)
+		}
+		fs, err := report.Gate(l.r, bl)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, x := range fs {
+			t.Errorf("%s against %s: %s %s -> %s: %s", filepath.Base(f), l.r.Run, x.Requirement, x.Was, x.Now, x.Why)
+		}
+	}
+}
+
+// TestFindingsRecordAgreesWithBaselines: the findings record
+// (docs/decisions/2026-10-05-conformance-findings.md) and the
+// baselines say the same thing. A known failure a baseline accepts
+// points at a finding that is open; a finding owned by one system that
+// has a baseline is open exactly while that baseline cites it; and a
+// finding the table calls closed names the fix (owner#N) and has a
+// "Closed" paragraph citing a committed record that shows it gone.
+func TestFindingsRecordAgreesWithBaselines(t *testing.T) {
+	const doc = "docs/decisions/2026-10-05-conformance-findings.md"
+	b, err := os.ReadFile(filepath.Join(labRoot, filepath.FromSlash(doc)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(b)
+	type finding struct{ owner, status, section string }
+	findings := map[string]*finding{}
+	for _, line := range strings.Split(text, "\n") {
+		cells := strings.Split(line, "|")
+		if len(cells) != 6 || !strings.HasPrefix(strings.TrimSpace(cells[1]), "C") {
+			continue
+		}
+		id := strings.TrimSpace(cells[1])
+		findings[id] = &finding{owner: strings.TrimSpace(cells[3]), status: strings.TrimSpace(cells[4])}
+	}
+	if len(findings) < 8 {
+		t.Fatalf("%s: %d findings in the table", doc, len(findings))
+	}
+	for _, part := range strings.Split(text, "\n## ")[1:] {
+		id, _, _ := strings.Cut(part, ":")
+		if f, ok := findings[id]; ok {
+			f.section = part
+		}
+	}
+	cited := map[string]map[string]bool{} // baseline target -> finding ids
+	files, _ := filepath.Glob(filepath.Join(labRoot, "conformance", "baseline", "*.json"))
+	for _, file := range files {
+		bl, err := report.ReadBaseline(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cited[bl.Target] = map[string]bool{}
+		for req, e := range bl.Requirements {
+			_, anchor, ok := strings.Cut(e.Note, doc+"#")
+			if !ok {
+				continue
+			}
+			id := strings.ToUpper(strings.SplitN(anchor, "-", 2)[0])
+			f, ok := findings[id]
+			switch {
+			case !ok:
+				t.Errorf("%s %s cites %s, which the record does not list", filepath.Base(file), req, id)
+			case !strings.HasPrefix(f.status, "open"):
+				t.Errorf("%s %s accepts a failure of %s, which the record calls %q", filepath.Base(file), req, id, f.status)
+			}
+			cited[bl.Target][id] = true
+		}
+	}
+	for id, f := range findings {
+		if f.section == "" {
+			t.Errorf("%s has no section", id)
+			continue
+		}
+		if target, ok := strings.CutPrefix(f.owner, "uspace-"); ok && !strings.ContainsAny(target, ", ") {
+			if c, has := cited[target]; has && strings.HasPrefix(f.status, "open") != c[id] {
+				t.Errorf("%s is %q but conformance/baseline/%s.json %s it: close it with the run that rewrote the baseline, or keep it accepted", id, f.status, target, map[bool]string{true: "cites", false: "does not cite"}[c[id]])
+			}
+		}
+		if !strings.HasPrefix(f.status, "closed") {
+			continue
+		}
+		if !regexp.MustCompile(`uspace-[a-z]+#\d+`).MatchString(f.status) {
+			t.Errorf("%s is %q: a closed finding names its fix (repo#N)", id, f.status)
+		}
+		i := strings.Index(f.section, "**Closed")
+		if i < 0 {
+			t.Errorf("%s is closed but its section has no Closed paragraph", id)
+			continue
+		}
+		recs := regexp.MustCompile("`conformance/report/records/([^/`]+)/`").FindAllStringSubmatch(f.section[i:], -1)
+		if len(recs) == 0 {
+			t.Errorf("%s: the Closed paragraph cites no record", id)
+		}
+		for _, r := range recs {
+			if _, err := os.Stat(filepath.Join(labRoot, "conformance", "report", "records", r[1], "report.json")); err != nil {
+				t.Errorf("%s: the Closed paragraph cites %s, which is not a committed record", id, r[1])
+			}
 		}
 	}
 }

@@ -529,7 +529,22 @@ func (c *Contract) ValidateResponse(op *Operation, code int, contentType string,
 	if md.SchemaPtr == "" {
 		return nil
 	}
+	if !isJSONMedia(contentType) {
+		// A text body (text/plain: Prometheus metrics) is the string the
+		// schema describes, not a JSON document.
+		return c.ValidateValue(md.SchemaPtr, string(body))
+	}
 	return c.ValidateJSON(md.SchemaPtr, body)
+}
+
+// isJSONMedia reports whether a content type is JSON: application/json
+// or a +json structured syntax (application/problem+json).
+func isJSONMedia(contentType string) bool {
+	mt, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		mt = strings.TrimSpace(strings.ToLower(contentType))
+	}
+	return mt == "application/json" || strings.HasSuffix(mt, "+json")
 }
 
 // ValidateJSON validates a JSON document against the schema at ptr.
