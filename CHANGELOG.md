@@ -7,6 +7,15 @@ request (docs/PLAN.md §5).
 
 ### Changed
 
+- Audit M-2: the lab USSP's code is `DEV01` and its client
+  `ussp-DEV01-01` (`deploy/issuer/clients.yaml`, `deploy/demo.env.example`,
+  the USSP conformance target), not `USSP-DEV`, which the authority's
+  `^[A-Z0-9]{1,8}$` code pattern refuses. The issuer now refuses at
+  load a `ussp-` client id the authority would refuse. Contract: the
+  lab issuer's client list narrows; uspace-ussp's default and start
+  check follow in its own pull request. A local `deploy/local/client-secrets.json`
+  that still names `ussp-USSP-DEV-01` stops the issuer with "remove its
+  line"; remove it and copy the two `USSP_*` lines into `deploy/demo.env`.
 - WP-L4: the spec errata of decision record §3 L4 applied to `docs/spec/`
   (`00`, `02`, `03`, `04`, `05`, `06`, `07`, `09`), each with a dated row
   in the file's errata table: goose and its version tables, `DAR` + 4,
