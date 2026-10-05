@@ -1,0 +1,45 @@
+chaos run 20261005-chaos: FAIL (2026-10-05T07:32:34Z to 2026-10-05T08:58:49Z, project uspace-chaos, lab eab0b1d, core v1.3.0)
+background scripts/chaos/background.yaml: verdict fail, missed 0, false 10, 17 finding(s)
+authority-rid-ingest         PASS     fault seen +3.4s, held 30/30, restored +0.6s
+ussp-telemetry-ingest        PASS     fault seen +3.2s, held 30/30, restored +0.6s
+authority-api                FAIL     fault seen +5.5s, held 23/23, restored +0.5s
+    - during others ready always: ansp not ready at +0.0s (HTTP 503 not_ready [cisp=degraded, jwks=down]); cisp ready in all 23 samples; dss ready in all 23 samples; issuer ready in all 23 samples; ussp ready in all 23 samples (05 §6: everyone else unaffected)
+    - after all recovered: ansp recovered at +0.5s; authority recovered at +0.5s; cisp recovered at +0.5s; dss recovered at +0.5s; issuer recovered at +0.5s; ussp not recovered by +10s (HTTP 200 degraded [client_address=degraded, registry=degraded]) (WP-L9: back within 10 s after a process restart)
+ussp-api                     PASS     fault seen +5.5s, held 22/22, restored +0.6s
+cisp-api                     FAIL     fault seen +5.5s, held 22/22, restored +2.3s
+    - after all recovered: ansp not recovered by +10s (HTTP 200 ready [cisp=down, cisp_publisher=down]); authority recovered at +2.3s; cisp recovered at +2.9s; dss recovered at +2.3s; issuer recovered at +2.3s; ussp not recovered by +10s (HTTP 200 degraded [ansp_coordination=degraded, client_address=degraded]) (WP-L9: back within 10 s after a process restart)
+ansp-api                     PASS     fault seen +5.7s, held 22/22, restored +0.6s
+ussp-monitor                 PASS     fault seen +3.3s, held 30/30, restored +0.6s
+ussp-monitor-stalled         FAIL     fault seen +2.5s, held 30/30, restored +0.6s
+    - alert: ussp cleared c4d4c240-2877-4dfa-ab2f-9af09cecd1a5 at +33.2s into the row (stale)
+    - alert: ussp re raised 2ad3c932-79e1-4b3e-ad00-7aa789971783 at +33.2s into the row
+ussp-rid-sp                  PASS     fault seen +3.4s, held 30/30, restored +0.6s
+authority-detect             FAIL     fault seen +3.3s, held 30/30, restored +0.6s
+    - alert: authority duplicate raise 01M45GHHK2W5MPTYHDXA4FZWEE at +36.1s into the row
+cisp-deliver                 PASS     fault seen +3.3s, held 30/30, restored +0.6s
+ansp-manned-feed             PASS     fault seen +2.8s, held 60/60, restored +0.6s
+ussp-nats                    FAIL     fault seen +2.8s, held 60/60, restored +0.7s
+    - alert: ussp cleared 2ad3c932-79e1-4b3e-ad00-7aa789971783 at +65.0s into the row (stale)
+    - alert: ussp re raised fd98e1a5-a3c1-4beb-aee5-4cfcc1544c18 at +65.0s into the row
+authority-nats               FAIL     fault seen +3.0s, held 60/60, restored +0.6s
+    - alert: authority cleared 01M45GHHK2W5MPTYHDXA4FZWEE at +64.8s into the row (stale)
+    - alert: authority duplicate raise 01M45GY3ZTPQ7HHZV5JG80FQ3G at +64.8s into the row
+cisp-nats                    PASS     fault seen +2.9s, held 60/60, restored +0.6s
+ansp-nats                    PASS     fault seen +2.9s, held 60/60, restored +0.6s
+ussp-timescaledb             PASS     fault seen +2.9s, held 60/60, restored +0.7s
+authority-timescaledb        PASS     fault seen +2.9s, held 60/60, restored +0.6s
+ussp-postgres                PASS     fault seen +3.2s, held 60/60, restored +0.7s
+authority-postgres           PASS     fault seen +2.8s, held 60/60, restored +0.6s
+ussp-dbhost                  PASS     fault seen +2.9s, held 60/60, restored +0.5s
+ussp-partition               PASS     fault seen +26.8s, held 17/17, restored +0.7s
+cisp-down                    PASS     fault seen +15.6s, held 110/110, restored +2.6s
+authority-down               FAIL     fault seen +22.3s, held 113/113, restored +0.6s
+    - during cisp,ussp,ansp,issuer,dss ready always: ansp not ready at +0.0s (HTTP 503 not_ready [cisp=degraded, jwks=down]); cisp ready in all 113 samples; dss ready in all 113 samples; issuer ready in all 113 samples; ussp ready in all 113 samples (05 §6: no real-time service depends on the authority)
+    - alert: authority duplicate raise 01M45JHFESPY7GXT83NYHJ2Q83 at +365.4s into the row
+dss-down                     PASS     fault seen +5.1s, held 107/107, restored +0.6s
+issuer-down                  FAIL     fault seen +5.0s, held 45/45, restored +0.5s
+    - during authority,cisp,ussp,ansp,dss ready always: ansp not ready at +0.0s (HTTP 503 not_ready [cisp=degraded, jwks=down]); authority ready in all 45 samples; cisp ready in all 45 samples; dss ready in all 45 samples; ussp ready in all 45 samples (05 §6: tokens valid for their TTL, JWKS cached)
+receiver-clock               PASS     [clock -10s: left -10.0s, accepted 202] [clock +45s: left +45.0s, refused 401] [clock -45s: left -45.0s, refused 401]
+stack-restart                FAIL     fault seen +12.6s, held 30/30, restored +8.7s
+    - alert: ussp duplicate raise 578e2d72-556f-4e8a-b5dd-436333c5c10a at +59.3s into the row
+    - alert: authority duplicate raise 01M45K4JY20V7E5NF7EENSM93N at +80.1s into the row

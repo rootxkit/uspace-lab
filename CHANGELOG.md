@@ -22,6 +22,19 @@ request (docs/PLAN.md §5).
 
 ### Added
 
+- WP-L9 (L-M3): the chaos matrix (`scripts/chaos/`, `make chaos`,
+  `chaos.yml`, `docs/RUNBOOKS/chaos.md`). One script per failure domain
+  of spec 05 §6 (`inject`/`restore`, each saying what it did and when,
+  exit 0 only when the act took effect), and a harness that runs every
+  row of `scripts/chaos/matrix.yaml` against the systems stack under a
+  standing zone alert (`scripts/chaos/background.yaml`): each fault
+  observed in place by the harness itself (a row whose fault never
+  happened fails), the spec's degraded states read from every system's
+  readiness and the consoles' status, recovery within bounds, and the
+  alert kept, never duplicated, open again after every row. The figures
+  GCAA has not answered are the spec's defaults, listed as pending GCAA.
+  `results/20261005-chaos` is the observed matrix.
+
 - WP-L7 (L-M4): the conformance suite (`conformance/`, `cmd/conformance`,
   `make conformance TARGET=<name>`, `conformance.yml`). It runs against
   a system's conformance target and reports pass, fail or not applicable
@@ -104,3 +117,11 @@ request (docs/PLAN.md §5).
   generated `api/index.md`; the enumeration pin against uspace-core
   v1.0.0 (`provider` under `identification.basis` pending core v1.1.0);
   the `contracts` CI workflow.
+
+### Fixed
+
+- WP-L9: `deploy/demo-up.sh` starts the ANSP and waits for its JWKS
+  before the CISP (cisp-api refused to start on a fresh stack);
+  `deploy/demo.env.example` pins a USSP image whose token client keeps
+  the code's case; the scenario recorder reads the alerts a console
+  snapshot carries, and shows a caller every event as recorded.
