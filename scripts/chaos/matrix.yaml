@@ -1,0 +1,492 @@
+# The WP-L9 failure-domain matrix (docs/WORKPACKAGES/WP-L9.md, make chaos,
+# docs/RUNBOOKS/chaos.md). One row per failure domain of spec 05 §6, each
+# injected by scripts/chaos/<domain>.sh and checked independently by
+# scripts/chaos (a row whose fault was never observed in place fails).
+# Every expectation is a claim of the spec, cited in `why`; a deviation
+# is a finding for the owning system, never a reason to edit the row.
+#
+# Figures. The holds of the CISP, the authority and the DSS (300 s) and
+# of NATS (60 s) are the brief's. The national figures a row leans on
+# are the spec's defaults and wait for GCAA (docs/PLAN.md §7.1 L-Q4):
+# they are listed under `pending` and printed in every result. The
+# readiness bounds (`within_s`) and the recovery bounds are the lab's
+# own, chosen to tell "said so" from "never said so", not national
+# figures; the 10 s process-restart bound is the brief's ("picture back
+# within 10 s after a process restart").
+#
+# Names are the lab's compose services (deploy/systems/compose.yaml) and
+# databases (deploy/systems/initdb/*.sql); hosts are demo.env keys.
+format: chaos-matrix/v1
+source: "spec 05 §6, 02 failure columns, 06 T2; docs/WORKPACKAGES/WP-L9.md"
+pending:
+  - "pending GCAA (L-Q4, spec Q17): stale_after_s 15 and live_max_age_s 10 (scenarios/policy/demo.yaml) decide when a track the faults starve ages out, which the stale_ok rows allow"
+  - "pending GCAA (spec 02 F3): the 300 s CIS cache bound after which a USSP refuses new U-space authorisations; the cisp-down row holds 300 s and judges the cache age shown, not the refusal"
+  - "pending GCAA (spec 02 F8): the 24 h registry validity cache the authority-down row leans on"
+  - "pending GCAA (spec 05 §6): the 5 min local disk spill of ingest while NATS is down; the nats rows hold 60 s"
+probe:
+  every_s: 1
+  timeout_s: 3
+  preflight_s: 180
+systems:
+  - {name: authority, host: AUTHORITY_HOST, path: /readyz}
+  - {name: cisp, host: CISP_HOST, path: /readyz}
+  - {name: ussp, host: USSP_HOST, path: /readyz}
+  - {name: ansp, host: ANSP_HOST, path: /readyz}
+  - {name: issuer, host: LAB_HOST, path: /healthz}
+  - {name: dss, host: LAB_HOST, path: /healthy}
+background:
+  scenario: scripts/chaos/background.yaml
+  hold_step: inside
+  raised_within_s: 150
+  realert_within_s: 45
+  stale_reasons: [stale, source_disabled]
+  systems: [ussp, authority]
+  kind: zone_incursion
+  subject: CHAOSZ
+  # The lab's own bound, not a national figure: three periods of the
+  # console/status/v1 every 2 s (spec 04 §1). A "kept" alert is judged by
+  # the absence of a clear, which counts only while the stream that
+  # would carry the clear is heard; a longer silence inside a row fails
+  # it unless the row names the system in streams_down.
+  max_silence_s: 6
+
+rows:
+  # ---- one ingest adapter instance ------------------------------------
+  - id: authority-rid-ingest
+    domain: adapter
+    args: [authority-rid-ingest]
+    system: authority
+    cite: ["05 §6 'One ingest adapter instance'", "02 F9 failure"]
+    claim: "Authority ingest down: receivers buffer and replay with original rx_ts and backlog=true; everyone else unaffected."
+    hold_s: 30
+    recover_within_s: 30
+    alerts: {authority: stale_ok}
+    alerts_reason: "the lab runs one rid-ingest instance (no peer to reconnect to): for 30 s no observation reaches the authority, longer than stale_after_s"
+    during:
+      - {system: others, ready: always, why: "05 §6: everyone else unaffected"}
+      - {system: authority, ready: always, why: "05 §6: only the adapter fails; the api answers"}
+    after:
+      - {system: all, recovered: true, within_s: 30, why: "the adapter restarted, everything as before"}
+
+  - id: ussp-telemetry-ingest
+    domain: adapter
+    args: [ussp-telemetry-ingest]
+    system: ussp
+    cite: ["05 §6 'One ingest adapter instance'", "02 F5 failure", "05 §5 operator WebSocket"]
+    claim: "The operator's connection reconnects; the client queues and replays with backlog; the dedupe window absorbs replays; everyone else unaffected."
+    hold_s: 30
+    recover_within_s: 30
+    alerts: {ussp: stale_ok}
+    alerts_reason: "the lab runs one telemetry-ingest instance: for 30 s no telemetry reaches the USSP, longer than telemetry_lost_s"
+    during:
+      - {system: others, ready: always, why: "05 §6: everyone else unaffected"}
+    after:
+      - {system: all, recovered: true, within_s: 30, why: "the adapter restarted, everything as before"}
+
+  # ---- api process (one system) ---------------------------------------
+  - id: authority-api
+    domain: api
+    args: [authority]
+    system: authority
+    cite: ["05 §6 'api process (one system)'"]
+    claim: "No new records or publications; the hot-path processes keep every live service running on their projections, with projection age shown; everyone else unaffected."
+    hold_s: 60
+    recover_within_s: 10
+    during:
+      - {system: authority, ready: lost, within_s: 10, why: "the api serves the authority's /readyz: a dead api must not look ready"}
+      - {system: others, ready: always, why: "05 §6: everyone else unaffected"}
+      - {system: authority, field: nats, in: [connected], within_s: 10, why: "05 §6: the hot path keeps running (the picture's own status keeps coming)"}
+    after:
+      - {system: all, recovered: true, within_s: 10, why: "WP-L9: back within 10 s after a process restart"}
+
+  - id: ussp-api
+    domain: api
+    args: [ussp]
+    system: ussp
+    cite: ["05 §6 'api process (one system)'"]
+    claim: "No new intents or accounts; the hot path (telemetry, network ID, traffic, conformance) keeps running on its KV projections; everyone else unaffected."
+    hold_s: 60
+    recover_within_s: 10
+    during:
+      - {system: ussp, ready: lost, within_s: 10, why: "the api serves the USSP's /readyz: a dead api must not look ready"}
+      - {system: others, ready: always, why: "05 §6: everyone else unaffected"}
+    after:
+      - {system: all, recovered: true, within_s: 10, why: "WP-L9: back within 10 s after a process restart"}
+
+  - id: cisp-api
+    domain: api
+    args: [cisp]
+    system: cisp
+    cite: ["05 §6 'api process (one system)'", "02 F3 failure"]
+    claim: "No new publications; subscribers keep their cache with cis_age_s; everyone else unaffected."
+    hold_s: 60
+    recover_within_s: 10
+    during:
+      - {system: cisp, ready: lost, within_s: 10, why: "the api serves the CISP's /readyz"}
+      - {system: [authority, ussp, ansp, issuer, dss], ready: always, why: "02 F3: subscribers keep serving from their cache"}
+    after:
+      - {system: all, recovered: true, within_s: 10, why: "WP-L9: back within 10 s after a process restart"}
+
+  - id: ansp-api
+    domain: api
+    args: [ansp]
+    system: ansp
+    cite: ["05 §6 'api process (one system)'", "02 F2 failure"]
+    claim: "The ANSP's control plane stops; its active restrictions stay active until their end; everyone else unaffected."
+    hold_s: 60
+    recover_within_s: 10
+    during:
+      - {system: ansp, ready: lost, within_s: 10, why: "the api serves the ANSP's /readyz"}
+      - {system: others, ready: always, why: "05 §6: everyone else unaffected"}
+    after:
+      - {system: all, recovered: true, within_s: 10, why: "WP-L9: back within 10 s after a process restart"}
+
+  # ---- one hot-path process (one system) ------------------------------
+  - id: ussp-monitor
+    domain: hotpath
+    args: [ussp-monitor]
+    system: ussp
+    cite: ["05 §6 'One hot-path process (one system)'"]
+    claim: "monitor down: conformance and traffic alerts stop and the console says so; api and the other processes continue; other systems unaffected."
+    hold_s: 30
+    recover_within_s: 10
+    during:
+      - {system: ussp, ready: always, why: "05 §6: api continues"}
+      - {system: others, ready: always, why: "05 §6: other systems unaffected"}
+    after:
+      - {system: all, recovered: true, within_s: 10, why: "WP-L9: back within 10 s after a process restart"}
+
+  - id: ussp-monitor-stalled
+    domain: stall
+    args: [ussp-monitor]
+    system: ussp
+    cite: ["knowledge/scenarios.md SC-15", "05 §6 'One hot-path process (one system)'"]
+    claim: "A stalled monitor (alive, answering nothing) is the same domain as a dead one: shown as down, no alert lost or duplicated when it resumes."
+    hold_s: 30
+    recover_within_s: 10
+    during:
+      - {system: ussp, ready: always, why: "05 §6: api continues"}
+      - {system: others, ready: always, why: "05 §6: other systems unaffected"}
+    after:
+      - {system: all, recovered: true, within_s: 10, why: "the process resumed"}
+
+  - id: ussp-rid-sp
+    domain: hotpath
+    args: [ussp-rid-sp]
+    system: ussp
+    cite: ["05 §6 'One hot-path process (one system)'"]
+    claim: "rid-sp down: peers and the authority see the USSP as unavailable; api and the other processes continue."
+    hold_s: 30
+    recover_within_s: 10
+    during:
+      - {system: ussp, ready: always, why: "05 §6: api continues"}
+      - {system: others, ready: always, why: "05 §6: other systems unaffected"}
+    after:
+      - {system: all, recovered: true, within_s: 10, why: "WP-L9: back within 10 s after a process restart"}
+
+  - id: authority-detect
+    domain: hotpath
+    args: [authority-detect]
+    system: authority
+    cite: ["05 §6 'One hot-path process (one system)'"]
+    claim: "detect down: the authority's violations stop and the console says so; api and the other processes continue; other systems unaffected."
+    hold_s: 30
+    recover_within_s: 10
+    during:
+      - {system: authority, ready: always, why: "05 §6: api continues"}
+      - {system: others, ready: always, why: "05 §6: other systems unaffected"}
+    after:
+      - {system: all, recovered: true, within_s: 10, why: "WP-L9: back within 10 s after a process restart"}
+
+  - id: cisp-deliver
+    domain: hotpath
+    args: [cisp-deliver]
+    system: cisp
+    cite: ["05 §6 'One hot-path process (one system)'", "02 F3 failure"]
+    claim: "deliver down: notifications are retried later; the subscribers' mandatory 60 s pull keeps them current; api continues."
+    hold_s: 30
+    recover_within_s: 10
+    during:
+      - {system: cisp, ready: always, why: "05 §6: api continues"}
+      - {system: others, ready: always, why: "05 §6: other systems unaffected"}
+    after:
+      - {system: all, recovered: true, within_s: 10, why: "WP-L9: back within 10 s after a process restart"}
+
+  - id: ansp-manned-feed
+    domain: ansp-feed
+    args: [ansp-manned-feed]
+    system: ansp
+    cite: ["05 §6 'ANSP feed'", "05 §6 'One source type or instance (disabled or dead)'", "02 F4 failure", "05 §6 'One hot-path process (one system)'"]
+    claim: "ANSP stream down: the consumers mark manned traffic unavailable since T and keep serving, never showing an empty sky as clear; the source ages out as stale, counted; other sources unaffected."
+    hold_s: 60
+    recover_within_s: 30
+    during:
+      - {system: authority, source: "ansp_feed/ansp", in: [stale, down, unavailable], within_s: 30, why: "05 §6: its tracks age out as stale; consoles show state (the authority's console status lists the ANSP feed as a source)"}
+      - {system: [authority, cisp, ussp, issuer, dss], ready: always, why: "02 F4: consumers continue"}
+    after:
+      - {system: authority, source: "ansp_feed/ansp", in: [live], within_s: 30, why: "the source is shown live again"}
+      - {system: all, recovered: true, within_s: 30, why: "the feed restarted"}
+
+  # ---- one source instance (dead) -----------------------------------------
+  - id: authority-dp-poller
+    domain: source
+    args: [authority-dp-poller]
+    system: authority
+    cite: ["05 §6 'One source type or instance (disabled or dead)'", "02 F9 failure", "uspace-authority internal/picture/sources.go (an adapter silent past SOURCE_STATUS_STALE_S is shown stale)"]
+    claim: "The authority's network RID source (dp-poller, one instance per USSP) dead: its tracks age out as stale, counted; the other sources (the receivers' direct RID) unaffected, so the aircraft the receiver hears stays in the picture and its alert stays open; the console shows the source's state."
+    hold_s: 60
+    recover_within_s: 30
+    during:
+      - {system: authority, source: "network_rid/*", in: [stale, down], within_s: 30, why: "05 §6: its tracks age out as stale; consoles show state (the picture shows a source stale once its adapter is silent 10 s)"}
+      - {system: authority, source: "direct_rid/*", in: [live], within_s: 10, why: "05 §6: other sources unaffected"}
+      - {system: authority, ready: always, why: "05 §6: only the source fails; the api answers"}
+      - {system: others, ready: always, why: "05 §6: everyone else unaffected"}
+    after:
+      - {system: authority, source: "network_rid/*", in: [live], within_s: 30, why: "the source is shown live again"}
+      - {system: all, recovered: true, within_s: 30, why: "the adapter restarted, everything as before"}
+
+  # ---- NATS (one system) ------------------------------------------------
+  - id: ussp-nats
+    domain: nats
+    args: [ussp]
+    system: ussp
+    cite: ["05 §6 'NATS (one system)'"]
+    claim: "Ingest spills to the local disk queue for 5 min; consumers hold last state; consoles freeze with age shown; other systems unaffected."
+    hold_s: 60
+    recover_within_s: 60
+    during:
+      - {system: ussp, check: nats, in: [down, degraded], within_s: 15, why: "05 §6: the system says its bus is gone"}
+      - {system: others, ready: always, why: "05 §6: no cross-system NATS"}
+    after:
+      - {system: all, recovered: true, within_s: 60, why: "the bus is back"}
+
+  - id: authority-nats
+    domain: nats
+    args: [authority]
+    system: authority
+    cite: ["05 §6 'NATS (one system)'"]
+    claim: "Consumers hold last state; consoles freeze with age shown; other systems unaffected."
+    hold_s: 60
+    recover_within_s: 60
+    during:
+      - {system: authority, field: nats, not_in: [connected], within_s: 15, why: "05 §6: consoles freeze with age shown (the picture's status says its bus is gone)"}
+      - {system: others, ready: always, why: "05 §6: no cross-system NATS"}
+    after:
+      - {system: authority, field: nats, in: [connected], within_s: 60, why: "the bus is back"}
+      - {system: all, recovered: true, within_s: 60, why: "the bus is back"}
+
+  - id: cisp-nats
+    domain: nats
+    args: [cisp]
+    system: cisp
+    cite: ["05 §6 'NATS (one system)'"]
+    claim: "The CISP's bus down: it says so; other systems unaffected."
+    hold_s: 60
+    recover_within_s: 60
+    during:
+      - {system: cisp, check: nats, not_in: [ok], within_s: 15, why: "05 §6: the system says its bus is gone"}
+      - {system: [authority, ussp, ansp, issuer, dss], ready: always, why: "05 §6: no cross-system NATS"}
+    after:
+      - {system: all, recovered: true, within_s: 60, why: "the bus is back"}
+
+  - id: ansp-nats
+    domain: nats
+    args: [ansp]
+    system: ansp
+    cite: ["05 §6 'NATS (one system)'"]
+    claim: "The ANSP's bus down: it says so; other systems unaffected."
+    hold_s: 60
+    recover_within_s: 60
+    during:
+      - {system: ansp, check: nats, not_in: [ok], within_s: 15, why: "05 §6: the system says its bus is gone"}
+      - {system: [authority, cisp, ussp, issuer, dss], ready: always, why: "05 §6: no cross-system NATS"}
+    after:
+      - {system: all, recovered: true, within_s: 60, why: "the bus is back"}
+
+  # ---- TimescaleDB (one system) -----------------------------------------
+  - id: ussp-timescaledb
+    domain: timescale
+    args: [ussp-timescaledb, ussp_timeseries]
+    system: ussp
+    cite: ["05 §6 'TimescaleDB (one system)'", "05 §5 TimescaleDB writer"]
+    claim: "Live picture continues from NATS; records queue in the JetStream mirror and are replayed later; the hot path never blocks on the database."
+    hold_s: 60
+    recover_within_s: 60
+    during:
+      - {system: ussp, check: timescaledb, in: [down, degraded], within_s: 15, why: "05 §6: the loss is shown"}
+      - {system: others, ready: always, why: "05 §6: unaffected"}
+    after:
+      - {system: all, recovered: true, within_s: 60, why: "the database is back"}
+
+  - id: authority-timescaledb
+    domain: timescale
+    args: [authority-postgres, authority_ts]
+    system: authority
+    cite: ["05 §6 'TimescaleDB (one system)'", "05 §5 TimescaleDB writer"]
+    claim: "Live picture continues from NATS; records queue and are replayed later."
+    hold_s: 60
+    recover_within_s: 60
+    during:
+      - {system: authority, check: telemetry, in: [down], within_s: 15, why: "05 §6: the loss is shown"}
+      - {system: others, ready: always, why: "05 §6: unaffected"}
+    after:
+      - {system: all, recovered: true, within_s: 60, why: "the database is back"}
+
+  # ---- PostgreSQL (one system) ------------------------------------------
+  - id: ussp-postgres
+    domain: postgres
+    args: [ussp-timescaledb, ussp_relational]
+    system: ussp
+    cite: ["05 §6 'PostgreSQL (one system)'"]
+    claim: "Control plane refuses writes; the hot path runs on projections (registry validity, zones, policy, switches) with age shown."
+    hold_s: 60
+    recover_within_s: 60
+    during:
+      - {system: ussp, check: postgres, in: [down, degraded], within_s: 15, why: "05 §6: the loss is shown"}
+      - {system: others, ready: always, why: "05 §6: unaffected"}
+    after:
+      - {system: all, recovered: true, within_s: 60, why: "the database is back"}
+
+  - id: authority-postgres
+    domain: postgres
+    args: [authority-postgres, authority]
+    system: authority
+    cite: ["05 §6 'PostgreSQL (one system)'"]
+    claim: "Control plane refuses writes; the hot path runs on projections with age shown."
+    hold_s: 60
+    recover_within_s: 60
+    during:
+      - {system: authority, check: relational, in: [down], within_s: 15, why: "05 §6: the loss is shown"}
+      - {system: others, ready: always, why: "05 §6: unaffected"}
+    after:
+      - {system: all, recovered: true, within_s: 60, why: "the database is back"}
+
+  - id: ussp-dbhost
+    domain: dbhost
+    args: [ussp-timescaledb]
+    system: ussp
+    cite: ["05 §6 'TimescaleDB (one system)' and 'PostgreSQL (one system)' together"]
+    claim: "Both databases of one system at once (the lab's one database container per system): the hot path runs on projections and NATS; both losses shown."
+    hold_s: 60
+    recover_within_s: 60
+    during:
+      - {system: ussp, check: postgres, in: [down, degraded], within_s: 15, why: "05 §6: the loss is shown"}
+      - {system: ussp, check: timescaledb, in: [down, degraded], within_s: 15, why: "05 §6: the loss is shown"}
+      - {system: others, ready: always, why: "05 §6: unaffected"}
+    after:
+      - {system: all, recovered: true, within_s: 60, why: "the database host is back"}
+
+  # ---- a network partition ------------------------------------------------
+  - id: ussp-partition
+    domain: partition
+    args: [ussp]
+    system: ussp
+    cite: ["02 §1 failure rule", "02 F5 failure", "02 F6 failure (peer USSP down)"]
+    claim: "The USSP cut off from everyone (its processes alive): consumers that lose it keep the last data, marked stale with age; its operators queue and replay; nothing hides an aircraft."
+    hold_s: 60
+    recover_within_s: 60
+    alerts: {ussp: stale_ok}
+    alerts_reason: "the operator's telemetry cannot reach the USSP for 60 s"
+    streams_down: [ussp]
+    streams_down_reason: "the lab front cannot reach the USSP's traffic-ws, which serves the alert stream"
+    during:
+      - {system: ussp, ready: lost, within_s: 10, why: "the lab front cannot reach it: it must not look ready from outside"}
+      - {system: others, ready: always, why: "02 §1: a consumer that loses a producer keeps serving"}
+    after:
+      - {system: all, recovered: true, within_s: 60, why: "the partition healed"}
+
+  # ---- CISP, authority, DSS, token service --------------------------------
+  - id: cisp-down
+    domain: system
+    args: [cisp]
+    system: cisp
+    cite: ["05 §6 'CISP'", "02 F1 failure", "02 F3 failure"]
+    claim: "Subscribers run on cache with cis_age_s on every output; in-flight services continue; the ANSP's degraded path posts to the USSPs."
+    pending: "the 300 s CIS cache bound for new U-space authorisations (02 F3, national figure) is not exercised: no intent is filed in U-space airspace during the row"
+    hold_s: 300
+    recover_within_s: 90
+    during:
+      - {system: cisp, ready: lost, within_s: 10, why: "the CISP is down"}
+      - {system: [authority, ussp, ansp, issuer, dss], ready: always, why: "02 F3: subscribers keep serving from their cache"}
+      - {system: ansp, check: cisp, in: [degraded, down, stale, unknown], within_s: 90, why: "02 F2: the ANSP raises an alarm after 10 s and takes its degraded path (lab bound 90 s: its CISP check polls)"}
+    after:
+      - {system: all, recovered: true, within_s: 90, why: "the CISP is back"}
+
+  - id: authority-down
+    domain: system
+    args: [authority]
+    system: authority
+    cite: ["05 §6 'Authority'", "02 F8 failure", "02 F9 failure"]
+    claim: "USSPs use the validity cache; the authority's DP views stop; receivers buffer; the CISP keeps serving; no real-time service depends on the authority."
+    hold_s: 300
+    recover_within_s: 120
+    alerts: {authority: stale_ok}
+    alerts_reason: "the whole authority is down for 300 s: its own alert cannot be shown; it must come back open, under its id or as one new raise after a stale clear, never twice"
+    streams_down: [authority]
+    streams_down_reason: "picture-ws, which serves the authority's console stream, is stopped with the system"
+    during:
+      - {system: authority, ready: lost, within_s: 10, why: "the authority is down"}
+      - {system: [cisp, ussp, ansp, issuer, dss], ready: always, why: "05 §6: no real-time service depends on the authority"}
+    after:
+      - {system: all, recovered: true, within_s: 120, why: "the authority is back"}
+
+  - id: dss-down
+    domain: dss
+    args: [dss]
+    cite: ["05 §6 'DSS'", "02 F6 failure"]
+    claim: "Cross-USSP deconfliction unavailable; existing intents keep their ovn; local intents and all in-flight services continue; the USSP console shows DSS state."
+    hold_s: 300
+    recover_within_s: 120
+    during:
+      - {system: dss, ready: lost, within_s: 10, why: "the DSS is down"}
+      - {system: ussp, check: dss, in: [down, degraded], within_s: 90, why: "02 F6: the USSP console shows DSS state (lab bound 90 s: its DSS check polls)"}
+      - {system: [authority, cisp, ussp, ansp, issuer], ready: always, why: "05 §6: all in-flight services continue"}
+    after:
+      - {system: ussp, check: dss, in: [ok], within_s: 120, why: "the DSS is back"}
+      - {system: all, recovered: true, within_s: 120, why: "the DSS is back"}
+
+  - id: issuer-down
+    domain: issuer
+    args: [lab-issuer]
+    cite: ["05 §6 'Token service'"]
+    claim: "Tokens stay valid for their TTL (at most 1 h) and JWKS is cached 24 h; new tokens fail and the systems alarm; nothing else stops."
+    hold_s: 120
+    recover_within_s: 60
+    during:
+      - {system: issuer, ready: lost, within_s: 10, why: "the token service is down"}
+      - {system: [authority, cisp, ussp, ansp, dss], ready: always, why: "05 §6: tokens valid for their TTL, JWKS cached"}
+    after:
+      - {system: all, recovered: true, within_s: 60, why: "the token service is back"}
+
+  # ---- clock --------------------------------------------------------------
+  - id: receiver-clock
+    domain: clock
+    cite: ["06 T2", "04 §2 captured_at", "knowledge/LESSONS.md T-01"]
+    claim: "A receiver body more than 30 s from the ingest clock is refused; a late batch inside the window is stored; source clock skew never moves the ingest's own clock."
+    hold_s: 30
+    recover_within_s: 30
+    skew:
+      - {skew_s: -10, want: accepted}
+      # The authority's problem type for a skewed body (uspace-authority
+      # internal/receivers/protocol.go SlugSkew): any other refusal is
+      # not this claim.
+      - {skew_s: 45, want: refused, problem: "https://schemas.uspace.ge/problems/skew"}
+      - {skew_s: -45, want: refused, problem: "https://schemas.uspace.ge/problems/skew"}
+    during:
+      - {system: all, ready: always, why: "a skewed source is the source's fault: every system stays ready"}
+
+  # ---- the whole stack ----------------------------------------------------
+  - id: stack-restart
+    domain: stack
+    cite: ["05 §6 'The whole droplet (staging)'", "05 §2 restart persistence"]
+    claim: "Everything stops; flights are unaffected because nothing commands them; every system comes back with its state: the standing alert open again once, never twice."
+    hold_s: 30
+    recover_within_s: 240
+    alerts: {ussp: stale_ok, authority: stale_ok}
+    alerts_reason: "nothing runs for the hold and the start: the aircraft's data reaches no system"
+    streams_down: [ussp, authority]
+    streams_down_reason: "every container stops, the console streams' servers with them"
+    during:
+      - {system: all, ready: lost, within_s: 30, why: "everything is down"}
+    after:
+      - {system: all, recovered: true, within_s: 240, why: "the stack is back"}

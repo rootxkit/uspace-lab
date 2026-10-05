@@ -22,6 +22,23 @@ request (docs/PLAN.md §5).
 
 ### Added
 
+- WP-L9 (L-M3): the chaos matrix (`scripts/chaos/`, `make chaos`,
+  `chaos.yml`, `docs/RUNBOOKS/chaos.md`). One script per failure domain
+  of spec 05 §6 (`inject`/`restore`, each saying what it did and when,
+  exit 0 only when the act took effect), and a harness that runs every
+  row of `scripts/chaos/matrix.yaml` against the systems stack under a
+  standing zone alert (`scripts/chaos/background.yaml`): each fault
+  observed in place by the harness itself (a row whose fault never
+  happened fails), the spec's degraded states read from every system's
+  readiness and the consoles' status, recovery within bounds, and the
+  alert kept, never duplicated, open again after every row. The figures
+  GCAA has not answered are the spec's defaults, listed as pending GCAA.
+  `results/20261005-chaos` is the observed matrix. A kept alert counts
+  only while its console stream is heard: a silence over
+  `background.max_silence_s` in a row fails it unless the row's fault
+  takes that stream down (`streams_down`) and the stream comes back
+  re-sending the open alerts. `observe.Recorder.OnFrame` and
+  `runner.Options.OnFrame` (additive) let a caller see every frame.
 - WP-L8 (L-M2): the load test (`cmd/loadgen`, `internal/load`, `load/`,
   `make load TIER=<tier>`, `load.yml`, `docs/RUNBOOKS/load.md`). Tiers
   at the `05 §1` volumes (100, 1000, the 2 h soak, 5000, and a CI tier
@@ -126,3 +143,11 @@ request (docs/PLAN.md §5).
   generated `api/index.md`; the enumeration pin against uspace-core
   v1.0.0 (`provider` under `identification.basis` pending core v1.1.0);
   the `contracts` CI workflow.
+
+### Fixed
+
+- WP-L9: `deploy/demo-up.sh` starts the ANSP and waits for its JWKS
+  before the CISP (cisp-api refused to start on a fresh stack);
+  `deploy/demo.env.example` pins a USSP image whose token client keeps
+  the code's case; the scenario recorder reads the alerts a console
+  snapshot carries, and shows a caller every event as recorded.

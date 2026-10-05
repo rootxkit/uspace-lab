@@ -14,8 +14,9 @@
 #      by digest);
 #   4. the DSS and the issuer, healthy, and the issuer's client secrets
 #      written one per file for the systems (clients/<id>.secret);
-#   5. the systems profile, every container with a health check healthy
-#      and every one-shot migration exited 0;
+#   5. the systems profile (the authority, then the ANSP, then the
+#      rest), every container with a health check healthy and every
+#      one-shot migration exited 0;
 #   6. the proofs: each system's JWKS through the lab Caddy over TLS from
 #      the lab CA, and a lab issuer token accepted by the DSS;
 #   7. one docker stats sample of the whole project (L-Q1).
@@ -114,6 +115,22 @@ for _ in $(seq 1 60); do
 done
 [ "$code" = "200" ] || die "the authority's JWKS did not answer 200 through Caddy (last: $code): dc logs authority-api"
 say "the authority's JWKS answers after $(( $(date +%s) - start ))s"
+# The CISP's api also refuses to start until the ANSP's JWKS answers (its
+# CISP_ANSP_JWKS_URL, for the restrictions the ANSP signs) and has no
+# cached copy on a fresh volume: the ANSP next, waited on the same way
+# (seen by WP-L9: on a fresh stack cisp-api was "unhealthy" at --wait).
+ansp_svcs="$(dc config --services | grep '^ansp-' | tr '
+' ' ')"
+# shellcheck disable=SC2086 # one argument per service
+dc up -d $ansp_svcs
+nh="$(val ANSP_HOST)"
+for _ in $(seq 1 60); do
+  code="$(MSYS_NO_PATHCONV=0 curl -s -o /dev/null -w '%{http_code}' --max-time 5 --ssl-no-revoke     --cacert "$state/ca/ca.pem" --resolve "$nh:$port:127.0.0.1" "https://$nh:$port/.well-known/jwks.json" || true)"
+  [ "$code" = "200" ] && break
+  sleep 2
+done
+[ "$code" = "200" ] || die "the ANSP's JWKS did not answer 200 through Caddy (last: $code): dc logs ansp-api"
+say "the ANSP's JWKS answers after $(( $(date +%s) - start ))s"
 dc up -d --wait --wait-timeout 900
 say "every service healthy after $(( $(date +%s) - start ))s"
 for m in authority-migrate cisp-migrate ussp-migrate ussp-migrate-timeseries ansp-migrate; do

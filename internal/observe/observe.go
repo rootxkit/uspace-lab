@@ -64,6 +64,38 @@ type Recorder struct {
 	// stream named it, so a peer track id resolves.
 	flights map[string]string
 	serials map[string]string
+	// onAdd, when set, sees every event as it is recorded, outside the
+	// lock (scripts/chaos watches the background run's alerts live).
+	onAdd func(Event)
+	// onFrame, when set, sees every frame received, outside the lock
+	// (scripts/chaos judges each console stream's liveness: an alert
+	// claim on a stream that said nothing proves nothing).
+	onFrame func(Frame)
+}
+
+// Frame is one frame received on a stream: where, what and when.
+type Frame struct {
+	Stream string
+	System string
+	Schema string // the envelope's schema, "unparseable" when it had none
+	At     time.Time
+}
+
+// OnFrame sets a function that sees every frame as it is received,
+// whatever its schema (a status frame is the stream's heartbeat). Set it
+// before the recorder runs; it must not block.
+func (r *Recorder) OnFrame(f func(Frame)) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.onFrame = f
+}
+
+// OnAdd sets a function that sees every event as it is recorded. Set it
+// before the recorder runs; it must not block.
+func (r *Recorder) OnAdd(f func(Event)) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.onAdd = f
 }
 
 // NewRecorder makes a recorder that resolves serials to aircraft names.
@@ -74,8 +106,12 @@ func NewRecorder(serials map[string]string) *Recorder {
 // Add records an event.
 func (r *Recorder) Add(e Event) {
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	r.events = append(r.events, e)
+	f := r.onAdd
+	r.mu.Unlock()
+	if f != nil {
+		f(e)
+	}
 }
 
 func (r *Recorder) frame(stream, schema string) {
@@ -85,6 +121,15 @@ func (r *Recorder) frame(stream, schema string) {
 		r.frames[stream] = map[string]uint64{}
 	}
 	r.frames[stream][schema]++
+}
+
+func (r *Recorder) seen(f Frame) {
+	r.mu.Lock()
+	h := r.onFrame
+	r.mu.Unlock()
+	if h != nil {
+		h(f)
+	}
 }
 
 func (r *Recorder) fail(stream string, err error) {
@@ -141,6 +186,11 @@ type Stream struct {
 	System string
 	URL    string
 	Header http.Header
+	// HeaderFunc, when set, builds the headers on every (re)connection
+	// instead of Header: a token or a console session read once expires
+	// during a long run, and every reconnection after that is refused
+	// ("sign in again"), so nothing more is observed.
+	HeaderFunc func(ctx context.Context) (http.Header, error)
 	// Aircraft is the scenario aircraft the stream belongs to (a USSP
 	// alert stream is one intent's).
 	Aircraft string
@@ -183,7 +233,15 @@ type streamState struct {
 
 func (r *Recorder) read(ctx context.Context, s Stream, st *streamState) error {
 	dctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	conn, resp, err := websocket.Dial(dctx, s.URL, &websocket.DialOptions{HTTPHeader: s.Header})
+	h := s.Header
+	if s.HeaderFunc != nil {
+		var err error
+		if h, err = s.HeaderFunc(dctx); err != nil {
+			cancel()
+			return fmt.Errorf("%s: credentials: %w", s.Name, err)
+		}
+	}
+	conn, resp, err := websocket.Dial(dctx, s.URL, &websocket.DialOptions{HTTPHeader: h})
 	cancel()
 	if resp != nil && resp.Body != nil {
 		_ = resp.Body.Close()
@@ -218,9 +276,11 @@ func (r *Recorder) Handle(s Stream, st *streamState, b []byte, at time.Time) {
 	e, err := wire.ParseEnvelope(b)
 	if err != nil {
 		r.frame(s.Name, "unparseable")
+		r.seen(Frame{Stream: s.Name, System: s.System, Schema: "unparseable", At: at})
 		return
 	}
 	r.frame(s.Name, e.Schema)
+	r.seen(Frame{Stream: s.Name, System: s.System, Schema: e.Schema, At: at})
 	switch e.Schema {
 	case wire.SchemaAlert:
 		r.alert(s, st, e, at)
@@ -230,6 +290,45 @@ func (r *Recorder) Handle(s Stream, st *streamState, b []byte, at time.Time) {
 		r.manned(s, st, e, at)
 	case wire.SchemaStatus:
 		r.status(s, st, e, at)
+	case wire.SchemaSnapshot:
+		r.snapshot(s, st, e, at)
+	}
+}
+
+// maxSnapshotAlerts bounds the alerts read from one snapshot.
+const maxSnapshotAlerts = 1000
+
+// snapshot reads the alerts of a console/snapshot/v1 (schemas/common/
+// console/snapshot/v1: every item a full alert/v1 or violation/v1
+// frame). A system sends one on every (re)connection, so an alert that
+// was raised while the stream was down, or under a new id after the
+// system restarted, is seen there first: each item goes through the
+// same rules as a live frame (an alert this stream had not seen raised
+// is a raise; one it had is an update and is not recorded again).
+func (r *Recorder) snapshot(s Stream, st *streamState, e wire.Envelope, at time.Time) {
+	var b struct {
+		Alerts []json.RawMessage `json:"alerts"`
+	}
+	if json.Unmarshal(e.Body, &b) != nil {
+		r.frame(s.Name, "console/snapshot/v1:unreadable")
+		return
+	}
+	for i, a := range b.Alerts {
+		if i >= maxSnapshotAlerts {
+			r.frame(s.Name, "console/snapshot/v1:alerts_dropped")
+			break
+		}
+		ae, err := wire.ParseEnvelope(a)
+		if err != nil {
+			r.frame(s.Name, "console/snapshot/v1:unreadable_alert")
+			continue
+		}
+		switch ae.Schema {
+		case wire.SchemaAlert:
+			r.alert(s, st, ae, at)
+		case wire.SchemaViolation:
+			r.violation(s, st, ae, at)
+		}
 	}
 }
 

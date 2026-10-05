@@ -62,6 +62,14 @@ type Options struct {
 	Prepare time.Duration
 	Repo    string
 	Log     *slog.Logger
+	// OnEvent, when set, sees every event the collectors record as it is
+	// recorded (scripts/chaos waits on the background run's alerts). It
+	// must not block.
+	OnEvent func(observe.Event)
+	// OnFrame, when set, sees every frame the collectors receive
+	// (scripts/chaos judges each console stream's liveness). It must not
+	// block.
+	OnFrame func(observe.Frame)
 }
 
 // referenceKinds are what the reference target judges, per system.
@@ -209,6 +217,12 @@ func Run(ctx context.Context, opt Options) (*Result, error) {
 		opt: opt, sc: sc, tg: tg, lab: lab, geo: g, geoDesc: desc, log: opt.Log, bus: vehicle.NewBus(),
 		rec: observe.NewRecorder(serials), samples: map[string]uint64{}, operators: map[string]*simop.Client{},
 		receivers: map[string]*simrx.Receiver{}, feeds: map[string]feedHandle{}, captures: map[string]string{}, done: map[string]bool{},
+	}
+	if opt.OnEvent != nil {
+		r.rec.OnAdd(opt.OnEvent)
+	}
+	if opt.OnFrame != nil {
+		r.rec.OnFrame(opt.OnFrame)
 	}
 	return r.execute(ctx)
 }

@@ -1,0 +1,2253 @@
+{
+  "format": "result/v1",
+  "run": "20261005-chaos",
+  "scenario": "chaos-background",
+  "scenario_digest": "sha256:5d5d57145815f27ad9a513370adfea937f74a923c8befd27b5f298734aac203e",
+  "title": "WP-L9 background: one standing zone alert through every fault",
+  "source": "docs/WORKPACKAGES/WP-L9.md (make chaos); knowledge/scenarios.md SC-03, SC-14, SC-18",
+  "owners": [
+    "authority",
+    "ussp"
+  ],
+  "started_at": "2026-10-05T07:32:35.7554832Z",
+  "ended_at": "2026-10-05T08:58:49.31836Z",
+  "t0": "2026-10-05T07:32:41Z",
+  "mode": {
+    "vehicles": "synthetic",
+    "targets": "systems",
+    "targets_name": "lab-demo"
+  },
+  "evidence": "systems under test with synthetic vehicles: evidence of the systems' behaviour, not a SITL run",
+  "commits": {
+    "lab": "373ae174bbdcd4ca801c031a7b0979ad9be2864c",
+    "lab_dirty": true,
+    "core": "v1.3.0",
+    "go": "go1.27.1"
+  },
+  "images": {
+    "ansp": "uspace-lab/uspace-ansp:d02b09a (built locally from uspace-ansp d02b09a6f8ed75e1222650c9f21b366c4a116f3e; not published)",
+    "authority": "ghcr.io/rootxkit/uspace-authority@sha256:8663cac141d9351b7ab6e96dd85bc6402ac1c37d568c52924d706a5bf44c27ab",
+    "cisp": "ghcr.io/rootxkit/uspace-cisp@sha256:63a02a8da983a530744663e52bdd82dac31b4c9f36b5ecfd572bd529e83978cd",
+    "dss": "interuss/dss:v0.23.0@sha256:0781042bef785f6c968efd4b4e1e85854db9bf361116916d0673d2c89db91582",
+    "ussp": "ghcr.io/rootxkit/uspace-ussp@sha256:4d72301d73b468fbbd80ad48ec4e02656de55c6d9f0f582963b8bf06430c1c36"
+  },
+  "policy_version": 1,
+  "policy": {
+    "policy_version": 1,
+    "source": "docs/PLAN.md §7.1 L-Q4 (owner-only, open; GCAA answers); knowledge/scenarios.md conventions",
+    "deviation": {
+      "h_m": 50,
+      "v_m": 15,
+      "t_s": 60
+    },
+    "telemetry_lost_s": 5,
+    "lost_link_s": 15,
+    "nonconformance_nearby_radius_m": 2000,
+    "cpa": {
+      "t_cpa_max_s": 60,
+      "d_horizontal_min_m": 60,
+      "d_vertical_min_m": 20,
+      "neighbour_radius_m": 800,
+      "neighbour_max_age_s": 10
+    },
+    "height_limit_agl_m": 120,
+    "monitor": {
+      "clear_after_s": 3,
+      "stale_after_s": 15,
+      "live_max_age_s": 10,
+      "pressure_uncertainty_m": 250,
+      "conditional_severity": "warning"
+    }
+  },
+  "lab": {
+    "file": "sim\\sitl.env",
+    "origin_lat_deg": 41.7151,
+    "origin_lon_deg": 44.8271,
+    "origin_alt_amsl_m": 605,
+    "spacing_m": 25
+  },
+  "geoid": "WGS84 EGM2008, 2.5-minute grid",
+  "marks": {
+    "beyond": "2026-10-05T08:57:50.906486988Z",
+    "beyond.start": "2026-10-05T08:57:42.906183958Z",
+    "climb": "2026-10-05T07:32:52.817964076Z",
+    "climb.start": "2026-10-05T07:32:41.067806482Z",
+    "down": "2026-10-05T08:58:11.157254695Z",
+    "down.start": "2026-10-05T08:57:51.006487131Z",
+    "in": "2026-10-05T07:33:25.318399429Z",
+    "in.start": "2026-10-05T07:32:52.867967128Z",
+    "inside": "2026-10-05T08:57:25.405520677Z",
+    "inside.start": "2026-10-05T07:33:25.368402719Z",
+    "out": "2026-10-05T08:57:42.806184053Z",
+    "out.start": "2026-10-05T08:57:25.505520582Z",
+    "t0": "2026-10-05T07:32:41Z"
+  },
+  "steps": [
+    {
+      "sysid": 1,
+      "step": 0,
+      "action": "arm",
+      "state": "started",
+      "at_unix_s": 1791185561.0678065
+    },
+    {
+      "sysid": 1,
+      "step": 0,
+      "action": "arm",
+      "state": "confirmed",
+      "at_unix_s": 1791185561.0678065,
+      "observed": {
+        "alt_rel_m": 0,
+        "armed": true,
+        "lat_deg": 41.7151,
+        "lon_deg": 44.8271
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 1,
+      "action": "takeoff",
+      "state": "started",
+      "at_unix_s": 1791185561.11781
+    },
+    {
+      "sysid": 1,
+      "step": 1,
+      "action": "takeoff",
+      "state": "confirmed",
+      "at_unix_s": 1791185572.817964,
+      "observed": {
+        "alt_rel_m": 28.612892075168354,
+        "armed": true,
+        "lat_deg": 41.7151,
+        "lon_deg": 44.8271
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 2,
+      "action": "goto",
+      "state": "started",
+      "at_unix_s": 1791185572.8679671
+    },
+    {
+      "sysid": 1,
+      "step": 2,
+      "action": "goto",
+      "state": "confirmed",
+      "at_unix_s": 1791185605.3183994,
+      "observed": {
+        "alt_rel_m": 29.999999999999986,
+        "armed": true,
+        "lat_deg": 41.71777677352478,
+        "lon_deg": 44.8271
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 3,
+      "action": "hold",
+      "state": "started",
+      "at_unix_s": 1791185605.3684027
+    },
+    {
+      "sysid": 1,
+      "step": 3,
+      "action": "hold",
+      "state": "confirmed",
+      "at_unix_s": 1791190645.4055207,
+      "observed": {
+        "alt_rel_m": 29.999999999999986,
+        "armed": true,
+        "lat_deg": 41.71780590152028,
+        "lon_deg": 44.8271
+      },
+      "max_drift_m": 0
+    },
+    {
+      "sysid": 1,
+      "step": 4,
+      "action": "goto",
+      "state": "started",
+      "at_unix_s": 1791190645.5055206
+    },
+    {
+      "sysid": 1,
+      "step": 4,
+      "action": "goto",
+      "state": "confirmed",
+      "at_unix_s": 1791190662.806184,
+      "observed": {
+        "alt_rel_m": 29.999999999999986,
+        "armed": true,
+        "lat_deg": 41.71912750175834,
+        "lon_deg": 44.8271
+      }
+    },
+    {
+      "sysid": 1,
+      "step": 5,
+      "action": "hold",
+      "state": "started",
+      "at_unix_s": 1791190662.906184
+    },
+    {
+      "sysid": 1,
+      "step": 5,
+      "action": "hold",
+      "state": "confirmed",
+      "at_unix_s": 1791190670.906487,
+      "observed": {
+        "alt_rel_m": 29.999999999999986,
+        "armed": true,
+        "lat_deg": 41.719156478894504,
+        "lon_deg": 44.8271
+      },
+      "max_drift_m": 0
+    },
+    {
+      "sysid": 1,
+      "step": 6,
+      "action": "land",
+      "state": "started",
+      "at_unix_s": 1791190671.0064871
+    },
+    {
+      "sysid": 1,
+      "step": 6,
+      "action": "land",
+      "state": "confirmed",
+      "at_unix_s": 1791190691.1572547,
+      "observed": {
+        "alt_rel_m": 0,
+        "armed": false,
+        "lat_deg": 41.719156478894504,
+        "lon_deg": 44.8271
+      }
+    }
+  ],
+  "intents": [
+    {
+      "aircraft": "a",
+      "intent_id": "af9b563d-9a06-4945-9f09-528fe299c342",
+      "decision": "authorised",
+      "state": "activated",
+      "volumes": [
+        {
+          "volume": {
+            "outline_circle": {
+              "center": {
+                "lat": 41.716900702366765,
+                "lng": 44.8271
+              },
+              "radius": {
+                "value": 1000,
+                "units": "M"
+              }
+            },
+            "altitude_lower": {
+              "value": 600.912422738792,
+              "reference": "W84",
+              "units": "M"
+            },
+            "altitude_upper": {
+              "value": 740.912422738792,
+              "reference": "W84",
+              "units": "M"
+            }
+          },
+          "time_start": {
+            "value": "2026-10-05T07:31:41Z",
+            "format": "RFC3339"
+          },
+          "time_end": {
+            "value": "2026-10-05T13:31:41Z",
+            "format": "RFC3339"
+          }
+        }
+      ],
+      "ended": "ended"
+    }
+  ],
+  "outcome": {
+    "expectations": [
+      {
+        "name": "ussp-incursion",
+        "matcher": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "aircraft": "a",
+          "subject": "CHAOSZ"
+        },
+        "raise_window": {
+          "from": "2026-10-05T07:33:02.867967128Z",
+          "to": "2026-10-05T07:33:37.867967128Z"
+        },
+        "clear_window": {
+          "from": "2026-10-05T08:57:27.505520582Z",
+          "to": "2026-10-05T08:58:05.505520582Z"
+        },
+        "raise": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "eae4717b-b704-417f-9de3-5f1bd62d90a3",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:33:19.8752679Z",
+          "captured_at": "2026-10-05T07:33:19.617999792Z",
+          "raised_at": "2026-10-05T07:33:19.617999792Z",
+          "detail": {
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "eae4717b-b704-417f-9de3-5f1bd62d90a3",
+          "phase": "cleared",
+          "reason": "stale",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:34:57.8966062Z",
+          "captured_at": "2026-10-05T07:33:19.617999792Z",
+          "raised_at": "2026-10-05T07:33:19.617999792Z",
+          "detail": {
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "ok": false,
+        "why": [
+          "cleared at 07:34:57.896, outside [08:57:27.505, 08:58:05.505]"
+        ]
+      },
+      {
+        "name": "authority-incursion",
+        "matcher": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "aircraft": "a",
+          "subject": "CHAOSZ"
+        },
+        "raise_window": {
+          "from": "2026-10-05T07:33:02.867967128Z",
+          "to": "2026-10-05T07:33:37.867967128Z"
+        },
+        "clear_window": {
+          "from": "2026-10-05T08:57:27.505520582Z",
+          "to": "2026-10-05T08:58:05.505520582Z"
+        },
+        "raise": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M45FPFBYRHHX36DVFNM5XAS8",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:33:19.8898047Z",
+          "captured_at": "2026-10-05T07:33:18.799Z",
+          "raised_at": "2026-10-05T07:33:18.799Z",
+          "detail": {
+            "identifier": "CHAOSZ",
+            "restriction": "CONDITIONAL"
+          },
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M45FPFBYRHHX36DVFNM5XAS8",
+          "phase": "cleared",
+          "reason": "stale",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:33:36.531836Z",
+          "captured_at": "2026-10-05T07:33:36.529Z",
+          "raised_at": "2026-10-05T07:33:18.799Z",
+          "detail": {
+            "identifier": "CHAOSZ",
+            "restriction": "CONDITIONAL"
+          },
+          "stream": "authority-picture"
+        },
+        "ok": false,
+        "why": [
+          "cleared at 07:33:36.531, outside [08:57:27.505, 08:58:05.505]"
+        ]
+      }
+    ],
+    "false_alerts": [
+      {
+        "system": "authority",
+        "kind": "zone_incursion",
+        "alert_id": "01M45FQNERTQ255PPFFYJFM9CK",
+        "aircraft": "a",
+        "subject": "CHAOSZ",
+        "raise": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M45FQNERTQ255PPFFYJFM9CK",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:33:58.8732015Z",
+          "captured_at": "2026-10-05T07:33:58.099Z",
+          "raised_at": "2026-10-05T07:33:58.099Z",
+          "detail": {
+            "identifier": "CHAOSZ",
+            "restriction": "CONDITIONAL"
+          },
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "zone_incursion",
+        "alert_id": "c4d4c240-2877-4dfa-ab2f-9af09cecd1a5",
+        "aircraft": "a",
+        "subject": "CHAOSZ",
+        "raise": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "c4d4c240-2877-4dfa-ab2f-9af09cecd1a5",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:35:18.873187Z",
+          "captured_at": "2026-10-05T07:35:18.618999958Z",
+          "raised_at": "2026-10-05T07:35:18.618999958Z",
+          "detail": {
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "c4d4c240-2877-4dfa-ab2f-9af09cecd1a5",
+          "phase": "cleared",
+          "reason": "stale",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:45:23.7884173Z",
+          "captured_at": "2026-10-05T07:43:54.625999928Z",
+          "raised_at": "2026-10-05T07:35:18.618999958Z",
+          "detail": {
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "zone_incursion",
+        "alert_id": "2ad3c932-79e1-4b3e-ad00-7aa789971783",
+        "aircraft": "a",
+        "subject": "CHAOSZ",
+        "raise": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "2ad3c932-79e1-4b3e-ad00-7aa789971783",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:45:23.7936802Z",
+          "captured_at": "2026-10-05T07:45:13.627000093Z",
+          "raised_at": "2026-10-05T07:45:13.627000093Z",
+          "detail": {
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "2ad3c932-79e1-4b3e-ad00-7aa789971783",
+          "phase": "cleared",
+          "reason": "stale",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:53:08.2087166Z",
+          "captured_at": "2026-10-05T07:45:13.627000093Z",
+          "raised_at": "2026-10-05T07:45:13.627000093Z",
+          "detail": {
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "zone_incursion",
+        "alert_id": "01M45GHHK2W5MPTYHDXA4FZWEE",
+        "aircraft": "a",
+        "subject": "CHAOSZ",
+        "raise": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M45GHHK2W5MPTYHDXA4FZWEE",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:48:06.8839083Z",
+          "captured_at": "2026-10-05T07:48:04.799Z",
+          "raised_at": "2026-10-05T07:48:04.799Z",
+          "detail": {
+            "identifier": "CHAOSZ",
+            "restriction": "CONDITIONAL"
+          },
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M45GHHK2W5MPTYHDXA4FZWEE",
+          "phase": "cleared",
+          "reason": "stale",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:54:58.9361085Z",
+          "captured_at": "2026-10-05T07:54:09.474Z",
+          "raised_at": "2026-10-05T07:48:04.799Z",
+          "detail": {
+            "identifier": "CHAOSZ",
+            "restriction": "CONDITIONAL"
+          },
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "zone_incursion",
+        "alert_id": "fd98e1a5-a3c1-4beb-aee5-4cfcc1544c18",
+        "aircraft": "a",
+        "subject": "CHAOSZ",
+        "raise": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "fd98e1a5-a3c1-4beb-aee5-4cfcc1544c18",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:53:08.2173531Z",
+          "captured_at": "2026-10-05T07:52:58.633999825Z",
+          "raised_at": "2026-10-05T07:52:58.633999825Z",
+          "detail": {
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "fd98e1a5-a3c1-4beb-aee5-4cfcc1544c18",
+          "phase": "cleared",
+          "reason": "stale",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T08:10:20.8080897Z",
+          "captured_at": "2026-10-05T07:52:58.633999825Z",
+          "raised_at": "2026-10-05T07:52:58.633999825Z",
+          "detail": {
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "zone_incursion",
+        "alert_id": "01M45GY3ZTPQ7HHZV5JG80FQ3G",
+        "aircraft": "a",
+        "subject": "CHAOSZ",
+        "raise": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M45GY3ZTPQ7HHZV5JG80FQ3G",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:54:58.9410202Z",
+          "captured_at": "2026-10-05T07:54:48.799Z",
+          "raised_at": "2026-10-05T07:54:48.799Z",
+          "detail": {
+            "identifier": "CHAOSZ",
+            "restriction": "CONDITIONAL"
+          },
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "zone_incursion",
+        "alert_id": "5560b791-b455-40ea-a928-63607faadd37",
+        "aircraft": "a",
+        "subject": "CHAOSZ",
+        "raise": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "5560b791-b455-40ea-a928-63607faadd37",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T08:10:46.5999878Z",
+          "captured_at": "2026-10-05T08:10:36.684999943Z",
+          "raised_at": "2026-10-05T08:10:36.684999943Z",
+          "detail": {
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "5560b791-b455-40ea-a928-63607faadd37",
+          "phase": "cleared",
+          "reason": "stale",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T08:33:33.3918279Z",
+          "captured_at": "2026-10-05T08:10:36.684999943Z",
+          "raised_at": "2026-10-05T08:10:36.684999943Z",
+          "detail": {
+            "carried_since": "2026-10-05T08:33:18.390557507Z",
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "zone_incursion",
+        "alert_id": "01M45JHFESPY7GXT83NYHJ2Q83",
+        "aircraft": "a",
+        "subject": "CHAOSZ",
+        "raise": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M45JHFESPY7GXT83NYHJ2Q83",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T08:23:23.223172Z",
+          "captured_at": "2026-10-05T08:23:21.2Z",
+          "raised_at": "2026-10-05T08:22:59.7Z",
+          "detail": {
+            "identifier": "CHAOSZ",
+            "restriction": "CONDITIONAL"
+          },
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "zone_incursion",
+        "alert_id": "578e2d72-556f-4e8a-b5dd-436333c5c10a",
+        "aircraft": "a",
+        "subject": "CHAOSZ",
+        "raise": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "578e2d72-556f-4e8a-b5dd-436333c5c10a",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T08:33:32.1021134Z",
+          "captured_at": "2026-10-05T08:33:31.747999907Z",
+          "raised_at": "2026-10-05T08:33:31.747999907Z",
+          "detail": {
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "578e2d72-556f-4e8a-b5dd-436333c5c10a",
+          "phase": "cleared",
+          "reason": "resolved",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T08:57:37.0580349Z",
+          "captured_at": "2026-10-05T08:33:31.747999907Z",
+          "raised_at": "2026-10-05T08:33:31.747999907Z",
+          "detail": {
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "zone_incursion",
+        "alert_id": "01M45K4JY20V7E5NF7EENSM93N",
+        "aircraft": "a",
+        "subject": "CHAOSZ",
+        "raise": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M45K4JY20V7E5NF7EENSM93N",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T08:33:52.8487302Z",
+          "captured_at": "2026-10-05T08:33:51.4Z",
+          "raised_at": "2026-10-05T08:33:26.9Z",
+          "detail": {
+            "identifier": "CHAOSZ",
+            "restriction": "CONDITIONAL"
+          },
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M45K4JY20V7E5NF7EENSM93N",
+          "phase": "cleared",
+          "reason": "resolved",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T08:57:36.0584741Z",
+          "captured_at": "2026-10-05T08:57:35.799Z",
+          "raised_at": "2026-10-05T08:33:26.9Z",
+          "detail": {
+            "identifier": "CHAOSZ",
+            "restriction": "CONDITIONAL"
+          },
+          "stream": "authority-picture"
+        }
+      }
+    ],
+    "missed_alerts": 0,
+    "false_alert_count": 10,
+    "alerts": [
+      {
+        "system": "authority",
+        "kind": "degraded",
+        "alert_id": "authority:degraded:dp_unavailable",
+        "subject": "dp_unavailable",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:dp_unavailable",
+          "phase": "raised",
+          "subject": "dp_unavailable",
+          "observed_at": "2026-10-05T07:32:35.8847457Z",
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "degraded",
+        "alert_id": "authority:degraded:no_subscription",
+        "subject": "no_subscription",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:no_subscription",
+          "phase": "raised",
+          "subject": "no_subscription",
+          "observed_at": "2026-10-05T07:32:35.8847457Z",
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:no_subscription",
+          "phase": "cleared",
+          "reason": "not_degraded",
+          "subject": "no_subscription",
+          "observed_at": "2026-10-05T07:32:35.8889598Z",
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "degraded",
+        "alert_id": "ussp:degraded:dss",
+        "subject": "dss",
+        "raise": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:dss",
+          "phase": "raised",
+          "subject": "dss",
+          "observed_at": "2026-10-05T07:32:35.8901211Z",
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "degraded",
+        "alert_id": "ussp:degraded:manned",
+        "subject": "manned",
+        "raise": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:manned",
+          "phase": "raised",
+          "subject": "manned",
+          "observed_at": "2026-10-05T07:32:35.8901211Z",
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "degraded",
+        "alert_id": "ussp:degraded:policy",
+        "subject": "policy",
+        "raise": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:policy",
+          "phase": "raised",
+          "subject": "policy",
+          "observed_at": "2026-10-05T07:32:35.8901211Z",
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "degraded",
+        "alert_id": "ussp:degraded:source_control",
+        "subject": "source_control",
+        "raise": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:source_control",
+          "phase": "raised",
+          "subject": "source_control",
+          "observed_at": "2026-10-05T07:32:35.8901211Z",
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "zone_incursion",
+        "alert_id": "eae4717b-b704-417f-9de3-5f1bd62d90a3",
+        "aircraft": "a",
+        "subject": "CHAOSZ",
+        "raise": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "eae4717b-b704-417f-9de3-5f1bd62d90a3",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:33:19.8752679Z",
+          "captured_at": "2026-10-05T07:33:19.617999792Z",
+          "raised_at": "2026-10-05T07:33:19.617999792Z",
+          "detail": {
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "eae4717b-b704-417f-9de3-5f1bd62d90a3",
+          "phase": "cleared",
+          "reason": "stale",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:34:57.8966062Z",
+          "captured_at": "2026-10-05T07:33:19.617999792Z",
+          "raised_at": "2026-10-05T07:33:19.617999792Z",
+          "detail": {
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "zone_incursion",
+        "alert_id": "01M45FPFBYRHHX36DVFNM5XAS8",
+        "aircraft": "a",
+        "subject": "CHAOSZ",
+        "raise": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M45FPFBYRHHX36DVFNM5XAS8",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:33:19.8898047Z",
+          "captured_at": "2026-10-05T07:33:18.799Z",
+          "raised_at": "2026-10-05T07:33:18.799Z",
+          "detail": {
+            "identifier": "CHAOSZ",
+            "restriction": "CONDITIONAL"
+          },
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M45FPFBYRHHX36DVFNM5XAS8",
+          "phase": "cleared",
+          "reason": "stale",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:33:36.531836Z",
+          "captured_at": "2026-10-05T07:33:36.529Z",
+          "raised_at": "2026-10-05T07:33:18.799Z",
+          "detail": {
+            "identifier": "CHAOSZ",
+            "restriction": "CONDITIONAL"
+          },
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "zone_incursion",
+        "alert_id": "01M45FQNERTQ255PPFFYJFM9CK",
+        "aircraft": "a",
+        "subject": "CHAOSZ",
+        "raise": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M45FQNERTQ255PPFFYJFM9CK",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:33:58.8732015Z",
+          "captured_at": "2026-10-05T07:33:58.099Z",
+          "raised_at": "2026-10-05T07:33:58.099Z",
+          "detail": {
+            "identifier": "CHAOSZ",
+            "restriction": "CONDITIONAL"
+          },
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "lost_link",
+        "alert_id": "801e0214-1872-46c7-9e2a-f2e37d48ef34",
+        "aircraft": "a",
+        "raise": {
+          "system": "ussp",
+          "kind": "lost_link",
+          "alert_id": "801e0214-1872-46c7-9e2a-f2e37d48ef34",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "a",
+          "observed_at": "2026-10-05T07:34:57.8971264Z",
+          "captured_at": "2026-10-05T07:34:42.619Z",
+          "raised_at": "2026-10-05T07:34:57.895578802Z",
+          "detail": {
+            "last_captured_at": "2026-10-05T07:34:42.619Z",
+            "lost_link_s": 15,
+            "position": {
+              "lat": 41.71780590152028,
+              "lng": 44.8271
+            },
+            "silence_s": 15.276578802
+          },
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "zone_incursion",
+        "alert_id": "c4d4c240-2877-4dfa-ab2f-9af09cecd1a5",
+        "aircraft": "a",
+        "subject": "CHAOSZ",
+        "raise": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "c4d4c240-2877-4dfa-ab2f-9af09cecd1a5",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:35:18.873187Z",
+          "captured_at": "2026-10-05T07:35:18.618999958Z",
+          "raised_at": "2026-10-05T07:35:18.618999958Z",
+          "detail": {
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "c4d4c240-2877-4dfa-ab2f-9af09cecd1a5",
+          "phase": "cleared",
+          "reason": "stale",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:45:23.7884173Z",
+          "captured_at": "2026-10-05T07:43:54.625999928Z",
+          "raised_at": "2026-10-05T07:35:18.618999958Z",
+          "detail": {
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "nonconformance_nearby",
+        "alert_id": "649452e7-17b3-414a-8168-93db47428074",
+        "aircraft": "a",
+        "raise": {
+          "system": "ussp",
+          "kind": "nonconformance_nearby",
+          "alert_id": "649452e7-17b3-414a-8168-93db47428074",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "observed_at": "2026-10-05T07:35:18.8965175Z",
+          "captured_at": "2026-10-05T07:34:42.619Z",
+          "raised_at": "2026-10-05T07:35:18.894655671Z",
+          "detail": {
+            "distance_m": 0,
+            "radius_m": 2000,
+            "source_alert_id": "801e0214-1872-46c7-9e2a-f2e37d48ef34",
+            "source_flight_id": "c0d3a331-716a-4e31-9660-166688f36223",
+            "source_kind": "lost_link",
+            "source_position": {
+              "lat": 41.71780590152028,
+              "lng": 44.8271
+            }
+          },
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "degraded",
+        "alert_id": "authority:degraded:session_unchecked",
+        "subject": "session_unchecked",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:session_unchecked",
+          "phase": "raised",
+          "subject": "session_unchecked",
+          "observed_at": "2026-10-05T07:36:06.8998659Z",
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:session_unchecked",
+          "phase": "cleared",
+          "reason": "not_degraded",
+          "subject": "session_unchecked",
+          "observed_at": "2026-10-05T07:37:10.0695962Z",
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "degraded",
+        "alert_id": "ussp:degraded:jwks",
+        "subject": "jwks",
+        "raise": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:jwks",
+          "phase": "raised",
+          "subject": "jwks",
+          "observed_at": "2026-10-05T07:36:29.8797469Z",
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:jwks",
+          "phase": "cleared",
+          "reason": "not_degraded",
+          "subject": "jwks",
+          "observed_at": "2026-10-05T07:37:29.8778119Z",
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "degraded",
+        "alert_id": "authority:degraded:cis_stale",
+        "subject": "cis_stale",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:cis_stale",
+          "phase": "raised",
+          "subject": "cis_stale",
+          "observed_at": "2026-10-05T07:36:44.8988841Z",
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:cis_stale",
+          "phase": "cleared",
+          "reason": "not_degraded",
+          "subject": "cis_stale",
+          "observed_at": "2026-10-05T07:37:12.8985816Z",
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "degraded",
+        "alert_id": "ussp:degraded:monitor",
+        "subject": "monitor",
+        "raise": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:monitor",
+          "phase": "raised",
+          "subject": "monitor",
+          "observed_at": "2026-10-05T07:43:37.8628377Z",
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:monitor",
+          "phase": "cleared",
+          "reason": "not_degraded",
+          "subject": "monitor",
+          "observed_at": "2026-10-05T07:44:05.8618705Z",
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "lost_link",
+        "alert_id": "34f0bf18-5f89-4620-b0f3-bc1cac4d7565",
+        "aircraft": "a",
+        "raise": {
+          "system": "ussp",
+          "kind": "lost_link",
+          "alert_id": "34f0bf18-5f89-4620-b0f3-bc1cac4d7565",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "a",
+          "observed_at": "2026-10-05T07:45:23.7915567Z",
+          "captured_at": "2026-10-05T07:44:51.627Z",
+          "raised_at": "2026-10-05T07:45:23.779948976Z",
+          "detail": {
+            "last_captured_at": "2026-10-05T07:44:51.627Z",
+            "lost_link_s": 15,
+            "position": {
+              "lat": 41.71780590152028,
+              "lng": 44.8271
+            },
+            "silence_s": 32.152948976
+          },
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "zone_incursion",
+        "alert_id": "2ad3c932-79e1-4b3e-ad00-7aa789971783",
+        "aircraft": "a",
+        "subject": "CHAOSZ",
+        "raise": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "2ad3c932-79e1-4b3e-ad00-7aa789971783",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:45:23.7936802Z",
+          "captured_at": "2026-10-05T07:45:13.627000093Z",
+          "raised_at": "2026-10-05T07:45:13.627000093Z",
+          "detail": {
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "2ad3c932-79e1-4b3e-ad00-7aa789971783",
+          "phase": "cleared",
+          "reason": "stale",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:53:08.2087166Z",
+          "captured_at": "2026-10-05T07:45:13.627000093Z",
+          "raised_at": "2026-10-05T07:45:13.627000093Z",
+          "detail": {
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "degraded",
+        "alert_id": "authority:degraded:alerts_unconfirmed",
+        "subject": "alerts_unconfirmed",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:alerts_unconfirmed",
+          "phase": "raised",
+          "subject": "alerts_unconfirmed",
+          "observed_at": "2026-10-05T07:47:38.8748736Z",
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:alerts_unconfirmed",
+          "phase": "cleared",
+          "reason": "not_degraded",
+          "subject": "alerts_unconfirmed",
+          "observed_at": "2026-10-05T07:49:32.8696875Z",
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "zone_incursion",
+        "alert_id": "01M45GHHK2W5MPTYHDXA4FZWEE",
+        "aircraft": "a",
+        "subject": "CHAOSZ",
+        "raise": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M45GHHK2W5MPTYHDXA4FZWEE",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:48:06.8839083Z",
+          "captured_at": "2026-10-05T07:48:04.799Z",
+          "raised_at": "2026-10-05T07:48:04.799Z",
+          "detail": {
+            "identifier": "CHAOSZ",
+            "restriction": "CONDITIONAL"
+          },
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M45GHHK2W5MPTYHDXA4FZWEE",
+          "phase": "cleared",
+          "reason": "stale",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:54:58.9361085Z",
+          "captured_at": "2026-10-05T07:54:09.474Z",
+          "raised_at": "2026-10-05T07:48:04.799Z",
+          "detail": {
+            "identifier": "CHAOSZ",
+            "restriction": "CONDITIONAL"
+          },
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "degraded",
+        "alert_id": "authority:degraded:manned_unavailable",
+        "subject": "manned_unavailable",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:manned_unavailable",
+          "phase": "raised",
+          "subject": "manned_unavailable",
+          "observed_at": "2026-10-05T07:50:14.8677564Z",
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:manned_unavailable",
+          "phase": "cleared",
+          "reason": "not_degraded",
+          "subject": "manned_unavailable",
+          "observed_at": "2026-10-05T07:51:28.8648174Z",
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "degraded",
+        "alert_id": "ussp:degraded:nats",
+        "subject": "nats",
+        "raise": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:nats",
+          "phase": "raised",
+          "subject": "nats",
+          "observed_at": "2026-10-05T07:52:29.8425613Z",
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:nats",
+          "phase": "cleared",
+          "reason": "not_degraded",
+          "subject": "nats",
+          "observed_at": "2026-10-05T07:53:29.8398885Z",
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "lost_link",
+        "alert_id": "9003db2d-db8e-425c-bb3c-9395b18bad52",
+        "aircraft": "a",
+        "raise": {
+          "system": "ussp",
+          "kind": "lost_link",
+          "alert_id": "9003db2d-db8e-425c-bb3c-9395b18bad52",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "a",
+          "observed_at": "2026-10-05T07:53:08.2087166Z",
+          "captured_at": "2026-10-05T07:52:03.633Z",
+          "raised_at": "2026-10-05T07:52:19.084638005Z",
+          "detail": {
+            "last_captured_at": "2026-10-05T07:52:03.633Z",
+            "lost_link_s": 15,
+            "position": {
+              "lat": 41.71780590152028,
+              "lng": 44.8271
+            },
+            "silence_s": 15.451638005
+          },
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "zone_incursion",
+        "alert_id": "fd98e1a5-a3c1-4beb-aee5-4cfcc1544c18",
+        "aircraft": "a",
+        "subject": "CHAOSZ",
+        "raise": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "fd98e1a5-a3c1-4beb-aee5-4cfcc1544c18",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:53:08.2173531Z",
+          "captured_at": "2026-10-05T07:52:58.633999825Z",
+          "raised_at": "2026-10-05T07:52:58.633999825Z",
+          "detail": {
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "fd98e1a5-a3c1-4beb-aee5-4cfcc1544c18",
+          "phase": "cleared",
+          "reason": "stale",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T08:10:20.8080897Z",
+          "captured_at": "2026-10-05T07:52:58.633999825Z",
+          "raised_at": "2026-10-05T07:52:58.633999825Z",
+          "detail": {
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "degraded",
+        "alert_id": "authority:degraded:nats_unavailable",
+        "subject": "nats_unavailable",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:nats_unavailable",
+          "phase": "raised",
+          "subject": "nats_unavailable",
+          "observed_at": "2026-10-05T07:53:55.8606984Z",
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:nats_unavailable",
+          "phase": "cleared",
+          "reason": "not_degraded",
+          "subject": "nats_unavailable",
+          "observed_at": "2026-10-05T07:54:59.1094501Z",
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "zone_incursion",
+        "alert_id": "01M45GY3ZTPQ7HHZV5JG80FQ3G",
+        "aircraft": "a",
+        "subject": "CHAOSZ",
+        "raise": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M45GY3ZTPQ7HHZV5JG80FQ3G",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T07:54:58.9410202Z",
+          "captured_at": "2026-10-05T07:54:48.799Z",
+          "raised_at": "2026-10-05T07:54:48.799Z",
+          "detail": {
+            "identifier": "CHAOSZ",
+            "restriction": "CONDITIONAL"
+          },
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "degraded",
+        "alert_id": "authority:degraded:alerts_replaying",
+        "subject": "alerts_replaying",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:alerts_replaying",
+          "phase": "raised",
+          "subject": "alerts_replaying",
+          "observed_at": "2026-10-05T07:54:59.1094501Z",
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:alerts_replaying",
+          "phase": "cleared",
+          "reason": "not_degraded",
+          "subject": "alerts_replaying",
+          "observed_at": "2026-10-05T07:55:00.8582531Z",
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "degraded",
+        "alert_id": "authority:degraded:projections_unreadable",
+        "subject": "projections_unreadable",
+        "raise": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:projections_unreadable",
+          "phase": "raised",
+          "subject": "projections_unreadable",
+          "observed_at": "2026-10-05T08:01:22.8432652Z",
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "degraded",
+          "alert_id": "authority:degraded:projections_unreadable",
+          "phase": "cleared",
+          "reason": "not_degraded",
+          "subject": "projections_unreadable",
+          "observed_at": "2026-10-05T08:02:26.8413022Z",
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "lost_link",
+        "alert_id": "2da245c7-32ee-4f6f-90d5-78ee5645109f",
+        "aircraft": "a",
+        "raise": {
+          "system": "ussp",
+          "kind": "lost_link",
+          "alert_id": "2da245c7-32ee-4f6f-90d5-78ee5645109f",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "a",
+          "observed_at": "2026-10-05T08:10:20.8080897Z",
+          "captured_at": "2026-10-05T08:08:57.681Z",
+          "raised_at": "2026-10-05T08:09:13.048092202Z",
+          "detail": {
+            "last_captured_at": "2026-10-05T08:08:57.681Z",
+            "lost_link_s": 15,
+            "position": {
+              "lat": 41.71780590152028,
+              "lng": 44.8271
+            },
+            "silence_s": 15.367092202
+          },
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "zone_incursion",
+        "alert_id": "5560b791-b455-40ea-a928-63607faadd37",
+        "aircraft": "a",
+        "subject": "CHAOSZ",
+        "raise": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "5560b791-b455-40ea-a928-63607faadd37",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T08:10:46.5999878Z",
+          "captured_at": "2026-10-05T08:10:36.684999943Z",
+          "raised_at": "2026-10-05T08:10:36.684999943Z",
+          "detail": {
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "5560b791-b455-40ea-a928-63607faadd37",
+          "phase": "cleared",
+          "reason": "stale",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T08:33:33.3918279Z",
+          "captured_at": "2026-10-05T08:10:36.684999943Z",
+          "raised_at": "2026-10-05T08:10:36.684999943Z",
+          "detail": {
+            "carried_since": "2026-10-05T08:33:18.390557507Z",
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "degraded",
+        "alert_id": "ussp:degraded:cis",
+        "subject": "cis",
+        "raise": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:cis",
+          "phase": "raised",
+          "subject": "cis",
+          "observed_at": "2026-10-05T08:16:02.1567898Z",
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:cis",
+          "phase": "cleared",
+          "reason": "not_degraded",
+          "subject": "cis",
+          "observed_at": "2026-10-05T08:17:02.1545881Z",
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "zone_incursion",
+        "alert_id": "01M45JHFESPY7GXT83NYHJ2Q83",
+        "aircraft": "a",
+        "subject": "CHAOSZ",
+        "raise": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M45JHFESPY7GXT83NYHJ2Q83",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T08:23:23.223172Z",
+          "captured_at": "2026-10-05T08:23:21.2Z",
+          "raised_at": "2026-10-05T08:22:59.7Z",
+          "detail": {
+            "identifier": "CHAOSZ",
+            "restriction": "CONDITIONAL"
+          },
+          "stream": "authority-picture"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "degraded",
+        "alert_id": "ussp:degraded:alerts",
+        "subject": "alerts",
+        "raise": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:alerts",
+          "phase": "raised",
+          "subject": "alerts",
+          "observed_at": "2026-10-05T08:33:32.1011066Z",
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:alerts",
+          "phase": "cleared",
+          "reason": "not_degraded",
+          "subject": "alerts",
+          "observed_at": "2026-10-05T08:33:48.1016367Z",
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "degraded",
+        "alert_id": "ussp:degraded:cis_current",
+        "subject": "cis_current",
+        "raise": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:cis_current",
+          "phase": "raised",
+          "subject": "cis_current",
+          "observed_at": "2026-10-05T08:33:32.1011066Z",
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:cis_current",
+          "phase": "cleared",
+          "reason": "not_degraded",
+          "subject": "cis_current",
+          "observed_at": "2026-10-05T08:33:48.1016367Z",
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "degraded",
+        "alert_id": "ussp:degraded:client_bindings",
+        "subject": "client_bindings",
+        "raise": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:client_bindings",
+          "phase": "raised",
+          "subject": "client_bindings",
+          "observed_at": "2026-10-05T08:33:32.1011066Z",
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:client_bindings",
+          "phase": "cleared",
+          "reason": "not_degraded",
+          "subject": "client_bindings",
+          "observed_at": "2026-10-05T08:33:48.1016367Z",
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "degraded",
+        "alert_id": "ussp:degraded:intent_active",
+        "subject": "intent_active",
+        "raise": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:intent_active",
+          "phase": "raised",
+          "subject": "intent_active",
+          "observed_at": "2026-10-05T08:33:32.1011066Z",
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:intent_active",
+          "phase": "cleared",
+          "reason": "not_degraded",
+          "subject": "intent_active",
+          "observed_at": "2026-10-05T08:33:48.1016367Z",
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "degraded",
+        "alert_id": "ussp:degraded:sessions_live",
+        "subject": "sessions_live",
+        "raise": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:sessions_live",
+          "phase": "raised",
+          "subject": "sessions_live",
+          "observed_at": "2026-10-05T08:33:32.1011066Z",
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "degraded",
+          "alert_id": "ussp:degraded:sessions_live",
+          "phase": "cleared",
+          "reason": "not_degraded",
+          "subject": "sessions_live",
+          "observed_at": "2026-10-05T08:33:48.1016367Z",
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "lost_link",
+        "alert_id": "943c02d4-fe1c-4415-ae97-cbbfe03a436d",
+        "aircraft": "a",
+        "raise": {
+          "system": "ussp",
+          "kind": "lost_link",
+          "alert_id": "943c02d4-fe1c-4415-ae97-cbbfe03a436d",
+          "phase": "raised",
+          "severity": "critical",
+          "aircraft": "a",
+          "observed_at": "2026-10-05T08:33:32.1021134Z",
+          "captured_at": "2026-10-05T08:32:28.745Z",
+          "raised_at": "2026-10-05T08:33:19.390601709Z",
+          "detail": {
+            "last_captured_at": "2026-10-05T08:32:28.745Z",
+            "lost_link_s": 15,
+            "position": {
+              "lat": 41.71780590152028,
+              "lng": 44.8271
+            },
+            "silence_s": 62.645910479
+          },
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "zone_incursion",
+        "alert_id": "578e2d72-556f-4e8a-b5dd-436333c5c10a",
+        "aircraft": "a",
+        "subject": "CHAOSZ",
+        "raise": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "578e2d72-556f-4e8a-b5dd-436333c5c10a",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T08:33:32.1021134Z",
+          "captured_at": "2026-10-05T08:33:31.747999907Z",
+          "raised_at": "2026-10-05T08:33:31.747999907Z",
+          "detail": {
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        },
+        "clear": {
+          "system": "ussp",
+          "kind": "zone_incursion",
+          "alert_id": "578e2d72-556f-4e8a-b5dd-436333c5c10a",
+          "phase": "cleared",
+          "reason": "resolved",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T08:57:37.0580349Z",
+          "captured_at": "2026-10-05T08:33:31.747999907Z",
+          "raised_at": "2026-10-05T08:33:31.747999907Z",
+          "detail": {
+            "cis_version": "zones:1,uspace_airspace:1,restrictions:0",
+            "dataset": "zones",
+            "identifier": "CHAOSZ",
+            "limit_not_judged": false,
+            "restriction": "CONDITIONAL",
+            "vertical_known": true,
+            "zone_id": "CHAOSZ",
+            "zone_part": "CHAOSZ",
+            "zone_type": "CONDITIONAL",
+            "zone_version": "zones:1"
+          },
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "nonconformance_nearby",
+        "alert_id": "d818112b-4148-4918-bd1e-4c57d37923c3",
+        "aircraft": "a",
+        "raise": {
+          "system": "ussp",
+          "kind": "nonconformance_nearby",
+          "alert_id": "d818112b-4148-4918-bd1e-4c57d37923c3",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "observed_at": "2026-10-05T08:33:32.3926048Z",
+          "captured_at": "2026-10-05T07:34:42.619Z",
+          "raised_at": "2026-10-05T08:33:32.390798187Z",
+          "detail": {
+            "distance_m": 0,
+            "radius_m": 2000,
+            "source_alert_id": "801e0214-1872-46c7-9e2a-f2e37d48ef34",
+            "source_flight_id": "c0d3a331-716a-4e31-9660-166688f36223",
+            "source_kind": "lost_link",
+            "source_position": {
+              "lat": 41.71780590152028,
+              "lng": 44.8271
+            }
+          },
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "ussp",
+        "kind": "nonconformance_nearby",
+        "alert_id": "0f92dcdb-31f8-4486-9382-ebbeaddb8308",
+        "aircraft": "a",
+        "raise": {
+          "system": "ussp",
+          "kind": "nonconformance_nearby",
+          "alert_id": "0f92dcdb-31f8-4486-9382-ebbeaddb8308",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "observed_at": "2026-10-05T08:33:32.3926048Z",
+          "captured_at": "2026-10-05T08:32:28.745Z",
+          "raised_at": "2026-10-05T08:33:32.390798187Z",
+          "detail": {
+            "distance_m": 0,
+            "radius_m": 2000,
+            "source_alert_id": "943c02d4-fe1c-4415-ae97-cbbfe03a436d",
+            "source_flight_id": "d14c8f3a-d834-428d-afaa-366c6741a04a",
+            "source_kind": "lost_link",
+            "source_position": {
+              "lat": 41.71780590152028,
+              "lng": 44.8271
+            }
+          },
+          "stream": "ussp-alerts-a"
+        }
+      },
+      {
+        "system": "authority",
+        "kind": "zone_incursion",
+        "alert_id": "01M45K4JY20V7E5NF7EENSM93N",
+        "aircraft": "a",
+        "subject": "CHAOSZ",
+        "raise": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M45K4JY20V7E5NF7EENSM93N",
+          "phase": "raised",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T08:33:52.8487302Z",
+          "captured_at": "2026-10-05T08:33:51.4Z",
+          "raised_at": "2026-10-05T08:33:26.9Z",
+          "detail": {
+            "identifier": "CHAOSZ",
+            "restriction": "CONDITIONAL"
+          },
+          "stream": "authority-picture"
+        },
+        "clear": {
+          "system": "authority",
+          "kind": "zone_incursion",
+          "alert_id": "01M45K4JY20V7E5NF7EENSM93N",
+          "phase": "cleared",
+          "reason": "resolved",
+          "severity": "warning",
+          "aircraft": "a",
+          "subject": "CHAOSZ",
+          "observed_at": "2026-10-05T08:57:36.0584741Z",
+          "captured_at": "2026-10-05T08:57:35.799Z",
+          "raised_at": "2026-10-05T08:33:26.9Z",
+          "detail": {
+            "identifier": "CHAOSZ",
+            "restriction": "CONDITIONAL"
+          },
+          "stream": "authority-picture"
+        }
+      }
+    ],
+    "pass": false,
+    "failures": [
+      "authority-incursion: cleared at 07:33:36.531, outside [08:57:27.505, 08:58:05.505]",
+      "false alert: authority zone_incursion 01M45FQNERTQ255PPFFYJFM9CK (aircraft \"a\", peer \"\", subject \"CHAOSZ\") raised at 07:33:58.873",
+      "false alert: authority zone_incursion 01M45GHHK2W5MPTYHDXA4FZWEE (aircraft \"a\", peer \"\", subject \"CHAOSZ\") raised at 07:48:06.883",
+      "false alert: authority zone_incursion 01M45GY3ZTPQ7HHZV5JG80FQ3G (aircraft \"a\", peer \"\", subject \"CHAOSZ\") raised at 07:54:58.941",
+      "false alert: authority zone_incursion 01M45JHFESPY7GXT83NYHJ2Q83 (aircraft \"a\", peer \"\", subject \"CHAOSZ\") raised at 08:23:23.223",
+      "false alert: authority zone_incursion 01M45K4JY20V7E5NF7EENSM93N (aircraft \"a\", peer \"\", subject \"CHAOSZ\") raised at 08:33:52.848",
+      "false alert: ussp zone_incursion 2ad3c932-79e1-4b3e-ad00-7aa789971783 (aircraft \"a\", peer \"\", subject \"CHAOSZ\") raised at 07:45:23.793",
+      "false alert: ussp zone_incursion 5560b791-b455-40ea-a928-63607faadd37 (aircraft \"a\", peer \"\", subject \"CHAOSZ\") raised at 08:10:46.599",
+      "false alert: ussp zone_incursion 578e2d72-556f-4e8a-b5dd-436333c5c10a (aircraft \"a\", peer \"\", subject \"CHAOSZ\") raised at 08:33:32.102",
+      "false alert: ussp zone_incursion c4d4c240-2877-4dfa-ab2f-9af09cecd1a5 (aircraft \"a\", peer \"\", subject \"CHAOSZ\") raised at 07:35:18.873",
+      "false alert: ussp zone_incursion fd98e1a5-a3c1-4beb-aee5-4cfcc1544c18 (aircraft \"a\", peer \"\", subject \"CHAOSZ\") raised at 07:53:08.217",
+      "ussp-incursion: cleared at 07:34:57.896, outside [08:57:27.505, 08:58:05.505]"
+    ]
+  },
+  "frames": {
+    "authority-picture": {
+      "console/snapshot/v1": 11,
+      "console/status/v1": 2344,
+      "source/status/v1": 22,
+      "track/telemetry/v1": 3960,
+      "violation/v1": 57
+    },
+    "ussp-alerts-a": {
+      "alert/v1": 1246,
+      "console/status/v1": 2555
+    }
+  },
+  "stream_errors": {
+    "authority-picture": "authority-picture: failed to get reader: received close frame: status = StatusTryAgainLater and reason = \"the session could not be checked; reconnect later\"",
+    "ussp-alerts-a": "ussp-alerts-a: failed to get reader: received close frame: status = StatusTryAgainLater and reason = \"the session cannot be checked now; retry later\""
+  },
+  "operator_ledgers": [
+    {
+      "serial": "LABX9CHAX00001",
+      "transport": "ws",
+      "produced": 5144,
+      "sent_live": 5051,
+      "sent_backlog": 2566,
+      "sent": 7617,
+      "dropped_by_knob": 0,
+      "queue_shed": 0,
+      "pending": 0,
+      "accepted": 1509,
+      "refused": 0,
+      "dropped": 38,
+      "duplicate": 2,
+      "backlog": 20,
+      "outcomes": {
+        "accepted": 1509,
+        "dropped_rate": 38,
+        "duplicate": 2
+      },
+      "acked_seq": 5143,
+      "last_seq": 5143,
+      "connections": 1,
+      "resent_after_break": 3700,
+      "exact": false,
+      "balanced": false,
+      "client_counters": {
+        "dial_failures": 56,
+        "dials": 1292,
+        "produced": 5144,
+        "refused_upgrade": 11,
+        "resent_after_break": 3700,
+        "sent_backlog": 2566,
+        "sent_live": 5051,
+        "status_frames": 2680
+      }
+    }
+  ],
+  "receiver_ledgers": [
+    {
+      "receiver_id": "lab-rx-1",
+      "observed": 4488,
+      "dropped_by_knob": 0,
+      "sent": 4488,
+      "accepted": 4488,
+      "duplicates": 0,
+      "refused": 0,
+      "backlog_shed": 0,
+      "pending": 0,
+      "balanced": true,
+      "counters": {
+        "accepted": 4488,
+        "backlog_batches": 17,
+        "batch_failures": 217,
+        "batches": 4304,
+        "duplicates": 0,
+        "observations": 4488,
+        "sent": 4488
+      }
+    }
+  ],
+  "vehicle_samples": {
+    "a": 20573
+  },
+  "latency_s": {
+    "authority": {
+      "n": 6,
+      "p50": 1.449,
+      "p95": 10.142,
+      "max": 10.142
+    },
+    "ussp": {
+      "n": 14,
+      "p50": 15.278,
+      "p95": 3529.774,
+      "max": 3529.774
+    }
+  },
+  "verdict": "fail",
+  "failures": [
+    "authority-incursion: cleared at 07:33:36.531, outside [08:57:27.505, 08:58:05.505]",
+    "false alert: authority zone_incursion 01M45FQNERTQ255PPFFYJFM9CK (aircraft \"a\", peer \"\", subject \"CHAOSZ\") raised at 07:33:58.873",
+    "false alert: authority zone_incursion 01M45GHHK2W5MPTYHDXA4FZWEE (aircraft \"a\", peer \"\", subject \"CHAOSZ\") raised at 07:48:06.883",
+    "false alert: authority zone_incursion 01M45GY3ZTPQ7HHZV5JG80FQ3G (aircraft \"a\", peer \"\", subject \"CHAOSZ\") raised at 07:54:58.941",
+    "false alert: authority zone_incursion 01M45JHFESPY7GXT83NYHJ2Q83 (aircraft \"a\", peer \"\", subject \"CHAOSZ\") raised at 08:23:23.223",
+    "false alert: authority zone_incursion 01M45K4JY20V7E5NF7EENSM93N (aircraft \"a\", peer \"\", subject \"CHAOSZ\") raised at 08:33:52.848",
+    "false alert: ussp zone_incursion 2ad3c932-79e1-4b3e-ad00-7aa789971783 (aircraft \"a\", peer \"\", subject \"CHAOSZ\") raised at 07:45:23.793",
+    "false alert: ussp zone_incursion 5560b791-b455-40ea-a928-63607faadd37 (aircraft \"a\", peer \"\", subject \"CHAOSZ\") raised at 08:10:46.599",
+    "false alert: ussp zone_incursion 578e2d72-556f-4e8a-b5dd-436333c5c10a (aircraft \"a\", peer \"\", subject \"CHAOSZ\") raised at 08:33:32.102",
+    "false alert: ussp zone_incursion c4d4c240-2877-4dfa-ab2f-9af09cecd1a5 (aircraft \"a\", peer \"\", subject \"CHAOSZ\") raised at 07:35:18.873",
+    "false alert: ussp zone_incursion fd98e1a5-a3c1-4beb-aee5-4cfcc1544c18 (aircraft \"a\", peer \"\", subject \"CHAOSZ\") raised at 07:53:08.217",
+    "operator LABX9CHAX00001 ledger does not balance: sent 7617, accepted 1509 + refused 0 + dropped 38 + duplicate 2",
+    "ussp-incursion: cleared at 07:34:57.896, outside [08:57:27.505, 08:58:05.505]"
+  ]
+}

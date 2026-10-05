@@ -3,6 +3,7 @@ package observe
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -155,5 +156,143 @@ func TestOnOpenIsSentOnConnect(t *testing.T) {
 			t.Fatalf("got %q, want %q", g, want)
 		}
 		cancel()
+	}
+}
+
+func TestOnAddSeesEveryRecordedEventAndNothingElse(t *testing.T) {
+	r := NewRecorder(nil)
+	var seen []Event
+	r.OnAdd(func(e Event) { seen = append(seen, e) })
+	s := Stream{Name: "ussp-alerts-a", System: "ussp", Aircraft: "a"}
+	st := NewStreamState()
+	now := time.Now()
+	r.Handle(s, st, frame(t, wire.SchemaAlert, alertBody("raised", nil)), now)
+	// An update is a frame, not an event: the hook must not see it.
+	r.Handle(s, st, frame(t, wire.SchemaAlert, alertBody("updated", nil)), now)
+	r.Handle(s, st, frame(t, wire.SchemaAlert, alertBody("cleared", "resolved")), now)
+	if len(seen) != 2 || seen[0].Phase != PhaseRaised || seen[1].Phase != PhaseCleared {
+		t.Fatalf("hook saw %+v", seen)
+	}
+	if got := r.Events(); len(got) != len(seen) {
+		t.Fatalf("recorded %d events, hook saw %d", len(got), len(seen))
+	}
+}
+
+// OnFrame sees every frame, the ones that make no event (a status
+// heartbeat, an update) and the unreadable ones too, with the stream's
+// name, system and the time it was received.
+func TestOnFrameSeesEveryFrameAndOnlyFrames(t *testing.T) {
+	r := NewRecorder(nil)
+	var seen []Frame
+	r.OnFrame(func(f Frame) { seen = append(seen, f) })
+	s := Stream{Name: "authority-picture", System: "authority"}
+	st := NewStreamState()
+	t1 := time.Date(2026, 10, 5, 9, 0, 0, 0, time.UTC)
+	r.Handle(s, st, frame(t, wire.SchemaStatus, map[string]any{"degraded": []string{}}), t1)
+	r.Handle(s, st, frame(t, wire.SchemaAlert, alertBody("raised", nil)), t1.Add(time.Second))
+	r.Handle(s, st, []byte("not json"), t1.Add(2*time.Second))
+	want := []Frame{
+		{Stream: "authority-picture", System: "authority", Schema: wire.SchemaStatus, At: t1},
+		{Stream: "authority-picture", System: "authority", Schema: wire.SchemaAlert, At: t1.Add(time.Second)},
+		{Stream: "authority-picture", System: "authority", Schema: "unparseable", At: t1.Add(2 * time.Second)},
+	}
+	if fmt.Sprint(seen) != fmt.Sprint(want) {
+		t.Fatalf("hook saw %+v, want %+v", seen, want)
+	}
+	// No frame, no call.
+	quiet := NewRecorder(nil)
+	n := 0
+	quiet.OnFrame(func(Frame) { n++ })
+	if n != 0 || len(quiet.Frames()) != 0 {
+		t.Fatalf("a recorder with no frame called its hook %d times", n)
+	}
+}
+
+func TestWithoutOnAddRecordingIsUnchanged(t *testing.T) {
+	r := NewRecorder(nil)
+	r.Handle(Stream{Name: "x", System: "ussp"}, NewStreamState(), frame(t, wire.SchemaAlert, alertBody("raised", nil)), time.Now())
+	if ev := r.Events(); len(ev) != 1 {
+		t.Fatalf("%+v", ev)
+	}
+}
+
+// An alert first seen in the snapshot a system sends on (re)connect is
+// a raise; the same alert in a later snapshot, or as an update, is not
+// recorded again; a new id in a snapshot is a second raise (what a
+// restart that loses an alert's identity looks like).
+func TestSnapshotAlertsAreSeenOnce(t *testing.T) {
+	r := NewRecorder(map[string]string{"LABSER1": "c"})
+	st := NewStreamState()
+	s := Stream{Name: "pic", System: "authority"}
+	vb := func(id, state string) map[string]any {
+		return map[string]any{"violation_id": id, "kind": "zone_incursion", "state": state, "severity": "warning",
+			"track_ref": "LABSER1", "serial": "LABSER1", "zone_id": "GEO/Z", "captured_at": "2026-10-03T12:00:00.000Z",
+			"opened_at": "2026-10-03T12:00:00.000Z", "clear_reason": nil}
+	}
+	snap := func(items ...map[string]any) []byte {
+		var alerts []json.RawMessage
+		for _, it := range items {
+			alerts = append(alerts, frame(t, wire.SchemaViolation, it))
+		}
+		return frame(t, wire.SchemaSnapshot, map[string]any{"tracks": []any{}, "alerts": alerts, "manned": []any{}, "zones_version": "1"})
+	}
+	r.Handle(s, st, snap(vb("01J00000000000000000000001", "updated")), time.Now())
+	r.Handle(s, st, snap(vb("01J00000000000000000000001", "updated")), time.Now())
+	r.Handle(s, st, frame(t, wire.SchemaViolation, vb("01J00000000000000000000001", "updated")), time.Now())
+	if ev := r.Events(); len(ev) != 1 || ev[0].Phase != PhaseRaised || ev[0].Aircraft != "c" {
+		t.Fatalf("one raise expected: %+v", ev)
+	}
+	r.Handle(s, st, snap(vb("01J00000000000000000000002", "updated")), time.Now())
+	if ev := r.Events(); len(ev) != 2 || ev[1].AlertID != "01J00000000000000000000002" || ev[1].Phase != PhaseRaised {
+		t.Fatalf("a new id in a snapshot is a raise: %+v", ev)
+	}
+	// A snapshot without alerts records nothing.
+	r.Handle(s, st, snap(), time.Now())
+	if len(r.Events()) != 2 {
+		t.Fatal("an empty snapshot recorded an event")
+	}
+}
+
+// HeaderFunc is asked on every connection, so credentials renewed
+// between two connections are the ones sent; Header alone sends the
+// same every time.
+func TestHeaderFuncIsAskedOnEveryConnection(t *testing.T) {
+	got := make(chan string, 8)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got <- r.Header.Get("Authorization")
+		c, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			return
+		}
+		_ = c.Close(4401, "sign in again")
+	}))
+	defer srv.Close()
+	n := 0
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	r := NewRecorder(nil)
+	go r.Run(ctx, Stream{Name: "s", URL: "ws" + strings.TrimPrefix(srv.URL, "http"), Retry: 10 * time.Millisecond,
+		HeaderFunc: func(context.Context) (http.Header, error) {
+			n++
+			return http.Header{"Authorization": {fmt.Sprintf("Bearer t%d", n)}}, nil
+		}})
+	first, second := <-got, <-got
+	cancel()
+	if first != "Bearer t1" || second != "Bearer t2" {
+		t.Fatalf("headers %q, %q: renewed credentials were not sent", first, second)
+	}
+	// A HeaderFunc that fails is a stream error, and nothing is dialled.
+	r2 := NewRecorder(nil)
+	ctx2, cancel2 := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel2()
+	r2.Run(ctx2, Stream{Name: "f", URL: "ws" + strings.TrimPrefix(srv.URL, "http"), Retry: 50 * time.Millisecond,
+		HeaderFunc: func(context.Context) (http.Header, error) { return nil, fmt.Errorf("no session") }})
+	if e := r2.Errors()["f"]; !strings.Contains(e, "no session") {
+		t.Fatalf("error %q", e)
+	}
+	select {
+	case h := <-got:
+		t.Fatalf("dialled without credentials: %q", h)
+	default:
 	}
 }

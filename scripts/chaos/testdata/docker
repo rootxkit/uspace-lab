@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# A fake docker for scripts_test.go: the containers of one project are
+# files in $FAKE_DOCKER/<service> holding "status started_at"; it answers
+# the calls scripts/chaos/lib.sh makes for processes, and logs each act
+# to $FAKE_DOCKER/acts. A container named in $FAKE_DOCKER/ignore takes
+# every act without changing (a docker that says yes and does nothing).
+set -euo pipefail
+d="${FAKE_DOCKER:?}"
+now() { date -u +%Y-%m-%dT%H:%M:%S.%NZ; }
+get() { cut -d' ' -f1 "$d/$1"; }
+put() { if grep -qx "$1" "$d/ignore" 2>/dev/null; then return 0; fi; printf '%s %s\n' "$2" "${3:-$(cut -d' ' -f2 "$d/$1")}" > "$d/$1"; }
+act() { echo "$*" >> "$d/acts"; }
+cmd="$1"; shift
+case "$cmd" in
+  ps)
+    svc=""; running=1; fmt=""
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        -a|-aq) running=0; shift;;
+        --filter) case "$2" in label=com.docker.compose.service=*) svc="${2#*=}"; svc="${svc#*=}";; status=running) running=1;; esac; shift 2;;
+        --format) fmt="$2"; shift 2;;
+        *) shift;;
+      esac
+    done
+    for f in "$d"/svc-*; do
+      [ -e "$f" ] || continue
+      s="$(basename "$f")"; s="${s#svc-}"
+      [ -z "$svc" ] || [ "$svc" = "$s" ] || continue
+      [ "$running" = 0 ] || [ "$(get "svc-$s")" = running ] || continue
+      if [ -n "$fmt" ]; then echo "$s"; else echo "id-$s"; fi
+    done ;;
+  inspect)
+    [ "$1" = "-f" ] || exit 1
+    f="$2"; id="$3"; s="svc-${id#id-}"
+    [ -e "$d/$s" ] || { echo "no such container $id" >&2; exit 1; }
+    case "$f" in
+      *Status*) get "$s" ;;
+      *StartedAt*) cut -d' ' -f2 "$d/$s" ;;
+      *) exit 1 ;;
+    esac ;;
+  kill) id="${*: -1}"; act kill "$id"; put "svc-${id#id-}" exited ;;
+  stop) [ "$1" = "-t" ] && shift 2; for id in "$@"; do act stop "$id"; put "svc-${id#id-}" exited; done ;;
+  start) for id in "$@"; do act start "$id"; put "svc-${id#id-}" running "$(now)"; done ;;
+  pause) act pause "$1"; put "svc-${1#id-}" paused ;;
+  unpause) act unpause "$1"; put "svc-${1#id-}" running ;;
+  *) echo "fake docker: $cmd not supported" >&2; exit 1 ;;
+esac

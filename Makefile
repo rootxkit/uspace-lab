@@ -217,6 +217,41 @@ conformance-axe-test:
 conformance-axe:
 	cd conformance/axe && npx playwright test tests/pages.spec.ts
 
+# --- WP-L9 chaos (scripts/chaos/) -------------------------------------------
+.PHONY: chaos chaos-check chaos-test
+
+# The whole matrix on a fresh stack (docs/RUNBOOKS/chaos.md): the project
+# removed (its volumes; deploy/local-demo/ keys stay), started again,
+# seeded for the background scenario, then every row of
+# scripts/chaos/matrix.yaml in turn under that background. About two
+# hours; 3 GB of memory for the stack. CHAOS_ROWS=id,id runs some rows.
+# The stack is removed at the end, pass or fail, and the run's exit
+# status is kept; CHAOS_KEEP=1 leaves it up for inspection (make
+# demo-down removes it). If demo-up or the seed fails, make stops there
+# and the stack stays up: make demo-down.
+CHAOS_ROWS ?=
+CHAOS_OUT  ?=
+CHAOS_KEEP ?=
+# Console sessions end after 30 minutes idle and the run is longer: the
+# harness refreshes them every 15 minutes with this command.
+CHAOS_SESSIONS ?= deploy/local-demo/bin/demo-seed --steps sessions --geoid deploy/local-demo/ground/egm2008-2_5.pgm scripts/chaos/background.yaml
+chaos:
+	deploy/demo-down.sh
+	deploy/demo-up.sh
+	GO=$(GO) scripts/chaos/prepare.sh --fresh
+	@rc=0; $(GO) run ./scripts/chaos run --rows '$(CHAOS_ROWS)' --sessions-cmd '$(CHAOS_SESSIONS)' $(if $(CHAOS_OUT),--out $(CHAOS_OUT)) || rc=$$?; \
+	if [ "$(CHAOS_KEEP)" != 1 ]; then deploy/demo-down.sh || { [ $$rc -ne 0 ] || rc=1; }; fi; \
+	exit $$rc
+
+# The matrix and the background scenario validated (offline).
+chaos-check:
+	$(GO) run ./scripts/chaos check
+	$(GO) run ./cmd/scenario check scripts/chaos/background.yaml
+
+# The harness's and the scripts' own tests, both ways (offline; bash).
+chaos-test:
+	$(GO) test -count=1 -shuffle=on ./scripts/chaos/
+
 # --- WP-L8 load test (load/, cmd/loadgen, internal/load) -----------------------
 .PHONY: load load-check
 
