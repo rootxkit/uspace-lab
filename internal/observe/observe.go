@@ -64,6 +64,17 @@ type Recorder struct {
 	// stream named it, so a peer track id resolves.
 	flights map[string]string
 	serials map[string]string
+	// onAdd, when set, sees every event as it is recorded, outside the
+	// lock (scripts/chaos watches the background run's alerts live).
+	onAdd func(Event)
+}
+
+// OnAdd sets a function that sees every event as it is recorded. Set it
+// before the recorder runs; it must not block.
+func (r *Recorder) OnAdd(f func(Event)) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.onAdd = f
 }
 
 // NewRecorder makes a recorder that resolves serials to aircraft names.
@@ -74,8 +85,12 @@ func NewRecorder(serials map[string]string) *Recorder {
 // Add records an event.
 func (r *Recorder) Add(e Event) {
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	r.events = append(r.events, e)
+	f := r.onAdd
+	r.mu.Unlock()
+	if f != nil {
+		f(e)
+	}
 }
 
 func (r *Recorder) frame(stream, schema string) {

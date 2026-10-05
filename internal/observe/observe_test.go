@@ -157,3 +157,30 @@ func TestOnOpenIsSentOnConnect(t *testing.T) {
 		cancel()
 	}
 }
+
+func TestOnAddSeesEveryRecordedEventAndNothingElse(t *testing.T) {
+	r := NewRecorder(nil)
+	var seen []Event
+	r.OnAdd(func(e Event) { seen = append(seen, e) })
+	s := Stream{Name: "ussp-alerts-a", System: "ussp", Aircraft: "a"}
+	st := NewStreamState()
+	now := time.Now()
+	r.Handle(s, st, frame(t, wire.SchemaAlert, alertBody("raised", nil)), now)
+	// An update is a frame, not an event: the hook must not see it.
+	r.Handle(s, st, frame(t, wire.SchemaAlert, alertBody("updated", nil)), now)
+	r.Handle(s, st, frame(t, wire.SchemaAlert, alertBody("cleared", "resolved")), now)
+	if len(seen) != 2 || seen[0].Phase != PhaseRaised || seen[1].Phase != PhaseCleared {
+		t.Fatalf("hook saw %+v", seen)
+	}
+	if got := r.Events(); len(got) != len(seen) {
+		t.Fatalf("recorded %d events, hook saw %d", len(got), len(seen))
+	}
+}
+
+func TestWithoutOnAddRecordingIsUnchanged(t *testing.T) {
+	r := NewRecorder(nil)
+	r.Handle(Stream{Name: "x", System: "ussp"}, NewStreamState(), frame(t, wire.SchemaAlert, alertBody("raised", nil)), time.Now())
+	if ev := r.Events(); len(ev) != 1 {
+		t.Fatalf("%+v", ev)
+	}
+}
