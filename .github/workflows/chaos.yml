@@ -1,0 +1,91 @@
+name: chaos
+
+# WP-L9 (docs/RUNBOOKS/chaos.md). The matrix itself needs the four
+# systems' stack and runs on a laptop or the droplet (make chaos, about
+# two hours); CI proves the harness: the matrix and the background
+# scenario validate, the harness's tests and the scripts' tests (with a
+# fake docker) pass both ways, the scripts are shellcheck-clean, and the
+# fault checks tell a real fault from its absence against real docker,
+# on the WP-L2 stack (make dss-up): a stop, a pause and a partition each
+# seen before, during and after (LESSONS E-01, E-02).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/chaos/**"
+      - "internal/observe/**"
+      - "internal/runner/**"
+      - "deploy/compose.yaml"
+      - "deploy/dss-up.sh"
+      - "deploy/dss-down.sh"
+      - "Makefile"
+      - ".github/workflows/chaos.yml"
+  pull_request:
+    paths:
+      - "scripts/chaos/**"
+      - "internal/observe/**"
+      - "internal/runner/**"
+      - "deploy/compose.yaml"
+      - "deploy/dss-up.sh"
+      - "deploy/dss-down.sh"
+      - "Makefile"
+      - ".github/workflows/chaos.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chaos-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GOFLAGS: -mod=mod
+  GOTOOLCHAIN: local
+
+defaults:
+  run:
+    shell: bash -eo pipefail {0}
+
+jobs:
+  harness:
+    name: matrix, harness and script tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: the matrix and the background scenario validate
+        run: make chaos-check
+      - name: shellcheck the domain scripts
+        run: shellcheck --version && shellcheck -x -P scripts/chaos scripts/chaos/*.sh scripts/chaos/testdata/docker
+      - name: go test -race (harness, scripts against the fake docker)
+        run: go test -race -count=1 -shuffle=on ./scripts/chaos/ ./internal/observe/
+
+  docker:
+    name: fault checks against real docker (make dss-up)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: make dss-up (start, wait, prove)
+        run: make dss-up
+      - name: stop, pause and partition seen before, during and after
+        env:
+          CHAOS_PROJECT: uspace-lab
+        run: go test -tags chaosdocker -count=1 -v -run Docker ./scripts/chaos/
+      - name: make dss-up proves the stack again after the faults
+        run: make dss-up
+      - name: DSS and issuer logs on failure
+        if: failure()
+        run: docker compose -p uspace-lab -f deploy/compose.yaml --env-file deploy/.env --profile dss --profile issuer logs --no-color --tail 200
+      - name: make dss-down (and check nothing is left)
+        if: always()
+        run: make dss-down

@@ -1,0 +1,106 @@
+format: scenario/v1
+id: chaos-background
+title: "WP-L9 background: one standing zone alert through every fault"
+source: "docs/WORKPACKAGES/WP-L9.md (make chaos); knowledge/scenarios.md SC-03, SC-14, SC-18"
+owners: [authority, ussp]
+policy: ../../scenarios/policy/demo.yaml
+systems: [ussp, authority]
+reference: false
+country: GEO
+note: >-
+  The traffic make chaos runs under the faults (scripts/chaos/README.md).
+  One aircraft, streamed to the USSP and heard by a receiver of the
+  authority, flies into a 120 m CONDITIONAL zone 300 m north of home and
+  holds there while the faults run, then leaves it to the
+  north and lands. Each system must raise one zone_incursion, keep it
+  through every fault and restart (a second raise is a duplicate, a
+  false alert to the verdict), and clear it once after the exit. The
+  hold below is a placeholder: scripts/chaos writes a copy whose hold
+  and duration cover the selected rows of its matrix, and runs that
+  copy. Zone, receiver and aircraft are SC-03's arrangement, except the
+  zone type: the USSP holds an intent that overlaps a REQ_AUTHORIZATION
+  zone at pending_authority (seen by WP-L9), so the operator could not
+  fly; a CONDITIONAL zone authorises the intent with the zone's
+  condition and is still an incursion to both systems. The zone's lower
+  limit is 0 m AMSL so it holds from the ground up without terrain.
+duration_s: 300
+tail_s: 8
+aircraft:
+  - name: a
+    sysid: 1
+    serial: LABX9CHAX00001
+    operator_reg: GEOLAB000001
+    operator_id: GEOLAB000001
+    operator:
+      system: ussp
+      intent:
+        center: {north_m: 200, east_m: 0}
+        radius_m: 1000
+        alt_lower_rel_m: -20
+        alt_upper_rel_m: 120
+        starts_before_s: 60
+        lasts_s: 21600
+        category: open
+        subcategory: A2
+        class_label: C2
+    receivers: [lab-rx-1]
+receivers:
+  - id: lab-rx-1
+    system: authority
+    at: {north_m: 150, east_m: 40}
+    transport: pack
+    hae: geoid
+    rssi_dbm: -55
+zones:
+  - id: CHAOSZ
+    type: CONDITIONAL
+    square: {center: {north_m: 300, east_m: 0}, side_m: 120}
+    lower: {m: 0, ref: AMSL}
+    upper: {m: 1500, ref: AMSL}
+steps:
+  - id: climb
+    at_s: 0
+    aircraft: [a]
+    do: takeoff
+    alt_rel_m: 30
+  # Into the zone (240 m to 360 m north) at 10 m/s.
+  - id: in
+    aircraft: [a]
+    do: goto
+    to: {north_m: 300, east_m: 0}
+    speed_ms: 10
+  # The faults run during this hold (scripts/chaos sets for_s).
+  - id: inside
+    aircraft: [a]
+    do: hold
+    for_s: 120
+  # Out of the zone to the north, and down there.
+  - id: out
+    aircraft: [a]
+    do: goto
+    to: {north_m: 450, east_m: 0}
+    speed_ms: 10
+  - id: beyond
+    aircraft: [a]
+    do: hold
+    for_s: 8
+  - id: down
+    aircraft: [a]
+    do: land
+expect:
+  - name: ussp-incursion
+    system: ussp
+    kind: zone_incursion
+    aircraft: a
+    subject: CHAOSZ
+    raise: {after: in.start, min_s: 10, max_s: 45}
+    clear: {after: out.start, min_s: 2, max_s: 40, reason: resolved}
+  - name: authority-incursion
+    system: authority
+    kind: zone_incursion
+    aircraft: a
+    subject: CHAOSZ
+    raise: {after: in.start, min_s: 10, max_s: 45}
+    clear: {after: out.start, min_s: 2, max_s: 40, reason: resolved}
+judged_kinds: ["ussp:zone_incursion", "authority:zone_incursion"]
+measure: [latency, ledger]
