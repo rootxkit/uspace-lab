@@ -56,6 +56,10 @@ type Tier struct {
 		// PollMS is how often each operator client looks for a new
 		// sample: the bound on the client's own share of the latency.
 		PollMS int `yaml:"poll_ms" json:"poll_ms"`
+		// RampPerS is how many operator clients connect per second at
+		// the start (a fleet dialling at once is a connection storm,
+		// not the steady load the tier measures).
+		RampPerS float64 `yaml:"ramp_per_s" json:"ramp_per_s"`
 		// Intents: "all" files one intent per aircraft at the start,
 		// "watched" only for the aircraft whose traffic is read.
 		Intents string `yaml:"intents" json:"intents"`
@@ -325,6 +329,8 @@ func (t *Tier) validate() error {
 		return fmt.Errorf("operators.telemetry_hz_status %q is not one of %v", t.Operators.TelemetryStatus, statuses)
 	case t.Operators.PollMS < 1 || t.Operators.PollMS > 1000:
 		return fmt.Errorf("operators.poll_ms %d is not in [1, 1000]", t.Operators.PollMS)
+	case t.Operators.RampPerS < 10 || t.Operators.RampPerS > 10000:
+		return fmt.Errorf("operators.ramp_per_s %v is not in [10, 10000]", t.Operators.RampPerS)
 	case t.Operators.Intents != "all" && t.Operators.Intents != "watched":
 		return fmt.Errorf("operators.intents is all or watched")
 	case t.Receivers.HeardFraction < 0 || t.Receivers.HeardFraction > 1:

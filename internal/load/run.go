@@ -55,7 +55,7 @@ type Options struct {
 	HeapProfile string
 	Log         *slog.Logger
 	// ReadyTimeout bounds the wait for every client and stream to come
-	// up before the generator starts (0: 60 s).
+	// up before the generator starts (0: a minute plus the tier's ramp).
 	ReadyTimeout time.Duration
 }
 
@@ -105,8 +105,10 @@ func Run(ctx context.Context, opt Options) (*Report, error) {
 	if opt.Log == nil {
 		opt.Log = slog.New(slog.DiscardHandler)
 	}
-	if opt.ReadyTimeout <= 0 {
-		opt.ReadyTimeout = 60 * time.Second
+	if opt.ReadyTimeout <= 0 && opt.Files != nil && opt.Files.Tier.Operators.RampPerS > 0 {
+		// A minute, plus the ramp.
+		ramp := float64(opt.Files.Tier.Operators.Aircraft) / opt.Files.Tier.Operators.RampPerS
+		opt.ReadyTimeout = time.Minute + time.Duration(ramp*float64(time.Second))
 	}
 	tg, lab, geo, geoDesc, err := Prepare(&opt)
 	if err != nil {
@@ -199,23 +201,33 @@ func (r *run) execute(ctx context.Context, rep *Report) {
 	defer cancel()
 	if err := r.startReference(ctx, &wg); err != nil {
 		r.fail("reference target: %v", err)
-		r.finish(rep, 0)
+		r.finish(rep)
 		return
 	}
 	r.fileIntents(ctx)
 	simCtx, simCancel := context.WithCancel(ctx)
 	defer simCancel()
-	if err := r.startClients(simCtx, &wg); err != nil {
-		r.fail("clients: %v", err)
-		r.finish(rep, 0)
-		return
-	}
+	// The consoles first, then the clients at the tier's ramp: five
+	// thousand sockets dialled at once were refused by the listener and
+	// took a console down with them (the first 5000 attempt).
 	obsCtx, obsCancel := context.WithCancel(ctx)
 	defer obsCancel()
+	deadline := time.NewTimer(r.opt.ReadyTimeout)
+	defer deadline.Stop()
 	r.startStreams(obsCtx, &wg)
-	if err := r.waitReady(ctx); err != nil {
+	if err := r.waitStreams(ctx, deadline.C); err != nil {
 		r.fail("not ready: %v", err)
-		r.finish(rep, 0)
+		r.finish(rep)
+		return
+	}
+	if err := r.startClients(simCtx, &wg); err != nil {
+		r.fail("clients: %v", err)
+		r.finish(rep)
+		return
+	}
+	if err := r.waitOperators(ctx, deadline.C); err != nil {
+		r.fail("not ready: %v", err)
+		r.finish(rep)
 		return
 	}
 	memCtx, memCancel := context.WithCancel(ctx)
@@ -240,8 +252,7 @@ func (r *run) execute(ctx context.Context, rep *Report) {
 	obsCancel()
 }
 
-func (r *run) finish(rep *Report, genS float64) {
-	rep.GeneratorS = genS
+func (r *run) finish(rep *Report) {
 	rep.Errors = append(rep.Errors, r.errs...)
 	rep.Metrics = map[string]Observation{}
 	for name, d := range Metrics {
@@ -391,7 +402,18 @@ func (r *run) fileIntents(ctx context.Context) {
 func (r *run) startClients(ctx context.Context, wg *sync.WaitGroup) error {
 	t := r.tier
 	poll := time.Duration(t.Operators.PollMS) * time.Millisecond
-	for _, a := range r.fleet.Aircraft {
+	// Start the clients at ramp_per_s, in tenths of a second.
+	perTick := max(1, int(t.Operators.RampPerS/10))
+	tk := time.NewTicker(100 * time.Millisecond)
+	defer tk.Stop()
+	for i, a := range r.fleet.Aircraft {
+		if i > 0 && i%perTick == 0 {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-tk.C:
+			}
+		}
 		c, err := simop.New(simop.Config{BaseURL: r.base, Tokens: r.tokens[a.Client], Serial: a.Serial, Transport: simop.TransportWS,
 			Period: poll, Geoid: r.geo, IntentID: r.intents[a.Index], Seed: uint64(a.Index) + 1, Epoch: "load-" + r.opt.Run})
 		if err != nil {
@@ -470,20 +492,24 @@ func (r *run) startStreams(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
-// waitReady waits until every operator client has had a status from its
-// socket and every stream its first status (and snapshot), bounded.
-func (r *run) waitReady(ctx context.Context) error {
-	deadline := time.NewTimer(r.opt.ReadyTimeout)
-	defer deadline.Stop()
+// waitStreams waits until every stream has had its first status (and
+// snapshot), bounded by deadline.
+func (r *run) waitStreams(ctx context.Context, deadline <-chan time.Time) error {
 	for _, s := range r.streams {
 		select {
 		case <-s.ready:
-		case <-deadline.C:
+		case <-deadline:
 			return fmt.Errorf("stream %s did not open within %s: %s", s.name, r.opt.ReadyTimeout, s.stats().LastError)
 		case <-ctx.Done():
 			return ctx.Err()
 		}
 	}
+	return nil
+}
+
+// waitOperators waits until every operator client has had a status
+// from its socket, bounded by deadline.
+func (r *run) waitOperators(ctx context.Context, deadline <-chan time.Time) error {
 	tk := time.NewTicker(20 * time.Millisecond)
 	defer tk.Stop()
 	for i := 0; i < len(r.operators); {
@@ -493,7 +519,7 @@ func (r *run) waitReady(ctx context.Context) error {
 		}
 		select {
 		case <-tk.C:
-		case <-deadline.C:
+		case <-deadline:
 			return fmt.Errorf("operator client %s did not connect within %s: %s", r.fleet.Aircraft[i].Name, r.opt.ReadyTimeout, r.operators[i].LastError())
 		case <-ctx.Done():
 			return ctx.Err()

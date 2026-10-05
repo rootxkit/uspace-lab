@@ -12,6 +12,7 @@ operators:
   telemetry_hz: 1
   telemetry_hz_status: pending GCAA # Art. 8(3) determination; 05 §1
   poll_ms: 50
+  ramp_per_s: 250 # clients connecting per second at the start
   intents: all
 receivers:
   heard_fraction: 0.4 # 05 §1: ~40 % heard by at least one receiver

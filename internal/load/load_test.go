@@ -25,7 +25,7 @@ title: test
 column: 100
 duration_s: 16
 drain_s: 10
-operators: {aircraft: 6, clients: 2, telemetry_hz: 1, telemetry_hz_status: pending GCAA, poll_ms: 20, intents: all}
+operators: {aircraft: 6, clients: 2, telemetry_hz: 1, telemetry_hz_status: pending GCAA, poll_ms: 20, ramp_per_s: 100, intents: all}
 receivers: {heard_fraction: 0.5, aircraft_per_receiver: 2, transports: [pack, single], batch_ms: 50}
 consoles: 1
 watch: {pairs: 1, walkers: 1}

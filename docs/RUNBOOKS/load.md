@@ -94,6 +94,12 @@ make load TIER=5000 LOAD_FLAGS='--host "<name, size>" --duration-s 600'
 make load-check                                      # every tier file
 ```
 
+A run opens the consoles and the traffic streams first, then connects
+the operator clients at the tier's `ramp_per_s` (250 a second: 20 s for
+5000), then starts the generator; five thousand sockets dialled at once
+were refused by the listener and took a console with them. The ramp is
+not part of the measured period.
+
 `--host` names the machine and its size (L-Q1: numbers are comparable
 only on a named host). `--duration-s` shortens a tier; the report then
 lists the override as a scale factor. `--run` names the run; a run never
