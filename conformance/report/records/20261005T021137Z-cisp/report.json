@@ -1,0 +1,1309 @@
+{
+  "format": "conformance-report/v1",
+  "run": "20261005T021137Z-cisp",
+  "wording": "Proposed format (docs/PLAN.md §7.1 L-Q12, pending GCAA): this report states what the suite observed; it certifies nothing.",
+  "target": {
+    "system": "cisp",
+    "name": "cisp",
+    "role": "own",
+    "base_url": "http://127.0.0.1:5628"
+  },
+  "started_at": "2026-10-05T02:11:37.6536849Z",
+  "ended_at": "2026-10-05T02:11:37.8267243Z",
+  "commits": {
+    "lab": "62809d31bc19dd365e10d987eaecb6f57d86bdb6",
+    "lab_dirty": false,
+    "core": "v1.3.0",
+    "go": "go1.27.1"
+  },
+  "images": {
+    "cisp": "unrecorded"
+  },
+  "interuss": {
+    "repo": "https://github.com/interuss/monitoring.git",
+    "tag": "interuss/monitoring/v0.36.0",
+    "commit": "0fabe238ef177f66266eba6048545ae1e6bbb4a0",
+    "image": "docker.io/interuss/monitoring:v0.36.0",
+    "image_digest": "sha256:a771c82cda62b83be707e650ddd2550bbabf6790120c4a57f76153a8f5504bb7"
+  },
+  "contract": {
+    "file": "C:/Users/LBEROZASHVILI/Desktop/projects/uspace/lab-wt/cisp-c1/api/openapi.yaml",
+    "sha256": "sha256:3f69439b8580ff5c731623623491f6fc21688b4ad14c696cdf9f2ff0043fc6bb",
+    "title": "uspace-cisp national CIS publication API",
+    "version": "1.0.0"
+  },
+  "policy": {
+    "format": "conformance-policy/v1",
+    "policy_version": 1,
+    "informative": {
+      "status": "pending GCAA (L-Q3, L-Q10)",
+      "requirements": [
+        "F3411-DP",
+        "A11Y-PUBLIC"
+      ]
+    },
+    "report_signature": {
+      "status": "pending GCAA (L-Q12)",
+      "alg": "RS256",
+      "form": "RFC 7797 detached JWS over the report file's bytes"
+    },
+    "accessibility": {
+      "status": "pending GCAA (L-Q10)",
+      "standard": "WCAG 2.2 AA",
+      "axe_tags": [
+        "wcag2a",
+        "wcag2aa",
+        "wcag21a",
+        "wcag21aa",
+        "wcag22aa"
+      ]
+    },
+    "cisp": {
+      "status": "pending GCAA (spec 09 §2: 1 s CIS change notification target, 300 s stale bound)",
+      "change_notification_s": 1,
+      "heartbeat_interval_s": 15,
+      "stale_tolerance_s": 2
+    },
+    "personal_data_fields": {
+      "status": "pending GCAA DPO (spec Q8)",
+      "names": [
+        "name",
+        "given_name",
+        "family_name",
+        "full_name",
+        "first_name",
+        "last_name",
+        "email",
+        "e_mail",
+        "phone",
+        "telephone",
+        "address",
+        "street",
+        "postal_code",
+        "date_of_birth",
+        "birth_date",
+        "dob",
+        "national_id",
+        "personal_number",
+        "id_number",
+        "passport",
+        "passport_number"
+      ]
+    },
+    "ed318_fixture": {
+      "centre_lat_deg": 41.7151,
+      "centre_lon_deg": 44.8271,
+      "half_side_m": 300,
+      "upper_agl_m": 120,
+      "upper_amsl_ft": 2500
+    }
+  },
+  "summary": {
+    "pass": 11,
+    "fail": 0,
+    "not_applicable": 3,
+    "verdict": "incomplete"
+  },
+  "requirements": [
+    {
+      "id": "NAT-UNAUTH",
+      "title": "Every operation that takes a credential refuses a request without one with 401 and a problem/v1 body",
+      "source": "spec 02 §1 (error body, M28), 06 §3; decision record M18",
+      "role": "gate",
+      "status": "pass",
+      "outcomes": {
+        "pass": 21,
+        "fail": 0,
+        "not_applicable": 16
+      }
+    },
+    {
+      "id": "NAT-SCOPE",
+      "title": "A valid token without the operation's scope is refused with 403 and a problem/v1 body",
+      "source": "spec 06 §3 (scope catalogue, M23), 02 §1",
+      "role": "gate",
+      "status": "pass",
+      "outcomes": {
+        "pass": 4,
+        "fail": 0,
+        "not_applicable": 17
+      }
+    },
+    {
+      "id": "NAT-NOTFOUND",
+      "title": "An unknown identifier is answered 404 with a problem/v1 body where the contract declares 404",
+      "source": "spec 02 §1",
+      "role": "gate",
+      "status": "pass",
+      "outcomes": {
+        "pass": 5,
+        "fail": 0,
+        "not_applicable": 9
+      }
+    },
+    {
+      "id": "NAT-PRECONDITION",
+      "title": "A stale If-Match is refused with the 409 or 412 the contract declares, and nothing changes",
+      "source": "spec 02 §1 (Retries and conflicts: a 409 is permanent), 02 F1",
+      "role": "gate",
+      "status": "not_applicable",
+      "reasons": [
+        "the contract gives no valid example body to send with the stale If-Match"
+      ],
+      "outcomes": {
+        "pass": 0,
+        "fail": 0,
+        "not_applicable": 1
+      }
+    },
+    {
+      "id": "NAT-INVALID",
+      "title": "An invalid body is refused with the 400 or 422 the contract declares, with a problem/v1 body naming the fields in errors[]",
+      "source": "spec 02 §1 (error body, M28), 06 T9",
+      "role": "gate",
+      "status": "pass",
+      "outcomes": {
+        "pass": 2,
+        "fail": 0,
+        "not_applicable": 12
+      }
+    },
+    {
+      "id": "NAT-SUCCESS",
+      "title": "The success case answers a declared 2xx whose body matches the published OpenAPI contract",
+      "source": "spec 00 §7 (national API publication), 02 §1",
+      "role": "gate",
+      "status": "pass",
+      "outcomes": {
+        "pass": 11,
+        "fail": 0,
+        "not_applicable": 15
+      }
+    },
+    {
+      "id": "ED318-SCHEMA",
+      "title": "Published datasets match the contract and are read whole by uspace-core's ED-318 reader",
+      "source": "spec 09 §1.6 (ED-318 UASZone), 02 F1, F3",
+      "role": "gate",
+      "status": "pass",
+      "outcomes": {
+        "pass": 2,
+        "fail": 0,
+        "not_applicable": 2
+      }
+    },
+    {
+      "id": "ED318-VERTICAL",
+      "title": "Every vertical limit names an ED-318 reference (AGL, AMSL, WGS84) in m or ft",
+      "source": "spec 09 §1.6 (CodeVerticalReferenceType, UomDistance), 02 F1",
+      "role": "gate",
+      "status": "pass",
+      "outcomes": {
+        "pass": 1,
+        "fail": 0,
+        "not_applicable": 0
+      }
+    },
+    {
+      "id": "ED318-APPLICABILITY",
+      "title": "?at= keeps what applies (and what cannot be evaluated, marked unknown); ?applies_at= annotates every feature; malformed filters are 400",
+      "source": "spec 09 §1.6 (TimePeriod, DailyPeriod), 02 F3; uspace-core ed318.Applies",
+      "role": "gate",
+      "status": "pass",
+      "outcomes": {
+        "pass": 4,
+        "fail": 0,
+        "not_applicable": 2
+      }
+    },
+    {
+      "id": "ED318-VERSIONING",
+      "title": "Versions and ETags, If-None-Match 304, signed snapshots, 428 without and 412 on a stale If-Match, a refused publication leaves the version unchanged",
+      "source": "spec 02 F1, F3, 06 T9; spec 09 §1.6 (Metadata)",
+      "role": "gate",
+      "status": "pass",
+      "outcomes": {
+        "pass": 8,
+        "fail": 0,
+        "not_applicable": 0
+      }
+    },
+    {
+      "id": "ED318-CHANGES",
+      "title": "A publication appears in /v1/changes as a cis/change/v1 record",
+      "source": "spec 02 F3 (pull and change feed)",
+      "role": "gate",
+      "status": "pass",
+      "outcomes": {
+        "pass": 1,
+        "fail": 0,
+        "not_applicable": 0
+      }
+    },
+    {
+      "id": "ED318-WEBHOOK",
+      "title": "A subscriber receives the change as a compact JWS it can verify, within the change-notification target",
+      "source": "spec 02 F3, decision record M19; spec 09 §2 (1 s target, national choice)",
+      "role": "gate",
+      "status": "not_applicable",
+      "reasons": [
+        "the target file names no webhook receiver the CISP can reach (ed318.webhook_listen, webhook_url)"
+      ],
+      "outcomes": {
+        "pass": 0,
+        "fail": 0,
+        "not_applicable": 1
+      }
+    },
+    {
+      "id": "ED318-HEARTBEAT",
+      "title": "A publisher heartbeat is recorded and the status document applies the stale rule",
+      "source": "spec 02 F3 (15 s heartbeat), 09 §2 (stale bound)",
+      "role": "gate",
+      "status": "pass",
+      "outcomes": {
+        "pass": 2,
+        "fail": 0,
+        "not_applicable": 0
+      }
+    },
+    {
+      "id": "A11Y-PUBLIC",
+      "title": "The public pages the suite loads pass axe at the policy's accessibility bar",
+      "source": "docs/PLAN.md §7.1 L-Q10 (WCAG 2.2 AA assumed)",
+      "role": "informative",
+      "status": "not_applicable",
+      "reasons": [
+        "the target file names no public page"
+      ],
+      "outcomes": {
+        "pass": 0,
+        "fail": 0,
+        "not_applicable": 1
+      }
+    }
+  ],
+  "outcomes": [
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getJWKS GET /.well-known/jwks.json",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "schema-valid application/json"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getHealthz GET /healthz",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "schema-valid application/json"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "getPublicDataset GET /public/v1/{dataset}",
+      "status": "not_applicable",
+      "reason": "no path parameter can name an unknown resource (enumerations only)"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getPublicDataset GET /public/v1/{dataset}",
+      "status": "not_applicable",
+      "reason": "nothing at the path parameter values the contract enumerates (404 https://schemas.uspace.ge/problems/no_version)"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "headPublicDataset HEAD /public/v1/{dataset}",
+      "status": "not_applicable",
+      "reason": "no path parameter can name an unknown resource (enumerations only)"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getReadyz GET /readyz",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "schema-valid application/json"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "listChanges GET /v1/changes",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "listChanges GET /v1/changes",
+      "status": "not_applicable",
+      "reason": "the target file supplies no ecosystem token without cis.read"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "listChanges GET /v1/changes",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "schema-valid application/json"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "listConsoleAccounts GET /v1/console/accounts",
+      "status": "not_applicable",
+      "reason": "the operation is unavailable on this target (503 https://schemas.uspace.ge/problems/console_unavailable): its unauthenticated refusal was not observed"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "listConsoleAccounts GET /v1/console/accounts",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "createConsoleAccount POST /v1/console/accounts",
+      "status": "not_applicable",
+      "reason": "the operation is unavailable on this target (503 https://schemas.uspace.ge/problems/console_unavailable): its unauthenticated refusal was not observed"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "createConsoleAccount POST /v1/console/accounts",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "patchConsoleAccount PATCH /v1/console/accounts/{id}",
+      "status": "not_applicable",
+      "reason": "the operation is unavailable on this target (503 https://schemas.uspace.ge/problems/console_unavailable): its unauthenticated refusal was not observed"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "patchConsoleAccount PATCH /v1/console/accounts/{id}",
+      "status": "not_applicable",
+      "reason": "the target file names no existing id"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "listConsoleAudit GET /v1/console/audit",
+      "status": "not_applicable",
+      "reason": "the operation is unavailable on this target (503 https://schemas.uspace.ge/problems/console_unavailable): its unauthenticated refusal was not observed"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "listConsoleAudit GET /v1/console/audit",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "getConsoleMe GET /v1/console/me",
+      "status": "not_applicable",
+      "reason": "the operation is unavailable on this target (503 https://schemas.uspace.ge/problems/console_unavailable): its unauthenticated refusal was not observed"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getConsoleMe GET /v1/console/me",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "listConsolePublications GET /v1/console/publications",
+      "status": "not_applicable",
+      "reason": "the operation is unavailable on this target (503 https://schemas.uspace.ge/problems/console_unavailable): its unauthenticated refusal was not observed"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "listConsolePublications GET /v1/console/publications",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "getConsolePublicationDiff GET /v1/console/publications/{id}/diff",
+      "status": "not_applicable",
+      "reason": "the operation is unavailable on this target (503 https://schemas.uspace.ge/problems/console_unavailable): its unauthenticated refusal was not observed"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "getConsolePublicationDiff GET /v1/console/publications/{id}/diff",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getConsolePublicationDiff GET /v1/console/publications/{id}/diff",
+      "status": "not_applicable",
+      "reason": "the target file names no existing id"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "republishConsolePublication POST /v1/console/publications/{id}/republish",
+      "status": "not_applicable",
+      "reason": "the operation is unavailable on this target (503 https://schemas.uspace.ge/problems/console_unavailable): its unauthenticated refusal was not observed"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "republishConsolePublication POST /v1/console/publications/{id}/republish",
+      "status": "not_applicable",
+      "reason": "the target file names no existing id"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "listConsoleRestrictions GET /v1/console/restrictions",
+      "status": "not_applicable",
+      "reason": "the operation is unavailable on this target (503 https://schemas.uspace.ge/problems/console_unavailable): its unauthenticated refusal was not observed"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "listConsoleRestrictions GET /v1/console/restrictions",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "createConsoleSession POST /v1/console/session",
+      "status": "not_applicable",
+      "reason": "the operation is unavailable on this target (503 https://schemas.uspace.ge/problems/console_unavailable): its invalid body refusal was not observed",
+      "detail": "sent an empty object (missing username, password);"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "deleteConsoleSession DELETE /v1/console/session",
+      "status": "not_applicable",
+      "reason": "the operation is unavailable on this target (503 https://schemas.uspace.ge/problems/console_unavailable): its unauthenticated refusal was not observed"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "createConsoleSessionMfa POST /v1/console/session/mfa",
+      "status": "not_applicable",
+      "reason": "the operation is unavailable on this target (503 https://schemas.uspace.ge/problems/console_unavailable): its invalid body refusal was not observed",
+      "detail": "sent an empty object (missing mfa_token, code);"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "getConsoleStatus GET /v1/console/status",
+      "status": "not_applicable",
+      "reason": "the operation is unavailable on this target (503 https://schemas.uspace.ge/problems/console_unavailable): its unauthenticated refusal was not observed"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getConsoleStatus GET /v1/console/status",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "listConsoleSubscriptions GET /v1/console/subscriptions",
+      "status": "not_applicable",
+      "reason": "the operation is unavailable on this target (503 https://schemas.uspace.ge/problems/console_unavailable): its unauthenticated refusal was not observed"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "listConsoleSubscriptions GET /v1/console/subscriptions",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "listConsoleDeliveries GET /v1/console/subscriptions/{id}/deliveries",
+      "status": "not_applicable",
+      "reason": "the operation is unavailable on this target (503 https://schemas.uspace.ge/problems/console_unavailable): its unauthenticated refusal was not observed"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "listConsoleDeliveries GET /v1/console/subscriptions/{id}/deliveries",
+      "status": "not_applicable",
+      "reason": "the target file supplies no console or portal session"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "listConsoleDeliveries GET /v1/console/subscriptions/{id}/deliveries",
+      "status": "not_applicable",
+      "reason": "the target file names no existing id"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "retryConsoleDelivery POST /v1/console/subscriptions/{id}/deliveries/{delivery_id}/retry",
+      "status": "not_applicable",
+      "reason": "the operation is unavailable on this target (503 https://schemas.uspace.ge/problems/console_unavailable): its unauthenticated refusal was not observed"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "retryConsoleDelivery POST /v1/console/subscriptions/{id}/deliveries/{delivery_id}/retry",
+      "status": "not_applicable",
+      "reason": "the target file names no existing id"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "resumeConsoleSubscription POST /v1/console/subscriptions/{id}/resume",
+      "status": "not_applicable",
+      "reason": "the operation is unavailable on this target (503 https://schemas.uspace.ge/problems/console_unavailable): its unauthenticated refusal was not observed"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "resumeConsoleSubscription POST /v1/console/subscriptions/{id}/resume",
+      "status": "not_applicable",
+      "reason": "the target file names no existing id"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "suspendConsoleSubscription POST /v1/console/subscriptions/{id}/suspend",
+      "status": "not_applicable",
+      "reason": "the operation is unavailable on this target (503 https://schemas.uspace.ge/problems/console_unavailable): its unauthenticated refusal was not observed"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "suspendConsoleSubscription POST /v1/console/subscriptions/{id}/suspend",
+      "status": "not_applicable",
+      "reason": "the target file names no existing id"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "listPublications GET /v1/publications/{dataset}",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "listPublications GET /v1/publications/{dataset}",
+      "status": "not_applicable",
+      "reason": "the target file supplies no ecosystem token without cis.read"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "listPublications GET /v1/publications/{dataset}",
+      "status": "not_applicable",
+      "reason": "no path parameter can name an unknown resource (enumerations only)"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "listPublications GET /v1/publications/{dataset}",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "schema-valid application/json"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "putPublication PUT /v1/publications/{dataset}",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "putPublication PUT /v1/publications/{dataset}",
+      "status": "pass",
+      "http_status": 403,
+      "detail": "token scopes cis.publish:restrictions cis.read; https://schemas.uspace.ge/problems/forbidden"
+    },
+    {
+      "requirement": "NAT-PRECONDITION",
+      "check": "stale_precondition",
+      "subject": "putPublication PUT /v1/publications/{dataset}",
+      "status": "not_applicable",
+      "reason": "the contract gives no valid example body to send with the stale If-Match"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "putPublication PUT /v1/publications/{dataset}",
+      "status": "not_applicable",
+      "reason": "skipped by the overrides: the contract verifies the publisher's detached JWS before it reads the body (403 signature first); conformance/ed318 sends a signed invalid body (ED318-VERSIONING)"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "listPublicationAttempts GET /v1/publications/{dataset}/attempts",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "listPublicationAttempts GET /v1/publications/{dataset}/attempts",
+      "status": "pass",
+      "http_status": 403,
+      "detail": "token scopes cis.publish:restrictions cis.read; https://schemas.uspace.ge/problems/forbidden"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "listPublicationAttempts GET /v1/publications/{dataset}/attempts",
+      "status": "not_applicable",
+      "reason": "no path parameter can name an unknown resource (enumerations only)"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "listPublicationAttempts GET /v1/publications/{dataset}/attempts",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "schema-valid application/json"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "postPublisherHeartbeat POST /v1/publishers/heartbeat",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "postPublisherHeartbeat POST /v1/publishers/heartbeat",
+      "status": "pass",
+      "http_status": 403,
+      "detail": "token scopes cis.read; https://schemas.uspace.ge/problems/forbidden"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "postPublisherHeartbeat POST /v1/publishers/heartbeat",
+      "status": "pass",
+      "http_status": 400,
+      "detail": "sent an empty object (missing sent_at); https://schemas.uspace.ge/problems/bad_request"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "createRestriction POST /v1/restrictions",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "createRestriction POST /v1/restrictions",
+      "status": "pass",
+      "http_status": 403,
+      "detail": "token scopes cis.publish:uspace cis.publish:zones cis.read; https://schemas.uspace.ge/problems/forbidden"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "createRestriction POST /v1/restrictions",
+      "status": "not_applicable",
+      "reason": "skipped by the overrides: the contract verifies the ANSP's detached JWS before anything else is read (403 signature first); a signed invalid restriction needs the ANSP's key"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "listRestrictions GET /v1/restrictions/heads",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "listRestrictions GET /v1/restrictions/heads",
+      "status": "not_applicable",
+      "reason": "the target file supplies no ecosystem token without cis.read"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "listRestrictions GET /v1/restrictions/heads",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "schema-valid application/json"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "getRestriction GET /v1/restrictions/{id}",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "getRestriction GET /v1/restrictions/{id}",
+      "status": "not_applicable",
+      "reason": "the target file supplies no ecosystem token without cis.read"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "getRestriction GET /v1/restrictions/{id}",
+      "status": "pass",
+      "http_status": 404,
+      "detail": "id=01JZZZZZZZZZZZZZZZZZZZZZZZ; https://schemas.uspace.ge/problems/not_found"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getRestriction GET /v1/restrictions/{id}",
+      "status": "not_applicable",
+      "reason": "the target file names no existing id"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "patchRestriction PATCH /v1/restrictions/{id}",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "patchRestriction PATCH /v1/restrictions/{id}",
+      "status": "not_applicable",
+      "reason": "the contract does not state the operation's scope"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "patchRestriction PATCH /v1/restrictions/{id}",
+      "status": "not_applicable",
+      "reason": "skipped by the overrides: the signature of POST /v1/restrictions applies (403 signature before the body is read)"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "getStatus GET /v1/status",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "getStatus GET /v1/status",
+      "status": "not_applicable",
+      "reason": "the target file supplies no ecosystem token without cis.read"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getStatus GET /v1/status",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "schema-valid application/json"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getStream GET /v1/stream",
+      "status": "pass",
+      "http_status": 101,
+      "detail": "WebSocket handshake accepted"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "listSubscriptions GET /v1/subscriptions",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "listSubscriptions GET /v1/subscriptions",
+      "status": "not_applicable",
+      "reason": "the target file supplies no ecosystem token without cis.read"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "listSubscriptions GET /v1/subscriptions",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "schema-valid application/json"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "createSubscription POST /v1/subscriptions",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "createSubscription POST /v1/subscriptions",
+      "status": "not_applicable",
+      "reason": "the contract does not state the operation's scope"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "createSubscription POST /v1/subscriptions",
+      "status": "pass",
+      "http_status": 400,
+      "detail": "sent an empty object (missing callback_url, datasets); https://schemas.uspace.ge/problems/subscription_refused"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "getSubscription GET /v1/subscriptions/{id}",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "getSubscription GET /v1/subscriptions/{id}",
+      "status": "not_applicable",
+      "reason": "the contract does not state the operation's scope"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "getSubscription GET /v1/subscriptions/{id}",
+      "status": "pass",
+      "http_status": 404,
+      "detail": "id=01JZZZZZZZZZZZZZZZZZZZZZZZ; https://schemas.uspace.ge/problems/not_found"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getSubscription GET /v1/subscriptions/{id}",
+      "status": "not_applicable",
+      "reason": "the target file names no existing id"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "patchSubscription PATCH /v1/subscriptions/{id}",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "patchSubscription PATCH /v1/subscriptions/{id}",
+      "status": "not_applicable",
+      "reason": "the contract does not state the operation's scope"
+    },
+    {
+      "requirement": "NAT-INVALID",
+      "check": "invalid_body",
+      "subject": "patchSubscription PATCH /v1/subscriptions/{id}",
+      "status": "not_applicable",
+      "reason": "the target file names no existing id"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "deleteSubscription DELETE /v1/subscriptions/{id}",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "deleteSubscription DELETE /v1/subscriptions/{id}",
+      "status": "not_applicable",
+      "reason": "the contract does not state the operation's scope"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "deleteSubscription DELETE /v1/subscriptions/{id}",
+      "status": "pass",
+      "http_status": 404,
+      "detail": "id=01JZZZZZZZZZZZZZZZZZZZZZZZ; https://schemas.uspace.ge/problems/not_found"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "listDeliveries GET /v1/subscriptions/{id}/deliveries",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "listDeliveries GET /v1/subscriptions/{id}/deliveries",
+      "status": "not_applicable",
+      "reason": "the contract does not state the operation's scope"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "listDeliveries GET /v1/subscriptions/{id}/deliveries",
+      "status": "pass",
+      "http_status": 404,
+      "detail": "id=01JZZZZZZZZZZZZZZZZZZZZZZZ; https://schemas.uspace.ge/problems/not_found"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "listDeliveries GET /v1/subscriptions/{id}/deliveries",
+      "status": "not_applicable",
+      "reason": "the target file names no existing id"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "retryDelivery POST /v1/subscriptions/{id}/deliveries/{delivery_id}/retry",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "retryDelivery POST /v1/subscriptions/{id}/deliveries/{delivery_id}/retry",
+      "status": "not_applicable",
+      "reason": "the contract does not state the operation's scope"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "getDataset GET /v1/{dataset}",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "getDataset GET /v1/{dataset}",
+      "status": "not_applicable",
+      "reason": "the target file supplies no ecosystem token without cis.read"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "getDataset GET /v1/{dataset}",
+      "status": "not_applicable",
+      "reason": "no path parameter can name an unknown resource (enumerations only)"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getDataset GET /v1/{dataset}",
+      "status": "not_applicable",
+      "reason": "nothing at the path parameter values the contract enumerates (404 https://schemas.uspace.ge/problems/no_version)"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "headDataset HEAD /v1/{dataset}",
+      "status": "pass",
+      "http_status": 401
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "headDataset HEAD /v1/{dataset}",
+      "status": "not_applicable",
+      "reason": "the target file supplies no ecosystem token without cis.read"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "headDataset HEAD /v1/{dataset}",
+      "status": "not_applicable",
+      "reason": "no path parameter can name an unknown resource (enumerations only)"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "listDatasetVersions GET /v1/{dataset}/versions",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "listDatasetVersions GET /v1/{dataset}/versions",
+      "status": "not_applicable",
+      "reason": "the target file supplies no ecosystem token without cis.read"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "listDatasetVersions GET /v1/{dataset}/versions",
+      "status": "not_applicable",
+      "reason": "no path parameter can name an unknown resource (enumerations only)"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "listDatasetVersions GET /v1/{dataset}/versions",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "schema-valid application/json"
+    },
+    {
+      "requirement": "NAT-UNAUTH",
+      "check": "unauthenticated",
+      "subject": "getDatasetVersion GET /v1/{dataset}/versions/{version}",
+      "status": "pass",
+      "http_status": 401,
+      "detail": "https://schemas.uspace.ge/problems/unauthenticated"
+    },
+    {
+      "requirement": "NAT-SCOPE",
+      "check": "wrong_scope",
+      "subject": "getDatasetVersion GET /v1/{dataset}/versions/{version}",
+      "status": "not_applicable",
+      "reason": "the target file supplies no ecosystem token without cis.read"
+    },
+    {
+      "requirement": "NAT-NOTFOUND",
+      "check": "not_found",
+      "subject": "getDatasetVersion GET /v1/{dataset}/versions/{version}",
+      "status": "pass",
+      "http_status": 404,
+      "detail": "version=999999999; https://schemas.uspace.ge/problems/not_found"
+    },
+    {
+      "requirement": "NAT-SUCCESS",
+      "check": "success",
+      "subject": "getDatasetVersion GET /v1/{dataset}/versions/{version}",
+      "status": "not_applicable",
+      "reason": "the target file names no existing version"
+    },
+    {
+      "requirement": "ED318-SCHEMA",
+      "check": "dataset",
+      "subject": "GET /v1/zones",
+      "status": "not_applicable",
+      "reason": "the dataset has never been published (404 https://schemas.uspace.ge/problems/no_version)"
+    },
+    {
+      "requirement": "ED318-SCHEMA",
+      "check": "dataset",
+      "subject": "GET /v1/uspace_airspace",
+      "status": "not_applicable",
+      "reason": "the dataset has never been published (404 https://schemas.uspace.ge/problems/no_version)"
+    },
+    {
+      "requirement": "ED318-APPLICABILITY",
+      "check": "at",
+      "subject": "GET /v1/zones?at=2026-10-05T02:11:37Z",
+      "status": "not_applicable",
+      "reason": "zones has never been published"
+    },
+    {
+      "requirement": "ED318-APPLICABILITY",
+      "check": "applies_at",
+      "subject": "GET /v1/zones?applies_at=2026-10-05T02:11:37Z",
+      "status": "not_applicable",
+      "reason": "zones has never been published"
+    },
+    {
+      "requirement": "ED318-APPLICABILITY",
+      "check": "filter_refused",
+      "subject": "GET /v1/zones?at=2026-10-05T02%3A11%3A37",
+      "status": "pass",
+      "http_status": 400,
+      "detail": "https://schemas.uspace.ge/problems/bad_request"
+    },
+    {
+      "requirement": "ED318-APPLICABILITY",
+      "check": "filter_refused",
+      "subject": "GET /v1/zones?applies_at=2026-10-05T02%3A11%3A37Z\u0026at=2026-10-05T02%3A11%3A37Z",
+      "status": "pass",
+      "http_status": 400,
+      "detail": "https://schemas.uspace.ge/problems/filter_conflict"
+    },
+    {
+      "requirement": "ED318-VERSIONING",
+      "check": "if_match_required",
+      "subject": "PUT /v1/publications/zones",
+      "status": "pass",
+      "http_status": 428,
+      "detail": "https://schemas.uspace.ge/problems/precondition_required"
+    },
+    {
+      "requirement": "ED318-VERSIONING",
+      "check": "stale_if_match",
+      "subject": "PUT /v1/publications/zones",
+      "status": "pass",
+      "http_status": 412,
+      "detail": "412 with the current ETag \"zones:0\""
+    },
+    {
+      "requirement": "ED318-VERSIONING",
+      "check": "invalid_refused",
+      "subject": "PUT /v1/publications/zones",
+      "status": "pass",
+      "http_status": 400,
+      "detail": "https://schemas.uspace.ge/problems/publication_refused"
+    },
+    {
+      "requirement": "ED318-VERSIONING",
+      "check": "accepted",
+      "subject": "PUT /v1/publications/zones",
+      "status": "pass",
+      "http_status": 201,
+      "detail": "\"zones:0\" -\u003e \"zones:1\""
+    },
+    {
+      "requirement": "ED318-SCHEMA",
+      "check": "contract",
+      "subject": "GET /v1/zones (the fixture)",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "schema-valid application/geo+json"
+    },
+    {
+      "requirement": "ED318-SCHEMA",
+      "check": "ed318_parse",
+      "subject": "GET /v1/zones (the fixture)",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "2 features read by uspace-core ed318.Parse"
+    },
+    {
+      "requirement": "ED318-VERTICAL",
+      "check": "vertical",
+      "subject": "GET /v1/zones (the fixture)",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "references AGL, AMSL in m or ft"
+    },
+    {
+      "requirement": "ED318-VERSIONING",
+      "check": "etag",
+      "subject": "GET /v1/zones (the fixture)",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "ETag \"zones:1\""
+    },
+    {
+      "requirement": "ED318-VERSIONING",
+      "check": "if_none_match",
+      "subject": "GET /v1/zones (the fixture)",
+      "status": "pass",
+      "http_status": 304,
+      "detail": "304 on the current ETag"
+    },
+    {
+      "requirement": "ED318-VERSIONING",
+      "check": "signed_snapshot",
+      "subject": "GET /v1/zones (the fixture)",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "X-CIS-Signature present"
+    },
+    {
+      "requirement": "ED318-VERSIONING",
+      "check": "versions",
+      "subject": "GET /v1/zones/versions",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "lists version 1"
+    },
+    {
+      "requirement": "ED318-APPLICABILITY",
+      "check": "at",
+      "subject": "GET /v1/zones?at=2026-10-05T02:11:37Z",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "features: 1, as uspace-core judges them (with the published fixture)"
+    },
+    {
+      "requirement": "ED318-APPLICABILITY",
+      "check": "applies_at",
+      "subject": "GET /v1/zones?applies_at=2026-10-05T02:11:37Z",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "features: 2, as uspace-core judges them (with the published fixture)"
+    },
+    {
+      "requirement": "ED318-CHANGES",
+      "check": "change_feed",
+      "subject": "GET /v1/changes?since=0",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "change 1 (publication) for zones:1"
+    },
+    {
+      "requirement": "ED318-WEBHOOK",
+      "check": "webhook",
+      "subject": "POST ",
+      "status": "not_applicable",
+      "reason": "the target file names no webhook receiver the CISP can reach (ed318.webhook_listen, webhook_url)"
+    },
+    {
+      "requirement": "ED318-HEARTBEAT",
+      "check": "heartbeat",
+      "subject": "POST /v1/publishers/heartbeat",
+      "status": "pass",
+      "http_status": 204,
+      "detail": "recorded for ansp-01"
+    },
+    {
+      "requirement": "ED318-HEARTBEAT",
+      "check": "stale_rule",
+      "subject": "GET /v1/status",
+      "status": "pass",
+      "http_status": 200,
+      "detail": "2 publishers consistent with stale_after_s"
+    },
+    {
+      "requirement": "A11Y-PUBLIC",
+      "check": "axe",
+      "subject": "cisp",
+      "status": "not_applicable",
+      "reason": "the target file names no public page"
+    }
+  ]
+}

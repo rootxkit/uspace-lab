@@ -1,0 +1,15 @@
+conformance 20261005T021137Z-cisp: cisp (cisp) at http://127.0.0.1:5628: incomplete, 11 pass, 0 fail, 3 not applicable
+  not_applicable NAT-PRECONDITION     0/0/1  the contract gives no valid example body to send with the stale If-Match
+  not_applicable ED318-WEBHOOK        0/0/1  the target file names no webhook receiver the CISP can reach (ed318.webhook_listen, webhook_url)
+  not_applicable A11Y-PUBLIC          (informative) 0/0/1  the target file names no public page
+  pass           NAT-UNAUTH           21/0/16
+  pass           NAT-SCOPE            4/0/17
+  pass           NAT-NOTFOUND         5/0/9
+  pass           NAT-INVALID          2/0/12
+  pass           NAT-SUCCESS          11/0/15
+  pass           ED318-SCHEMA         2/0/2
+  pass           ED318-VERTICAL       1/0/0
+  pass           ED318-APPLICABILITY  4/0/2
+  pass           ED318-VERSIONING     8/0/0
+  pass           ED318-CHANGES        1/0/0
+  pass           ED318-HEARTBEAT      2/0/0

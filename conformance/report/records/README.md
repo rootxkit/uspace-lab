@@ -12,7 +12,7 @@ with the issuer JWKS that verifies it:
 
 ## `20261004T221103Z-cisp/`: the CISP's own conformance target
 
-uspace-cisp at `d89910109ac8` (main; the commit
+uspace-cisp at `d89910109ac8` (main; the commit then
 `conformance/national/contracts/PINS` names), `tools/conformance.sh`
 with `LAB_DIR` this repository at `d6b4cf1` (clean) and
 `CONFORMANCE_PUBLISH=true`: its chaos stack built from that checkout
@@ -42,8 +42,42 @@ Verdict **fail**: 9 pass, 2 fail, 3 not applicable.
   CISP delivers to HTTPS subscribers; the suite's receiver is plain HTTP
   and the target named none), A11Y-PUBLIC (no public page named).
 
-`conformance/baseline/cisp.json` is this run: CI runs the same target on
-every change to the suite and fails on a regression against it.
+`conformance/baseline/cisp.json` was this run until the next record.
+
+## `20261005T021137Z-cisp/`: the CISP after the C1 fix
+
+uspace-cisp at `24659a5` (main, the merge of uspace-cisp#27, "send
+errors on every problem body"; the commit
+`conformance/national/contracts/PINS` now names), `tools/conformance.sh`
+with `LAB_DIR` this repository at `62809d3` (clean; the report names
+it; re-made as `e603682` with a shorter subject before it was pushed,
+same tree) and `CONFORMANCE_PUBLISH=true`, as the first record: its chaos stack built
+from that checkout (`uspace-cisp:chaos-local`, `sha256:4f5809ba...`),
+the contract the checkout's `api/openapi.yaml` (`sha256:3f69439b...`).
+On Windows the stack's test executes `conformance/cisp/run` directly,
+which Windows cannot do for a shell script, so an untracked
+`conformance/cisp/run.cmd` handed it to Git Bash for this run (the
+report does not count untracked files as dirt; nothing else differed).
+
+Verdict **incomplete** by the report's own rule (gate requirements not
+applicable), **no regression** against the baseline, which accepts
+those as not applicable: 11 pass, 0 fail, 3 not applicable.
+
+- Pass: everything that passed in the first record, and now NAT-UNAUTH
+  (21 checks, the 16 console operations included) and NAT-INVALID
+  (`POST /v1/console/session`, `/mfa`): the console's `503
+  console_unavailable` body carries `errors: []`, so it is judged as
+  the declared problem. C1 is closed
+  (`docs/decisions/2026-10-05-conformance-findings.md`).
+- Not applicable, as before: NAT-PRECONDITION, ED318-WEBHOOK,
+  A11Y-PUBLIC.
+
+The gate reported both as "a known failure now passes", and
+`conformance/baseline/cisp.json` was rewritten from this run
+(`conformance baseline`): no known failure is left in it, so a 503
+without `errors[]` on any console operation is a regression again. CI
+runs the same target on every change to the suite, at the commit PINS
+names, and fails on a regression against it.
 
 ## `20261004T221305Z-mock-ridsp-candidate/`: uss_qualifier end to end
 

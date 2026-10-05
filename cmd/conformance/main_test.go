@@ -465,3 +465,56 @@ func TestRecordsVerifyAndAreDescribed(t *testing.T) {
 		}
 	}
 }
+
+// TestBaselineIsTheLatestRecord: a committed baseline is the newest
+// committed record of its target, byte for byte (its from_digest), and
+// gating that record on it finds nothing, not even an improvement. A
+// newer reviewed run whose known failures now pass must rewrite the
+// baseline: kept as it was, the baseline would go on accepting the
+// failures that run shows fixed, and the gate would let them come back.
+func TestBaselineIsTheLatestRecord(t *testing.T) {
+	files, _ := filepath.Glob(filepath.Join(labRoot, "conformance", "baseline", "*.json"))
+	if len(files) == 0 {
+		t.Fatal("no committed baseline")
+	}
+	recs, _ := filepath.Glob(filepath.Join(labRoot, "conformance", "report", "records", "*", "report.json"))
+	type rec struct {
+		r   *report.Report
+		raw []byte
+	}
+	latest := map[string]rec{}
+	for _, p := range recs {
+		r, raw, err := report.Read(p)
+		if err != nil {
+			t.Fatalf("%s: %v", p, err)
+		}
+		if l, ok := latest[r.Target.Name]; !ok || r.Run > l.r.Run {
+			latest[r.Target.Name] = rec{r, raw}
+		}
+	}
+	for _, f := range files {
+		bl, err := report.ReadBaseline(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		l, ok := latest[bl.Target]
+		if !ok {
+			t.Errorf("%s: no committed record of target %s", filepath.Base(f), bl.Target)
+			continue
+		}
+		if bl.FromRun != l.r.Run {
+			t.Errorf("%s is from run %s; the newest record of %s is %s: rewrite it from that run (conformance baseline)", filepath.Base(f), bl.FromRun, bl.Target, l.r.Run)
+			continue
+		}
+		if d := report.Digest(l.raw); bl.FromDigest != d {
+			t.Errorf("%s: from_digest %s, the record is %s", filepath.Base(f), bl.FromDigest, d)
+		}
+		fs, err := report.Gate(l.r, bl)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, x := range fs {
+			t.Errorf("%s against %s: %s %s -> %s: %s", filepath.Base(f), l.r.Run, x.Requirement, x.Was, x.Now, x.Why)
+		}
+	}
+}
