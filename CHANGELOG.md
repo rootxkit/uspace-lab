@@ -22,6 +22,28 @@ request (docs/PLAN.md §5).
 
 ### Added
 
+- WP-L8 (L-M2): the load test (`cmd/loadgen`, `internal/load`, `load/`,
+  `make load TIER=<tier>`, `load.yml`, `docs/RUNBOOKS/load.md`). Tiers
+  at the `05 §1` volumes (100, 1000, the 2 h soak, 5000, and a CI tier
+  of 100 drones for 120 s) drive one operator client per aircraft at
+  1 Hz, receivers hearing 40 % of them (BT5 packs and BT4 singles),
+  consoles on the authority picture and the traffic streams of the
+  watched flights, over synthetic paths whose separation the policy
+  guarantees and whose scripted crossings make the expected alert set
+  exact. Latency is timed end to end on the generator's clock alone;
+  loss is the clients' ledgers and, for the picture, every heard sample
+  shown or counted. The report fills every `05 §7` row with the
+  observed p50/p95/p99 or "not measured" and the reason, with the tier's
+  scale factors, the host, the commits and the policy; figures GCAA has
+  not decided are marked pending GCAA (`load/criteria.yaml`). The
+  verdict fails closed, and a run that measured nothing fails. Only the
+  reference target is driven yet: the systems mode, the F3411 and F3548
+  rows, the storage rows and the chaos rows are open (the runbook).
+- WP-L8: the reference target sends `track/telemetry/v1` to a picture
+  console that subscribed (answering the subscribe with a
+  `console/snapshot/v1`) and serves `WS /v1/traffic?intent_id=` with the
+  flight's `traffic/product/v1`; the pinned uspace-ussp
+  `traffic/product/v1` schema is in `internal/wire/testdata`.
 - WP-L7 (L-M4): the conformance suite (`conformance/`, `cmd/conformance`,
   `make conformance TARGET=<name>`, `conformance.yml`). It runs against
   a system's conformance target and reports pass, fail or not applicable
