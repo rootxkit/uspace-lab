@@ -227,6 +227,24 @@ rows:
       - {system: authority, source: "ansp_feed/ansp", in: [live], within_s: 30, why: "the source is shown live again"}
       - {system: all, recovered: true, within_s: 30, why: "the feed restarted"}
 
+  # ---- one source instance (dead) -----------------------------------------
+  - id: authority-dp-poller
+    domain: source
+    args: [authority-dp-poller]
+    system: authority
+    cite: ["05 §6 'One source type or instance (disabled or dead)'", "02 F9 failure", "uspace-authority internal/picture/sources.go (an adapter silent past SOURCE_STATUS_STALE_S is shown stale)"]
+    claim: "The authority's network RID source (dp-poller, one instance per USSP) dead: its tracks age out as stale, counted; the other sources (the receivers' direct RID) unaffected, so the aircraft the receiver hears stays in the picture and its alert stays open; the console shows the source's state."
+    hold_s: 60
+    recover_within_s: 30
+    during:
+      - {system: authority, source: "network_rid/*", in: [stale, down], within_s: 30, why: "05 §6: its tracks age out as stale; consoles show state (the picture shows a source stale once its adapter is silent 10 s)"}
+      - {system: authority, source: "direct_rid/*", in: [live], within_s: 10, why: "05 §6: other sources unaffected"}
+      - {system: authority, ready: always, why: "05 §6: only the source fails; the api answers"}
+      - {system: others, ready: always, why: "05 §6: everyone else unaffected"}
+    after:
+      - {system: authority, source: "network_rid/*", in: [live], within_s: 30, why: "the source is shown live again"}
+      - {system: all, recovered: true, within_s: 30, why: "the adapter restarted, everything as before"}
+
   # ---- NATS (one system) ------------------------------------------------
   - id: ussp-nats
     domain: nats

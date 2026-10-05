@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,7 +19,7 @@ func TestCommittedMatrixValidates(t *testing.T) {
 	}
 	// Every domain of 05 §6 the brief names has a row (WP-L9 "What to
 	// build"), and every row's script exists.
-	want := []string{"adapter", "api", "hotpath", "stall", "nats", "timescale", "postgres", "partition",
+	want := []string{"adapter", "api", "hotpath", "stall", "source", "nats", "timescale", "postgres", "partition",
 		"system", "dss", "ansp-feed", "issuer", "clock", "stack"}
 	have := map[string]bool{}
 	for _, r := range m.Rows {
@@ -34,6 +35,48 @@ func TestCommittedMatrixValidates(t *testing.T) {
 		if !have[d] {
 			t.Errorf("no row for domain %s", d)
 		}
+	}
+	// Every domain script is run by some row: a script no row names is
+	// a domain the matrix claims to cover and never injects.
+	scripts, _ := filepath.Glob("*.sh")
+	for _, sc := range scripts {
+		d := strings.TrimSuffix(sc, ".sh")
+		if d == "lib" || d == "prepare" {
+			continue
+		}
+		if !have[d] {
+			t.Errorf("scripts/chaos/%s has no row", sc)
+		}
+	}
+	// Every failure domain of spec 05 §6 is the first citation of a row
+	// of its own.
+	spec, err := os.ReadFile("../../docs/spec/05-scale-and-reliability.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sec := string(spec)
+	sec = sec[strings.Index(sec, "## 6. Failure domains"):]
+	sec = sec[:strings.Index(sec[3:], "\n## ")+3]
+	first := map[string]bool{}
+	for _, r := range m.Rows {
+		if len(r.Cite) > 0 {
+			first[r.Cite[0]] = true
+		}
+	}
+	n := 0
+	for _, line := range strings.Split(sec, "\n") {
+		cells := strings.Split(line, "|")
+		if len(cells) < 4 || !strings.HasPrefix(line, "| ") || strings.HasPrefix(line, "| Domain") || strings.HasPrefix(line, "|---") {
+			continue
+		}
+		dom := strings.ReplaceAll(strings.TrimSpace(cells[1]), "`", "")
+		n++
+		if !first[fmt.Sprintf("05 §6 '%s'", dom)] {
+			t.Errorf("05 §6 domain %q is no row's first citation", dom)
+		}
+	}
+	if n < 10 {
+		t.Fatalf("read %d domains from 05 §6: the table moved", n)
 	}
 	if len(m.Pending) == 0 {
 		t.Error("the matrix lists no figure pending GCAA")

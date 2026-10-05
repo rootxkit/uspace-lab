@@ -269,7 +269,9 @@ also in run 1.
 ## Not covered, and why
 
 - **A source disabled through a console API** (05 §6 "disabled", SC-08:
-  an audited act by a person): not scripted. The dead case is the ANSP
+  an audited act by a person): not scripted. The dead case is the
+  `authority-dp-poller` row (the authority's network RID source killed
+  while its direct RID receiver keeps hearing the aircraft) and the ANSP
   feed row. The disable needs an admin session and the receiver's
   disable call per system; it is left for WP-L9's next pass with SC-08's
   scenario, which already exercises the authority's disable.
