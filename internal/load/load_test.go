@@ -33,7 +33,7 @@ min_samples: 5
 memory_sample_s: 1
 required: [operator_rate, rid_rate, operator_to_console_p99, receiver_to_picture_p99, proximity_raise_p99, expected_set,
   missed_raises, missed_clears, no_false_alarm, alerts_traceable, operator_identity, receiver_identity, picture_identity,
-  picture_traceable, evaluation_period]
+  picture_traceable, traffic_traceable, evaluation_period]
 `
 
 func smallPaths(policy string) string {
@@ -399,5 +399,35 @@ func TestExpectedSetAtTheEndOfTheRun(t *testing.T) {
 	}
 	if pairs := f.Tier.Watch.Pairs; due != 2*2*pairs || cut != 2*pairs {
 		t.Fatalf("%d due, %d cut, want %d and %d", due, cut, 4*pairs, 2*pairs)
+	}
+}
+
+// A receipt-placed frame that arrived 700 ms late is the sample handed
+// out before it, timed at 700 ms; matched to the nearest sample it would
+// have been the next one's and dropped out of the percentiles. A frame
+// placed before any sample was handed out is untraceable.
+func TestReceiptLedgerTimesLateFrames(t *testing.T) {
+	t0 := time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)
+	late := t0.Add(700 * time.Millisecond)
+	for _, c := range []struct {
+		name   string
+		l      *Ledger
+		timed  bool
+		wantNs time.Duration
+	}{{"receipt", NewReceiptLedger(), true, 710 * time.Millisecond}, {"nearest", NewLedger(), false, 0}} {
+		c.l.Hand("a", t0)
+		c.l.Hand("a", t0.Add(time.Second))
+		lat, ok := c.l.Show("a", late, late.Add(10*time.Millisecond))
+		if ok != c.timed || (ok && lat != c.wantNs) {
+			t.Errorf("%s: %v %v", c.name, lat, ok)
+		}
+	}
+	l := NewReceiptLedger()
+	l.Hand("a", t0)
+	if _, ok := l.Show("a", t0.Add(-time.Second), t0); ok || l.Counts().Untraceable != 1 {
+		t.Fatalf("a frame placed before any sample: %+v", l.Counts())
+	}
+	if at, ok := l.Find("a", t0.Add(30*time.Millisecond)); !ok || !at.Equal(t0) {
+		t.Fatalf("find %v %v", at, ok)
 	}
 }

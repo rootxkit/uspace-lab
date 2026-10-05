@@ -129,7 +129,7 @@ func Run(ctx context.Context, opt Options) (*Report, error) {
 		return nil, err
 	}
 	r := &run{opt: opt, files: &runFiles, tier: &tier, fleet: fl, geo: geo, log: opt.Log,
-		picture: NewLedger(), traffic: NewLedger(), rec: observe.NewRecorder(nil)}
+		picture: NewLedger(), traffic: NewReceiptLedger(), rec: observe.NewRecorder(nil)}
 	rep := &Report{Format: ReportFormat, Run: opt.Run, StartedAt: time.Now().UTC(), Tier: &tier, Scaled: len(tier.Scale) > 0,
 		Target: TargetInfo{Mode: tg.Mode, Name: tg.Name, Images: tg.Images,
 			Evidence: "The lab's in-process reference target (internal/reftarget): it proves the harness and is never evidence for a system (docs/PLAN.md L-D4); generator and target share this host's CPUs."},
@@ -799,6 +799,11 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 	} else {
 		obs["picture_silent_loss"] = notMeasured("no timed console or no heard aircraft")
 		obs["picture_untraceable_frames"] = notMeasured("no timed console or no heard aircraft")
+	}
+	if tc := rep.Loss.Traffic; tc.Handed > 0 {
+		obs["traffic_untraceable_frames"] = valueObs(float64(tc.Untraceable + tc.Negative))
+	} else {
+		obs["traffic_untraceable_frames"] = notMeasured("no traffic stream was read")
 	}
 	// Alerts.
 	r.judgeAlerts(rep, obs, t0)

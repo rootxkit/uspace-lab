@@ -41,6 +41,7 @@ required:
   - receiver_identity
   - picture_identity
   - picture_traceable
+  - traffic_traceable
   - evaluation_period
   - memory_monotonic
 scale:

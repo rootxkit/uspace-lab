@@ -123,26 +123,20 @@ func (rd *readers) noteAlert(s *stream, e wire.Envelope) {
 		return
 	}
 	// The triggering sample of a proximity alert is either aircraft's:
-	// the pair is judged when the later of the two samples arrives.
+	// the pair is judged when the later of the two samples arrives, so
+	// it is the newer of the two the alert's captured_at can show.
 	best, found := time.Time{}, false
 	for _, name := range []string{s.aircraft.Name, rd.peers[s.aircraft.Name]} {
 		if name == "" {
 			continue
 		}
-		if handed, ok := rd.traffic.Find(name, captured); ok && (!found || absDur(handed.Sub(captured)) < absDur(best.Sub(captured))) {
+		if handed, ok := rd.traffic.Find(name, captured); ok && (!found || handed.After(best)) {
 			best, found = handed, true
 		}
 	}
 	if found {
 		rd.raised[b.AlertID] = best
 	}
-}
-
-func absDur(d time.Duration) time.Duration {
-	if d < 0 {
-		return -d
-	}
-	return d
 }
 
 // run reads s until ctx ends, reconnecting after a break (each break is

@@ -39,9 +39,14 @@ receives is the same.
 - **Latency** is end to end on one clock, the generator's: from the
   moment a sample is handed to the client that sends it to the moment
   the frame that first shows it arrives on a console. A frame is tied
-  to its sample by the aircraft and its `captured_at` (the nearest
-  sample within 500 ms). The target's clock is never subtracted from
-  the lab's. The clients' own share is bounded by `poll_ms` (50 ms) and
+  to its sample by the aircraft and its `captured_at`: on the picture,
+  where the authority places a Remote ID sample at its broadcast time,
+  the nearest sample within 500 ms; on the traffic stream, where the
+  USSP places operator telemetry at receipt, the newest sample handed
+  out by then (50 ms allowed for the clocks), so a frame that arrived
+  late is timed late rather than tied to the next sample. The target's
+  clock is never subtracted from the lab's; a systems run needs the
+  hosts' clocks within that 50 ms (NTP), and says so. The clients' own share is bounded by `poll_ms` (50 ms) and
   `batch_ms` (100 ms) and included: the figures are upper bounds.
 - **Alert latency** is from the sample a raise names (its
   `captured_at`, either aircraft of the pair) to the raise's arrival.

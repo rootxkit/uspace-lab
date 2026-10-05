@@ -52,6 +52,7 @@ var Metrics = map[string]MetricDef{
 	"receiver_ledgers_unbalanced": {Kind: KindValue, Doc: "receivers whose sent != accepted + duplicates + refused, or observed != dropped + sent + shed + pending, after the drain"},
 	"picture_silent_loss":         {Kind: KindValue, Doc: "heard samples never shown on the timed console beyond every counted loss (refused observations, dropped_frames, generator and receiver sheds)"},
 	"picture_untraceable_frames":  {Kind: KindValue, Doc: "track frames on the timed console that match no sample the generator sent"},
+	"traffic_untraceable_frames":  {Kind: KindValue, Doc: "own tracks in traffic products that match no sample the generator sent, or arrive before it"},
 	"cpa_evaluation_period_max_s": {Kind: KindValue, Unit: "s", Doc: "the largest evaluation_period_s any proximity alert carried"},
 	"memory_growth_ratio":         {Kind: KindValue, Doc: "median live heap of the last third of the run after its warm-up / of the first third"},
 	"memory_monotonic":            {Kind: KindValue, Doc: "1 when the live heap medians of the three thirds after the warm-up rise strictly and the last is over 10 % above the first (growth beyond GC noise), else 0"},

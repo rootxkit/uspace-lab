@@ -41,6 +41,7 @@ required:
   - receiver_identity
   - picture_identity
   - picture_traceable
+  - traffic_traceable
   - evaluation_period
 scale:
   - {quantity: duration, spec: "3600 s (05 §7)", here: "120 s", factor: 0.0333, why: "a pull request's CI budget; one crossing per pair still falls inside it"}

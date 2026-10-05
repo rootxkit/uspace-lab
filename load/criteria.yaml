@@ -75,6 +75,7 @@ rows:
       - {id: receiver_identity, metric: receiver_ledgers_unbalanced, stat: value, op: "==", value: 0, status: spec, basis: "05 §7, 05 §5 (receiver -> authority: accepted + duplicates + refused = sent)"}
       - {id: picture_identity, metric: picture_silent_loss, stat: value, op: "==", value: 0, status: spec, basis: "05 §7: every heard sample is on the picture or in a counted loss"}
       - {id: picture_traceable, metric: picture_untraceable_frames, stat: value, op: "==", value: 0, status: lab, basis: "every track frame names a sample the generator sent"}
+      - {id: traffic_traceable, metric: traffic_untraceable_frames, stat: value, op: "==", value: 0, status: lab, basis: "every own track in a traffic product names a sample the generator sent"}
 
   - id: cpa_budget
     property: CPA budget
