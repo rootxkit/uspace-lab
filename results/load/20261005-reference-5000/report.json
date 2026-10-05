@@ -1,0 +1,1213 @@
+{
+  "format": "load-report/v1",
+  "run": "20261005-reference-5000",
+  "started_at": "2026-10-05T06:59:12.8098495Z",
+  "ended_at": "2026-10-05T07:00:18.12429Z",
+  "generator_s": 0,
+  "tier": {
+    "tier": "5000",
+    "title": "5000 drones for 60 minutes (attempted: the report says what breaks first)",
+    "column": 5000,
+    "duration_s": 600,
+    "drain_s": 120,
+    "operators": {
+      "aircraft": 5000,
+      "clients": 200,
+      "telemetry_hz": 1,
+      "telemetry_hz_status": "pending GCAA",
+      "poll_ms": 50,
+      "intents": "all"
+    },
+    "receivers": {
+      "heard_fraction": 0.4,
+      "aircraft_per_receiver": 25,
+      "transports": [
+        "pack",
+        "single"
+      ],
+      "batch_ms": 100
+    },
+    "consoles": 60,
+    "watch": {
+      "pairs": 15,
+      "walkers": 15
+    },
+    "min_samples": 1000,
+    "memory_sample_s": 10,
+    "memory_warmup_s": 900,
+    "required": [
+      "operator_rate",
+      "rid_rate",
+      "operator_to_console_p99",
+      "receiver_to_picture_p99",
+      "proximity_raise_p99",
+      "expected_set",
+      "missed_raises",
+      "missed_clears",
+      "no_false_alarm",
+      "alerts_traceable",
+      "operator_identity",
+      "receiver_identity",
+      "picture_identity",
+      "picture_traceable",
+      "evaluation_period",
+      "memory_monotonic"
+    ],
+    "scale": [
+      {
+        "quantity": "console viewports",
+        "spec": "60 consoles each viewing \u003c= 200 tracks (05 §1)",
+        "here": "the same count, each subscribed to the whole area",
+        "factor": 1,
+        "why": "the reference picture has no viewport throttle; whole-area subscriptions are the worst case"
+      },
+      {
+        "quantity": "duration (override)",
+        "spec": "3600 s (this tier)",
+        "here": "600 s",
+        "factor": 0.16666666666666666,
+        "why": "--duration-s given for this run"
+      }
+    ],
+    "not_generated": [
+      {
+        "source": "ANSP manned feed (tens of aircraft)",
+        "why": "the reference target has no manned intake; the systems mode is not built yet"
+      },
+      {
+        "source": "sim-ussp as the second USSP on a local DSS",
+        "why": "the reference target has no DSS or peer interface; the F3411 and F3548 rows wait for the systems mode"
+      },
+      {
+        "source": "authority DP polls of the USSPs (05 §1: one view per 1 Hz)",
+        "why": "the reference authority has no DP poller"
+      },
+      {
+        "source": "optional national push USSP -\u003e authority",
+        "why": "disabled by default (02 F6) and not in the reference target"
+      }
+    ]
+  },
+  "scaled": true,
+  "target": {
+    "mode": "reference",
+    "name": "reference",
+    "evidence": "The lab's in-process reference target (internal/reftarget): it proves the harness and is never evidence for a system (docs/PLAN.md L-D4); generator and target share this host's CPUs."
+  },
+  "host": {
+    "name": "dev workstation (Windows 11, 16 logical CPUs, 16 GB; not the droplet)",
+    "os": "windows",
+    "arch": "amd64",
+    "cpus": 16,
+    "mem_total_bytes": null,
+    "go": "go1.27.1",
+    "note": "the host the generator and the reference target ran on together (L-Q1)"
+  },
+  "commits": {
+    "lab": "e79b1202c5f0f16f276b9b3e65bb8a2291f86102",
+    "lab_dirty": false,
+    "core": "v1.3.0",
+    "go": "go1.27.1"
+  },
+  "files": {
+    "criteria": "sha256:a3147b0f85fb24b8f4c0e09a8e84938f223cb4ef47a225fcf270ff0ab4b808e1",
+    "paths": "sha256:06224ea5ff7f874d6238f66b3a7e3307b917f2f137ded43218eccc64a36c0db0",
+    "policy": "sha256:19124b6573ade992e321dbb2f18313bf01ec7ac262db03d75216da38f94db8df",
+    "tier": "sha256:b9fbdcc2b7d140d7488aa9dc3f742908def78c0f768db8359ed3a25b9c7d357a"
+  },
+  "policy": {
+    "policy_version": 1,
+    "source": "docs/PLAN.md §7.1 L-Q4 (owner-only, open; GCAA answers); knowledge/scenarios.md conventions",
+    "deviation": {
+      "h_m": 50,
+      "v_m": 15,
+      "t_s": 60
+    },
+    "telemetry_lost_s": 5,
+    "lost_link_s": 15,
+    "nonconformance_nearby_radius_m": 2000,
+    "cpa": {
+      "t_cpa_max_s": 60,
+      "d_horizontal_min_m": 60,
+      "d_vertical_min_m": 20,
+      "neighbour_radius_m": 800,
+      "neighbour_max_age_s": 10
+    },
+    "height_limit_agl_m": 120,
+    "monitor": {
+      "clear_after_s": 3,
+      "stale_after_s": 15,
+      "live_max_age_s": 10,
+      "pressure_uncertainty_m": 250,
+      "conditional_severity": "warning"
+    }
+  },
+  "lab": {
+    "file": "sim\\sitl.env.example",
+    "origin_lat_deg": 41.7151,
+    "origin_lon_deg": 44.8271,
+    "origin_alt_amsl_m": 605,
+    "geoid": "constant N = 15.9 m"
+  },
+  "volumes": {
+    "aircraft": 0,
+    "operator_clients": 0,
+    "heard_aircraft": 0,
+    "receivers": 0,
+    "consoles": 0,
+    "watched_aircraft": 0,
+    "intents_filed": 0,
+    "intent_errors": 0,
+    "operator_msgs_per_s": 0,
+    "operator_target_per_s": 0,
+    "rid_locations_per_s": 0,
+    "rid_target_per_s": 0,
+    "console_frames_per_s": 0
+  },
+  "rows": [
+    {
+      "id": "offered_load",
+      "property": "Offered load",
+      "criterion": "the tier's 05 §1 rates were reached (a latency measured at a lower load proves nothing about the tier)",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "operator_rate",
+          "metric": "operator_rate_ratio",
+          "stat": "value",
+          "op": "\u003e=",
+          "value": 0.95,
+          "unit": "",
+          "status": "lab",
+          "basis": "05 §1 operator telemetry row at the tier",
+          "required": true,
+          "observed": {
+            "measured": false,
+            "reason": "the run stopped before measuring"
+          },
+          "result": "not measured",
+          "reason": "the run stopped before measuring"
+        },
+        {
+          "id": "rid_rate",
+          "metric": "rid_rate_ratio",
+          "stat": "value",
+          "op": "\u003e=",
+          "value": 0.95,
+          "unit": "",
+          "status": "lab",
+          "basis": "05 §1 direct RID row at the tier",
+          "required": true,
+          "observed": {
+            "measured": false,
+            "reason": "the run stopped before measuring"
+          },
+          "result": "not measured",
+          "reason": "the run stopped before measuring"
+        }
+      ]
+    },
+    {
+      "id": "ingest_to_picture",
+      "property": "Ingest-to-picture latency",
+      "criterion": "p99 \u003c 1 s (operator telemetry to USSP console frame; receiver frame to authority picture)",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "operator_to_console_p99",
+          "metric": "operator_to_ussp_console_s",
+          "stat": "p99",
+          "op": "\u003c",
+          "value": 1,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (Art. 11 traffic information without delay; the figure is the spec's)",
+          "required": true,
+          "observed": {
+            "measured": false,
+            "reason": "the run stopped before measuring"
+          },
+          "result": "not measured",
+          "reason": "the run stopped before measuring"
+        },
+        {
+          "id": "receiver_to_picture_p99",
+          "metric": "receiver_to_authority_picture_s",
+          "stat": "p99",
+          "op": "\u003c",
+          "value": 1,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (the figure is the spec's)",
+          "required": true,
+          "observed": {
+            "measured": false,
+            "reason": "the run stopped before measuring"
+          },
+          "result": "not measured",
+          "reason": "the run stopped before measuring"
+        }
+      ]
+    },
+    {
+      "id": "f3411_timing",
+      "property": "F3411 timing",
+      "criterion": "SP GET /uss/flights p95 \u003c= 1 s, p99 \u003c= 3 s; DP display p95 \u003c= 1 s, p99 \u003c= 3 s; details p95 \u003c= 2 s, p99 \u003c= 6 s; DP cache empty of anything older than 24 h",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "sp_flights_p95",
+          "metric": "f3411_sp_flights_s",
+          "stat": "p95",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "sp_flights_p99",
+          "metric": "f3411_sp_flights_s",
+          "stat": "p99",
+          "op": "\u003c=",
+          "value": 3,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "dp_display_p95",
+          "metric": "f3411_dp_display_s",
+          "stat": "p95",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "dp_display_p99",
+          "metric": "f3411_dp_display_s",
+          "stat": "p99",
+          "op": "\u003c=",
+          "value": 3,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "details_p95",
+          "metric": "f3411_details_s",
+          "stat": "p95",
+          "op": "\u003c=",
+          "value": 2,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "details_p99",
+          "metric": "f3411_details_s",
+          "stat": "p99",
+          "op": "\u003c=",
+          "value": 6,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "dp_cache_24h",
+          "metric": "f3411_dp_cache_over_24h",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "standard",
+          "basis": "F3411 v22a NetDpMaxDataRetentionPeriodSeconds 86400",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        }
+      ]
+    },
+    {
+      "id": "f3548_timing",
+      "property": "F3548 timing",
+      "criterion": "peer notification of an intent change \u003c= 5 s; conflicting-intent notification \u003c= 1 s; details answered \u003c= 1 s; constraint notification \u003c= 5 s",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "intent_change_notify",
+          "metric": "f3548_intent_change_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 5,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "conflict_notify",
+          "metric": "f3548_conflict_notify_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "details_answered",
+          "metric": "f3548_details_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "constraint_notify",
+          "metric": "f3548_constraint_notify_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 5,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        }
+      ]
+    },
+    {
+      "id": "alert_latency",
+      "property": "Alert latency",
+      "criterion": "proximity / nonconformance raised p99 \u003c 2 s after the triggering sample's captured_at; zone alert within one tick of entry; Art. 13(2) notices to peers and ANSP within 5 s and acknowledged",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "proximity_raise_p99",
+          "metric": "alert_raise_s",
+          "stat": "p99",
+          "op": "\u003c",
+          "value": 2,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (Art. 13 without delay; the figure is the spec's)",
+          "required": true,
+          "observed": {
+            "measured": false,
+            "reason": "the run stopped before measuring"
+          },
+          "result": "not measured",
+          "reason": "the run stopped before measuring"
+        },
+        {
+          "id": "zone_alert_tick",
+          "metric": "zone_alert_ticks",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the load paths script no zone entry yet; zone alerts are proved by the scenario suite (sc-03)"
+          },
+          "result": "not measured",
+          "reason": "the load paths script no zone entry yet; zone alerts are proved by the scenario suite (sc-03)"
+        },
+        {
+          "id": "art13_notice",
+          "metric": "art13_notice_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 5,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (Art. 13(2); the figure is the spec's)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "Art. 13(2) notices go to peers and the ANSP, neither of which the load harness drives yet"
+          },
+          "result": "not measured",
+          "reason": "Art. 13(2) notices go to peers and the ANSP, neither of which the load harness drives yet"
+        }
+      ]
+    },
+    {
+      "id": "missed_alerts",
+      "property": "Missed alerts",
+      "criterion": "zero against the scenario's expected set; every expected clear observed",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "expected_set",
+          "metric": "expected_raises",
+          "stat": "value",
+          "op": "\u003e=",
+          "value": 1,
+          "unit": "",
+          "status": "lab",
+          "basis": "a run with no alert due cannot count a miss",
+          "required": true,
+          "observed": {
+            "measured": false,
+            "reason": "the run stopped before measuring"
+          },
+          "result": "not measured",
+          "reason": "the run stopped before measuring"
+        },
+        {
+          "id": "missed_raises",
+          "metric": "missed_raises",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": true,
+          "observed": {
+            "measured": false,
+            "reason": "the run stopped before measuring"
+          },
+          "result": "not measured",
+          "reason": "the run stopped before measuring"
+        },
+        {
+          "id": "missed_clears",
+          "metric": "missed_clears",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": true,
+          "observed": {
+            "measured": false,
+            "reason": "the run stopped before measuring"
+          },
+          "result": "not measured",
+          "reason": "the run stopped before measuring"
+        },
+        {
+          "id": "no_false_alarm",
+          "metric": "unexpected_alerts",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "lab",
+          "basis": "the paths keep every walker outside the CPA minima (load/paths.yaml, checked at load); an alert there is a false alarm or a broken expected set",
+          "required": true,
+          "observed": {
+            "measured": false,
+            "reason": "the run stopped before measuring"
+          },
+          "result": "not measured",
+          "reason": "the run stopped before measuring"
+        },
+        {
+          "id": "alerts_traceable",
+          "metric": "alert_untraceable",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "lab",
+          "basis": "every raise names a captured_at the generator sent",
+          "required": true,
+          "observed": {
+            "measured": false,
+            "reason": "the run stopped before measuring"
+          },
+          "result": "not measured",
+          "reason": "the run stopped before measuring"
+        }
+      ]
+    },
+    {
+      "id": "no_silent_loss",
+      "property": "No silent loss",
+      "criterion": "every dropped_*, gap, degraded counter accounted for in the report; sum of accepted + dropped = sent",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "operator_identity",
+          "metric": "operator_ledgers_unbalanced",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7, 05 §5 (operator WS: accepted + refused + dropped + duplicate = sent, per client)",
+          "required": true,
+          "observed": {
+            "measured": false,
+            "reason": "the run stopped before measuring"
+          },
+          "result": "not measured",
+          "reason": "the run stopped before measuring"
+        },
+        {
+          "id": "receiver_identity",
+          "metric": "receiver_ledgers_unbalanced",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7, 05 §5 (receiver -\u003e authority: accepted + duplicates + refused = sent)",
+          "required": true,
+          "observed": {
+            "measured": false,
+            "reason": "the run stopped before measuring"
+          },
+          "result": "not measured",
+          "reason": "the run stopped before measuring"
+        },
+        {
+          "id": "picture_identity",
+          "metric": "picture_silent_loss",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7: every heard sample is on the picture or in a counted loss",
+          "required": true,
+          "observed": {
+            "measured": false,
+            "reason": "the run stopped before measuring"
+          },
+          "result": "not measured",
+          "reason": "the run stopped before measuring"
+        },
+        {
+          "id": "picture_traceable",
+          "metric": "picture_untraceable_frames",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "lab",
+          "basis": "every track frame names a sample the generator sent",
+          "required": true,
+          "observed": {
+            "measured": false,
+            "reason": "the run stopped before measuring"
+          },
+          "result": "not measured",
+          "reason": "the run stopped before measuring"
+        }
+      ]
+    },
+    {
+      "id": "cpa_budget",
+      "property": "CPA budget",
+      "criterion": "pair checks per worker per second within budget; evaluation_period_s never above 2 s",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "pair_checks",
+          "metric": "cpa_pair_checks_per_worker",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §1 (~50 000 pair checks per second per core)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "read from a system's /metrics by name; the reference target has no /metrics and systems mode is not built yet"
+          },
+          "result": "not measured",
+          "reason": "read from a system's /metrics by name; the reference target has no /metrics and systems mode is not built yet"
+        },
+        {
+          "id": "evaluation_period",
+          "metric": "cpa_evaluation_period_max_s",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 2,
+          "unit": "s",
+          "status": "spec",
+          "basis": "05 §5 CPA workers",
+          "required": true,
+          "observed": {
+            "measured": false,
+            "reason": "the run stopped before measuring"
+          },
+          "result": "not measured",
+          "reason": "the run stopped before measuring"
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "property": "Storage",
+      "criterion": "write rate sustained with writer queue \u003c 10 s; compression job keeps up; disk growth matches the model within 20 %",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "writer_queue",
+          "metric": "writer_queue_max_s",
+          "stat": "value",
+          "op": "\u003c",
+          "value": 10,
+          "unit": "s",
+          "status": "spec",
+          "basis": "05 §5 TimescaleDB writer",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the reference target has no database; storage is measured against the systems' images"
+          },
+          "result": "not measured",
+          "reason": "the reference target has no database; storage is measured against the systems' images"
+        },
+        {
+          "id": "compression",
+          "metric": "compression_lag_chunks",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §4",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the reference target has no database; storage is measured against the systems' images"
+          },
+          "result": "not measured",
+          "reason": "the reference target has no database; storage is measured against the systems' images"
+        },
+        {
+          "id": "disk_model",
+          "metric": "disk_growth_vs_model",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1.2,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §4 (within 20 %)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the reference target has no database; storage is measured against the systems' images"
+          },
+          "result": "not measured",
+          "reason": "the reference target has no database; storage is measured against the systems' images"
+        }
+      ]
+    },
+    {
+      "id": "restart",
+      "property": "Restart",
+      "criterion": "kill each component in turn mid-run: picture recovers within 10 s, no duplicate alerts, no lost backlog",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "restart_recovery",
+          "metric": "restart_recovery_s",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 10,
+          "unit": "s",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        },
+        {
+          "id": "restart_duplicates",
+          "metric": "restart_duplicate_alerts",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        },
+        {
+          "id": "restart_backlog",
+          "metric": "restart_lost_backlog",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        }
+      ]
+    },
+    {
+      "id": "partition",
+      "property": "Partition",
+      "criterion": "kill NATS of one system for 60 s: ingest spills and replays; other systems show nothing",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "partition_replay",
+          "metric": "partition_unreplayed",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §6 NATS row",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        },
+        {
+          "id": "partition_isolation",
+          "metric": "partition_cross_effects",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §6",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        }
+      ]
+    },
+    {
+      "id": "cross_system_outage",
+      "property": "Cross-system outage",
+      "criterion": "CISP, authority, DSS, ANSP each taken down for 5 min: the degraded behaviours of 02 observed, nothing hidden, everything flagged with age",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "outage_flagged",
+          "metric": "outage_unflagged",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §6, 02 failure columns",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        }
+      ]
+    },
+    {
+      "id": "memory",
+      "property": "Memory",
+      "criterion": "no monotonic growth over the soak",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "memory_monotonic",
+          "metric": "memory_monotonic",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "min_duration_s": 1800,
+          "required": true,
+          "observed": {
+            "measured": false,
+            "reason": "the run stopped before measuring"
+          },
+          "result": "not measured",
+          "reason": "the run stopped before measuring"
+        },
+        {
+          "id": "memory_growth",
+          "metric": "memory_growth_ratio",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1.5,
+          "unit": "",
+          "status": "lab",
+          "basis": "the live heap at the end against the start of the soak after the warm-up (generator and reference target together)",
+          "min_duration_s": 1800,
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the run stopped before measuring"
+          },
+          "result": "not measured",
+          "reason": "the run stopped before measuring"
+        }
+      ]
+    },
+    {
+      "id": "vectors",
+      "property": "Vectors",
+      "criterion": "all knowledge/vectors behaviour vectors pass against the packages in every image under test; schema examples pass everywhere",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "vectors_pass",
+          "metric": "vectors_failed",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the vectors run in uspace-core's CI and per image in the conformance suite, not in a load run"
+          },
+          "result": "not measured",
+          "reason": "the vectors run in uspace-core's CI and per image in the conformance suite, not in a load run"
+        }
+      ]
+    }
+  ],
+  "metrics": {
+    "alert_raise_s": {
+      "measured": false,
+      "reason": "the run stopped before measuring"
+    },
+    "alert_untraceable": {
+      "measured": false,
+      "reason": "the run stopped before measuring"
+    },
+    "art13_notice_s": {
+      "measured": false,
+      "reason": "Art. 13(2) notices go to peers and the ANSP, neither of which the load harness drives yet"
+    },
+    "compression_lag_chunks": {
+      "measured": false,
+      "reason": "the reference target has no database; storage is measured against the systems' images"
+    },
+    "cpa_evaluation_period_max_s": {
+      "measured": false,
+      "reason": "the run stopped before measuring"
+    },
+    "cpa_pair_checks_per_worker": {
+      "measured": false,
+      "reason": "read from a system's /metrics by name; the reference target has no /metrics and systems mode is not built yet"
+    },
+    "disk_growth_vs_model": {
+      "measured": false,
+      "reason": "the reference target has no database; storage is measured against the systems' images"
+    },
+    "expected_raises": {
+      "measured": false,
+      "reason": "the run stopped before measuring"
+    },
+    "f3411_details_s": {
+      "measured": false,
+      "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3411_dp_cache_over_24h": {
+      "measured": false,
+      "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3411_dp_display_s": {
+      "measured": false,
+      "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3411_sp_flights_s": {
+      "measured": false,
+      "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3548_conflict_notify_s": {
+      "measured": false,
+      "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3548_constraint_notify_s": {
+      "measured": false,
+      "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3548_details_s": {
+      "measured": false,
+      "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3548_intent_change_s": {
+      "measured": false,
+      "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "memory_growth_ratio": {
+      "measured": false,
+      "reason": "the run stopped before measuring"
+    },
+    "memory_monotonic": {
+      "measured": false,
+      "reason": "the run stopped before measuring"
+    },
+    "missed_clears": {
+      "measured": false,
+      "reason": "the run stopped before measuring"
+    },
+    "missed_raises": {
+      "measured": false,
+      "reason": "the run stopped before measuring"
+    },
+    "operator_ledgers_unbalanced": {
+      "measured": false,
+      "reason": "the run stopped before measuring"
+    },
+    "operator_rate_ratio": {
+      "measured": false,
+      "reason": "the run stopped before measuring"
+    },
+    "operator_to_ussp_console_s": {
+      "measured": false,
+      "reason": "the run stopped before measuring"
+    },
+    "outage_unflagged": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "partition_cross_effects": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "partition_unreplayed": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "picture_silent_loss": {
+      "measured": false,
+      "reason": "the run stopped before measuring"
+    },
+    "picture_untraceable_frames": {
+      "measured": false,
+      "reason": "the run stopped before measuring"
+    },
+    "receiver_ledgers_unbalanced": {
+      "measured": false,
+      "reason": "the run stopped before measuring"
+    },
+    "receiver_to_authority_picture_s": {
+      "measured": false,
+      "reason": "the run stopped before measuring"
+    },
+    "restart_duplicate_alerts": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "restart_lost_backlog": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "restart_recovery_s": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "rid_rate_ratio": {
+      "measured": false,
+      "reason": "the run stopped before measuring"
+    },
+    "unexpected_alerts": {
+      "measured": false,
+      "reason": "the run stopped before measuring"
+    },
+    "vectors_failed": {
+      "measured": false,
+      "reason": "the vectors run in uspace-core's CI and per image in the conformance suite, not in a load run"
+    },
+    "writer_queue_max_s": {
+      "measured": false,
+      "reason": "the reference target has no database; storage is measured against the systems' images"
+    },
+    "zone_alert_ticks": {
+      "measured": false,
+      "reason": "the load paths script no zone entry yet; zone alerts are proved by the scenario suite (sc-03)"
+    }
+  },
+  "loss": {
+    "operator": {
+      "sent": 0,
+      "accepted": 0,
+      "refused": 0,
+      "dropped": 0,
+      "duplicate": 0,
+      "queue_shed": 0,
+      "pending": 0,
+      "unbalanced": 0,
+      "outcomes": null
+    },
+    "receivers": {
+      "observed": 0,
+      "sent": 0,
+      "accepted": 0,
+      "duplicates": 0,
+      "refused": 0,
+      "backlog_shed": 0,
+      "dropped_by_knob": 0,
+      "pending": 0,
+      "unbalanced": 0
+    },
+    "generator_shed_operator": 0,
+    "generator_shed_rid": 0,
+    "picture": {
+      "handed": 0,
+      "shown": 0,
+      "unshown": 0,
+      "repeats": 0,
+      "untraceable": 0,
+      "negative_latencies": 0
+    },
+    "traffic": {
+      "handed": 0,
+      "shown": 0,
+      "unshown": 0,
+      "repeats": 0,
+      "untraceable": 0,
+      "negative_latencies": 0
+    },
+    "picture_dropped_frames": 0,
+    "picture_accounted": 0,
+    "picture_silent": 0
+  },
+  "alerts": {
+    "expected": 0,
+    "raised": 0,
+    "cleared": 0,
+    "untraceable": 0
+  },
+  "streams": null,
+  "errors": [
+    "not ready: stream console-01 did not open within 1m0s: console-01: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:5287/v1/picture/ws\": dial tcp 127.0.0.1:5287: connectex: No connection could be made because the target machine actively refused it."
+  ],
+  "checks_measured": 0,
+  "checks_not_measured": 41,
+  "complete": false,
+  "verdict": "fail",
+  "failures": [
+    "operator_rate: required and not measured: the run stopped before measuring",
+    "rid_rate: required and not measured: the run stopped before measuring",
+    "operator_to_console_p99: required and not measured: the run stopped before measuring",
+    "receiver_to_picture_p99: required and not measured: the run stopped before measuring",
+    "proximity_raise_p99: required and not measured: the run stopped before measuring",
+    "expected_set: required and not measured: the run stopped before measuring",
+    "missed_raises: required and not measured: the run stopped before measuring",
+    "missed_clears: required and not measured: the run stopped before measuring",
+    "no_false_alarm: required and not measured: the run stopped before measuring",
+    "alerts_traceable: required and not measured: the run stopped before measuring",
+    "operator_identity: required and not measured: the run stopped before measuring",
+    "receiver_identity: required and not measured: the run stopped before measuring",
+    "picture_identity: required and not measured: the run stopped before measuring",
+    "picture_traceable: required and not measured: the run stopped before measuring",
+    "evaluation_period: required and not measured: the run stopped before measuring",
+    "memory_monotonic: required and not measured: the run stopped before measuring",
+    "the run measured nothing: no check had an observation",
+    "run error: not ready: stream console-01 did not open within 1m0s: console-01: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:5287/v1/picture/ws\": dial tcp 127.0.0.1:5287: connectex: No connection could be made because the target machine actively refused it."
+  ]
+}

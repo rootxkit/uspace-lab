@@ -151,3 +151,71 @@ func Check(t testing.TB, rel string, v any) error {
 	}
 	return s.Validate(doc)
 }
+
+// RegisterByID adds the pinned copy rel under its own $id as well, so a
+// pinned schema whose $ref names it (traffic/product/v1 refers to
+// alert/v1's body) resolves offline. Once per rel.
+func RegisterByID(t testing.TB, rel string) {
+	t.Helper()
+	once.Do(setup)
+	if errCompile != nil {
+		t.Fatal(errCompile)
+	}
+	cacheMu.Lock()
+	defer cacheMu.Unlock()
+	if byID[rel] {
+		return
+	}
+	if err := CheckPin(rel); err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.Open(filepath.Join(TestdataDir(), filepath.FromSlash(rel)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = f.Close() }()
+	doc, err := jsonschema.UnmarshalJSON(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, _ := doc.(map[string]any)["$id"].(string)
+	if id == "" {
+		t.Fatalf("%s has no $id", rel)
+	}
+	if err := compiler.AddResource(id, doc); err != nil {
+		t.Fatal(err)
+	}
+	byID[rel] = true
+}
+
+var byID = map[string]bool{}
+
+// CommonCheck validates v against the schemas/common schema with $id id
+// (for example https://schemas.uspace.ge/track/telemetry/v1.json).
+func CommonCheck(t testing.TB, id string, v any) error {
+	t.Helper()
+	once.Do(setup)
+	if errCompile != nil {
+		t.Fatal(errCompile)
+	}
+	cacheMu.Lock()
+	s, ok := cache[id]
+	if !ok {
+		var err error
+		if s, err = compiler.Compile(id); err != nil {
+			cacheMu.Unlock()
+			t.Fatalf("%s: %v", id, err)
+		}
+		cache[id] = s
+	}
+	cacheMu.Unlock()
+	b, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	doc, err := jsonschema.UnmarshalJSON(strings.NewReader(string(b)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s.Validate(doc)
+}

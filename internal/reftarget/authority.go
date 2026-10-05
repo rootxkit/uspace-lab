@@ -271,6 +271,60 @@ func (t *Target) locationLocked(mac string, tx *transmitter, loc *odid.Location,
 	}
 	t.trackPos[id] = pos
 	t.emitAuthority(t.authority.Observe(tr, unixS(arrival)), arrival)
+	t.picture.publishTrack(pos, func() []byte { return t.trackFrameLocked(id, tx, loc, &tr, pl, arrival, backlog) })
+}
+
+// trackFrameLocked is the picture's track/telemetry/v1 envelope of one
+// Remote ID location (schemas/common/track/telemetry/v1), sent to the
+// consoles whose console/subscribe/v1 view holds it. The reference has
+// no registry, so a serial is unknown_operator for registry_unavailable
+// and a track without one is unidentified (SC-22: nothing claimed that
+// was not judged).
+func (t *Target) trackFrameLocked(id string, tx *transmitter, loc *odid.Location, tr *alerting.Track, pl timeplace.Placement, arrival time.Time, backlog bool) []byte {
+	status := "Ground"
+	switch {
+	case loc.Status == odid.StatusEmergency:
+		status = "Emergency"
+	case loc.Status == odid.StatusRemoteIDSystemFailure:
+		status = "RemoteIDSystemFailure"
+	case loc.Status == odid.StatusUndeclared:
+		status = "Undeclared"
+	case loc.Status.Airborne():
+		status = "Airborne"
+	}
+	ident := map[string]any{"status": "unidentified", "reason": "no_serial", "serial": nil, "operator_reg": nil,
+		"registered_operator_reg": nil, "mismatch": false, "basis": "as_broadcast"}
+	if tx.serial != "" {
+		ident["status"], ident["reason"], ident["serial"] = "unknown_operator", "registry_unavailable", tx.serial
+	}
+	if tx.operatorID != "" {
+		ident["operator_reg"] = tx.operatorID
+	}
+	var height, heightRef any
+	if loc.HeightM != nil {
+		height, heightRef = *loc.HeightM, "TakeoffLocation"
+		if loc.HeightReference == odid.HeightOverGround {
+			heightRef = "GroundLevel"
+		}
+	}
+	body := map[string]any{
+		"track_id": id, "trust": string(core.TrustBroadcast), "source": groupRID, "source_instance": tx.receiver,
+		"position":    map[string]any{"lat": tr.Pos.LatDeg, "lng": tr.Pos.LonDeg},
+		"alt_wgs84_m": loc.AltHAEM, "alt_amsl_m": tr.AltAMSLM, "alt_source": string(tr.AltSource), "alt_pressure_m": loc.AltBaroM,
+		"height_m": height, "height_ref": heightRef,
+		"speed_ms": loc.SpeedHorizontalMS, "track_deg": loc.DirectionDeg, "vspeed_ms": loc.SpeedVerticalMS,
+		"accuracy_h_m": nil, "accuracy_v_m": nil, "status": status, "emergency": loc.Status == odid.StatusEmergency,
+		"identification": ident, "flight_id": nil, "intent_id": nil,
+	}
+	if c, err := cell.Of(tr.Pos, cell.Level5); err == nil {
+		body["cell"] = c.String()
+	}
+	var ts *time.Time
+	if !pl.TS.IsZero() {
+		ts = &pl.TS
+	}
+	b, _ := wire.New(wire.SchemaTrack, producerAuthority, pl.CapturedAt, arrival, ts, string(pl.Source), backlog, body)
+	return b
 }
 
 // violationKind is the violation/v1 kind of a monitor alert kind, as
@@ -393,6 +447,22 @@ func (t *Target) handlePictureWS(w http.ResponseWriter, r *http.Request) {
 	}
 	s := t.picture.add(func(topic string) bool { return topic == "picture" })
 	defer t.picture.remove(s)
+	// A console/subscribe/v1 sets the view and is answered with a
+	// console/snapshot/v1 (Appendix C), after which the view's tracks
+	// follow as frames. The reference keeps no picture between frames,
+	// so its snapshot holds no tracks and no alerts (the active
+	// violations were sent on connect); it is never evidence for a system.
+	onMessage := func(b []byte) {
+		v, ok := parseSubscribe(b)
+		if !ok {
+			return
+		}
+		s.view.Store(v)
+		now := t.cfg.Now()
+		snap, _ := wire.New(wire.SchemaSnapshot, producerAuthority, now, now, nil, string(core.TimeSystem), false,
+			map[string]any{"tracks": []any{}, "alerts": []any{}, "manned": []any{}, "zones_version": nil})
+		s.offer(snap)
+	}
 	t.mu.Lock()
 	var initial [][]byte
 	now := t.cfg.Now()
@@ -402,5 +472,41 @@ func (t *Target) handlePictureWS(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	t.mu.Unlock()
-	t.serveFrames(r.Context(), conn, s, producerAuthority, initial)
+	t.serveFrames(r.Context(), conn, s, producerAuthority, initial, onMessage)
+}
+
+// parseSubscribe reads a console/subscribe/v1 frame (schemas/common/
+// console/subscribe/v1): a [west, south, east, north] box and the known
+// layers. Anything else is ignored, as the systems' pictures do.
+func parseSubscribe(b []byte) (*view, bool) {
+	var m struct {
+		Schema string `json:"schema"`
+		Body   struct {
+			BBox   []float64 `json:"bbox"`
+			Layers []string  `json:"layers"`
+		} `json:"body"`
+	}
+	if json.Unmarshal(b, &m) != nil || m.Schema != wire.SchemaSubscribe || len(m.Body.BBox) != 4 {
+		return nil, false
+	}
+	bb := m.Body.BBox
+	for i, lim := range []float64{180, 90, 180, 90} {
+		if math.IsNaN(bb[i]) || bb[i] < -lim || bb[i] > lim {
+			return nil, false
+		}
+	}
+	if bb[1] > bb[3] {
+		return nil, false
+	}
+	v := &view{west: bb[0], south: bb[1], east: bb[2], north: bb[3]}
+	for _, l := range m.Body.Layers {
+		switch l {
+		case "tracks":
+			v.tracks = true
+		case "manned", "alerts", "zones":
+		default:
+			return nil, false
+		}
+	}
+	return v, true
 }

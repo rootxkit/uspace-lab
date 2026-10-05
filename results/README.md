@@ -16,6 +16,9 @@ printed.
 | `20261004-systems-try1..3` | ArduCopter 4.5.7 SITL (WSL) | systems | earlier attempts kept as evidence of lab findings fixed on WP-L6 (SC-22 of try2 is that scenario's result: it needs a fresh authority) |
 | `20261005-chaos` | synthetic | systems | the WP-L9 chaos matrix (scripts/chaos): every failure domain of 05 §6 injected and observed, 18 rows pass, 10 fail with the system findings of docs/RUNBOOKS/chaos.md (F1 to F8) |
 
+The load runs (WP-L8, `load-report/v1`) are in `load/`, with their own
+README.
+
 The two reference runs are not evidence for a system: the reference target is the lab's own
 stand-in (`"evidence"` in each file says so). The owed system runs
 (scenarios/README.md) write their results here with `mode.targets:

@@ -10,3 +10,4 @@ d7324b7d487d33e8dfbc8f6581855c20141788ced5e1995843e23e225db9f227 rootxkit/uspace
 525e158ae7a0b39da7971bc0feaa3aa6bc80557e4603ea5091d2aa52d9ea5876 rootxkit/uspace-authority 3fb45c98d0308330914b19324f96d27808c1a138 schemas/rid/observation/v1.json -> authority/rid-observation-v1.json
 74618cdc285040167a7649f75629c4edba6892cc3b1903891cd330f5a4965a47 rootxkit/uspace-authority 3fb45c98d0308330914b19324f96d27808c1a138 schemas/violation/v1.json -> authority/violation-v1.json
 79d68e62b6ea773990a40b54b7af311b2065205d865f4fb5ad160de6b183a1cd rootxkit/uspace-ansp 2f9a7007e000eb210b799a00142c399cb01a8735 schemas/track/manned/v1.json -> ansp/track-manned-v1.json
+4ae9524ccd06ed5fa5cebb614487cc1a9495e4eecd545fcb6a884cd20cf92541 rootxkit/uspace-ussp db1df0105cd09de7988c17e09eb1d496d51d8bbc schemas/traffic/product/v1/schema.json -> ussp/traffic-product-v1.json
