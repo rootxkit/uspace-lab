@@ -277,6 +277,12 @@ func judgeAlerts(evs []alertEvent, bg Background, outStart, end time.Time, windo
 				seen = true
 				open[e.AlertID] = true
 			case observe.PhaseCleared:
+				if !open[e.AlertID] {
+					// A clear of an alert already closed (a system that
+					// replays its cleared frames after an outage) is not
+					// a new act.
+					continue
+				}
 				delete(open, e.AlertID)
 				allowed := inRow && w.mode(sys) == alertsStaleOK && slices.Contains(bg.StaleReasons, e.Reason)
 				f.What, f.Allowed = "cleared", allowed

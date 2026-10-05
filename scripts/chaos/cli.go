@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -19,6 +21,7 @@ import (
 	"runtime/debug"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/rootxkit/uspace-lab/internal/runner"
@@ -139,6 +142,8 @@ func cmdRun(args []string) int {
 	out := fs.String("out", "", "results directory (default results/<run>-chaos)")
 	runID := fs.String("run", "", "run id (default the UTC start time)")
 	noBG := fs.Bool("no-background", false, "run without the background scenario (alerts are then not judged and the run cannot pass)")
+	sessionsCmd := fs.String("sessions-cmd", "", "a shell command that refreshes the console sessions the targets file names (demo-seed --steps sessions); run every --sessions-every")
+	sessionsEvery := fs.Duration("sessions-every", 15*time.Minute, "how often --sessions-cmd runs (a console session ends after 30 minutes idle)")
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
@@ -183,6 +188,15 @@ func cmdRun(args []string) int {
 	res.Matrix.Path, res.Matrix.Digest = filepath.ToSlash(c.matrix), fileDigest(c.matrix)
 	res.Host.OS = runtime.GOOS + "/" + runtime.GOARCH
 	res.Commits = labCommits()
+	if *sessionsCmd != "" {
+		if *sessionsEvery < time.Minute || *sessionsEvery > time.Hour {
+			fmt.Fprintln(os.Stderr, "chaos: --sessions-every is 1m to 1h")
+			return exitUsage
+		}
+		r := &sessionRefresher{cmd: *sessionsCmd, every: *sessionsEvery, bash: bash, log: h.say}
+		res.Sessions = r
+		go r.run(ctx)
+	}
 
 	site, err := siteLab(c.targets)
 	if err != nil {
@@ -476,6 +490,8 @@ type RunResult struct {
 	Rows       []*RowResult      `json:"rows"`
 	Verdict    string            `json:"verdict"`
 	Failures   []string          `json:"failures,omitempty"`
+	// Sessions are the console-session refreshes made during the run.
+	Sessions *sessionRefresher `json:"sessions,omitempty"`
 }
 
 func (r *RunResult) write(dir string) error {
@@ -668,4 +684,77 @@ func cmdSkew(args []string) int {
 		return exitFail
 	}
 	return exitPass
+}
+
+// maxRefreshes bounds the refreshes kept in the result.
+const maxRefreshes = 64
+
+// sessionRefresher runs a command every so often for as long as the run
+// lasts: the background's console streams are refused ("sign in again")
+// once the session the targets file names has ended, and the runner
+// reads the file again on every reconnection.
+type sessionRefresher struct {
+	cmd   string
+	every time.Duration
+	bash  string
+	log   func(string, ...any)
+
+	mu   sync.Mutex
+	Runs []Refresh `json:"runs"`
+}
+
+// Refresh is one run of the command.
+type Refresh struct {
+	At       time.Time `json:"at"`
+	ExitCode int       `json:"exit_code"`
+	Tail     string    `json:"tail,omitempty"`
+}
+
+func (s *sessionRefresher) run(ctx context.Context) {
+	t := time.NewTicker(s.every)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+		cctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+		var buf bytes.Buffer
+		cmd := exec.CommandContext(cctx, s.bash, "-c", s.cmd) //nolint:gosec // G204: the operator's own command line
+		cmd.Stdout, cmd.Stderr = &limited{b: &buf}, &limited{b: &buf}
+		err := cmd.Run()
+		cancel()
+		r := Refresh{At: time.Now().UTC()}
+		var ee *exec.ExitError
+		switch {
+		case errors.As(err, &ee):
+			r.ExitCode = ee.ExitCode()
+		case err != nil:
+			r.ExitCode = -1
+		}
+		out := strings.TrimSpace(buf.String())
+		if i := strings.LastIndex(out, "\n"); i >= 0 {
+			out = out[i+1:]
+		}
+		r.Tail = bounded(out)
+		s.log("console sessions refreshed (exit %d)", r.ExitCode)
+		s.mu.Lock()
+		if len(s.Runs) < maxRefreshes {
+			s.Runs = append(s.Runs, r)
+		}
+		s.mu.Unlock()
+	}
+}
+
+// MarshalJSON reads the runs under the lock: the result is written while
+// the refresher may still run.
+func (s *sessionRefresher) MarshalJSON() ([]byte, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return json.Marshal(struct {
+		Command string    `json:"command"`
+		Every   string    `json:"every"`
+		Runs    []Refresh `json:"runs"`
+	}{s.cmd, s.every.String(), s.Runs})
 }

@@ -231,3 +231,12 @@ func TestAnEventIsTheLatestRowsWhenWindowsMeet(t *testing.T) {
 		t.Fatalf("%+v", all)
 	}
 }
+
+func TestARepeatedClearIsNotANewAct(t *testing.T) {
+	evs := []alertEvent{ev("authority", "a1", observe.PhaseCleared, "stale", 20), ev("authority", "a1", observe.PhaseCleared, "stale", 20),
+		ev("authority", "a1", observe.PhaseCleared, "stale", 21), ev("authority", "a2", observe.PhaseRaised, "", 25)}
+	all := findings(evs, map[string]string{"authority": alertsStaleOK})
+	if len(all) != 2 || all[0].What != "stale_clear" || all[1].What != "re_raised" || len(failed(all)) != 0 {
+		t.Fatalf("%+v", all)
+	}
+}

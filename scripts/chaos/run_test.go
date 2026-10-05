@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -158,4 +159,43 @@ func TestTheResultIsWrittenAndReadable(t *testing.T) {
 	if err != nil || !strings.Contains(string(txt), "ussp-monitor") || !strings.Contains(string(txt), "fault seen") {
 		t.Fatalf("chaos.txt: %q %v", txt, err)
 	}
+}
+
+func TestTheSessionRefresherRunsAndRecordsBothWays(t *testing.T) {
+	if _, err := exec.LookPath("bash"); err != nil {
+		t.Skip("bash is not installed")
+	}
+	bash, _ := exec.LookPath("bash")
+	for _, c := range []struct {
+		cmd  string
+		code int
+	}{{"echo refreshed", 0}, {"echo no; exit 3", 3}} {
+		r := &sessionRefresher{cmd: c.cmd, every: 20 * time.Millisecond, bash: bash, log: func(string, ...any) {}}
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		done := make(chan struct{})
+		go func() { r.run(ctx); close(done) }()
+		ok := eventually(2*time.Second, func() bool { r.mu.Lock(); defer r.mu.Unlock(); return len(r.Runs) > 0 })
+		cancel()
+		<-done
+		if !ok || r.Runs[0].ExitCode != c.code {
+			t.Fatalf("%q: %+v", c.cmd, r.Runs)
+		}
+		if _, err := json.Marshal(r); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// eventually polls f until it holds or d passes.
+func eventually(d time.Duration, f func() bool) bool {
+	deadline := time.Now().Add(d)
+	tk := time.NewTicker(10 * time.Millisecond)
+	defer tk.Stop()
+	for !f() {
+		if time.Now().After(deadline) {
+			return false
+		}
+		<-tk.C
+	}
+	return true
 }

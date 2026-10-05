@@ -232,11 +232,14 @@ conformance-axe:
 CHAOS_ROWS ?=
 CHAOS_OUT  ?=
 CHAOS_KEEP ?=
+# Console sessions end after 30 minutes idle and the run is longer: the
+# harness refreshes them every 15 minutes with this command.
+CHAOS_SESSIONS ?= deploy/local-demo/bin/demo-seed --steps sessions --geoid deploy/local-demo/ground/egm2008-2_5.pgm scripts/chaos/background.yaml
 chaos:
 	deploy/demo-down.sh
 	deploy/demo-up.sh
 	GO=$(GO) scripts/chaos/prepare.sh --fresh
-	@rc=0; $(GO) run ./scripts/chaos run --rows '$(CHAOS_ROWS)' $(if $(CHAOS_OUT),--out $(CHAOS_OUT)) || rc=$$?; \
+	@rc=0; $(GO) run ./scripts/chaos run --rows '$(CHAOS_ROWS)' --sessions-cmd '$(CHAOS_SESSIONS)' $(if $(CHAOS_OUT),--out $(CHAOS_OUT)) || rc=$$?; \
 	if [ "$(CHAOS_KEEP)" != 1 ]; then deploy/demo-down.sh || { [ $$rc -ne 0 ] || rc=1; }; fi; \
 	exit $$rc
 
