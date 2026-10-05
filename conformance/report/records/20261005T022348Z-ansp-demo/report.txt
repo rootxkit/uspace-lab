@@ -1,0 +1,9 @@
+conformance 20261005T022348Z-ansp-demo: ansp-demo (ansp) at https://ansp.uspace.test:9443: incomplete, 5 pass, 0 fail, 3 not applicable
+  not_applicable NAT-PRECONDITION     0/0/0  no check of this run applied (decided by national.stale_precondition)
+  not_applicable F3548-CM             0/0/1  uss_qualifier v0.36.0 has no constraint management requirement set or suite (requirements/astm/f3548/v21 holds dss_provider and scd only)
+  not_applicable A11Y-PUBLIC          (informative) 0/0/1  the target file names no public page
+  pass           NAT-UNAUTH           39/0/0
+  pass           NAT-SCOPE            9/0/0
+  pass           NAT-NOTFOUND         3/0/4
+  pass           NAT-INVALID          2/0/16
+  pass           NAT-SUCCESS          5/0/19

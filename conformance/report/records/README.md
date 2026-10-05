@@ -151,3 +151,58 @@ What the failures are, as observed (the defects of the systems are
 
 None of these targets has a baseline: they are evidence that the suite
 runs against each system, not a reviewed state CI gates on.
+
+## `20261005T0223*-demo/`: the authority and the ANSP after their fixes
+
+The two systems at the merges of their conformance fixes,
+uspace-authority#49 (`9a35cba`: C4, C6, C7) and uspace-ansp#26
+(`a26e00b`: C4, C5), on the systems stack of `deploy/systems/` at
+uspace-lab `e425025` (clean; the reports name it; re-made as `dc7b4ee`
+before it was pushed, when an earlier subject was shortened: the same
+tree but for the note on `62809d3` above), which routes their
+`/healthz`, `/readyz` and `/metrics` through the lab Caddy and judges a
+`text/plain` answer as text. Compose project `uspace-close` with
+`deploy/demo.env.example` less two images: the authority's
+`ghcr.io/rootxkit/uspace-authority@sha256:cd31db6b...` (`sha-9a35cba`,
+revision label `9a35cba`) and the ANSP's
+`ghcr.io/rootxkit/uspace-ansp@sha256:97304cfc...` (tag `a26e00b`,
+published by its CI). Only the DSS, the issuer, Caddy and those two
+systems were started (the CISP and the USSP stack were not needed);
+`gen-secrets.sh` ran with `MSYS_NO_PATHCONV=1` in the environment, the
+case that used to stop it without a word. Target files as for the first
+`*-demo` records (the committed ones plus `ca_file` and `resolve`, the
+port 9443); each contract at its image's commit.
+
+| Record | Contract | Verdict |
+|---|---|---|
+| `20261005T022343Z-authority-demo/` | uspace-authority `9a35cba` `api/openapi.yaml` (`sha256:07284432...`) | fail: 3 pass, 3 fail, 3 n/a |
+| `20261005T022348Z-ansp-demo/` | uspace-ansp `a26e00b` `api/openapi.yaml` (`sha256:1b1596cf...`) | incomplete: 5 pass, 0 fail, 3 n/a (NAT-PRECONDITION, F3548-CM: no baseline accepts them) |
+
+What changed against the first `*-demo` records:
+
+- ANSP: NAT-UNAUTH passes (39 checks: an upgrade without credential is
+  401, C4), NAT-INVALID passes (`login`, `verifyMfa` answer an empty
+  body 400, C5), NAT-SUCCESS passes (`getMetrics` reached, 200 with the
+  declared text). Nothing fails.
+- Authority: NAT-UNAUTH passes (124 checks: `getPictureWS` without
+  credential is 401, C4; the six operations of C6 answer 401 before
+  validating), NAT-SCOPE passes (`postDPISANotification`'s refusals
+  match the contract, C7), and `getHealthz`, `getReadyz`, `getMetrics`
+  pass through the lab Caddy. `postRIDObservations` is no longer 502.
+
+What still fails on the authority, all on the lab's side:
+
+- `validateRegistry` answers 400 `validation`: the target names no
+  operator registration (`AUTHORITY_CONFORMANCE_OPERATOR`), so
+  NAT-SUCCESS fails on it and REG-NOPII has nothing to inspect. The lab
+  has no operator fixture to name yet.
+- NAT-INVALID on `createOperatorOccurrence`, `submitRegistryApplication`
+  and `requestOperatorLink`: each answers an empty body 404
+  `not_found`, not 400. They are switched off: the authority's
+  `REGISTRY_APPLICATIONS` and `REGISTRY_OPERATOR_REPORTS` default to
+  `off`, which its configuration documents as "404" for these
+  operations, and the lab stack sets neither (they need a portal key and
+  URL). In the first record the suite could construct no invalid body
+  for them. Whether the lab turns them on or the suite reads a
+  switched-off 404 as not applicable, as it reads the CISP's 503, is
+  not decided here.
