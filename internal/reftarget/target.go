@@ -217,6 +217,7 @@ func (t *Target) Handler() http.Handler {
 	mux.HandleFunc("GET /v1/intents/{id}", t.handleIntentGet)
 	mux.HandleFunc("PATCH /v1/intents/{id}", t.handleIntentPatch)
 	mux.HandleFunc("GET /v1/alerts", t.handleAlertsWS)
+	mux.HandleFunc("GET /v1/traffic", t.handleTrafficWS)
 	mux.HandleFunc("POST /v1/rid/observations", t.handleObservations)
 	mux.HandleFunc("GET /v1/picture/ws", t.handlePictureWS)
 	mux.HandleFunc("GET /lab/state", t.handleState)
