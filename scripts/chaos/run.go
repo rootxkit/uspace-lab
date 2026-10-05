@@ -25,6 +25,11 @@ type harness struct {
 	out     io.Writer
 	status  map[string]*StatusLog
 	skewRig *skewRig
+	// settle is how long after a restore a row keeps sampling even when
+	// every after-claim is met: the background's re-alert bound, so that
+	// what the systems do with the standing alert after a restore falls
+	// in the row that caused it, not in the next row's injection.
+	settle time.Duration
 	// shell runs a domain script; tests replace it.
 	shell func(ctx context.Context, domain, action string, args []string) ScriptRun
 }
@@ -323,14 +328,15 @@ func (h *harness) runRow(ctx context.Context, r Row) *RowResult {
 	for i := range r.After {
 		afterMax = max(afterMax, r.After[i].WithinS)
 	}
-	afterEnd := rr.Restored.Add(time.Duration(afterMax * float64(time.Second)))
+	afterEnd := rr.Restored.Add(max(time.Duration(afterMax*float64(time.Second)), h.settle))
+	settled := rr.Restored.Add(h.settle)
 	t = time.NewTicker(every)
 	for time.Now().Before(afterEnd) {
 		// cs is docker's view before the fault: a restarted container
 		// is one whose StartedAt moved on docker's clock.
 		s, _ := h.sample(ctx, phaseAfter, &spec, cs)
 		samples = append(samples, s)
-		if h.afterMet(r, rr.Restored, samples, &base) {
+		if h.afterMet(r, rr.Restored, samples, &base) && !time.Now().Before(settled) {
 			break
 		}
 		if !h.tick(ctx, t) {

@@ -25,7 +25,7 @@ const rowOverheadS = 30
 func backgroundHoldS(bg Background, rows []Row) float64 {
 	h := bg.RaisedWithinS
 	for i := range rows {
-		h += rows[i].HoldS + rows[i].RecoverWithinS + rowOverheadS
+		h += rows[i].HoldS + max(rows[i].RecoverWithinS, bg.RealertWithinS) + rowOverheadS
 		h += float64(len(rows[i].Skew)) * 15
 	}
 	return h

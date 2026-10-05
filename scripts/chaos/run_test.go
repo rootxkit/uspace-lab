@@ -199,3 +199,20 @@ func eventually(d time.Duration, f func() bool) bool {
 	}
 	return true
 }
+
+// With a settle time the row keeps sampling after its claims are met,
+// until the restore plus the settle; without one it stops as soon as
+// they are.
+func TestARowSettlesForTheReAlertBound(t *testing.T) {
+	st := newStage(t, false)
+	st.h.settle = 1500 * time.Millisecond
+	rr := st.h.runRow(context.Background(), monitorRow())
+	if rr.Verdict != verdictPass || rr.Ended.Sub(rr.Restored) < 1500*time.Millisecond {
+		t.Fatalf("%s, ended %v after the restore", rr.Verdict, rr.Ended.Sub(rr.Restored))
+	}
+	st2 := newStage(t, false)
+	rr2 := st2.h.runRow(context.Background(), monitorRow())
+	if rr2.Ended.Sub(rr2.Restored) >= 1500*time.Millisecond {
+		t.Fatalf("no settle, still sampled %v after the restore", rr2.Ended.Sub(rr2.Restored))
+	}
+}

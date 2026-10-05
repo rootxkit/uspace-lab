@@ -184,6 +184,9 @@ func cmdRun(args []string) int {
 	defer stop()
 	h := &harness{m: m, lab: lab, docker: cliDocker{bin: "docker"}, scripts: filepath.Dir(c.matrix), bash: bash, out: os.Stdout, status: map[string]*StatusLog{}}
 	h.shell = h.runScript
+	if !*noBG && m.Background.Scenario != "" {
+		h.settle = time.Duration(m.Background.RealertWithinS * float64(time.Second))
+	}
 	res := &RunResult{Format: ResultFormat, Run: *runID, StartedAt: time.Now().UTC(), Project: lab.Project, Systems: h.systemNames(), Pending: m.Pending}
 	res.Matrix.Path, res.Matrix.Digest = filepath.ToSlash(c.matrix), fileDigest(c.matrix)
 	res.Host.OS = runtime.GOOS + "/" + runtime.GOARCH
@@ -287,7 +290,7 @@ func cmdRun(args []string) int {
 		rowsStart := time.Now()
 		for i := range sel {
 			r := &sel[i]
-			if bg != nil && time.Since(rowsStart).Seconds()+r.HoldS+r.RecoverWithinS+rowOverheadS > bg.HoldS-m.Background.RaisedWithinS {
+			if bg != nil && time.Since(rowsStart).Seconds()+r.HoldS+max(r.RecoverWithinS, m.Background.RealertWithinS)+rowOverheadS > bg.HoldS-m.Background.RaisedWithinS {
 				rr := &RowResult{ID: r.ID, Domain: r.Domain, Cite: r.Cite, Claim: r.Claim, Verdict: verdictNotRun,
 					Failures: []string{"not run: the background's hold would end during the row"}}
 				res.Rows = append(res.Rows, rr)
