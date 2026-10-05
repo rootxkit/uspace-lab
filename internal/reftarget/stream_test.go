@@ -271,3 +271,31 @@ func TestTrafficProductOnTheTrafficStreamOnly(t *testing.T) {
 		t.Fatalf("a product on the alert stream: %v", extra)
 	}
 }
+
+// The windows are swept: a receiver nonce, an observation key and a
+// telemetry dedupe key are kept inside their windows and gone after
+// them, so a long run's state stops growing.
+func TestPruneForgetsWhatLeftItsWindow(t *testing.T) {
+	clk := &clock{now: time.Now().UTC()}
+	tg, _ := newTargetAt(t, clk.Now)
+	tg.mu.Lock()
+	tg.nonces["rx-1"] = map[string]time.Time{"n1": clk.Now()}
+	tg.seenObs["k1"] = clk.Now()
+	fl := tg.flightLocked("A1", "op-a")
+	fl.dedupe["e|1"] = dedupeEntry{ts: "t", at: clk.Now()}
+	tg.mu.Unlock()
+	tg.tick() // inside every window: nothing goes
+	tg.mu.Lock()
+	kept := len(tg.nonces["rx-1"]) == 1 && len(tg.seenObs) == 1 && len(fl.dedupe) == 1
+	tg.mu.Unlock()
+	if !kept {
+		t.Fatal("a key inside its window was forgotten")
+	}
+	clk.Advance(dedupeWindow + time.Second)
+	tg.tick()
+	tg.mu.Lock()
+	defer tg.mu.Unlock()
+	if len(tg.nonces["rx-1"]) != 0 || len(tg.seenObs) != 0 || len(fl.dedupe) != 0 {
+		t.Fatalf("kept after their windows: %d nonces, %d observations, %d dedupe keys", len(tg.nonces["rx-1"]), len(tg.seenObs), len(fl.dedupe))
+	}
+}

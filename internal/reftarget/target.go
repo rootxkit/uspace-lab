@@ -107,6 +107,7 @@ type Target struct {
 	tx        map[string]*transmitter
 	trackPos  map[string]core.LatLon
 	counters  map[string]*core.Counters
+	lastPrune time.Time
 }
 
 // Counter groups.
@@ -252,6 +253,40 @@ func (t *Target) tick() {
 	t.emitAuthority(t.authority.Tick(wall), now)
 	t.lostLinkLocked(now)
 	t.republishLocked(now)
+	if now.Sub(t.lastPrune) >= pruneEvery {
+		t.pruneLocked(now)
+		t.lastPrune = now
+	}
+}
+
+// pruneEvery is how often the replay and dedupe windows are swept.
+const pruneEvery = 10 * time.Second
+
+// pruneLocked forgets what has left its window: receiver nonces after
+// twice the nonce window, observation and telemetry dedupe keys after
+// theirs. The count caps at the insert sites stay as the hard bound; the
+// sweep keeps the steady state to one window, so a long run's memory
+// stops growing once the windows are full (05 §7 memory row).
+func (t *Target) pruneLocked(now time.Time) {
+	for _, ns := range t.nonces {
+		for k, at := range ns {
+			if now.Sub(at) >= 2*nonceWindow {
+				delete(ns, k)
+			}
+		}
+	}
+	for k, at := range t.seenObs {
+		if now.Sub(at) >= nonceWindow {
+			delete(t.seenObs, k)
+		}
+	}
+	for _, fl := range t.flights {
+		for k, d := range fl.dedupe {
+			if now.Sub(d.at) > dedupeWindow {
+				delete(fl.dedupe, k)
+			}
+		}
+	}
 }
 
 // --- helpers -------------------------------------------------------------------
