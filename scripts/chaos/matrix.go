@@ -71,6 +71,12 @@ type Background struct {
 	Systems      []string `yaml:"systems"`
 	Kind         string   `yaml:"kind"`
 	Subject      string   `yaml:"subject"`
+	// MaxSilenceS is the longest a background system's console stream
+	// may go without a frame (console/status/v1 comes every 2 s, spec
+	// 04 §1) before what it did not say about the alert stops counting:
+	// a silence longer than this inside a row fails the row unless the
+	// row names the system in streams_down. Below realert_within_s.
+	MaxSilenceS float64 `yaml:"max_silence_s"`
 }
 
 // Row is one failure domain run.
@@ -101,9 +107,18 @@ type Row struct {
 	// In every mode the alert must be open again after the row.
 	Alerts       map[string]string `yaml:"alerts"`
 	AlertsReason string            `yaml:"alerts_reason"`
-	During       []Expect          `yaml:"during"`
-	After        []Expect          `yaml:"after"`
-	Skew         []Skew            `yaml:"skew"`
+	// StreamsDown are the background systems whose console stream the
+	// fault itself takes down (the process serving it, or the system,
+	// stops or is cut off): their silence is allowed inside the row's
+	// window when the stream comes back re-sending the open alerts (a
+	// console/snapshot/v1, or the active alert frames a stream sends on
+	// connect), so the alert after it is re-read. Any other silence longer
+	// than background.max_silence_s fails the row.
+	StreamsDown       []string `yaml:"streams_down"`
+	StreamsDownReason string   `yaml:"streams_down_reason"`
+	During            []Expect `yaml:"during"`
+	After             []Expect `yaml:"after"`
+	Skew              []Skew   `yaml:"skew"`
 }
 
 // Expect is one claim judged on the samples of a phase.
@@ -265,6 +280,9 @@ func (m *Matrix) Validate() error {
 		if len(bg.StaleReasons) == 0 {
 			bad("background.stale_reasons: at least one")
 		}
+		if bg.MaxSilenceS <= 0 || bg.MaxSilenceS >= bg.RealertWithinS {
+			bad("background.max_silence_s %g: above 0, below realert_within_s (a row's window must outlast it)", bg.MaxSilenceS)
+		}
 	}
 	if len(m.Rows) == 0 || len(m.Rows) > maxRows {
 		bad("rows: 1 to %d", maxRows)
@@ -313,6 +331,14 @@ func (m *Matrix) Validate() error {
 			default:
 				bad("%s: alerts %s %q: kept or stale_ok", at, sys, mode)
 			}
+		}
+		for _, sys := range r.StreamsDown {
+			if !slices.Contains(m.Background.Systems, sys) {
+				bad("%s: streams_down names %q, not a system of the background", at, sys)
+			}
+		}
+		if len(r.StreamsDown) > 0 && strings.TrimSpace(r.StreamsDownReason) == "" {
+			bad("%s: streams_down needs streams_down_reason (what in the fault takes the stream down)", at)
 		}
 		if r.Domain == "clock" {
 			if len(r.Skew) < 2 {

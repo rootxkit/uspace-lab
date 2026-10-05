@@ -154,6 +154,10 @@ go run ./scripts/chaos skew --skew-s 45     # one skewed receiver batch
    restore; never two open at once; never cleared for another reason
    while the aircraft is inside; at the exit, open, cleared as resolved,
    nothing raised after.
+4. The streams: each absence in 3 counts only while the system's
+   console stream is heard. A silence over `max_silence_s` (6 s) in a
+   row fails it, unless the row's fault takes that stream down
+   (`streams_down`) and it comes back re-sending the open alerts.
 
 "Ready" is the system's readiness endpoint answering 200. A system may
 answer 200 with a check degraded; the rows judge the checks separately.

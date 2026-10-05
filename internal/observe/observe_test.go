@@ -178,6 +178,36 @@ func TestOnAddSeesEveryRecordedEventAndNothingElse(t *testing.T) {
 	}
 }
 
+// OnFrame sees every frame, the ones that make no event (a status
+// heartbeat, an update) and the unreadable ones too, with the stream's
+// name, system and the time it was received.
+func TestOnFrameSeesEveryFrameAndOnlyFrames(t *testing.T) {
+	r := NewRecorder(nil)
+	var seen []Frame
+	r.OnFrame(func(f Frame) { seen = append(seen, f) })
+	s := Stream{Name: "authority-picture", System: "authority"}
+	st := NewStreamState()
+	t1 := time.Date(2026, 10, 5, 9, 0, 0, 0, time.UTC)
+	r.Handle(s, st, frame(t, wire.SchemaStatus, map[string]any{"degraded": []string{}}), t1)
+	r.Handle(s, st, frame(t, wire.SchemaAlert, alertBody("raised", nil)), t1.Add(time.Second))
+	r.Handle(s, st, []byte("not json"), t1.Add(2*time.Second))
+	want := []Frame{
+		{Stream: "authority-picture", System: "authority", Schema: wire.SchemaStatus, At: t1},
+		{Stream: "authority-picture", System: "authority", Schema: wire.SchemaAlert, At: t1.Add(time.Second)},
+		{Stream: "authority-picture", System: "authority", Schema: "unparseable", At: t1.Add(2 * time.Second)},
+	}
+	if fmt.Sprint(seen) != fmt.Sprint(want) {
+		t.Fatalf("hook saw %+v, want %+v", seen, want)
+	}
+	// No frame, no call.
+	quiet := NewRecorder(nil)
+	n := 0
+	quiet.OnFrame(func(Frame) { n++ })
+	if n != 0 || len(quiet.Frames()) != 0 {
+		t.Fatalf("a recorder with no frame called its hook %d times", n)
+	}
+}
+
 func TestWithoutOnAddRecordingIsUnchanged(t *testing.T) {
 	r := NewRecorder(nil)
 	r.Handle(Stream{Name: "x", System: "ussp"}, NewStreamState(), frame(t, wire.SchemaAlert, alertBody("raised", nil)), time.Now())

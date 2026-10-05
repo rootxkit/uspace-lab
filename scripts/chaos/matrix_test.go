@@ -133,8 +133,12 @@ func TestMatrixRefusesWhatCannotBeJudged(t *testing.T) {
 		"clock without refusal": {func(m *Matrix) {
 			rowByDomain(m, "clock").Skew = []Skew{{SkewS: -10, Want: skewAccepted}, {SkewS: -5, Want: skewAccepted}}
 		}, "accepted and a refused"},
-		"clock one case": {func(m *Matrix) { rowByDomain(m, "clock").Skew = []Skew{{SkewS: 45, Want: skewRefused}} }, "presence and absence"},
-		"zero skew":      {func(m *Matrix) { rowByDomain(m, "clock").Skew[0].SkewS = 0 }, "non-zero"},
+		"clock one case":         {func(m *Matrix) { rowByDomain(m, "clock").Skew = []Skew{{SkewS: 45, Want: skewRefused}} }, "presence and absence"},
+		"zero skew":              {func(m *Matrix) { rowByDomain(m, "clock").Skew[0].SkewS = 0 }, "non-zero"},
+		"no silence bound":       {func(m *Matrix) { m.Background.MaxSilenceS = 0 }, "max_silence_s"},
+		"silence past re-alert":  {func(m *Matrix) { m.Background.MaxSilenceS = m.Background.RealertWithinS }, "max_silence_s"},
+		"streams_down unknown":   {func(m *Matrix) { m.Rows[0].StreamsDown, m.Rows[0].StreamsDownReason = []string{"cisp"}, "x" }, "not a system of the background"},
+		"streams_down no reason": {func(m *Matrix) { m.Rows[0].StreamsDown = []string{"ussp"} }, "streams_down_reason"},
 		"refusal without its problem": {func(m *Matrix) {
 			for i := range rowByDomain(m, "clock").Skew {
 				rowByDomain(m, "clock").Skew[i].Problem = ""

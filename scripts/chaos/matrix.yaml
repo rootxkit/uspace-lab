@@ -43,6 +43,12 @@ background:
   systems: [ussp, authority]
   kind: zone_incursion
   subject: CHAOSZ
+  # The lab's own bound, not a national figure: three periods of the
+  # console/status/v1 every 2 s (spec 04 §1). A "kept" alert is judged by
+  # the absence of a clear, which counts only while the stream that
+  # would carry the clear is heard; a longer silence inside a row fails
+  # it unless the row names the system in streams_down.
+  max_silence_s: 6
 
 rows:
   # ---- one ingest adapter instance ------------------------------------
@@ -363,6 +369,8 @@ rows:
     recover_within_s: 60
     alerts: {ussp: stale_ok}
     alerts_reason: "the operator's telemetry cannot reach the USSP for 60 s"
+    streams_down: [ussp]
+    streams_down_reason: "the lab front cannot reach the USSP's traffic-ws, which serves the alert stream"
     during:
       - {system: ussp, ready: lost, within_s: 10, why: "the lab front cannot reach it: it must not look ready from outside"}
       - {system: others, ready: always, why: "02 §1: a consumer that loses a producer keeps serving"}
@@ -396,6 +404,8 @@ rows:
     recover_within_s: 120
     alerts: {authority: stale_ok}
     alerts_reason: "the whole authority is down for 300 s: its own alert cannot be shown; it must come back open, under its id or as one new raise after a stale clear, never twice"
+    streams_down: [authority]
+    streams_down_reason: "picture-ws, which serves the authority's console stream, is stopped with the system"
     during:
       - {system: authority, ready: lost, within_s: 10, why: "the authority is down"}
       - {system: [cisp, ussp, ansp, issuer, dss], ready: always, why: "05 §6: no real-time service depends on the authority"}
@@ -456,6 +466,8 @@ rows:
     recover_within_s: 240
     alerts: {ussp: stale_ok, authority: stale_ok}
     alerts_reason: "nothing runs for the hold and the start: the aircraft's data reaches no system"
+    streams_down: [ussp, authority]
+    streams_down_reason: "every container stops, the console streams' servers with them"
     during:
       - {system: all, ready: lost, within_s: 30, why: "everything is down"}
     after:

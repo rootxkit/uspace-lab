@@ -67,6 +67,27 @@ type Recorder struct {
 	// onAdd, when set, sees every event as it is recorded, outside the
 	// lock (scripts/chaos watches the background run's alerts live).
 	onAdd func(Event)
+	// onFrame, when set, sees every frame received, outside the lock
+	// (scripts/chaos judges each console stream's liveness: an alert
+	// claim on a stream that said nothing proves nothing).
+	onFrame func(Frame)
+}
+
+// Frame is one frame received on a stream: where, what and when.
+type Frame struct {
+	Stream string
+	System string
+	Schema string // the envelope's schema, "unparseable" when it had none
+	At     time.Time
+}
+
+// OnFrame sets a function that sees every frame as it is received,
+// whatever its schema (a status frame is the stream's heartbeat). Set it
+// before the recorder runs; it must not block.
+func (r *Recorder) OnFrame(f func(Frame)) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.onFrame = f
 }
 
 // OnAdd sets a function that sees every event as it is recorded. Set it
@@ -100,6 +121,15 @@ func (r *Recorder) frame(stream, schema string) {
 		r.frames[stream] = map[string]uint64{}
 	}
 	r.frames[stream][schema]++
+}
+
+func (r *Recorder) seen(f Frame) {
+	r.mu.Lock()
+	h := r.onFrame
+	r.mu.Unlock()
+	if h != nil {
+		h(f)
+	}
 }
 
 func (r *Recorder) fail(stream string, err error) {
@@ -246,9 +276,11 @@ func (r *Recorder) Handle(s Stream, st *streamState, b []byte, at time.Time) {
 	e, err := wire.ParseEnvelope(b)
 	if err != nil {
 		r.frame(s.Name, "unparseable")
+		r.seen(Frame{Stream: s.Name, System: s.System, Schema: "unparseable", At: at})
 		return
 	}
 	r.frame(s.Name, e.Schema)
+	r.seen(Frame{Stream: s.Name, System: s.System, Schema: e.Schema, At: at})
 	switch e.Schema {
 	case wire.SchemaAlert:
 		r.alert(s, st, e, at)

@@ -66,6 +66,10 @@ type Options struct {
 	// recorded (scripts/chaos waits on the background run's alerts). It
 	// must not block.
 	OnEvent func(observe.Event)
+	// OnFrame, when set, sees every frame the collectors receive
+	// (scripts/chaos judges each console stream's liveness). It must not
+	// block.
+	OnFrame func(observe.Frame)
 }
 
 // referenceKinds are what the reference target judges, per system.
@@ -216,6 +220,9 @@ func Run(ctx context.Context, opt Options) (*Result, error) {
 	}
 	if opt.OnEvent != nil {
 		r.rec.OnAdd(opt.OnEvent)
+	}
+	if opt.OnFrame != nil {
+		r.rec.OnFrame(opt.OnFrame)
 	}
 	return r.execute(ctx)
 }

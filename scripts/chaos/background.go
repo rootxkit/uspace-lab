@@ -207,6 +207,9 @@ type window struct {
 	from, to time.Time
 	restored time.Time
 	modes    map[string]string
+	// streamsDown are the systems whose console stream the row's fault
+	// takes down (Row.StreamsDown).
+	streamsDown []string
 }
 
 func (w window) mode(sys string) string {
@@ -363,10 +366,13 @@ type BackgroundResult struct {
 	Failures       []string             `json:"failures,omitempty"`
 	Findings       []AlertFinding       `json:"findings,omitempty"`
 	Events         []alertEvent         `json:"events,omitempty"`
-	EventsDropped  int                  `json:"events_dropped,omitempty"`
-	ResultFile     string               `json:"result_file,omitempty"`
-	Note           string               `json:"note,omitempty"`
-	Error          string               `json:"error,omitempty"`
+	// Streams is each background console stream's frames and silences:
+	// what the alert findings' absences rest on.
+	Streams       map[string]StreamLiveness `json:"streams,omitempty"`
+	EventsDropped int                       `json:"events_dropped,omitempty"`
+	ResultFile    string                    `json:"result_file,omitempty"`
+	Note          string                    `json:"note,omitempty"`
+	Error         string                    `json:"error,omitempty"`
 }
 
 func summarise(res *runner.Result, br *BackgroundResult) {

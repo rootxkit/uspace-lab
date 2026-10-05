@@ -233,6 +233,7 @@ func cmdRun(args []string) int {
 	var bg *BackgroundResult
 	var bgDone chan *runner.Result
 	var watch *alertWatch
+	var live *liveWatch
 	var bgErr error
 	var holdEnd time.Time
 	if !*noBG && m.Background.Scenario != "" {
@@ -245,6 +246,7 @@ func cmdRun(args []string) int {
 			return exitUsage
 		}
 		watch = newAlertWatch(m.Background)
+		live = newLiveWatch(m.Background)
 		bgDone = make(chan *runner.Result, 1)
 		started := time.Now()
 		logf, _ := os.Create(filepath.Join(*out, "background.log"))
@@ -252,7 +254,7 @@ func cmdRun(args []string) int {
 		defer bgCancel()
 		go func() {
 			r, err := runner.Run(bgCtx, runner.Options{Scenario: path, Targets: c.targets, Vehicles: runner.VehiclesSynthetic,
-				OutDir: *out, Run: *runID, Repo: runner.RepoRoot("."), OnEvent: watch.see,
+				OutDir: *out, Run: *runID, Repo: runner.RepoRoot("."), OnEvent: watch.see, OnFrame: live.frame,
 				Log: slog.New(slog.NewTextHandler(logWriter(logf), nil))})
 			bgErr = err
 			bgDone <- r
@@ -307,7 +309,7 @@ func cmdRun(args []string) int {
 			if n := len(windows); n > 0 && windows[n-1].to.After(rr.Injected) {
 				windows[n-1].to = rr.Injected
 			}
-			windows = append(windows, window{row: r.ID, from: rr.Injected, to: to, restored: rr.Restored, modes: r.Alerts})
+			windows = append(windows, window{row: r.ID, from: rr.Injected, to: to, restored: rr.Restored, modes: r.Alerts, streamsDown: r.StreamsDown})
 			h.say("row %s: %s%s", r.ID, strings.ToUpper(rr.Verdict), failureTail(rr.Failures))
 			if ctx.Err() != nil {
 				break
@@ -331,27 +333,21 @@ func cmdRun(args []string) int {
 		}
 		evs, dropped := watch.all()
 		bg.Events, bg.EventsDropped = evs, dropped
+		bg.Streams = live.all()
+		if r == nil {
+			// No background result: neither the alert nor its streams can
+			// be judged, and an unjudged alert must not pass a row.
+			res.Failures = append(res.Failures, "background: no result, the standing alert was not judged")
+		}
 		if r != nil {
 			bg.Findings = judgeAlerts(evs, m.Background, firstClearBound(r), r.EndedAt, windows)
+			// The absences above count only where the streams were heard.
+			bg.Findings = append(bg.Findings, judgeLiveness(bg.Streams, m.Background, firstClearBound(r), r.EndedAt, windows)...)
+			sort.SliceStable(bg.Findings, func(i, j int) bool { return bg.Findings[i].At.Before(bg.Findings[j].At) })
 		}
 	}
 	if bg != nil {
-		for _, f := range bg.Findings {
-			placed := false
-			for _, rr := range res.Rows {
-				if rr.ID == f.Row {
-					rr.AlertFindings = append(rr.AlertFindings, f)
-					if !f.Allowed {
-						rr.Failures = append(rr.Failures, fmt.Sprintf("alert: %s %s %s at +%.1fs into the row%s", f.System, strings.ReplaceAll(f.What, "_", " "), f.AlertID, f.OffsetS, reasonTail(f.Reason)))
-						rr.Verdict = verdictFail
-					}
-					placed = true
-				}
-			}
-			if !placed && !f.Allowed {
-				res.Failures = append(res.Failures, fmt.Sprintf("alert: %s %s %s at %s, between rows%s", f.System, strings.ReplaceAll(f.What, "_", " "), f.AlertID, f.At.Format(time.RFC3339), reasonTail(f.Reason)))
-			}
-		}
+		placeFindings(res, bg.Findings)
 		// The runner's own verdict is recorded, not judged: it pairs an
 		// alert's first raise with its first clear, so an allowed stale
 		// clear and re-raise reads to it as a missed clear and a false
@@ -379,6 +375,29 @@ func cmdRun(args []string) int {
 		return exitFail
 	}
 	return exitPass
+}
+
+// placeFindings puts each finding of the standing alert in the row whose
+// window it is in: one not allowed fails that row, or the run when it
+// is in no row (between rows).
+func placeFindings(res *RunResult, fs []AlertFinding) {
+	for _, f := range fs {
+		what := strings.TrimSpace(strings.ReplaceAll(f.What, "_", " ") + " " + f.AlertID)
+		placed := false
+		for _, rr := range res.Rows {
+			if rr.ID == f.Row {
+				rr.AlertFindings = append(rr.AlertFindings, f)
+				if !f.Allowed {
+					rr.Failures = append(rr.Failures, fmt.Sprintf("alert: %s %s at +%.1fs into the row%s", f.System, what, f.OffsetS, reasonTail(f.Reason)))
+					rr.Verdict = verdictFail
+				}
+				placed = true
+			}
+		}
+		if !placed && !f.Allowed {
+			res.Failures = append(res.Failures, fmt.Sprintf("alert: %s %s at %s, between rows%s", f.System, what, f.At.Format(time.RFC3339), reasonTail(f.Reason)))
+		}
+	}
 }
 
 // firstClearBound is when the background aircraft left the zone (the

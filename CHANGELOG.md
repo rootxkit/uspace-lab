@@ -33,7 +33,12 @@ request (docs/PLAN.md §5).
   readiness and the consoles' status, recovery within bounds, and the
   alert kept, never duplicated, open again after every row. The figures
   GCAA has not answered are the spec's defaults, listed as pending GCAA.
-  `results/20261005-chaos` is the observed matrix.
+  `results/20261005-chaos` is the observed matrix. A kept alert counts
+  only while its console stream is heard: a silence over
+  `background.max_silence_s` in a row fails it unless the row's fault
+  takes that stream down (`streams_down`) and the stream comes back
+  re-sending the open alerts. `observe.Recorder.OnFrame` and
+  `runner.Options.OnFrame` (additive) let a caller see every frame.
 - WP-L8 (L-M2): the load test (`cmd/loadgen`, `internal/load`, `load/`,
   `make load TIER=<tier>`, `load.yml`, `docs/RUNBOOKS/load.md`). Tiers
   at the `05 §1` volumes (100, 1000, the 2 h soak, 5000, and a CI tier

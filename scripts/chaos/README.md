@@ -42,6 +42,19 @@ procedure and the observed matrix are in `docs/RUNBOOKS/chaos.md`.
    another reason while the aircraft is inside, and open again after
    every row. The background's own verdict (one raise and one clear per
    system, no false alert) is the run's.
+4. **The streams were heard.** "No clear, no second raise" is an
+   absence, and it counts only while the console stream that would
+   carry the clear is talking. Each background system's stream sends
+   `console/status/v1` every 2 s; a silence longer than
+   `background.max_silence_s` (6 s, the lab's own bound) that overlaps a
+   row's window fails the row, and one between rows fails the run. A
+   row whose fault takes the stream itself down names the system in
+   `streams_down`: its silence is allowed inside the row's window when
+   the stream comes back re-sending the open alerts (the authority's
+   `console/snapshot/v1`, the USSP's active `alert/v1` on connect).
+   `TestASilentStreamFailsAKeptRow` and
+   `TestAKeptAlertOnAHeardStreamPasses` are the pair. Every stream's
+   frames and silences are in `chaos.json` (`background.streams`).
 
 Nothing commands an aircraft (INV-01): the faults are the lab's own
 containers, networks and databases, and the background flies the
@@ -52,7 +65,8 @@ synthetic stand-in.
 Every hold, wait, probe, script, output and buffer is bounded: holds at
 30 min, waits at 30 min, probes at 30 s, a script at 3 min, a script's
 output at 200 lines, docker output at 4 MiB, console status frames at
-20 000 per system, alert events at 10 000. The harness validates the
+20 000 per system, alert events at 10 000, stream silences at 1000 per
+stream (past that the run fails). The harness validates the
 whole matrix before it injects anything, checks every target exists and
 runs before each row, and runs a row's restore even when its injection
 failed.
