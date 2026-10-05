@@ -164,80 +164,16 @@ answer 200 with a check degraded; the rows judge the checks separately.
 
 ## Findings
 
-Recorded here with their counters and samples (`results/20261005-chaos/`);
-they are for the owning repositories to take up (this work package
-files nothing on GitHub). Each was seen in runs 2 and 3, F1, F5, F7
-also in run 1.
-
-### ANSP (uspace-ansp, image d02b09a)
-
-- **F1. Readiness fails when another system's JWKS cannot be fetched.**
-  With the authority's api, the whole authority or the lab issuer down,
-  the ANSP's `/readyz` alternates between 503 (`jwks` down: "check did
-  not answer within 2s") and 200 (`jwks` degraded: "stale (age 75 s:
-  HTTP 502)") every few seconds for the whole fault (run 3,
-  `authority-down`: 08:17:40 to 08:22:36). 05 §6: JWKS are cached 24 h,
-  no real-time service depends on the authority, the token service down
-  leaves tokens valid for their TTL. The check is required and blocks
-  on the fetch; the cached keys it already holds are not what it
-  reports on.
-- **F2. The CIS projection holds a version it does not use.** At
-  baseline and through the run the ANSP's `cisp` check is degraded:
-  "uspace_airspace version 1 held, not used: the bytes at
-  /v1/uspace_airspace and at /v1/uspace_airspace/versions/1 differ",
-  and "stale" once its age passes 300 s (it crossed 301 s during the
-  `ussp-api` row of run 2, which is why that row failed in run 2 and
-  not in run 3). Either the CISP serves different bytes for the current
-  and the versioned document, or the ANSP compares them in a way the
-  CISP does not promise: for the CISP and the ANSP to settle.
-- **F4. Slow to see the CISP back.** After the CISP's api restarted the
-  ANSP's `cisp` check stayed down 17 s (`cisp_publisher` down 16 s),
-  past the 10 s process-restart bound; the USSP's `ansp_coordination`
-  showed 2 escalated deliveries from the same outage.
-
-### USSP (uspace-ussp 4e2a664)
-
-- **F3. The registry poll hangs through an authority restart.** After
-  the authority's api came back the USSP's `registry` check stayed
-  degraded 20 s ("last poll failed: ... context deadline exceeded, no
-  answer within 90 s"): the poll in flight when the api died waited out
-  its 90 s timeout instead of failing at the connection reset.
-- **F5. A stalled monitor costs the alert its identity.** Frozen for
-  30 s (`docker pause`, SC-15) and resumed, the monitor cleared the
-  standing zone alert as `stale` and raised it again under a new id in
-  the same instant; killed and restarted (`ussp-monitor`) it kept the
-  same alert under its id. 05 §6 and the USSP's own design (alerts
-  carried "across a restart ... under its id") treat both as one
-  domain.
-- **F7 (with the authority). A NATS outage costs the alert its
-  identity.** Through 60 s without NATS the alert stayed open (consumers
-  held last state, as 05 §6 says); the moment NATS returned it was
-  cleared as `stale` and raised again under a new id. 05 §6 promises
-  ingest spilled to disk and replayed, which would leave no gap for the
-  monitor to judge stale.
-- **F8. After a whole-stack restart** the USSP raised the alert under a
-  new id while the old one was still open, and cleared the old one as
-  `stale` 1.3 s later: the restart cost the alert its identity, and for
-  a moment a console held two alerts for one incursion.
-- The operator client's ledger does not balance (sent 7617, accepted
-  1509, 3700 resent after 1292 dials, 56 dial failures, 11 refused
-  upgrades) although every produced sample was acknowledged by sequence
-  (`acked_seq` = `last_seq` = 5143): per-frame outcomes are not
-  reported for frames acknowledged across a reconnection. Observed; not
-  judged; the cause is not established.
-
-### Authority (uspace-authority 8663cac1)
-
-- **F6. A restart loses the violation's identity.** When `detect`
-  restarted (at once), 21 s after the whole authority came back from
-  300 s down, and 30 s after the stack restart, the authority raised
-  the standing zone violation under a new id while the old one was
-  still open, and never cleared the old one: three open violations for
-  one incursion by the end of the hold, only the last cleared at the
-  exit. 05 §2/§6: state survives a process restart.
-- **F7.** As the USSP: held through the NATS outage, cleared `stale`
-  and raised anew when NATS returned; in run 2 it also sent the same
-  cleared violation 52 times in that instant.
+F1 to F8 are recorded, each with what was observed, what the spec asks
+for, the owner and what the lab does meanwhile, in
+`docs/decisions/2026-10-05-chaos-findings.md` (this work package files
+nothing on GitHub). In short: the ANSP's readiness tied to other
+systems' JWKS (F1), its CIS projection holding an unused version (F2)
+and slow to see the CISP back (F4); the USSP's registry poll hanging
+through an authority restart (F3) and the alert's identity lost to a
+stalled monitor (F5) and a stack restart (F8); the authority's
+violation identity lost to restarts (F6); and both systems' alert
+identity lost to a NATS outage (F7).
 
 ### Lab (this repository)
 
