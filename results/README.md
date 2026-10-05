@@ -15,6 +15,9 @@ printed.
 | `20261005-systems-wp12` | ArduCopter 4.5.7 SITL (WSL) | systems | `ussp-wp12-restriction` raised and cleared: passes against ANSP main and a USSP built from the unmerged fix/WP-12-planned-restriction (a04638c). Before that fix it raised at the plan step (its README); `../20261005-systems-wp12-planned` is the same run on the pre-commit build |
 | `20261004-systems-try1..3` | ArduCopter 4.5.7 SITL (WSL) | systems | earlier attempts kept as evidence of lab findings fixed on WP-L6 (SC-22 of try2 is that scenario's result: it needs a fresh authority) |
 
+The load runs (WP-L8, `load-report/v1`) are in `load/`, with their own
+README.
+
 The two reference runs are not evidence for a system: the reference target is the lab's own
 stand-in (`"evidence"` in each file says so). The owed system runs
 (scenarios/README.md) write their results here with `mode.targets:

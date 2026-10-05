@@ -25,6 +25,9 @@ const (
 	// maxTelemetryFrame is the USSP's per-message bound (ussp openapi:
 	// at most 8 KiB).
 	maxTelemetryFrame = 8 << 10
+	// maxClientFrame bounds what a console or alert client may send (a
+	// console/subscribe/v1 is well under it).
+	maxClientFrame = 4 << 10
 	// maxLiveHz is the live rate above which samples are dropped.
 	maxLiveHz = 2.0
 	// dedupeWindow is telemetry_dedupe_s (600 s, the client's queue).
@@ -323,7 +326,85 @@ func (t *Target) ingestMessage(st *sockState, msg []byte, batch bool, sentAt tim
 		fl.lostLink = nil
 	}
 	t.emitUSSP(t.ussp.Observe(tr, unixS(rx)), rx)
+	if !f.Backlog {
+		t.publishProductLocked(fl, &f, &tr, captured, rx)
+	}
 	return "accepted"
+}
+
+// publishProductLocked sends the flight's traffic/product/v1 (uspace-ussp
+// schemas/traffic/product/v1) to the traffic streams of its intent. The
+// reference's product is narrower than the USSP's: it is sent on every
+// accepted live sample rather than on a 1 s tick, its tracks[] is the
+// subscriber's own flight only, and its alerts[] is empty (the alert/v1
+// frames on the same socket carry them). A load run reads it to time
+// operator telemetry to the console (05 §7) without the product period.
+func (t *Target) publishProductLocked(fl *flight, f *telemetryBody, tr *alerting.Track, captured, now time.Time) {
+	topic := "traffic:" + fl.ID
+	if fl.IntentID == "" || !t.alerts.wants(topic) {
+		return
+	}
+	status := "live"
+	speed, track, vspeed := f.SpeedMS, f.TrackDeg, f.VSpeedMS
+	if speed != nil && *speed < 0 {
+		speed = nil
+	}
+	if track != nil && (*track < 0 || *track >= 360) {
+		track = nil
+	}
+	var emergency any = f.Emergency
+	tk := map[string]any{
+		"track_id": fl.ID, "trust": string(core.TrustSimulated), "source": groupTelemetry, "state": status,
+		"age_s": math.Max(0, now.Sub(captured).Seconds()), "position": map[string]any{"lat": tr.Pos.LatDeg, "lng": tr.Pos.LonDeg},
+		"alt_amsl_m": tr.AltAMSLM, "alt_source": string(tr.AltSource), "speed_ms": speed, "track_deg": track, "vspeed_ms": vspeed,
+		"emergency": emergency, "identification": map[string]any{"status": "unknown_operator"},
+		"time_of_report": wire.Format(captured), "own": true,
+	}
+	degraded := make([]any, 0, 4)
+	for _, d := range t.degradedLocked() {
+		degraded = append(degraded, map[string]any{"input": d, "since": wire.Format(t.started), "reason": "lab reference target"})
+	}
+	intentID := fl.IntentID
+	t.alerts.publishEach(topic, func(s *sub) []byte {
+		body := map[string]any{
+			"at": wire.Format(now), "for": map[string]any{"intent_id": intentID}, "tracks": []any{tk}, "alerts": []any{},
+			"degraded": degraded, "cis_version": nil, "policy_version": t.cfg.Policy.PolicyVersion,
+			"dropped_frames": s.dropped.Load(),
+		}
+		b, _ := wire.New(SchemaTrafficProduct, producerUSSP, now, now, nil, string(core.TimeSystem), false, body)
+		return b
+	})
+}
+
+// SchemaTrafficProduct is the USSP's traffic information product.
+const SchemaTrafficProduct = "traffic/product/v1"
+
+// handleTrafficWS is WS /v1/traffic for an operator machine client (ussp
+// openapi openTrafficStream, intent_id): the flight's traffic/product/v1
+// frames and its alert/v1 frames, with a status every 2 s.
+func (t *Target) handleTrafficWS(w http.ResponseWriter, r *http.Request) {
+	in, ok := t.intentFor(w, r, ScopeTraffic)
+	if !ok {
+		return
+	}
+	t.mu.Lock()
+	fl := t.flightLocked(in.Serial, in.Client)
+	fl.IntentID = in.ID
+	flightID := fl.ID
+	var initial [][]byte
+	for _, a := range t.active {
+		if a.system == "ussp" && a.flight == fl {
+			initial = append(initial, t.alertFrameLocked(a, "raised", "", nil, t.cfg.Now()))
+		}
+	}
+	t.mu.Unlock()
+	conn, err := websocket.Accept(w, r, nil)
+	if err != nil {
+		return
+	}
+	s := t.alerts.add(func(topic string) bool { return topic == "flight:"+flightID || topic == "traffic:"+flightID })
+	defer t.alerts.remove(s)
+	t.serveFrames(r.Context(), conn, s, producerUSSP, initial, nil)
 }
 
 func decodeTelemetry(raw []byte, f *telemetryBody) error {
@@ -532,19 +613,25 @@ func (t *Target) handleAlertsWS(w http.ResponseWriter, r *http.Request) {
 	}
 	s := t.alerts.add(func(topic string) bool { return topic == "flight:"+flightID })
 	defer t.alerts.remove(s)
-	t.serveFrames(r.Context(), conn, s, producerUSSP, initial)
+	t.serveFrames(r.Context(), conn, s, producerUSSP, initial, nil)
 }
 
 // serveFrames writes the hub's frames and a status every 2 s until the
-// client goes away; client messages are read and ignored.
-func (t *Target) serveFrames(ctx context.Context, conn *websocket.Conn, s *sub, producer string, initial [][]byte) {
+// client goes away; client messages go to onMessage (nil: read and
+// ignored).
+func (t *Target) serveFrames(ctx context.Context, conn *websocket.Conn, s *sub, producer string, initial [][]byte, onMessage func([]byte)) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	conn.SetReadLimit(maxClientFrame)
 	go func() {
 		defer cancel()
 		for {
-			if _, _, err := conn.Read(ctx); err != nil {
+			_, b, err := conn.Read(ctx)
+			if err != nil {
 				return
+			}
+			if onMessage != nil {
+				onMessage(b)
 			}
 		}
 	}()

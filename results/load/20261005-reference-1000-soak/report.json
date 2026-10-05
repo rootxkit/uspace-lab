@@ -1,0 +1,3722 @@
+{
+  "format": "load-report/v1",
+  "run": "20261005-reference-1000-soak",
+  "started_at": "2026-10-05T07:00:18.4829837Z",
+  "ended_at": "2026-10-05T09:01:24.5965163Z",
+  "generator_s": 7200.002,
+  "tier": {
+    "tier": "1000-soak",
+    "title": "1000 drones, the 2 h soak",
+    "column": 1000,
+    "duration_s": 7200,
+    "drain_s": 60,
+    "operators": {
+      "aircraft": 1000,
+      "clients": 50,
+      "telemetry_hz": 1,
+      "telemetry_hz_status": "pending GCAA",
+      "poll_ms": 50,
+      "intents": "all"
+    },
+    "receivers": {
+      "heard_fraction": 0.4,
+      "aircraft_per_receiver": 20,
+      "transports": [
+        "pack",
+        "single"
+      ],
+      "batch_ms": 100
+    },
+    "consoles": 30,
+    "watch": {
+      "pairs": 15,
+      "walkers": 15
+    },
+    "min_samples": 1000,
+    "memory_sample_s": 10,
+    "memory_warmup_s": 900,
+    "required": [
+      "operator_rate",
+      "rid_rate",
+      "operator_to_console_p99",
+      "receiver_to_picture_p99",
+      "proximity_raise_p99",
+      "expected_set",
+      "missed_raises",
+      "missed_clears",
+      "no_false_alarm",
+      "alerts_traceable",
+      "operator_identity",
+      "receiver_identity",
+      "picture_identity",
+      "picture_traceable",
+      "evaluation_period",
+      "memory_monotonic",
+      "memory_growth"
+    ],
+    "scale": [
+      {
+        "quantity": "console viewports",
+        "spec": "30 consoles each viewing \u003c= 200 tracks (05 §1)",
+        "here": "the same count, each subscribed to the whole area",
+        "factor": 1,
+        "why": "the reference picture has no viewport throttle; whole-area subscriptions are the worst case"
+      }
+    ],
+    "not_generated": [
+      {
+        "source": "ANSP manned feed (tens of aircraft)",
+        "why": "the reference target has no manned intake; the systems mode is not built yet"
+      },
+      {
+        "source": "sim-ussp as the second USSP on a local DSS",
+        "why": "the reference target has no DSS or peer interface; the F3411 and F3548 rows wait for the systems mode"
+      },
+      {
+        "source": "authority DP polls of the USSPs (05 §1: one view per 1 Hz)",
+        "why": "the reference authority has no DP poller"
+      },
+      {
+        "source": "optional national push USSP -\u003e authority",
+        "why": "disabled by default (02 F6) and not in the reference target"
+      }
+    ]
+  },
+  "scaled": true,
+  "target": {
+    "mode": "reference",
+    "name": "reference",
+    "evidence": "The lab's in-process reference target (internal/reftarget): it proves the harness and is never evidence for a system (docs/PLAN.md L-D4); generator and target share this host's CPUs."
+  },
+  "host": {
+    "name": "dev workstation (Windows 11, 16 logical CPUs, 16 GB; not the droplet)",
+    "os": "windows",
+    "arch": "amd64",
+    "cpus": 16,
+    "mem_total_bytes": null,
+    "go": "go1.27.1",
+    "note": "the host the generator and the reference target ran on together (L-Q1)"
+  },
+  "commits": {
+    "lab": "e79b1202c5f0f16f276b9b3e65bb8a2291f86102",
+    "lab_dirty": false,
+    "core": "v1.3.0",
+    "go": "go1.27.1"
+  },
+  "files": {
+    "criteria": "sha256:a3147b0f85fb24b8f4c0e09a8e84938f223cb4ef47a225fcf270ff0ab4b808e1",
+    "paths": "sha256:06224ea5ff7f874d6238f66b3a7e3307b917f2f137ded43218eccc64a36c0db0",
+    "policy": "sha256:19124b6573ade992e321dbb2f18313bf01ec7ac262db03d75216da38f94db8df",
+    "tier": "sha256:11221499de75fe141066ff045401fe4c9d3dcd7f8afab883887ffe5206d31396"
+  },
+  "policy": {
+    "policy_version": 1,
+    "source": "docs/PLAN.md §7.1 L-Q4 (owner-only, open; GCAA answers); knowledge/scenarios.md conventions",
+    "deviation": {
+      "h_m": 50,
+      "v_m": 15,
+      "t_s": 60
+    },
+    "telemetry_lost_s": 5,
+    "lost_link_s": 15,
+    "nonconformance_nearby_radius_m": 2000,
+    "cpa": {
+      "t_cpa_max_s": 60,
+      "d_horizontal_min_m": 60,
+      "d_vertical_min_m": 20,
+      "neighbour_radius_m": 800,
+      "neighbour_max_age_s": 10
+    },
+    "height_limit_agl_m": 120,
+    "monitor": {
+      "clear_after_s": 3,
+      "stale_after_s": 15,
+      "live_max_age_s": 10,
+      "pressure_uncertainty_m": 250,
+      "conditional_severity": "warning"
+    }
+  },
+  "lab": {
+    "file": "sim\\sitl.env.example",
+    "origin_lat_deg": 41.7151,
+    "origin_lon_deg": 44.8271,
+    "origin_alt_amsl_m": 605,
+    "geoid": "constant N = 15.9 m"
+  },
+  "volumes": {
+    "aircraft": 1000,
+    "operator_clients": 50,
+    "heard_aircraft": 400,
+    "receivers": 20,
+    "consoles": 30,
+    "watched_aircraft": 45,
+    "intents_filed": 1000,
+    "intent_errors": 0,
+    "operator_msgs_per_s": 999.73,
+    "operator_target_per_s": 1000,
+    "rid_locations_per_s": 399.892,
+    "rid_target_per_s": 400,
+    "console_frames_per_s": 11985.504
+  },
+  "rows": [
+    {
+      "id": "offered_load",
+      "property": "Offered load",
+      "criterion": "the tier's 05 §1 rates were reached (a latency measured at a lower load proves nothing about the tier)",
+      "result": "pass",
+      "checks": [
+        {
+          "id": "operator_rate",
+          "metric": "operator_rate_ratio",
+          "stat": "value",
+          "op": "\u003e=",
+          "value": 0.95,
+          "unit": "",
+          "status": "lab",
+          "basis": "05 §1 operator telemetry row at the tier",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 1
+          },
+          "result": "pass"
+        },
+        {
+          "id": "rid_rate",
+          "metric": "rid_rate_ratio",
+          "stat": "value",
+          "op": "\u003e=",
+          "value": 0.95,
+          "unit": "",
+          "status": "lab",
+          "basis": "05 §1 direct RID row at the tier",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 1
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "ingest_to_picture",
+      "property": "Ingest-to-picture latency",
+      "criterion": "p99 \u003c 1 s (operator telemetry to USSP console frame; receiver frame to authority picture)",
+      "result": "pass",
+      "checks": [
+        {
+          "id": "operator_to_console_p99",
+          "metric": "operator_to_ussp_console_s",
+          "stat": "p99",
+          "op": "\u003c",
+          "value": 1,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (Art. 11 traffic information without delay; the figure is the spec's)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 323909,
+            "p50": 0.016,
+            "p95": 0.027,
+            "p99": 0.045,
+            "max": 0.309,
+            "mean": 0.017
+          },
+          "result": "pass"
+        },
+        {
+          "id": "receiver_to_picture_p99",
+          "metric": "receiver_to_authority_picture_s",
+          "stat": "p99",
+          "op": "\u003c",
+          "value": 1,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (the figure is the spec's)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 2878975,
+            "p50": 0.076,
+            "p95": 0.119,
+            "p99": 0.152,
+            "max": 2.89,
+            "mean": 0.077
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "f3411_timing",
+      "property": "F3411 timing",
+      "criterion": "SP GET /uss/flights p95 \u003c= 1 s, p99 \u003c= 3 s; DP display p95 \u003c= 1 s, p99 \u003c= 3 s; details p95 \u003c= 2 s, p99 \u003c= 6 s; DP cache empty of anything older than 24 h",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "sp_flights_p95",
+          "metric": "f3411_sp_flights_s",
+          "stat": "p95",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "sp_flights_p99",
+          "metric": "f3411_sp_flights_s",
+          "stat": "p99",
+          "op": "\u003c=",
+          "value": 3,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "dp_display_p95",
+          "metric": "f3411_dp_display_s",
+          "stat": "p95",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "dp_display_p99",
+          "metric": "f3411_dp_display_s",
+          "stat": "p99",
+          "op": "\u003c=",
+          "value": 3,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "details_p95",
+          "metric": "f3411_details_s",
+          "stat": "p95",
+          "op": "\u003c=",
+          "value": 2,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "details_p99",
+          "metric": "f3411_details_s",
+          "stat": "p99",
+          "op": "\u003c=",
+          "value": 6,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "dp_cache_24h",
+          "metric": "f3411_dp_cache_over_24h",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "standard",
+          "basis": "F3411 v22a NetDpMaxDataRetentionPeriodSeconds 86400",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        }
+      ]
+    },
+    {
+      "id": "f3548_timing",
+      "property": "F3548 timing",
+      "criterion": "peer notification of an intent change \u003c= 5 s; conflicting-intent notification \u003c= 1 s; details answered \u003c= 1 s; constraint notification \u003c= 5 s",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "intent_change_notify",
+          "metric": "f3548_intent_change_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 5,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "conflict_notify",
+          "metric": "f3548_conflict_notify_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "details_answered",
+          "metric": "f3548_details_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "constraint_notify",
+          "metric": "f3548_constraint_notify_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 5,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        }
+      ]
+    },
+    {
+      "id": "alert_latency",
+      "property": "Alert latency",
+      "criterion": "proximity / nonconformance raised p99 \u003c 2 s after the triggering sample's captured_at; zone alert within one tick of entry; Art. 13(2) notices to peers and ANSP within 5 s and acknowledged",
+      "result": "partial",
+      "checks": [
+        {
+          "id": "proximity_raise_p99",
+          "metric": "alert_raise_s",
+          "stat": "p99",
+          "op": "\u003c",
+          "value": 2,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (Art. 13 without delay; the figure is the spec's)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1200,
+            "p50": 0.015,
+            "p95": 0.019,
+            "p99": 0.024,
+            "max": 0.03,
+            "mean": 0.015
+          },
+          "result": "pass"
+        },
+        {
+          "id": "zone_alert_tick",
+          "metric": "zone_alert_ticks",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the load paths script no zone entry yet; zone alerts are proved by the scenario suite (sc-03)"
+          },
+          "result": "not measured",
+          "reason": "the load paths script no zone entry yet; zone alerts are proved by the scenario suite (sc-03)"
+        },
+        {
+          "id": "art13_notice",
+          "metric": "art13_notice_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 5,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (Art. 13(2); the figure is the spec's)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "Art. 13(2) notices go to peers and the ANSP, neither of which the load harness drives yet"
+          },
+          "result": "not measured",
+          "reason": "Art. 13(2) notices go to peers and the ANSP, neither of which the load harness drives yet"
+        }
+      ]
+    },
+    {
+      "id": "missed_alerts",
+      "property": "Missed alerts",
+      "criterion": "zero against the scenario's expected set; every expected clear observed",
+      "result": "pass",
+      "checks": [
+        {
+          "id": "expected_set",
+          "metric": "expected_raises",
+          "stat": "value",
+          "op": "\u003e=",
+          "value": 1,
+          "unit": "",
+          "status": "lab",
+          "basis": "a run with no alert due cannot count a miss",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 1200
+          },
+          "result": "pass"
+        },
+        {
+          "id": "missed_raises",
+          "metric": "missed_raises",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "missed_clears",
+          "metric": "missed_clears",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "no_false_alarm",
+          "metric": "unexpected_alerts",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "lab",
+          "basis": "the paths keep every walker outside the CPA minima (load/paths.yaml, checked at load); an alert there is a false alarm or a broken expected set",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "alerts_traceable",
+          "metric": "alert_untraceable",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "lab",
+          "basis": "every raise names a captured_at the generator sent",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "no_silent_loss",
+      "property": "No silent loss",
+      "criterion": "every dropped_*, gap, degraded counter accounted for in the report; sum of accepted + dropped = sent",
+      "result": "pass",
+      "checks": [
+        {
+          "id": "operator_identity",
+          "metric": "operator_ledgers_unbalanced",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7, 05 §5 (operator WS: accepted + refused + dropped + duplicate = sent, per client)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "receiver_identity",
+          "metric": "receiver_ledgers_unbalanced",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7, 05 §5 (receiver -\u003e authority: accepted + duplicates + refused = sent)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "picture_identity",
+          "metric": "picture_silent_loss",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7: every heard sample is on the picture or in a counted loss",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "picture_traceable",
+          "metric": "picture_untraceable_frames",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "lab",
+          "basis": "every track frame names a sample the generator sent",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "cpa_budget",
+      "property": "CPA budget",
+      "criterion": "pair checks per worker per second within budget; evaluation_period_s never above 2 s",
+      "result": "partial",
+      "checks": [
+        {
+          "id": "pair_checks",
+          "metric": "cpa_pair_checks_per_worker",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §1 (~50 000 pair checks per second per core)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "read from a system's /metrics by name; the reference target has no /metrics and systems mode is not built yet"
+          },
+          "result": "not measured",
+          "reason": "read from a system's /metrics by name; the reference target has no /metrics and systems mode is not built yet"
+        },
+        {
+          "id": "evaluation_period",
+          "metric": "cpa_evaluation_period_max_s",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 2,
+          "unit": "s",
+          "status": "spec",
+          "basis": "05 §5 CPA workers",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 1
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "property": "Storage",
+      "criterion": "write rate sustained with writer queue \u003c 10 s; compression job keeps up; disk growth matches the model within 20 %",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "writer_queue",
+          "metric": "writer_queue_max_s",
+          "stat": "value",
+          "op": "\u003c",
+          "value": 10,
+          "unit": "s",
+          "status": "spec",
+          "basis": "05 §5 TimescaleDB writer",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the reference target has no database; storage is measured against the systems' images"
+          },
+          "result": "not measured",
+          "reason": "the reference target has no database; storage is measured against the systems' images"
+        },
+        {
+          "id": "compression",
+          "metric": "compression_lag_chunks",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §4",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the reference target has no database; storage is measured against the systems' images"
+          },
+          "result": "not measured",
+          "reason": "the reference target has no database; storage is measured against the systems' images"
+        },
+        {
+          "id": "disk_model",
+          "metric": "disk_growth_vs_model",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1.2,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §4 (within 20 %)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the reference target has no database; storage is measured against the systems' images"
+          },
+          "result": "not measured",
+          "reason": "the reference target has no database; storage is measured against the systems' images"
+        }
+      ]
+    },
+    {
+      "id": "restart",
+      "property": "Restart",
+      "criterion": "kill each component in turn mid-run: picture recovers within 10 s, no duplicate alerts, no lost backlog",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "restart_recovery",
+          "metric": "restart_recovery_s",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 10,
+          "unit": "s",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        },
+        {
+          "id": "restart_duplicates",
+          "metric": "restart_duplicate_alerts",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        },
+        {
+          "id": "restart_backlog",
+          "metric": "restart_lost_backlog",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        }
+      ]
+    },
+    {
+      "id": "partition",
+      "property": "Partition",
+      "criterion": "kill NATS of one system for 60 s: ingest spills and replays; other systems show nothing",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "partition_replay",
+          "metric": "partition_unreplayed",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §6 NATS row",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        },
+        {
+          "id": "partition_isolation",
+          "metric": "partition_cross_effects",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §6",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        }
+      ]
+    },
+    {
+      "id": "cross_system_outage",
+      "property": "Cross-system outage",
+      "criterion": "CISP, authority, DSS, ANSP each taken down for 5 min: the degraded behaviours of 02 observed, nothing hidden, everything flagged with age",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "outage_flagged",
+          "metric": "outage_unflagged",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §6, 02 failure columns",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        }
+      ]
+    },
+    {
+      "id": "memory",
+      "property": "Memory",
+      "criterion": "no monotonic growth over the soak",
+      "result": "pass",
+      "checks": [
+        {
+          "id": "memory_monotonic",
+          "metric": "memory_monotonic",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "min_duration_s": 1800,
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "memory_growth",
+          "metric": "memory_growth_ratio",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1.5,
+          "unit": "",
+          "status": "lab",
+          "basis": "the live heap at the end against the start of the soak after the warm-up (generator and reference target together)",
+          "min_duration_s": 1800,
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0.997
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "vectors",
+      "property": "Vectors",
+      "criterion": "all knowledge/vectors behaviour vectors pass against the packages in every image under test; schema examples pass everywhere",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "vectors_pass",
+          "metric": "vectors_failed",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the vectors run in uspace-core's CI and per image in the conformance suite, not in a load run"
+          },
+          "result": "not measured",
+          "reason": "the vectors run in uspace-core's CI and per image in the conformance suite, not in a load run"
+        }
+      ]
+    }
+  ],
+  "metrics": {
+    "alert_raise_s": {
+      "measured": true,
+      "n": 1200,
+      "p50": 0.015,
+      "p95": 0.019,
+      "p99": 0.024,
+      "max": 0.03,
+      "mean": 0.015
+    },
+    "alert_untraceable": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "art13_notice_s": {
+      "measured": false,
+      "reason": "Art. 13(2) notices go to peers and the ANSP, neither of which the load harness drives yet"
+    },
+    "compression_lag_chunks": {
+      "measured": false,
+      "reason": "the reference target has no database; storage is measured against the systems' images"
+    },
+    "cpa_evaluation_period_max_s": {
+      "measured": true,
+      "n": 1,
+      "value": 1
+    },
+    "cpa_pair_checks_per_worker": {
+      "measured": false,
+      "reason": "read from a system's /metrics by name; the reference target has no /metrics and systems mode is not built yet"
+    },
+    "disk_growth_vs_model": {
+      "measured": false,
+      "reason": "the reference target has no database; storage is measured against the systems' images"
+    },
+    "expected_raises": {
+      "measured": true,
+      "n": 1,
+      "value": 1200
+    },
+    "f3411_details_s": {
+      "measured": false,
+      "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3411_dp_cache_over_24h": {
+      "measured": false,
+      "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3411_dp_display_s": {
+      "measured": false,
+      "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3411_sp_flights_s": {
+      "measured": false,
+      "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3548_conflict_notify_s": {
+      "measured": false,
+      "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3548_constraint_notify_s": {
+      "measured": false,
+      "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3548_details_s": {
+      "measured": false,
+      "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3548_intent_change_s": {
+      "measured": false,
+      "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "memory_growth_ratio": {
+      "measured": true,
+      "n": 1,
+      "value": 0.997
+    },
+    "memory_monotonic": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "missed_clears": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "missed_raises": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "operator_ledgers_unbalanced": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "operator_rate_ratio": {
+      "measured": true,
+      "n": 1,
+      "value": 1
+    },
+    "operator_to_ussp_console_s": {
+      "measured": true,
+      "n": 323909,
+      "p50": 0.016,
+      "p95": 0.027,
+      "p99": 0.045,
+      "max": 0.309,
+      "mean": 0.017
+    },
+    "outage_unflagged": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "partition_cross_effects": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "partition_unreplayed": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "picture_silent_loss": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "picture_untraceable_frames": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "receiver_ledgers_unbalanced": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "receiver_to_authority_picture_s": {
+      "measured": true,
+      "n": 2878975,
+      "p50": 0.076,
+      "p95": 0.119,
+      "p99": 0.152,
+      "max": 2.89,
+      "mean": 0.077
+    },
+    "restart_duplicate_alerts": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "restart_lost_backlog": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "restart_recovery_s": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "rid_rate_ratio": {
+      "measured": true,
+      "n": 1,
+      "value": 1
+    },
+    "unexpected_alerts": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "vectors_failed": {
+      "measured": false,
+      "reason": "the vectors run in uspace-core's CI and per image in the conformance suite, not in a load run"
+    },
+    "writer_queue_max_s": {
+      "measured": false,
+      "reason": "the reference target has no database; storage is measured against the systems' images"
+    },
+    "zone_alert_ticks": {
+      "measured": false,
+      "reason": "the load paths script no zone entry yet; zone alerts are proved by the scenario suite (sc-03)"
+    }
+  },
+  "loss": {
+    "operator": {
+      "sent": 7198056,
+      "accepted": 7198025,
+      "refused": 0,
+      "dropped": 31,
+      "duplicate": 0,
+      "queue_shed": 0,
+      "pending": 0,
+      "unbalanced": 0,
+      "outcomes": {
+        "accepted": 7198025,
+        "dropped_rate": 31
+      }
+    },
+    "receivers": {
+      "observed": 3683344,
+      "sent": 3683344,
+      "accepted": 3683344,
+      "duplicates": 0,
+      "refused": 0,
+      "backlog_shed": 0,
+      "dropped_by_knob": 0,
+      "pending": 0,
+      "unbalanced": 0
+    },
+    "generator_shed_operator": 0,
+    "generator_shed_rid": 0,
+    "picture": {
+      "handed": 2879220,
+      "shown": 2878975,
+      "unshown": 245,
+      "repeats": 0,
+      "untraceable": 0,
+      "negative_latencies": 0
+    },
+    "traffic": {
+      "handed": 323913,
+      "shown": 323909,
+      "unshown": 4,
+      "repeats": 0,
+      "untraceable": 2,
+      "negative_latencies": 0
+    },
+    "picture_dropped_frames": 245,
+    "picture_accounted": 245,
+    "picture_silent": 0,
+    "target_counters": {
+      "authority_monitor": {
+        "conflict_checks_skipped": 2879092,
+        "height_checks_not_evaluated": 2879092,
+        "rejected_backlog": 128
+      },
+      "direct_rid": {
+        "accepted": 3683344,
+        "backlog": 170
+      },
+      "operator_ws": {
+        "accepted": 7198025,
+        "dropped_rate": 31
+      },
+      "ussp_monitor": {}
+    }
+  },
+  "alerts": {
+    "expected": 1200,
+    "raised": 1200,
+    "cleared": 1200,
+    "untraceable": 0,
+    "raises": [
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "c9d19256-ebcf-4818-9e8b-5a5d05051fcf",
+        "observed_s": 36.005,
+        "captured_s": 36.005,
+        "latency_s": 0.003
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "37495eea-e309-4370-bf62-63785c1f79f4",
+        "observed_s": 217.805,
+        "captured_s": 217.807,
+        "latency_s": 0.013
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "d007add7-34bb-42f7-bd24-dcc5560dbc23",
+        "observed_s": 397.805,
+        "captured_s": 397.809,
+        "latency_s": 0.013
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "2f1c3309-21c0-452b-8af3-8fed14415067",
+        "observed_s": 577.805,
+        "captured_s": 577.812,
+        "latency_s": 0.013
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "6ce03b0b-67f7-426e-b7ac-5f97aedc74a7",
+        "observed_s": 757.807,
+        "captured_s": 757.814,
+        "latency_s": 0.015
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "33d72750-38c0-4e3b-8fc3-d12acf15ea4d",
+        "observed_s": 937.806,
+        "captured_s": 937.817,
+        "latency_s": 0.014
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "a51fe5d8-36b4-4b2d-84da-6534e0a6edf1",
+        "observed_s": 1117.806,
+        "captured_s": 1117.819,
+        "latency_s": 0.014
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "cc01e9b8-d634-49ea-b7d4-995e592338c1",
+        "observed_s": 1297.817,
+        "captured_s": 1297.825,
+        "latency_s": 0.025
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "91152a30-b671-42b0-8e79-8461c291cf05",
+        "observed_s": 1477.805,
+        "captured_s": 1477.824,
+        "latency_s": 0.013
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "bcf48e7d-ddb0-4070-ae7e-dfcba08ed812",
+        "observed_s": 1657.822,
+        "captured_s": 1657.826,
+        "latency_s": 0.03
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "f4713e37-feca-40a3-a24c-d3d46a76eb65",
+        "observed_s": 1837.807,
+        "captured_s": 1837.829,
+        "latency_s": 0.015
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "516b0af7-1413-4e8c-93ca-bc1ab52f31dc",
+        "observed_s": 2017.806,
+        "captured_s": 2017.831,
+        "latency_s": 0.015
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "53b85a41-762b-4a61-9149-0e9173747270",
+        "observed_s": 2197.805,
+        "captured_s": 2197.833,
+        "latency_s": 0.013
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "38f1777a-b703-431f-9d61-d093a6bb0aa8",
+        "observed_s": 2377.806,
+        "captured_s": 2377.836,
+        "latency_s": 0.014
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "e30c38b1-ac9c-4327-847d-fb74cdc3c1b7",
+        "observed_s": 2557.806,
+        "captured_s": 2557.839,
+        "latency_s": 0.014
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "7307dc5a-d9e8-4843-8d59-8322aefec8bb",
+        "observed_s": 2737.805,
+        "captured_s": 2737.841,
+        "latency_s": 0.013
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "3a7b50a9-c37c-484b-8491-faccd033d332",
+        "observed_s": 2917.806,
+        "captured_s": 2917.843,
+        "latency_s": 0.015
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "0bfc73e8-0487-4552-8ec5-7d1c322c0aa8",
+        "observed_s": 3097.806,
+        "captured_s": 3097.846,
+        "latency_s": 0.014
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "a78850b8-050a-41dc-a24f-230690e64fe3",
+        "observed_s": 3277.807,
+        "captured_s": 3277.852,
+        "latency_s": 0.015
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "5011326c-00be-413f-8025-6d2732ea5210",
+        "observed_s": 3457.805,
+        "captured_s": 3457.861,
+        "latency_s": 0.014
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "30c39d9c-5222-4dcf-8dec-1ba4403ff0a6",
+        "observed_s": 3637.807,
+        "captured_s": 3637.87,
+        "latency_s": 0.015
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "0d9f76a1-8363-42d4-bac2-cd89c5491381",
+        "observed_s": 3817.805,
+        "captured_s": 3817.88,
+        "latency_s": 0.013
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "e197b79f-8e16-4f68-9890-32833723ea52",
+        "observed_s": 3997.805,
+        "captured_s": 3997.888,
+        "latency_s": 0.013
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "ba0360d4-10f2-4e02-b65f-a19e2aa3a945",
+        "observed_s": 4177.807,
+        "captured_s": 4177.897,
+        "latency_s": 0.016
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "473fa69c-2ffa-4011-ac5d-baad891715ee",
+        "observed_s": 4357.805,
+        "captured_s": 4357.906,
+        "latency_s": 0.013
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "4773f62e-fbe8-40d0-a213-cffb71340c0f",
+        "observed_s": 4537.805,
+        "captured_s": 4537.914,
+        "latency_s": 0.013
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "0b051e79-a450-4abe-ad41-d9623f9de64c",
+        "observed_s": 4717.806,
+        "captured_s": 4717.922,
+        "latency_s": 0.014
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "fb75425b-c0d8-4988-99e4-18dbb0ac0df9",
+        "observed_s": 4897.81,
+        "captured_s": 4897.931,
+        "latency_s": 0.017
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "cce51a70-ce55-4b08-abc1-710f8f3bde21",
+        "observed_s": 5077.805,
+        "captured_s": 5077.939,
+        "latency_s": 0.014
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "b2cd914e-be75-4dd9-97f5-2e8701916e04",
+        "observed_s": 5257.807,
+        "captured_s": 5257.947,
+        "latency_s": 0.015
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "a983e48a-3e77-4ef5-bfca-835edb80492c",
+        "observed_s": 5437.807,
+        "captured_s": 5437.954,
+        "latency_s": 0.015
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "e3e75c0d-f996-4cc4-ab01-00550bca0602",
+        "observed_s": 5617.805,
+        "captured_s": 5617.962,
+        "latency_s": 0.014
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "0ae08ae1-6b25-454c-80f6-fb3b45318659",
+        "observed_s": 5797.806,
+        "captured_s": 5797.969,
+        "latency_s": 0.014
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "ee02bbfd-6625-4402-bf51-cc3acf094a17",
+        "observed_s": 5977.806,
+        "captured_s": 5977.977,
+        "latency_s": 0.015
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "dece2934-0097-4602-b765-5ddbb80849e4",
+        "observed_s": 6157.805,
+        "captured_s": 6157.984,
+        "latency_s": 0.013
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "e8d825be-70e5-4ce2-8996-73cba9ac4d30",
+        "observed_s": 6337.807,
+        "captured_s": 6337.992,
+        "latency_s": 0.015
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "8e1d1bd2-e207-4b8b-b925-ef46f1f76b03",
+        "observed_s": 6517.806,
+        "captured_s": 6517.999,
+        "latency_s": 0.015
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "c28be383-2942-41b7-8eca-2fa1cc1dc88c",
+        "observed_s": 6697.806,
+        "captured_s": 6698.005,
+        "latency_s": 0.014
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "581ff4bf-22d5-486c-8fc8-21bde632a569",
+        "observed_s": 6877.806,
+        "captured_s": 6878.012,
+        "latency_s": 0.015
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "f1fc5d55-a8d1-4cdd-bd98-1ef2d40b7979",
+        "observed_s": 7057.807,
+        "captured_s": 7058.019,
+        "latency_s": 0.015
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "934a6200-586a-4bdf-81cb-9006a0839aa8",
+        "observed_s": 36.006,
+        "captured_s": 36.005,
+        "latency_s": 0.004
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "da3be072-b90f-40a6-bf0f-42dccfcfad13",
+        "observed_s": 217.805,
+        "captured_s": 217.807,
+        "latency_s": 0.013
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "55ebf858-b55f-4fed-bc98-c1779ddcbe11",
+        "observed_s": 397.805,
+        "captured_s": 397.809,
+        "latency_s": 0.013
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "5a4ed7cf-95b5-4579-b599-0b3f87fec239",
+        "observed_s": 577.805,
+        "captured_s": 577.812,
+        "latency_s": 0.013
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "fc8a4486-a031-4424-b1e0-c43a022a8c4f",
+        "observed_s": 757.807,
+        "captured_s": 757.814,
+        "latency_s": 0.015
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "21d6b1ca-bbcc-4a02-8c04-05b416dd4eb1",
+        "observed_s": 937.806,
+        "captured_s": 937.817,
+        "latency_s": 0.014
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "8e7a7c52-5e31-4a25-a03c-839e24a5125b",
+        "observed_s": 1117.806,
+        "captured_s": 1117.819,
+        "latency_s": 0.014
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "18a3c91d-c81b-426c-a708-d8ea8237c51d",
+        "observed_s": 1297.816,
+        "captured_s": 1297.825,
+        "latency_s": 0.025
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "0ac683bf-d319-460b-b9f0-c4e9a6d2be34",
+        "observed_s": 1477.805,
+        "captured_s": 1477.824,
+        "latency_s": 0.013
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "51ff4e25-766c-473f-b48e-5c30b392247e",
+        "observed_s": 1657.821,
+        "captured_s": 1657.826,
+        "latency_s": 0.03
+      }
+    ]
+  },
+  "streams": [
+    {
+      "name": "console-00",
+      "kind": "picture",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3632,
+        "track/telemetry/v1": 2878975
+      },
+      "dropped_frames": 245,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "console-00: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-01",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3632,
+        "track/telemetry/v1": 2879074
+      },
+      "dropped_frames": 146,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "console-01: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-02",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3632,
+        "track/telemetry/v1": 2878383
+      },
+      "dropped_frames": 837,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "console-02: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-03",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3632,
+        "track/telemetry/v1": 2878701
+      },
+      "dropped_frames": 519,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "console-03: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-04",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3632,
+        "track/telemetry/v1": 2879152
+      },
+      "dropped_frames": 68,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "console-04: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-05",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3631,
+        "track/telemetry/v1": 2879122
+      },
+      "dropped_frames": 98,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "console-05: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-06",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3631,
+        "track/telemetry/v1": 2878997
+      },
+      "dropped_frames": 223,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "console-06: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-07",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3631,
+        "track/telemetry/v1": 2879002
+      },
+      "dropped_frames": 218,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "console-07: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-08",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3632,
+        "track/telemetry/v1": 2879070
+      },
+      "dropped_frames": 150,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "console-08: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-09",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3632,
+        "track/telemetry/v1": 2879165
+      },
+      "dropped_frames": 55,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ],
+      "last_error": "console-09: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-10",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3632,
+        "track/telemetry/v1": 2879068
+      },
+      "dropped_frames": 152,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ],
+      "last_error": "console-10: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-11",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3632,
+        "track/telemetry/v1": 2809164
+      },
+      "dropped_frames": 70056,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "console-11: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-12",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3632,
+        "track/telemetry/v1": 2879180
+      },
+      "dropped_frames": 40,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "console-12: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-13",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3632,
+        "track/telemetry/v1": 2866497
+      },
+      "dropped_frames": 12723,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "console-13: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-14",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3632,
+        "track/telemetry/v1": 2879135
+      },
+      "dropped_frames": 85,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "console-14: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-15",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3631,
+        "track/telemetry/v1": 2878999
+      },
+      "dropped_frames": 221,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "console-15: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-16",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3632,
+        "track/telemetry/v1": 2879052
+      },
+      "dropped_frames": 168,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ],
+      "last_error": "console-16: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-17",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3631,
+        "track/telemetry/v1": 2878968
+      },
+      "dropped_frames": 252,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ],
+      "last_error": "console-17: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-18",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3632,
+        "track/telemetry/v1": 2879029
+      },
+      "dropped_frames": 191,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "console-18: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-19",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3631,
+        "track/telemetry/v1": 2878998
+      },
+      "dropped_frames": 222,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ],
+      "last_error": "console-19: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-20",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3632,
+        "track/telemetry/v1": 2878969
+      },
+      "dropped_frames": 251,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "console-20: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-21",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3632,
+        "track/telemetry/v1": 2878960
+      },
+      "dropped_frames": 260,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "console-21: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-22",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3632,
+        "track/telemetry/v1": 2879125
+      },
+      "dropped_frames": 95,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "console-22: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-23",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3632,
+        "track/telemetry/v1": 2879010
+      },
+      "dropped_frames": 210,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "console-23: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-24",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3632,
+        "track/telemetry/v1": 2879130
+      },
+      "dropped_frames": 90,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ],
+      "last_error": "console-24: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-25",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3632,
+        "track/telemetry/v1": 2879075
+      },
+      "dropped_frames": 145,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "console-25: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-26",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3632,
+        "track/telemetry/v1": 2777643
+      },
+      "dropped_frames": 101577,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ],
+      "last_error": "console-26: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-27",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3631,
+        "track/telemetry/v1": 2878903
+      },
+      "dropped_frames": 317,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "console-27: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-28",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3631,
+        "track/telemetry/v1": 2878931
+      },
+      "dropped_frames": 289,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ],
+      "last_error": "console-28: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "console-29",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 3632,
+        "track/telemetry/v1": 2879194
+      },
+      "dropped_frames": 26,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "console-29: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/picture/ws\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00000",
+      "kind": "traffic",
+      "aircraft": "ac-00000",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1929,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7199
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00000: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=c8555b7c-ca1c-494b-b713-5ce428d2db11\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00001",
+      "kind": "traffic",
+      "aircraft": "ac-00001",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1929,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00001: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=85ca6c32-cfba-4889-8119-4d53bb09c6fa\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00002",
+      "kind": "traffic",
+      "aircraft": "ac-00002",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1943,
+        "console/status/v1": 3632,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00002: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=6235ff22-4d47-492b-92b3-bdee78f074f4\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00003",
+      "kind": "traffic",
+      "aircraft": "ac-00003",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1943,
+        "console/status/v1": 3632,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00003: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=07bfd67a-1342-498c-bbea-ff7f926c8000\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00004",
+      "kind": "traffic",
+      "aircraft": "ac-00004",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1932,
+        "console/status/v1": 3632,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ],
+      "last_error": "traffic-ac-00004: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=b5e209c4-77e5-4489-a404-7004988a3c4b\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00005",
+      "kind": "traffic",
+      "aircraft": "ac-00005",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1932,
+        "console/status/v1": 3632,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00005: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=8f1d4788-72c3-4589-a47d-6bac4c4b618a\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00006",
+      "kind": "traffic",
+      "aircraft": "ac-00006",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1926,
+        "console/status/v1": 3632,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00006: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=401157aa-79f1-459f-9417-2ac274c440a4\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00007",
+      "kind": "traffic",
+      "aircraft": "ac-00007",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1926,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00007: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=5a3cf421-6fb5-4ff1-8f9a-4e395becabcd\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00008",
+      "kind": "traffic",
+      "aircraft": "ac-00008",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1938,
+        "console/status/v1": 3632,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00008: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=98f5f45b-ed7f-4dec-8d18-559233c4efbe\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00009",
+      "kind": "traffic",
+      "aircraft": "ac-00009",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1938,
+        "console/status/v1": 3632,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00009: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=f2594a49-0b65-487a-bbcf-f88143c11b04\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00010",
+      "kind": "traffic",
+      "aircraft": "ac-00010",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1922,
+        "console/status/v1": 3632,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00010: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=ae17fc1f-ab84-4b41-af70-e7fd894162cb\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00011",
+      "kind": "traffic",
+      "aircraft": "ac-00011",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1922,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ],
+      "last_error": "traffic-ac-00011: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=3c3e535a-57f1-4ce1-a06e-381d8a4a7398\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00012",
+      "kind": "traffic",
+      "aircraft": "ac-00012",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1934,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00012: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=faaaca3b-4b7f-4c94-8c48-8a186973e355\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00013",
+      "kind": "traffic",
+      "aircraft": "ac-00013",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1934,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ],
+      "last_error": "traffic-ac-00013: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=61054990-56cb-4f19-adba-80b4c3d9e353\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00014",
+      "kind": "traffic",
+      "aircraft": "ac-00014",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1932,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ],
+      "last_error": "traffic-ac-00014: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=6cf0b993-5f13-446a-a207-03f070c173e8\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00015",
+      "kind": "traffic",
+      "aircraft": "ac-00015",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1932,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00015: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=1dbf8299-2e7c-480b-8d36-0b44f4616a35\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00016",
+      "kind": "traffic",
+      "aircraft": "ac-00016",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1915,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00016: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=115288f8-c52b-4362-bbbe-c8c742b0b65a\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00017",
+      "kind": "traffic",
+      "aircraft": "ac-00017",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1915,
+        "console/status/v1": 3632,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00017: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=c55f9fdc-1755-4c9a-b316-e9d4d942d7e5\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00018",
+      "kind": "traffic",
+      "aircraft": "ac-00018",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1933,
+        "console/status/v1": 3632,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00018: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=346fdfdb-cf31-4264-a043-d1656af7102b\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00019",
+      "kind": "traffic",
+      "aircraft": "ac-00019",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1933,
+        "console/status/v1": 3632,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00019: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=d522affa-f583-45d5-b37a-266285f965e8\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00020",
+      "kind": "traffic",
+      "aircraft": "ac-00020",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1927,
+        "console/status/v1": 3632,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00020: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=057ef7ac-3f4a-4f62-b8ad-3d07269caff7\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00021",
+      "kind": "traffic",
+      "aircraft": "ac-00021",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1927,
+        "console/status/v1": 3632,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00021: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=cdf409c0-c054-4110-b80a-b2220069f678\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00022",
+      "kind": "traffic",
+      "aircraft": "ac-00022",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1920,
+        "console/status/v1": 3632,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00022: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=e9ba443f-848c-4202-9708-ef33b884646e\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00023",
+      "kind": "traffic",
+      "aircraft": "ac-00023",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1920,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00023: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=6d22451b-cbe5-44b0-80fd-d9d981df04b9\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00024",
+      "kind": "traffic",
+      "aircraft": "ac-00024",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1931,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00024: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=6d51ad4a-244f-4c39-8a1a-3db37f0a7f1b\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00025",
+      "kind": "traffic",
+      "aircraft": "ac-00025",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1931,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00025: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=c2df78da-8656-4c68-8333-9c749bc32745\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00026",
+      "kind": "traffic",
+      "aircraft": "ac-00026",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1930,
+        "console/status/v1": 3632,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00026: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=680eade9-f5c7-40d1-b1c5-5ca381558293\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00027",
+      "kind": "traffic",
+      "aircraft": "ac-00027",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1930,
+        "console/status/v1": 3632,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00027: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=3974005f-1a11-4e94-a875-98d0841cb0c1\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00028",
+      "kind": "traffic",
+      "aircraft": "ac-00028",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1915,
+        "console/status/v1": 3632,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00028: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=0255e5ee-e790-4b34-983b-e88abc5de7cc\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00029",
+      "kind": "traffic",
+      "aircraft": "ac-00029",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 1915,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00029: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=21b44953-0d0a-49b3-9d19-270c1f545725\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00030",
+      "kind": "traffic",
+      "aircraft": "ac-00030",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 46,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00030: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=e85d17ff-cc6e-49ba-ab8c-7299193645c1\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00031",
+      "kind": "traffic",
+      "aircraft": "ac-00031",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 46,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00031: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=40ebb3f2-2469-471f-a1c6-9bab820e7c26\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00032",
+      "kind": "traffic",
+      "aircraft": "ac-00032",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 46,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00032: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=48e59704-26d0-4c5b-b2c1-18366685940c\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00033",
+      "kind": "traffic",
+      "aircraft": "ac-00033",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 46,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ],
+      "last_error": "traffic-ac-00033: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=6a46d9fb-c33d-4786-a422-bf7a321d8e36\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00034",
+      "kind": "traffic",
+      "aircraft": "ac-00034",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 46,
+        "console/status/v1": 3632,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00034: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=9befe87d-612d-4e2a-8523-8521074150d0\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00035",
+      "kind": "traffic",
+      "aircraft": "ac-00035",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 46,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00035: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=da5fe76b-2b5b-4c9d-be74-5d7d6913c4bd\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00036",
+      "kind": "traffic",
+      "aircraft": "ac-00036",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 46,
+        "console/status/v1": 3632,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00036: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=77896413-aa50-4dd7-ae15-5d0d99de475f\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00037",
+      "kind": "traffic",
+      "aircraft": "ac-00037",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 46,
+        "console/status/v1": 3632,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ],
+      "last_error": "traffic-ac-00037: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=064c7b24-cea3-47d9-ab47-daf6906d460a\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00038",
+      "kind": "traffic",
+      "aircraft": "ac-00038",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 46,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00038: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=01ce1901-18ce-4224-bc49-1bbdb6782dea\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00039",
+      "kind": "traffic",
+      "aircraft": "ac-00039",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 46,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ],
+      "last_error": "traffic-ac-00039: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=dc4da245-7016-427c-b5d6-ab7c3047152a\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00040",
+      "kind": "traffic",
+      "aircraft": "ac-00040",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 46,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ],
+      "last_error": "traffic-ac-00040: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=f7683e81-e6e4-49cd-87d1-b3dabb3dc94e\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00041",
+      "kind": "traffic",
+      "aircraft": "ac-00041",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 46,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00041: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=38182435-d1de-4298-bfcf-94e87a65d466\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00042",
+      "kind": "traffic",
+      "aircraft": "ac-00042",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 46,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00042: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=5af61acf-03d3-4410-8ca8-29e1de0edf01\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00043",
+      "kind": "traffic",
+      "aircraft": "ac-00043",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 46,
+        "console/status/v1": 3632,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ],
+      "last_error": "traffic-ac-00043: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=6589e233-88bc-406d-a1dc-906380da097c\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    },
+    {
+      "name": "traffic-ac-00044",
+      "kind": "traffic",
+      "aircraft": "ac-00044",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 46,
+        "console/status/v1": 3631,
+        "traffic/product/v1": 7198
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ],
+      "last_error": "traffic-ac-00044: failed to WebSocket dial: failed to send handshake request: Get \"http://127.0.0.1:14501/v1/traffic?intent_id=933260f8-826d-4d31-bce3-1b98053197cc\": dial tcp 127.0.0.1:14501: connectex: No connection could be made because the target machine actively refused it."
+    }
+  ],
+  "memory_live_heap_bytes": [
+    61550280,
+    60248184,
+    66799064,
+    68999392,
+    76062112,
+    83004320,
+    83646504,
+    85331888,
+    81918512,
+    88394376,
+    84597616,
+    90840728,
+    89398424,
+    87412392,
+    93931632,
+    91362336,
+    91439904,
+    89603416,
+    89317464,
+    96505104,
+    96289304,
+    96248144,
+    118188512,
+    112671712,
+    108423400,
+    118162512,
+    114622112,
+    123284672,
+    113222184,
+    119789392,
+    118781592,
+    125994624,
+    128385160,
+    121826056,
+    127461432,
+    118831144,
+    118189584,
+    131787680,
+    130602888,
+    124578616,
+    119424088,
+    130033816,
+    133099992,
+    129572544,
+    120117872,
+    164220872,
+    167256560,
+    167818456,
+    159655336,
+    162865288,
+    169636432,
+    164842768,
+    174119464,
+    166168880,
+    169947560,
+    166030488,
+    171777088,
+    166965552,
+    173221056,
+    173621872,
+    163369192,
+    170884312,
+    163015984,
+    170147512,
+    171262320,
+    170183560,
+    173288688,
+    169484888,
+    168962456,
+    178053304,
+    171322608,
+    166088600,
+    164984760,
+    168583008,
+    165037896,
+    168869248,
+    163997936,
+    173621408,
+    168917712,
+    170868176,
+    176427920,
+    177456440,
+    167495320,
+    166561336,
+    173294760,
+    168064960,
+    174195400,
+    161544712,
+    169073296,
+    166266232,
+    175008840,
+    167381216,
+    166151288,
+    174549688,
+    174688080,
+    174073144,
+    175024792,
+    170602736,
+    170440704,
+    169877752,
+    170620944,
+    167908864,
+    164776504,
+    172959832,
+    172964168,
+    171577720,
+    170796632,
+    173357368,
+    171894984,
+    170350928,
+    172074856,
+    175988104,
+    170779568,
+    172066512,
+    170815144,
+    170278808,
+    175059256,
+    171000176,
+    166722880,
+    171083360,
+    174746824,
+    164338800,
+    171283264,
+    172323408,
+    173623304,
+    168142208,
+    172760744,
+    174149312,
+    175479496,
+    174880376,
+    168195872,
+    172368960,
+    171832312,
+    177437800,
+    179547784,
+    166118928,
+    169160560,
+    171693432,
+    175932576,
+    172792960,
+    166591264,
+    167867712,
+    171454360,
+    174920824,
+    172380912,
+    173338824,
+    165733696,
+    167875864,
+    165416264,
+    173611296,
+    171013632,
+    180576568,
+    185950336,
+    177536760,
+    170770376,
+    167595272,
+    173176248,
+    166890000,
+    176576672,
+    170268808,
+    172188992,
+    177417848,
+    171264648,
+    170878632,
+    179536984,
+    178330016,
+    172647464,
+    165133584,
+    170885328,
+    177041248,
+    173595016,
+    168616176,
+    166380696,
+    173963064,
+    173681464,
+    181154880,
+    180780384,
+    163006584,
+    170565504,
+    172402520,
+    173800976,
+    174558088,
+    167861064,
+    172498744,
+    167965800,
+    171695016,
+    175402400,
+    169267920,
+    167510960,
+    173046032,
+    171883296,
+    173564928,
+    170276952,
+    168763320,
+    167988568,
+    161853904,
+    174188088,
+    171842192,
+    160850712,
+    175213576,
+    168519632,
+    170884952,
+    177723704,
+    180850176,
+    175083424,
+    174675440,
+    172607760,
+    172709848,
+    171752800,
+    166944568,
+    177171320,
+    173237672,
+    166151944,
+    174199344,
+    168965632,
+    172785560,
+    176578736,
+    170104560,
+    174603184,
+    177644840,
+    173268520,
+    167549992,
+    171001808,
+    168717000,
+    167703744,
+    173410464,
+    177602528,
+    171485800,
+    172191120,
+    170860160,
+    174184800,
+    171283008,
+    170137864,
+    172629712,
+    171380744,
+    168057304,
+    170455408,
+    173954328,
+    174488352,
+    175317136,
+    166892152,
+    169882552,
+    174093696,
+    174573872,
+    176566008,
+    174221600,
+    171457664,
+    175883728,
+    176896976,
+    175921632,
+    171456800,
+    172337992,
+    174493120,
+    176280544,
+    170938416,
+    169843064,
+    171223704,
+    165107752,
+    168052384,
+    172927936,
+    170201472,
+    169598744,
+    177174488,
+    173558928,
+    167111384,
+    163484520,
+    165211240,
+    169452264,
+    172314544,
+    173534624,
+    177839032,
+    175054848,
+    175082080,
+    170812104,
+    171048696,
+    168400200,
+    173404048,
+    176956808,
+    166943752,
+    164047888,
+    175365968,
+    171994072,
+    175067600,
+    169285232,
+    176048064,
+    174297888,
+    172265640,
+    173232864,
+    164437760,
+    167025152,
+    172543392,
+    170682392,
+    164531872,
+    175657288,
+    170641440,
+    176553200,
+    174638456,
+    168613160,
+    166078384,
+    175985568,
+    174543592,
+    166040024,
+    163712976,
+    169741568,
+    169644256,
+    168377512,
+    171219736,
+    170505856,
+    172869960,
+    169300472,
+    170700272,
+    174652688,
+    174020728,
+    173494248,
+    169850720,
+    168294048,
+    172699280,
+    161677896,
+    174453576,
+    172353360,
+    177351792,
+    168783256,
+    166722984,
+    167345360,
+    177530216,
+    169134024,
+    174309296,
+    171998120,
+    175603184,
+    172747200,
+    170097424,
+    172696256,
+    168092888,
+    174333928,
+    175253832,
+    172379320,
+    172562848,
+    176775232,
+    173032048,
+    174427584,
+    172932472,
+    175969968,
+    173805808,
+    170409816,
+    170988176,
+    169267416,
+    168022272,
+    171998280,
+    171337288,
+    167586360,
+    175320096,
+    173554760,
+    172062392,
+    169619168,
+    171549824,
+    167511816,
+    170106872,
+    170521552,
+    163729896,
+    174745792,
+    177168128,
+    166361096,
+    173179552,
+    167224752,
+    170221824,
+    170525904,
+    172749048,
+    173477888,
+    168435216,
+    174369432,
+    174932184,
+    168563640,
+    171997408,
+    163189072,
+    171167072,
+    174392592,
+    168024584,
+    171356120,
+    172086088,
+    169264656,
+    176100768,
+    170559336,
+    169765848,
+    171915408,
+    175838000,
+    178306896,
+    169270280,
+    168409480,
+    169595304,
+    164858304,
+    171270328,
+    166008240,
+    170708184,
+    170085544,
+    176966064,
+    169534896,
+    173192872,
+    169611288,
+    168950816,
+    171197184,
+    169231096,
+    170730080,
+    169744824,
+    169094752,
+    167478280,
+    174182352,
+    169878240,
+    170481496,
+    172079480,
+    173169640,
+    167679000,
+    168874120,
+    168327528,
+    170860784,
+    173601656,
+    174120192,
+    171721048,
+    167659288,
+    173619840,
+    172759736,
+    172792016,
+    171143808,
+    178483176,
+    174185184,
+    169381416,
+    173876720,
+    163066560,
+    173346240,
+    172841312,
+    171810192,
+    170695712,
+    172182968,
+    170063080,
+    166754288,
+    172941456,
+    172760840,
+    172098728,
+    176188640,
+    173384496,
+    174275768,
+    175961120,
+    177408368,
+    167337696,
+    162815528,
+    172254056,
+    168354912,
+    172029584,
+    175714752,
+    174864672,
+    174887024,
+    174747248,
+    169679896,
+    167397656,
+    171642744,
+    168803400,
+    171819232,
+    171187288,
+    168816088,
+    175321232,
+    169078200,
+    167718792,
+    173183592,
+    173051696,
+    175667016,
+    169132856,
+    171893816,
+    172735816,
+    173274112,
+    169304904,
+    169882784,
+    175971312,
+    173734992,
+    173347960,
+    173475368,
+    173836512,
+    169125968,
+    176794656,
+    176291904,
+    172248376,
+    168422392,
+    166434560,
+    170058696,
+    175609112,
+    168859136,
+    169507736,
+    180467960,
+    174540376,
+    170948568,
+    172117744,
+    173227592,
+    171260936,
+    175007072,
+    172355208,
+    169357872,
+    177065280,
+    178790496,
+    175294968,
+    167483712,
+    167975712,
+    170215672,
+    171013384,
+    174337984,
+    173206632,
+    169348448,
+    175600720,
+    166181912,
+    172202744,
+    164395952,
+    166369768,
+    173680224,
+    169676696,
+    168461256,
+    177773592,
+    175832512,
+    172722104,
+    170150536,
+    173155536,
+    171992088,
+    169129992,
+    166867432,
+    179222432,
+    170758872,
+    175552096,
+    169409696,
+    168943720,
+    172007352,
+    172191904,
+    168727096,
+    172131160,
+    166963392,
+    163352544,
+    165289184,
+    168758688,
+    169816144,
+    172386760,
+    169154784,
+    175217560,
+    169106056,
+    169683296,
+    171687104,
+    173896152,
+    173845576,
+    174396080,
+    181277048,
+    172538712,
+    169623504,
+    170371752,
+    171392696,
+    170470432,
+    163476504,
+    169975112,
+    170154720,
+    171049360,
+    170141400,
+    169962336,
+    170253584,
+    171481856,
+    169907944,
+    167161208,
+    166888704,
+    173475240,
+    172695240,
+    175414720,
+    175578960,
+    176446832,
+    169175856,
+    168582184,
+    166383272,
+    171907504,
+    172957912,
+    175910680,
+    178558224,
+    175388704,
+    167939200,
+    177507464,
+    175918160,
+    176917984,
+    168187224,
+    168662240,
+    175084976,
+    173578552,
+    167845208,
+    172374632,
+    176106016,
+    178388616,
+    176162568,
+    175092376,
+    174378792,
+    176125992,
+    176270112,
+    172252464,
+    167881424,
+    175147664,
+    171636264,
+    170259624,
+    168846352,
+    175226296,
+    167112112,
+    172764992,
+    179567936,
+    168732440,
+    168985712,
+    174592272,
+    168569424,
+    175084976,
+    170663256,
+    175114704,
+    171153136,
+    177360408,
+    166643464,
+    171414904,
+    174182112,
+    180582544,
+    169507880,
+    171261448,
+    172204312,
+    169030960,
+    179378488,
+    171899472,
+    179768416,
+    170643008,
+    176174928,
+    168666624,
+    173682408,
+    176418696,
+    170899344,
+    179921600,
+    168001144,
+    176094432,
+    175540544,
+    169923536,
+    173283072,
+    168885728,
+    180239400,
+    170072296,
+    176963848,
+    171086968,
+    171824200,
+    174350448,
+    167968032,
+    176397392,
+    170175520,
+    165060536,
+    172912536,
+    177112144,
+    168748728,
+    171211920,
+    172153496,
+    164781224,
+    172564168,
+    167952192,
+    174747128,
+    179419552,
+    177096856,
+    171276928,
+    168831664,
+    165928104,
+    170208792,
+    170962760,
+    174002736,
+    168383008,
+    167849824,
+    175166496,
+    170919464,
+    169976616,
+    172438864,
+    169783152,
+    168865888,
+    172618768,
+    167465960,
+    169900440,
+    173742192,
+    165736840,
+    175322904,
+    170986536,
+    169058448,
+    168603696,
+    166480368,
+    172288312,
+    168338272,
+    169278624,
+    166425456,
+    163680456,
+    172608064,
+    175538968,
+    166476840,
+    170652640,
+    169738496,
+    168964832,
+    172427272,
+    171288072,
+    174775936,
+    175797032,
+    171214648,
+    172262568,
+    173652720,
+    172634064,
+    165277752,
+    165041520,
+    165788728,
+    167219328,
+    166496776,
+    171511696,
+    167729832,
+    180966944,
+    177249088,
+    175100072,
+    175258896,
+    179138808,
+    173745216,
+    164736936,
+    173146264,
+    172062144,
+    172224024,
+    174804528,
+    171574088,
+    175234776,
+    166439752,
+    176008784,
+    169746936
+  ],
+  "errors": [
+    "drain: not settled within drain_s 60 s",
+    "the generator fell behind its schedule 1000 times (saturated host)"
+  ],
+  "checks_measured": 17,
+  "checks_not_measured": 24,
+  "complete": false,
+  "verdict": "fail",
+  "failures": [
+    "run error: drain: not settled within drain_s 60 s",
+    "run error: the generator fell behind its schedule 1000 times (saturated host)"
+  ]
+}

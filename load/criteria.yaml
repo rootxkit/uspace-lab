@@ -1,0 +1,128 @@
+# Spec 05 §7 as checks (WP-L8). The load report fills every row with the
+# observed figure and pass, fail or "not measured" with its reason.
+#
+# status says where a figure comes from:
+#   pending GCAA  the spec's default for a national choice; GCAA has not
+#                 answered its policy questions (docs/PLAN.md §7.1), so the
+#                 figure stands until it does
+#   standard      ASTM F3411 v22a / F3548-21
+#   spec          a design target of spec 05 (the owner's)
+#   lab           the harness's own self-check (a load run that cannot tie
+#                 what it saw to what it sent measures nothing)
+#
+# Every metric is defined in internal/load/metrics.go; a check naming a
+# metric the harness does not know is refused when the file is loaded.
+source: "docs/spec/05-scale-and-reliability.md §7, §1, §5"
+rows:
+  - id: offered_load
+    property: Offered load
+    criterion: "the tier's 05 §1 rates were reached (a latency measured at a lower load proves nothing about the tier)"
+    checks:
+      - {id: operator_rate, metric: operator_rate_ratio, stat: value, op: ">=", value: 0.95, status: lab, basis: "05 §1 operator telemetry row at the tier"}
+      - {id: rid_rate, metric: rid_rate_ratio, stat: value, op: ">=", value: 0.95, status: lab, basis: "05 §1 direct RID row at the tier"}
+      - {id: generator_on_time, metric: generator_late_ratio, stat: value, op: "<=", value: 0.001, status: lab, basis: "the rate held moment by moment, not only on average: at most one sample in a thousand more than a period late"}
+
+  - id: ingest_to_picture
+    property: Ingest-to-picture latency
+    criterion: "p99 < 1 s (operator telemetry to USSP console frame; receiver frame to authority picture)"
+    checks:
+      - {id: operator_to_console_p99, metric: operator_to_ussp_console_s, stat: p99, op: "<", value: 1.0, unit: s, status: pending GCAA, basis: "05 §7 (Art. 11 traffic information without delay; the figure is the spec's)"}
+      - {id: receiver_to_picture_p99, metric: receiver_to_authority_picture_s, stat: p99, op: "<", value: 1.0, unit: s, status: pending GCAA, basis: "05 §7 (the figure is the spec's)"}
+
+  - id: f3411_timing
+    property: F3411 timing
+    criterion: "SP GET /uss/flights p95 <= 1 s, p99 <= 3 s; DP display p95 <= 1 s, p99 <= 3 s; details p95 <= 2 s, p99 <= 6 s; DP cache empty of anything older than 24 h"
+    checks:
+      - {id: sp_flights_p95, metric: f3411_sp_flights_s, stat: p95, op: "<=", value: 1.0, unit: s, status: standard, basis: "F3411 v22a (05 §7)"}
+      - {id: sp_flights_p99, metric: f3411_sp_flights_s, stat: p99, op: "<=", value: 3.0, unit: s, status: standard, basis: "F3411 v22a (05 §7)"}
+      - {id: dp_display_p95, metric: f3411_dp_display_s, stat: p95, op: "<=", value: 1.0, unit: s, status: standard, basis: "F3411 v22a (05 §7)"}
+      - {id: dp_display_p99, metric: f3411_dp_display_s, stat: p99, op: "<=", value: 3.0, unit: s, status: standard, basis: "F3411 v22a (05 §7)"}
+      - {id: details_p95, metric: f3411_details_s, stat: p95, op: "<=", value: 2.0, unit: s, status: standard, basis: "F3411 v22a (05 §7)"}
+      - {id: details_p99, metric: f3411_details_s, stat: p99, op: "<=", value: 6.0, unit: s, status: standard, basis: "F3411 v22a (05 §7)"}
+      - {id: dp_cache_24h, metric: f3411_dp_cache_over_24h, stat: value, op: "==", value: 0, status: standard, basis: "F3411 v22a NetDpMaxDataRetentionPeriodSeconds 86400"}
+
+  - id: f3548_timing
+    property: F3548 timing
+    criterion: "peer notification of an intent change <= 5 s; conflicting-intent notification <= 1 s; details answered <= 1 s; constraint notification <= 5 s"
+    checks:
+      - {id: intent_change_notify, metric: f3548_intent_change_s, stat: max, op: "<=", value: 5.0, unit: s, status: standard, basis: "F3548-21 (05 §7)"}
+      - {id: conflict_notify, metric: f3548_conflict_notify_s, stat: max, op: "<=", value: 1.0, unit: s, status: standard, basis: "F3548-21 (05 §7)"}
+      - {id: details_answered, metric: f3548_details_s, stat: max, op: "<=", value: 1.0, unit: s, status: standard, basis: "F3548-21 (05 §7)"}
+      - {id: constraint_notify, metric: f3548_constraint_notify_s, stat: max, op: "<=", value: 5.0, unit: s, status: standard, basis: "F3548-21 (05 §7)"}
+
+  - id: alert_latency
+    property: Alert latency
+    criterion: "proximity / nonconformance raised p99 < 2 s after the triggering sample's captured_at; zone alert within one tick of entry; Art. 13(2) notices to peers and ANSP within 5 s and acknowledged"
+    checks:
+      - {id: proximity_raise_p99, metric: alert_raise_s, stat: p99, op: "<", value: 2.0, unit: s, status: pending GCAA, basis: "05 §7 (Art. 13 without delay; the figure is the spec's)"}
+      - {id: zone_alert_tick, metric: zone_alert_ticks, stat: value, op: "<=", value: 1, status: spec, basis: "05 §7"}
+      - {id: art13_notice, metric: art13_notice_s, stat: max, op: "<=", value: 5.0, unit: s, status: pending GCAA, basis: "05 §7 (Art. 13(2); the figure is the spec's)"}
+
+  - id: missed_alerts
+    property: Missed alerts
+    criterion: "zero against the scenario's expected set; every expected clear observed"
+    checks:
+      - {id: expected_set, metric: expected_raises, stat: value, op: ">=", value: 1, status: lab, basis: "a run with no alert due cannot count a miss"}
+      - {id: missed_raises, metric: missed_raises, stat: value, op: "==", value: 0, status: spec, basis: "05 §7"}
+      - {id: missed_clears, metric: missed_clears, stat: value, op: "==", value: 0, status: spec, basis: "05 §7"}
+      - {id: no_false_alarm, metric: unexpected_alerts, stat: value, op: "==", value: 0, status: lab, basis: "the paths keep every walker outside the CPA minima (load/paths.yaml, checked at load); an alert there is a false alarm or a broken expected set"}
+      - {id: alerts_traceable, metric: alert_untraceable, stat: value, op: "==", value: 0, status: lab, basis: "every raise names a captured_at the generator sent"}
+
+  - id: no_silent_loss
+    property: No silent loss
+    criterion: "every dropped_*, gap, degraded counter accounted for in the report; sum of accepted + dropped = sent"
+    checks:
+      - {id: operator_identity, metric: operator_ledgers_unbalanced, stat: value, op: "==", value: 0, status: spec, basis: "05 §7, 05 §5 (operator WS: accepted + refused + dropped + duplicate = sent, per client)"}
+      - {id: receiver_identity, metric: receiver_ledgers_unbalanced, stat: value, op: "==", value: 0, status: spec, basis: "05 §7, 05 §5 (receiver -> authority: accepted + duplicates + refused = sent)"}
+      - {id: picture_identity, metric: picture_silent_loss, stat: value, op: "==", value: 0, status: spec, basis: "05 §7: every heard sample is on the picture or in a counted loss"}
+      - {id: picture_traceable, metric: picture_untraceable_frames, stat: value, op: "==", value: 0, status: lab, basis: "every track frame names a sample the generator sent"}
+      - {id: traffic_traceable, metric: traffic_untraceable_frames, stat: value, op: "==", value: 0, status: lab, basis: "every own track in a traffic product names a sample the generator sent"}
+
+  - id: cpa_budget
+    property: CPA budget
+    criterion: "pair checks per worker per second within budget; evaluation_period_s never above 2 s"
+    checks:
+      - {id: pair_checks, metric: cpa_pair_checks_per_worker, stat: value, op: "<=", value: 1.0, status: spec, basis: "05 §1 (~50 000 pair checks per second per core)"}
+      - {id: evaluation_period, metric: cpa_evaluation_period_max_s, stat: value, op: "<=", value: 2.0, unit: s, status: spec, basis: "05 §5 CPA workers"}
+
+  - id: storage
+    property: Storage
+    criterion: "write rate sustained with writer queue < 10 s; compression job keeps up; disk growth matches the model within 20 %"
+    checks:
+      - {id: writer_queue, metric: writer_queue_max_s, stat: value, op: "<", value: 10, unit: s, status: spec, basis: "05 §5 TimescaleDB writer"}
+      - {id: compression, metric: compression_lag_chunks, stat: value, op: "==", value: 0, status: spec, basis: "05 §4"}
+      - {id: disk_model, metric: disk_growth_vs_model, stat: value, op: "<=", value: 1.2, status: spec, basis: "05 §4 (within 20 %)"}
+
+  - id: restart
+    property: Restart
+    criterion: "kill each component in turn mid-run: picture recovers within 10 s, no duplicate alerts, no lost backlog"
+    checks:
+      - {id: restart_recovery, metric: restart_recovery_s, stat: value, op: "<=", value: 10, unit: s, status: spec, basis: "05 §7"}
+      - {id: restart_duplicates, metric: restart_duplicate_alerts, stat: value, op: "==", value: 0, status: spec, basis: "05 §7"}
+      - {id: restart_backlog, metric: restart_lost_backlog, stat: value, op: "==", value: 0, status: spec, basis: "05 §7"}
+
+  - id: partition
+    property: Partition
+    criterion: "kill NATS of one system for 60 s: ingest spills and replays; other systems show nothing"
+    checks:
+      - {id: partition_replay, metric: partition_unreplayed, stat: value, op: "==", value: 0, status: spec, basis: "05 §6 NATS row"}
+      - {id: partition_isolation, metric: partition_cross_effects, stat: value, op: "==", value: 0, status: spec, basis: "05 §6"}
+
+  - id: cross_system_outage
+    property: Cross-system outage
+    criterion: "CISP, authority, DSS, ANSP each taken down for 5 min: the degraded behaviours of 02 observed, nothing hidden, everything flagged with age"
+    checks:
+      - {id: outage_flagged, metric: outage_unflagged, stat: value, op: "==", value: 0, status: spec, basis: "05 §6, 02 failure columns"}
+
+  - id: memory
+    property: Memory
+    criterion: "no monotonic growth over the soak"
+    checks:
+      - {id: memory_monotonic, metric: memory_monotonic, stat: value, op: "==", value: 0, status: spec, basis: "05 §7", min_duration_s: 1800}
+      - {id: memory_growth, metric: memory_growth_ratio, stat: value, op: "<=", value: 1.5, status: lab, basis: "the live heap at the end against the start of the soak after the warm-up (generator and reference target together)", min_duration_s: 1800}
+
+  - id: vectors
+    property: Vectors
+    criterion: "all knowledge/vectors behaviour vectors pass against the packages in every image under test; schema examples pass everywhere"
+    checks:
+      - {id: vectors_pass, metric: vectors_failed, stat: value, op: "==", value: 0, status: spec, basis: "05 §7"}

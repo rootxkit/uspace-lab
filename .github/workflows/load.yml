@@ -1,0 +1,99 @@
+name: load
+
+# The load test (docs/WORKPACKAGES/WP-L8.md, docs/RUNBOOKS/load.md).
+#
+# On every change to the harness: every tier file checked, and the CI
+# tier run against the lab's reference target in process: 100 aircraft
+# at 1 Hz, 40 heard by four receivers, two consoles and the traffic of
+# twelve watched flights for 120 s (05 §1's 100-drone volumes, the
+# duration scaled down; load/tiers/ci.yaml says what and why). The job
+# fails when the run fails, and a run that measured nothing fails. The
+# report is kept as an artefact.
+#
+# On dispatch: the CI tier or the 100-drone tier for 60 min. Nothing
+# here runs the 1000-drone load (docs/PLAN.md §6: CI stays lean); the
+# 1000, soak and 5000 tiers run on a named host (the runbook).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "load/**"
+      - "cmd/loadgen/**"
+      - "internal/load/**"
+      - "internal/reftarget/**"
+      - "internal/simop/**"
+      - "internal/simrx/**"
+      - "internal/observe/**"
+      - "internal/vehicle/**"
+      - "scenarios/policy/**"
+      - "targets/reference.yaml"
+      - "sim/sitl.env.example"
+      - "go.mod"
+      - "go.sum"
+      - "Makefile"
+      - ".github/workflows/load.yml"
+  pull_request:
+    paths:
+      - "load/**"
+      - "cmd/loadgen/**"
+      - "internal/load/**"
+      - "internal/reftarget/**"
+      - "internal/simop/**"
+      - "internal/simrx/**"
+      - "internal/observe/**"
+      - "internal/vehicle/**"
+      - "scenarios/policy/**"
+      - "targets/reference.yaml"
+      - "sim/sitl.env.example"
+      - "go.mod"
+      - "go.sum"
+      - "Makefile"
+      - ".github/workflows/load.yml"
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: "tier (ci: 120 s; 100: 60 min)"
+        type: choice
+        options: [ci, "100"]
+        default: ci
+
+permissions:
+  contents: read
+
+concurrency:
+  group: load-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GOFLAGS: -mod=mod
+  GOTOOLCHAIN: local
+
+jobs:
+  reference:
+    name: load tier against the reference target
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: every tier, the paths and the criteria are valid
+        run: make load-check
+      - name: run the tier
+        env:
+          TIER: ${{ inputs.tier || 'ci' }}
+        run: |
+          set -o pipefail
+          make load TIER="$TIER" LOAD_FLAGS="--run gha-${GITHUB_RUN_ID}-${TIER} --host github-hosted-ubuntu-latest" 2>&1 | tee "$RUNNER_TEMP/load.log"
+      - name: keep the report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: load-report
+          path: |
+            results/load/
+            ${{ runner.temp }}/load.log
+          retention-days: 14
+          if-no-files-found: warn
