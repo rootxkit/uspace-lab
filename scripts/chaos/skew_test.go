@@ -31,7 +31,7 @@ func ingest(t *testing.T) *httptest.Server {
 			return
 		}
 		if d := time.Since(time.UnixMilli(b.SentAtMS)); d > 30*time.Second || d < -30*time.Second {
-			http.Error(w, `{"type":"https://schemas.uspace.ge/problems/clock_skew"}`, http.StatusUnauthorized)
+			http.Error(w, `{"type":"https://schemas.uspace.ge/problems/skew"}`, http.StatusUnauthorized)
 			return
 		}
 		w.WriteHeader(http.StatusAccepted)
@@ -52,7 +52,7 @@ func TestClockSkewBothWays(t *testing.T) {
 	if !in.Pass || !in.Injected || in.Got != skewAccepted || in.Measured > -9 || in.Measured < -11 {
 		t.Fatalf("inside the window: %+v", in)
 	}
-	out := runSkew(context.Background(), rig(srv.URL), http.DefaultTransport, Skew{SkewS: 45, Want: skewRefused}, skewedClock)
+	out := runSkew(context.Background(), rig(srv.URL), http.DefaultTransport, Skew{SkewS: 45, Want: skewRefused, Problem: skewProblem}, skewedClock)
 	if !out.Pass || !out.Injected || out.Got != skewRefused || out.Code != http.StatusUnauthorized {
 		t.Fatalf("outside the window: %+v", out)
 	}
@@ -69,19 +69,46 @@ func unskewed(time.Duration) func() time.Time { return time.Now }
 
 func TestASkewThatNeverLeftFailsWhateverTheAnswer(t *testing.T) {
 	// Accepted, for a case that wants refused: fails twice over.
-	res := runSkew(context.Background(), rig(ingest(t).URL), http.DefaultTransport, Skew{SkewS: 45, Want: skewRefused}, unskewed)
+	res := runSkew(context.Background(), rig(ingest(t).URL), http.DefaultTransport, Skew{SkewS: 45, Want: skewRefused, Problem: skewProblem}, unskewed)
 	if res.Injected || res.Pass || res.Got != skewAccepted {
 		t.Fatalf("an unskewed batch counted: %+v", res)
 	}
 	// A server that refuses everything gives the answer the case wants;
 	// the fault still did not happen, so the case fails.
 	refusing := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		http.Error(w, "refused", http.StatusUnauthorized)
+		http.Error(w, `{"type":"`+skewProblem+`"}`, http.StatusUnauthorized)
 	}))
 	defer refusing.Close()
-	res = runSkew(context.Background(), rig(refusing.URL), http.DefaultTransport, Skew{SkewS: 45, Want: skewRefused}, unskewed)
+	res = runSkew(context.Background(), rig(refusing.URL), http.DefaultTransport, Skew{SkewS: 45, Want: skewRefused, Problem: skewProblem}, unskewed)
 	if res.Got != skewRefused || res.Injected || res.Pass {
 		t.Fatalf("a refusal without the fault passed: %+v", res)
+	}
+}
+
+// skewProblem is the authority's problem type for a skewed body
+// (uspace-authority internal/receivers/protocol.go SlugSkew).
+const skewProblem = "https://schemas.uspace.ge/problems/skew"
+
+// A refusal counts only when it is the skew refusal: a skewed batch the
+// authority refuses for another reason (a bad bearer, a bad signature)
+// says nothing about its clock rule.
+func TestOnlyTheSkewProblemIsARefusal(t *testing.T) {
+	for name, body := range map[string]string{
+		"another problem": `{"type":"https://schemas.uspace.ge/problems/unauthorized"}`,
+		"no problem body": "refused",
+	} {
+		other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			http.Error(w, body, http.StatusUnauthorized)
+		}))
+		res := runSkew(context.Background(), rig(other.URL), http.DefaultTransport, Skew{SkewS: 45, Want: skewRefused, Problem: skewProblem}, skewedClock)
+		other.Close()
+		if res.Pass || res.Got == skewRefused || !res.Injected {
+			t.Errorf("%s: a 401 that is not the skew problem counted: %+v", name, res)
+		}
+	}
+	res := runSkew(context.Background(), rig(ingest(t).URL), http.DefaultTransport, Skew{SkewS: 45, Want: skewRefused, Problem: skewProblem}, skewedClock)
+	if !res.Pass || res.Got != skewRefused {
+		t.Fatalf("the skew problem did not count: %+v", res)
 	}
 }
 
@@ -89,7 +116,7 @@ func TestASkewCaseWithNoAnswerIsNotAVerdict(t *testing.T) {
 	srv := ingest(t)
 	url := srv.URL
 	srv.Close()
-	res := runSkew(context.Background(), rig(url), http.DefaultTransport, Skew{SkewS: 45, Want: skewRefused}, skewedClock)
+	res := runSkew(context.Background(), rig(url), http.DefaultTransport, Skew{SkewS: 45, Want: skewRefused, Problem: skewProblem}, skewedClock)
 	if res.Pass || res.Got == skewRefused {
 		t.Fatalf("an unreachable authority counted as a refusal: %+v", res)
 	}

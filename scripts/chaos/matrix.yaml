@@ -439,8 +439,11 @@ rows:
     recover_within_s: 30
     skew:
       - {skew_s: -10, want: accepted}
-      - {skew_s: 45, want: refused}
-      - {skew_s: -45, want: refused}
+      # The authority's problem type for a skewed body (uspace-authority
+      # internal/receivers/protocol.go SlugSkew): any other refusal is
+      # not this claim.
+      - {skew_s: 45, want: refused, problem: "https://schemas.uspace.ge/problems/skew"}
+      - {skew_s: -45, want: refused, problem: "https://schemas.uspace.ge/problems/skew"}
     during:
       - {system: all, ready: always, why: "a skewed source is the source's fault: every system stays ready"}
 

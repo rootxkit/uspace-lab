@@ -657,6 +657,7 @@ func cmdSkew(args []string) int {
 	c.bind(fs)
 	skew := fs.Float64("skew-s", 45, "the receiver clock's offset from this host's, seconds")
 	want := fs.String("want", skewRefused, "accepted or refused")
+	problem := fs.String("problem", "", "the problem type a refusal must carry (default: the matrix's clock row)")
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
@@ -680,7 +681,11 @@ func cmdSkew(args []string) int {
 		fmt.Fprintln(os.Stderr, err)
 		return exitUsage
 	}
-	res := runSkew(context.Background(), rig, lab.Transport, Skew{SkewS: *skew, Want: *want}, skewedClock)
+	pt := *problem
+	if pt == "" {
+		pt = refusalProblem(m)
+	}
+	res := runSkew(context.Background(), rig, lab.Transport, Skew{SkewS: *skew, Want: *want, Problem: pt}, skewedClock)
 	b, _ := json.MarshalIndent(res, "", "  ")
 	fmt.Println(string(b))
 	if !res.Pass {
@@ -772,4 +777,17 @@ func (s *sessionRefresher) MarshalJSON() ([]byte, error) {
 		Every   string    `json:"every"`
 		Runs    []Refresh `json:"runs"`
 	}{s.cmd, s.every.String(), s.Runs})
+}
+
+// refusalProblem is the problem type of the matrix's first refused
+// clock case ("" when there is none: no refusal can then count).
+func refusalProblem(m *Matrix) string {
+	for i := range m.Rows {
+		for _, sk := range m.Rows[i].Skew {
+			if sk.Want == skewRefused && sk.Problem != "" {
+				return sk.Problem
+			}
+		}
+	}
+	return ""
 }

@@ -148,6 +148,9 @@ type Expect struct {
 type Skew struct {
 	SkewS float64 `yaml:"skew_s"`
 	Want  string  `yaml:"want"` // accepted | refused
+	// Problem is the problem type a refusal must carry to count
+	// (required for want: refused): any other 4xx is another refusal.
+	Problem string `yaml:"problem"`
 }
 
 // StringList is a YAML string or list of strings.
@@ -322,6 +325,9 @@ func (m *Matrix) Validate() error {
 				}
 				if s.Want != skewAccepted && s.Want != skewRefused {
 					bad("%s: skew[%d].want %q: accepted or refused", at, j, s.Want)
+				}
+				if s.Want == skewRefused && !strings.HasPrefix(s.Problem, "https://") {
+					bad("%s: skew[%d]: a refused case needs problem, the type of the refusal it is about", at, j)
 				}
 				want[s.Want] = true
 			}

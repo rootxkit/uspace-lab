@@ -135,6 +135,11 @@ func TestMatrixRefusesWhatCannotBeJudged(t *testing.T) {
 		}, "accepted and a refused"},
 		"clock one case": {func(m *Matrix) { rowByDomain(m, "clock").Skew = []Skew{{SkewS: 45, Want: skewRefused}} }, "presence and absence"},
 		"zero skew":      {func(m *Matrix) { rowByDomain(m, "clock").Skew[0].SkewS = 0 }, "non-zero"},
+		"refusal without its problem": {func(m *Matrix) {
+			for i := range rowByDomain(m, "clock").Skew {
+				rowByDomain(m, "clock").Skew[i].Problem = ""
+			}
+		}, "needs problem"},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {

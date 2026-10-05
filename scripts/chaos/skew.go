@@ -41,7 +41,7 @@ type SkewResult struct {
 	Injected bool   `json:"injected"`
 	Code     int    `json:"code"`
 	Answer   string `json:"answer,omitempty"`
-	Got      string `json:"got"` // accepted, refused, unavailable, none
+	Got      string `json:"got"` // accepted, refused, refused_other, unavailable, none
 	Pass     bool   `json:"pass"`
 	Note     string `json:"note,omitempty"`
 }
@@ -214,7 +214,15 @@ func runSkew(ctx context.Context, rig *skewRig, base http.RoundTripper, s Skew, 
 	case cp.code == http.StatusAccepted:
 		res.Got = skewAccepted
 	case cp.code >= 400 && cp.code < 500:
-		res.Got = skewRefused
+		// Only the authority's skew problem is the refusal the case is
+		// about: a 4xx for anything else (a bearer, a signature) is
+		// another refusal and proves nothing about the clock rule.
+		if pt := problemType(cp.answer); s.Problem != "" && pt == s.Problem {
+			res.Got = skewRefused
+		} else {
+			res.Got = skewRefusedOther
+			res.Note = fmt.Sprintf("refused with problem type %q, not %q", pt, s.Problem)
+		}
 	default:
 		res.Got = "unavailable"
 	}
@@ -223,6 +231,21 @@ func runSkew(ctx context.Context, rig *skewRig, base http.RoundTripper, s Skew, 
 		res.Note = strings.TrimSpace(res.Note + fmt.Sprintf(" the batch left %.1f s off this host's clock, not %g s: the fault did not happen", res.Measured, s.SkewS))
 	}
 	return res
+}
+
+// skewRefusedOther is a 4xx that is not the skew problem.
+const skewRefusedOther = "refused_other"
+
+// problemType is the type member of a problem body, "" when the answer
+// is not one.
+func problemType(answer string) string {
+	var p struct {
+		Type string `json:"type"`
+	}
+	if json.Unmarshal([]byte(answer), &p) != nil {
+		return ""
+	}
+	return p.Type
 }
 
 func macFor(seed string) string {
