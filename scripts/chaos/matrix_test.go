@@ -55,8 +55,14 @@ func TestCommittedMatrixValidates(t *testing.T) {
 		t.Fatal(err)
 	}
 	sec := string(spec)
-	sec = sec[strings.Index(sec, "## 6. Failure domains"):]
-	sec = sec[:strings.Index(sec[3:], "\n## ")+3]
+	start := strings.Index(sec, "## 6. Failure domains")
+	if start < 0 {
+		t.Fatal("05 has no section 6 'Failure domains'")
+	}
+	sec = sec[start:]
+	if end := strings.Index(sec[3:], "\n## "); end >= 0 {
+		sec = sec[:end+3]
+	}
 	first := map[string]bool{}
 	for _, r := range m.Rows {
 		if len(r.Cite) > 0 {
