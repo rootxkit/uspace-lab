@@ -212,12 +212,13 @@ func (r *run) startOperators(ctx, simCtx context.Context, wg *sync.WaitGroup) er
 		wg.Add(1)
 		go func() { defer wg.Done(); _ = c.Run(simCtx, sub.C) }()
 		if intentID != "" && (a.Operator.System == scenario.SystemUSSP) {
-			tok, err := tokens.Token(ctx)
-			if err != nil {
+			if _, err := tokens.Token(ctx); err != nil {
 				return fmt.Errorf("token for the alert stream of %s: %w", a.Name, err)
 			}
+			// The token is asked for on every (re)connection: the client
+			// renews it before it expires.
 			r.collect(ctx, observe.Stream{Name: "ussp-alerts-" + a.Name, System: scenario.SystemUSSP, Aircraft: a.Name,
-				URL: wsURL(base) + "/v1/alerts?intent_id=" + intentID, Header: http.Header{"Authorization": {"Bearer " + tok}}})
+				URL: wsURL(base) + "/v1/alerts?intent_id=" + intentID, HeaderFunc: bearerHeader(tokens)})
 		}
 	}
 	return nil
@@ -408,13 +409,22 @@ func (r *run) collectAuthority(ctx context.Context) {
 	if a == nil || a.PictureURL == "" {
 		return
 	}
-	session, err := r.tg.secret(a.SessionFile)
-	if err != nil {
+	if _, err := r.tg.secret(a.SessionFile); err != nil {
 		r.log.Error("authority picture not collected", "err", err)
 		return
 	}
+	// The session file is read on every (re)connection: a console
+	// session ends after 30 minutes idle, and whoever runs a long
+	// scenario refreshes the file (demo-seed --steps sessions).
+	sessionFile, origin := a.SessionFile, a.Origin
 	r.collect(ctx, observe.Stream{Name: "authority-picture", System: scenario.SystemAuthority, URL: a.PictureURL,
-		Header: http.Header{"Cookie": {"uspace_session=" + session}, "Origin": {a.Origin}}, OnOpen: r.pictureSubscribe()})
+		HeaderFunc: func(context.Context) (http.Header, error) {
+			session, err := r.tg.secret(sessionFile)
+			if err != nil {
+				return nil, err
+			}
+			return http.Header{"Cookie": {"uspace_session=" + session}, "Origin": {origin}}, nil
+		}, OnOpen: r.pictureSubscribe()})
 }
 
 // pictureSubscribeHalfM is half the side of the picture viewport about
@@ -443,13 +453,12 @@ func (r *run) collectANSP(ctx context.Context) {
 		return
 	}
 	cc := &oauth.ClientCredentials{TokenURL: tc.TokenURL, ClientID: tc.ClientID, ClientSecret: secret, Audience: tc.Audience, Scopes: tc.Scopes}
-	tok, err := cc.Token(ctx)
-	if err != nil {
+	if _, err := cc.Token(ctx); err != nil {
 		r.log.Error("ansp stream not collected", "err", err)
 		return
 	}
 	r.collect(ctx, observe.Stream{Name: "ansp-manned", System: scenario.SystemANSP, URL: r.tg.ANSP.StreamURL,
-		Header: http.Header{"Authorization": {"Bearer " + tok}}})
+		HeaderFunc: bearerHeader(cc)})
 }
 
 func (r *run) wants(sys string) bool {
@@ -757,4 +766,20 @@ func decodeHex(s string) ([]byte, error) {
 		return nil, fmt.Errorf("the HMAC key file is not hex: %w", err)
 	}
 	return b, nil
+}
+
+// tokenSource is a token client that renews its token.
+type tokenSource interface {
+	Token(ctx context.Context) (string, error)
+}
+
+// bearerHeader asks src for its current token on every connection.
+func bearerHeader(src tokenSource) func(context.Context) (http.Header, error) {
+	return func(ctx context.Context) (http.Header, error) {
+		tok, err := src.Token(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return http.Header{"Authorization": {"Bearer " + tok}}, nil
+	}
 }

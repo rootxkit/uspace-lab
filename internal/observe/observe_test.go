@@ -3,6 +3,7 @@ package observe
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -219,5 +220,49 @@ func TestSnapshotAlertsAreSeenOnce(t *testing.T) {
 	r.Handle(s, st, snap(), time.Now())
 	if len(r.Events()) != 2 {
 		t.Fatal("an empty snapshot recorded an event")
+	}
+}
+
+// HeaderFunc is asked on every connection, so credentials renewed
+// between two connections are the ones sent; Header alone sends the
+// same every time.
+func TestHeaderFuncIsAskedOnEveryConnection(t *testing.T) {
+	got := make(chan string, 8)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got <- r.Header.Get("Authorization")
+		c, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			return
+		}
+		_ = c.Close(4401, "sign in again")
+	}))
+	defer srv.Close()
+	n := 0
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	r := NewRecorder(nil)
+	go r.Run(ctx, Stream{Name: "s", URL: "ws" + strings.TrimPrefix(srv.URL, "http"), Retry: 10 * time.Millisecond,
+		HeaderFunc: func(context.Context) (http.Header, error) {
+			n++
+			return http.Header{"Authorization": {fmt.Sprintf("Bearer t%d", n)}}, nil
+		}})
+	first, second := <-got, <-got
+	cancel()
+	if first != "Bearer t1" || second != "Bearer t2" {
+		t.Fatalf("headers %q, %q: renewed credentials were not sent", first, second)
+	}
+	// A HeaderFunc that fails is a stream error, and nothing is dialled.
+	r2 := NewRecorder(nil)
+	ctx2, cancel2 := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel2()
+	r2.Run(ctx2, Stream{Name: "f", URL: "ws" + strings.TrimPrefix(srv.URL, "http"), Retry: 50 * time.Millisecond,
+		HeaderFunc: func(context.Context) (http.Header, error) { return nil, fmt.Errorf("no session") }})
+	if e := r2.Errors()["f"]; !strings.Contains(e, "no session") {
+		t.Fatalf("error %q", e)
+	}
+	select {
+	case h := <-got:
+		t.Fatalf("dialled without credentials: %q", h)
+	default:
 	}
 }

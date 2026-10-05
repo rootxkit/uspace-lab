@@ -156,6 +156,11 @@ type Stream struct {
 	System string
 	URL    string
 	Header http.Header
+	// HeaderFunc, when set, builds the headers on every (re)connection
+	// instead of Header: a token or a console session read once expires
+	// during a long run, and every reconnection after that is refused
+	// ("sign in again"), so nothing more is observed.
+	HeaderFunc func(ctx context.Context) (http.Header, error)
 	// Aircraft is the scenario aircraft the stream belongs to (a USSP
 	// alert stream is one intent's).
 	Aircraft string
@@ -198,7 +203,15 @@ type streamState struct {
 
 func (r *Recorder) read(ctx context.Context, s Stream, st *streamState) error {
 	dctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	conn, resp, err := websocket.Dial(dctx, s.URL, &websocket.DialOptions{HTTPHeader: s.Header})
+	h := s.Header
+	if s.HeaderFunc != nil {
+		var err error
+		if h, err = s.HeaderFunc(dctx); err != nil {
+			cancel()
+			return fmt.Errorf("%s: credentials: %w", s.Name, err)
+		}
+	}
+	conn, resp, err := websocket.Dial(dctx, s.URL, &websocket.DialOptions{HTTPHeader: h})
 	cancel()
 	if resp != nil && resp.Body != nil {
 		_ = resp.Body.Close()
