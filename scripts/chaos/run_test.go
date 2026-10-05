@@ -216,3 +216,36 @@ func TestARowSettlesForTheReAlertBound(t *testing.T) {
 		t.Fatalf("no settle, still sampled %v after the restore", rr2.Ended.Sub(rr2.Restored))
 	}
 }
+
+func TestAFailedRefreshIsRetriedSooner(t *testing.T) {
+	bash, err := exec.LookPath("bash")
+	if err != nil {
+		t.Skip("bash is not installed")
+	}
+	// A period of 500 ms: without the retry at most three runs fit in
+	// the 1.5 s below; with a 20 ms retry after each failure, many more.
+	r := &sessionRefresher{cmd: "exit 2", every: 500 * time.Millisecond, retry: 20 * time.Millisecond, bash: bash, log: func(string, ...any) {}}
+	ctx, cancel := context.WithTimeout(context.Background(), 1500*time.Millisecond)
+	defer cancel()
+	go r.run(ctx)
+	r2 := func() int { r.mu.Lock(); defer r.mu.Unlock(); return len(r.Runs) }
+	if !eventually(1400*time.Millisecond, func() bool { return r2() >= 5 }) {
+		t.Fatalf("a failed refresh was not retried: %d run(s)", r2())
+	}
+}
+
+func TestASucceedingRefreshKeepsItsPeriod(t *testing.T) {
+	bash, err := exec.LookPath("bash")
+	if err != nil {
+		t.Skip("bash is not installed")
+	}
+	r := &sessionRefresher{cmd: "true", every: 500 * time.Millisecond, retry: 20 * time.Millisecond, bash: bash, log: func(string, ...any) {}}
+	ctx, cancel := context.WithTimeout(context.Background(), 1400*time.Millisecond)
+	defer cancel()
+	done := make(chan struct{})
+	go func() { r.run(ctx); close(done) }()
+	<-done
+	if n := len(r.Runs); n < 1 || n > 3 {
+		t.Fatalf("%d runs in 1.4 s at a 500 ms period", n)
+	}
+}

@@ -699,6 +699,7 @@ const maxRefreshes = 64
 type sessionRefresher struct {
 	cmd   string
 	every time.Duration
+	retry time.Duration // after a failure; default a minute
 	bash  string
 	log   func(string, ...any)
 
@@ -714,11 +715,18 @@ type Refresh struct {
 }
 
 func (s *sessionRefresher) run(ctx context.Context) {
-	t := time.NewTicker(s.every)
-	defer t.Stop()
+	// After a failed run (the fault of the moment took a system down)
+	// the next one comes a retry period later, not a whole period.
+	wait := s.every
+	retry := s.retry
+	if retry <= 0 {
+		retry = time.Minute
+	}
 	for {
+		t := time.NewTimer(wait)
 		select {
 		case <-ctx.Done():
+			t.Stop()
 			return
 		case <-t.C:
 		}
@@ -742,6 +750,10 @@ func (s *sessionRefresher) run(ctx context.Context) {
 		}
 		r.Tail = bounded(out)
 		s.log("console sessions refreshed (exit %d)", r.ExitCode)
+		wait = s.every
+		if r.ExitCode != 0 {
+			wait = min(retry, s.every)
+		}
 		s.mu.Lock()
 		if len(s.Runs) < maxRefreshes {
 			s.Runs = append(s.Runs, r)
