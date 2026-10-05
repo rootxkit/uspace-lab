@@ -245,7 +245,7 @@ rows:
     hold_s: 60
     recover_within_s: 60
     during:
-      - {system: authority, field: nats, in: [disconnected, down, reconnecting, closed], within_s: 15, why: "05 §6: consoles freeze with age shown (the picture's status says its bus is gone)"}
+      - {system: authority, field: nats, not_in: [connected], within_s: 15, why: "05 §6: consoles freeze with age shown (the picture's status says its bus is gone)"}
       - {system: others, ready: always, why: "05 §6: no cross-system NATS"}
     after:
       - {system: authority, field: nats, in: [connected], within_s: 60, why: "the bus is back"}
@@ -260,7 +260,7 @@ rows:
     hold_s: 60
     recover_within_s: 60
     during:
-      - {system: cisp, check: nats, in: [down, degraded, error, unavailable, failing], within_s: 15, why: "05 §6: the system says its bus is gone"}
+      - {system: cisp, check: nats, not_in: [ok], within_s: 15, why: "05 §6: the system says its bus is gone"}
       - {system: [authority, ussp, ansp, issuer, dss], ready: always, why: "05 §6: no cross-system NATS"}
     after:
       - {system: all, recovered: true, within_s: 60, why: "the bus is back"}
@@ -274,7 +274,7 @@ rows:
     hold_s: 60
     recover_within_s: 60
     during:
-      - {system: ansp, check: nats, in: [down, degraded, error, unavailable, failing], within_s: 15, why: "05 §6: the system says its bus is gone"}
+      - {system: ansp, check: nats, not_in: [ok], within_s: 15, why: "05 §6: the system says its bus is gone"}
       - {system: [authority, cisp, ussp, issuer, dss], ready: always, why: "05 §6: no cross-system NATS"}
     after:
       - {system: all, recovered: true, within_s: 60, why: "the bus is back"}

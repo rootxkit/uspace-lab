@@ -158,3 +158,23 @@ func TestStatusExpectationsBothWays(t *testing.T) {
 		}
 	}
 }
+
+func TestNotInBothWays(t *testing.T) {
+	frames := map[string][]StatusFrame{"authority": {{At: at(1), NATS: "connected"}, {At: at(3), NATS: "unavailable"}}}
+	e := Expect{System: StringList{"authority"}, Field: "nats", NotIn: []string{"connected"}, WithinS: 5}
+	if r := judgeExpect(e, phaseDuring, e.System, t0, nil, nil, frames); !r.Pass || r.AfterS["authority"] != 3 {
+		t.Fatalf("%+v", r)
+	}
+	still := map[string][]StatusFrame{"authority": {{At: at(1), NATS: "connected"}, {At: at(3), NATS: "connected"}}}
+	if r := judgeExpect(e, phaseDuring, e.System, t0, nil, nil, still); r.Pass {
+		t.Fatal("a bus that stayed connected passed")
+	}
+	// An absent check is not "anything but ok".
+	c := Expect{System: StringList{"cisp"}, Check: "nats", NotIn: []string{"ok"}, WithinS: 10}
+	none := func(int) (bool, map[string]Readiness) {
+		return true, map[string]Readiness{"cisp": ready(200, map[string]string{})}
+	}
+	if r := judgeExpect(c, phaseDuring, c.System, t0, samplesWith(none, none), nil, nil); r.Pass {
+		t.Fatal("an absent check passed not_in")
+	}
+}

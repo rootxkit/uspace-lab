@@ -24,8 +24,26 @@ func rowWindow(modes map[string]string) []window {
 	return []window{{row: "r", from: at(10), to: at(40), restored: at(30), modes: modes}}
 }
 
+// findings judges a row, leaving out the exit (TestTheExitIsJudgedOnEveryEvent).
 func findings(evs []alertEvent, modes map[string]string) []AlertFinding {
-	return judgeAlerts(append(append([]alertEvent(nil), baseEvents...), evs...), bgCfg, at(100), rowWindow(modes))
+	var out []AlertFinding
+	for _, f := range judgeAlerts(append(append([]alertEvent(nil), baseEvents...), evs...), bgCfg, at(100), at(200), rowWindow(modes)) {
+		if f.What != "not_cleared_at_exit" && f.What != "not_open_at_exit" {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// rowOnly leaves out the exit checks.
+func rowOnly(fs []AlertFinding) []AlertFinding {
+	var out []AlertFinding
+	for _, f := range fs {
+		if f.What != "not_cleared_at_exit" && f.What != "not_open_at_exit" {
+			out = append(out, f)
+		}
+	}
+	return out
 }
 
 func failed(fs []AlertFinding) []AlertFinding {
@@ -99,7 +117,7 @@ func TestTheExitClearIsNotJudged(t *testing.T) {
 		t.Fatalf("%+v", fs)
 	}
 	// A clear between rows is reported with no row.
-	fs := failed(judgeAlerts(append(append([]alertEvent(nil), baseEvents...), ev("ussp", "u1", observe.PhaseCleared, "stale", 60)), bgCfg, at(100), rowWindow(nil)))
+	fs := failed(judgeAlerts(append(append([]alertEvent(nil), baseEvents...), ev("ussp", "u1", observe.PhaseCleared, "stale", 60)), bgCfg, at(100), at(200), rowWindow(nil)))
 	if len(fs) == 0 || fs[0].Row != "" {
 		t.Fatalf("%+v", fs)
 	}
@@ -169,8 +187,47 @@ func TestALostAlertIsReportedByTheRowThatLostItOnly(t *testing.T) {
 		{row: "r2", from: at(50), to: at(70), restored: at(60)},
 	}
 	evs := append(append([]alertEvent(nil), baseEvents...), ev("ussp", "u1", observe.PhaseCleared, "stale", 20))
-	fs := failed(judgeAlerts(evs, bgCfg, at(100), windows))
+	fs := failed(rowOnly(judgeAlerts(evs, bgCfg, at(100), at(100), windows)))
 	if len(fs) != 1 || fs[0].Row != "r1" || fs[0].What != "not_open_after" {
 		t.Fatalf("%+v", fs)
+	}
+}
+
+func exitEvents(evs ...alertEvent) []alertEvent {
+	return append(append([]alertEvent(nil), baseEvents...), evs...)
+}
+
+func TestTheExitIsJudgedOnEveryEvent(t *testing.T) {
+	ok := exitEvents(ev("ussp", "u1", observe.PhaseCleared, "resolved", 105), ev("authority", "a1", observe.PhaseCleared, "resolved", 106))
+	if fs := failed(judgeAlerts(ok, bgCfg, at(100), at(150), nil)); len(fs) != 0 {
+		t.Fatalf("%+v", fs)
+	}
+	// The authority never clears after the exit.
+	fs := failed(judgeAlerts(exitEvents(ev("ussp", "u1", observe.PhaseCleared, "resolved", 105)), bgCfg, at(100), at(150), nil))
+	if len(fs) != 1 || fs[0].What != "not_cleared_at_exit" || fs[0].System != "authority" {
+		t.Fatalf("%+v", fs)
+	}
+	// A raise after the exit.
+	fs = failed(judgeAlerts(append(ok, ev("ussp", "u9", observe.PhaseRaised, "", 110)), bgCfg, at(100), at(150), nil))
+	if len(fs) != 1 || fs[0].What != "raised_after_exit" {
+		t.Fatalf("%+v", fs)
+	}
+	// Nothing open when the aircraft left: the alert was lost before.
+	lost := exitEvents(ev("ussp", "u1", observe.PhaseCleared, "stale", 90), ev("authority", "a1", observe.PhaseCleared, "resolved", 106))
+	fs = failed(judgeAlerts(lost, bgCfg, at(100), at(150), nil))
+	if len(fs) < 2 || fs[1].What != "not_open_at_exit" {
+		t.Fatalf("%+v", fs)
+	}
+}
+
+func TestAnEventIsTheLatestRowsWhenWindowsMeet(t *testing.T) {
+	windows := []window{
+		{row: "r1", from: at(10), to: at(30), restored: at(20)},
+		{row: "r2", from: at(30), to: at(60), restored: at(50), modes: map[string]string{"ussp": alertsStaleOK}},
+	}
+	evs := exitEvents(ev("ussp", "u1", observe.PhaseCleared, "stale", 30), ev("ussp", "u2", observe.PhaseRaised, "", 40))
+	all := rowOnly(judgeAlerts(evs, bgCfg, at(100), at(100), windows))
+	if len(failed(all)) != 0 || all[0].Row != "r2" {
+		t.Fatalf("%+v", all)
 	}
 }

@@ -111,6 +111,7 @@ type Row struct {
 //	ready: always       the endpoint answers 200 in every sample
 //	ready: lost         it stops answering 200 within within_s
 //	ready: back         it answers 200 again within within_s
+//	(not_in in place of in: any state but those, present and named)
 //	check + in          the named readiness check is in one of the
 //	                    states within within_s (always: in every sample)
 //	recovered: true     ready, and every check that was ok before the
@@ -128,6 +129,7 @@ type Expect struct {
 	Ready     string     `yaml:"ready"`
 	Check     string     `yaml:"check"`
 	In        []string   `yaml:"in"`
+	NotIn     []string   `yaml:"not_in"`
 	Always    bool       `yaml:"always"`
 	Recovered bool       `yaml:"recovered"`
 	Status    string     `yaml:"status"`
@@ -386,8 +388,8 @@ func (e *Expect) check(systems map[string]bool, r *Row, during bool) []string {
 	}
 	if e.Check != "" {
 		kinds++
-		if len(e.In) == 0 {
-			out = append(out, "check needs in: [states]")
+		if (len(e.In) == 0) == (len(e.NotIn) == 0) {
+			out = append(out, "check needs one of in or not_in")
 		}
 	}
 	if e.Recovered {
@@ -401,8 +403,8 @@ func (e *Expect) check(systems map[string]bool, r *Row, during bool) []string {
 	}
 	if e.Source != "" {
 		kinds++
-		if len(e.In) == 0 {
-			out = append(out, "source needs in: [states]")
+		if (len(e.In) == 0) == (len(e.NotIn) == 0) {
+			out = append(out, "source needs one of in or not_in")
 		}
 	}
 	if e.Field != "" {
@@ -410,8 +412,8 @@ func (e *Expect) check(systems map[string]bool, r *Row, during bool) []string {
 		if e.Field != "nats" && e.Field != "dp_state" {
 			out = append(out, fmt.Sprintf("field %q: nats or dp_state", e.Field))
 		}
-		if len(e.In) == 0 {
-			out = append(out, "field needs in: [states]")
+		if (len(e.In) == 0) == (len(e.NotIn) == 0) {
+			out = append(out, "field needs one of in or not_in")
 		}
 	}
 	if e.StatusNot != "" {
@@ -477,4 +479,16 @@ func (e *Expect) systems(all []string, row *Row) []string {
 	}
 	slices.Sort(out)
 	return slices.Compact(out)
+}
+
+// matches is a state the expectation accepts: one of In, or, with NotIn,
+// any state but those (an absent check or member never matches).
+func (e *Expect) matches(st string) bool {
+	if st == "" {
+		return false
+	}
+	if len(e.NotIn) > 0 {
+		return !slices.Contains(e.NotIn, st)
+	}
+	return slices.Contains(e.In, st)
 }

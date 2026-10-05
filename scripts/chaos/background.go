@@ -227,24 +227,33 @@ func (w window) mode(sys string) string {
 //   - at the end of each row's window the system must have an open alert.
 //
 // Anything outside every window is reported with no row (between rows).
-func judgeAlerts(evs []alertEvent, bg Background, outStart time.Time, windows []window) []AlertFinding {
+func judgeAlerts(evs []alertEvent, bg Background, outStart, end time.Time, windows []window) []AlertFinding {
 	var out []AlertFinding
+	// The latest row whose window holds t: a row's window may reach past
+	// the next row's injection only when the caller did not cap it, and
+	// what happens after an injection is that row's.
 	find := func(t time.Time) (window, bool) {
+		var got window
+		ok := false
 		for _, w := range windows {
 			if !t.Before(w.from) && !t.After(w.to) {
-				return w, true
+				got, ok = w, true
 			}
 		}
-		return window{}, false
+		return got, ok
 	}
 	for _, sys := range bg.Systems {
 		open := map[string]bool{}
 		lastClearAllowed := false
 		seen := false
-		var sysEvents []alertEvent
+		var sysEvents, exitEvents []alertEvent
 		for _, e := range evs {
-			if e.System == sys && e.At.Before(outStart) {
+			switch {
+			case e.System != sys:
+			case e.At.Before(outStart):
 				sysEvents = append(sysEvents, e)
+			default:
+				exitEvents = append(exitEvents, e)
 			}
 		}
 		for _, e := range sysEvents {
@@ -281,10 +290,13 @@ func judgeAlerts(evs []alertEvent, bg Background, outStart time.Time, windows []
 		// Open at the end of every window that it was open at the start
 		// of (an alert lost before a row is that earlier row's finding,
 		// not one per row after it).
+		// openAt counts the events strictly before t: at a window's end
+		// capped by the next row's injection, an event at that instant
+		// is the next row's.
 		openAt := func(t time.Time) bool {
 			open := map[string]bool{}
 			for _, e := range sysEvents {
-				if e.At.After(t) {
+				if !e.At.Before(t) {
 					break
 				}
 				if e.Phase == observe.PhaseRaised {
@@ -303,6 +315,30 @@ func judgeAlerts(evs []alertEvent, bg Background, outStart time.Time, windows []
 				out = append(out, AlertFinding{System: sys, What: "not_open_after", At: w.to, Row: w.row,
 					OffsetS: round1(w.to.Sub(w.from).Seconds())})
 			}
+		}
+		// The exit: the aircraft leaves the zone at outStart; the alert
+		// open then must clear as resolved before the run ends, and no
+		// other raise may follow (the scenario's own expectation, judged
+		// on every raise and clear: after an allowed stale clear and
+		// re-raise the runner's verdict counts the new id as a false
+		// alert, which it is not).
+		if !openAt(outStart) {
+			out = append(out, AlertFinding{System: sys, What: "not_open_at_exit", At: outStart})
+		}
+		cleared := false
+		for _, e := range exitEvents {
+			if e.At.After(end) {
+				break
+			}
+			switch {
+			case e.Phase == observe.PhaseCleared && e.Reason == "resolved":
+				cleared = true
+			case e.Phase == observe.PhaseRaised:
+				out = append(out, AlertFinding{System: sys, What: "raised_after_exit", AlertID: e.AlertID, At: e.At})
+			}
+		}
+		if openAt(outStart) && !cleared {
+			out = append(out, AlertFinding{System: sys, What: "not_cleared_at_exit", At: end})
 		}
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].At.Before(out[j].At) })
@@ -323,6 +359,7 @@ type BackgroundResult struct {
 	Events         []alertEvent         `json:"events,omitempty"`
 	EventsDropped  int                  `json:"events_dropped,omitempty"`
 	ResultFile     string               `json:"result_file,omitempty"`
+	Note           string               `json:"note,omitempty"`
 	Error          string               `json:"error,omitempty"`
 }
 

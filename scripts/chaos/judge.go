@@ -190,7 +190,7 @@ func judgeExpect(e Expect, phase string, systems []string, start time.Time, samp
 			ok := true
 			for _, s := range phaseSamples {
 				st := s.Ready[sys].Checks[e.Check]
-				if !slices.Contains(e.In, st) {
+				if !e.matches(st) {
 					ok = false
 					obs = append(obs, fmt.Sprintf("%s check %s %q at +%.1fs, want %v", sys, e.Check, st, s.At.Sub(start).Seconds(), e.In))
 					break
@@ -202,7 +202,7 @@ func judgeExpect(e Expect, phase string, systems []string, start time.Time, samp
 				res.Pass = false
 			}
 		case e.Check != "":
-			after, ok, last := firstMet(sys, func(r Readiness) bool { return slices.Contains(e.In, r.Checks[e.Check]) })
+			after, ok, last := firstMet(sys, func(r Readiness) bool { return e.matches(r.Checks[e.Check]) })
 			if ok {
 				met(sys, after)
 				obs = append(obs, fmt.Sprintf("%s check %s %q at +%.1fs", sys, e.Check, last.Checks[e.Check], after))
@@ -255,7 +255,7 @@ func judgeExpect(e Expect, phase string, systems []string, start time.Time, samp
 				if ok {
 					last = st
 				}
-				if ok && slices.Contains(e.In, st) {
+				if ok && e.matches(st) {
 					met(sys, round1(f.At.Sub(start).Seconds()))
 					obs = append(obs, fmt.Sprintf("%s console status source %s %q at +%.1fs", sys, e.Source, st, f.At.Sub(start).Seconds()))
 					found = true
@@ -280,7 +280,7 @@ func judgeExpect(e Expect, phase string, systems []string, start time.Time, samp
 				if v != "" {
 					last = v
 				}
-				if slices.Contains(e.In, v) {
+				if v != "" && e.matches(v) {
 					met(sys, round1(f.At.Sub(start).Seconds()))
 					obs = append(obs, fmt.Sprintf("%s console status %s %q at +%.1fs", sys, e.Field, v, f.At.Sub(start).Seconds()))
 					found = true
