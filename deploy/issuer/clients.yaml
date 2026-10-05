@@ -25,7 +25,7 @@
 #   ansp-01       publishes restrictions to the CISP and reads it (F2,
 #                 F3); writes occurrences at the authority (F11); writes
 #                 F3548 constraints to the DSS (F2).
-#   ussp-USSP-DEV-01  the lab USSP (code USSP-DEV, M8; the USSP keeps the
+#   ussp-DEV01-01  the lab USSP (code DEV01, M8; the USSP keeps the
 #                 code's case in its client id since its 8cce0e0): registry lookups,
 #                 occurrences, operating status at the authority (F7,
 #                 F8); CIS reads (F3); manned traffic and coordination
@@ -103,7 +103,7 @@ clients:
       - ${LAB_CISP_AUDIENCES}
       - ${LAB_AUTHORITY_AUDIENCES}
 
-  - id: ussp-USSP-DEV-01
+  - id: ussp-DEV01-01
     scopes:
       - registry.validate
       - occurrences.write

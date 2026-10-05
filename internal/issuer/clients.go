@@ -40,6 +40,12 @@ type clientsFile struct {
 
 var (
 	clientIDPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
+	// usspClientPattern is the authority's form of a USSP's client id,
+	// ussp-<certificates.code>-<nn> with the code one to eight
+	// upper-case letters and digits (uspace-authority internal/tokens
+	// identifiers.go, M8, M24). The lab stands in for that issuer, so a
+	// ussp- id it would refuse is refused here too (audit M-2).
+	usspClientPattern = regexp.MustCompile(`^ussp-[A-Z0-9]{1,8}-[0-9]{2}$`)
 	// hostPattern is a lower-case DNS name or compose service name: no
 	// scheme, port, path or upper case (an aud is compared byte for byte).
 	hostPattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?$`)
@@ -53,7 +59,8 @@ const MaxClientsFileBytes = 64 << 10
 // form ${VAR} is replaced by the comma-separated hosts in the environment
 // variable VAR, read through lookup; an unset or empty variable is an
 // error, as is anything that would make a client ambiguous: an empty or
-// repeated id, a scope outside the catalogue, a reserved scope, a
+// repeated id, a ussp- id the authority would refuse, a scope outside
+// the catalogue, a reserved scope, a
 // lab-only scope on another client, a repeated scope, a host that is not
 // a bare lower-case host name, or a national scope with no audience.
 func LoadClients(b []byte, lookup func(string) (string, bool)) (*Registry, error) {
@@ -72,6 +79,9 @@ func LoadClients(b []byte, lookup func(string) (string, bool)) (*Registry, error
 		where := fmt.Sprintf("clients[%d]", i)
 		if !clientIDPattern.MatchString(c.ID) {
 			return nil, fmt.Errorf("%s.id: %q is empty or not a client id", where, c.ID)
+		}
+		if strings.HasPrefix(c.ID, "ussp-") && !usspClientPattern.MatchString(c.ID) {
+			return nil, fmt.Errorf("%s.id: %q is not a USSP client id the authority issues (ussp-<code>-<nn>, code A-Z and 0-9, at most 8)", where, c.ID)
 		}
 		where = "client " + c.ID
 		if _, dup := r.clients[c.ID]; dup {

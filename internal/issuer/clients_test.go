@@ -13,13 +13,13 @@ import (
 // the one the USSP itself asks with: uspace-ussp internal/auth
 // ClientIDFor is "ussp-" + the code as given + "-01" (M24; since its
 // 8cce0e0 it no longer lower-cases the code), so for USSP_SYSTEM_ID
-// USSP-DEV it is ussp-USSP-DEV-01. The issuer's ids are case-sensitive:
+// DEV01 it is ussp-DEV01-01. The issuer's ids are case-sensitive:
 // an entry in the other case refuses every token the USSP asks for (the
 // WP-L6 systems run against 6ec6238 and the re-run against 6e78644 both
 // saw 401 on every CIS pull, each with the other case).
 func TestLabClientsFile(t *testing.T) {
 	r := labRegistry(t)
-	want := []string{"lab-01", "authority-01", "cisp-01", "ansp-01", "ussp-USSP-DEV-01", "sim-ussp-01"}
+	want := []string{"lab-01", "authority-01", "cisp-01", "ansp-01", "ussp-DEV01-01", "sim-ussp-01"}
 	if !slices.Equal(r.IDs(), want) {
 		t.Fatalf("clients %v, want %v", r.IDs(), want)
 	}
@@ -76,6 +76,9 @@ func TestLoadClientsRefusals(t *testing.T) {
 	for _, tc := range []struct{ name, old, new, want string }{
 		{"repeated id", "id: ussp-A-01", "id: lab-01", "listed twice"},
 		{"empty id", "id: ussp-A-01", `id: ""`, "not a client id"},
+		{"USSP code with a hyphen", "id: ussp-A-01", "id: ussp-USSP-DEV-01", "not a USSP client id"},
+		{"lower-case USSP code", "id: ussp-A-01", "id: ussp-a-01", "not a USSP client id"},
+		{"USSP code over 8", "id: ussp-A-01", "id: ussp-ABCDEFGHI-01", "not a USSP client id"},
 		{"scope outside the catalogue", "[rid.service_provider]", "[rid.observe]", "not in the catalogue"},
 		{"reserved scope", "[rid.service_provider]", "[cis.publish:ats_data]", "reserved"},
 		{"lab-only scope elsewhere", "[rid.service_provider]", "[dp.observe]", "lab-01 only"},

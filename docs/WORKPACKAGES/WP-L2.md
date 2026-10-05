@@ -42,7 +42,7 @@ the staging droplet (`docs/deploy/PLAN.md` WP-D1 includes this compose).
   `audience` (and RFC 8707 `resource`; either names the target host).
   Clients from `deploy/issuer/clients.yaml`: `lab-01` (every national
   scope plus `dp.observe`), `authority-01`, `cisp-01`, `ansp-01`,
-  `ussp-<code>-01` (`USSP-DEV` in the lab), `sim-ussp-01` (the peer),
+  `ussp-<code>-01` (`DEV01` in the lab), `sim-ussp-01` (the peer),
   each with its allowed national scopes and audiences; any audience for
   `utm.*` and `rid.*` scopes (M18). Secrets are generated at first start
   into a git-ignored file and printed once; keys with `rsa.GenerateKey`
