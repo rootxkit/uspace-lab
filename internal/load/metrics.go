@@ -42,6 +42,7 @@ var Metrics = map[string]MetricDef{
 	"alert_raise_s": {Kind: KindLatency, Unit: "s",
 		Doc: "the sample the alert names (its captured_at matched) handed to the operator client -> the alert/v1 raise on the flight's traffic stream"},
 	"operator_rate_ratio":         {Kind: KindValue, Doc: "operator telemetry sent per second / the tier's aircraft x telemetry_hz"},
+	"generator_late_ratio":        {Kind: KindValue, Doc: "samples handed out more than a period after their slot / samples handed out (a stalled or saturated host)"},
 	"rid_rate_ratio":              {Kind: KindValue, Doc: "Remote ID locations handed to receivers per second / heard aircraft x telemetry_hz"},
 	"expected_raises":             {Kind: KindValue, Doc: "alerts the scripted conflicts make due inside the run (the missed-alert count's set)"},
 	"missed_raises":               {Kind: KindValue, Doc: "expected raises not observed in their window"},

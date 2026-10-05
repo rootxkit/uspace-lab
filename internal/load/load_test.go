@@ -31,7 +31,7 @@ consoles: 1
 watch: {pairs: 1, walkers: 1}
 min_samples: 5
 memory_sample_s: 1
-required: [operator_rate, rid_rate, operator_to_console_p99, receiver_to_picture_p99, proximity_raise_p99, expected_set,
+required: [operator_rate, rid_rate, generator_on_time, operator_to_console_p99, receiver_to_picture_p99, proximity_raise_p99, expected_set,
   missed_raises, missed_clears, no_false_alarm, alerts_traceable, operator_identity, receiver_identity, picture_identity,
   picture_traceable, traffic_traceable, evaluation_period]
 `
@@ -429,5 +429,50 @@ func TestReceiptLedgerTimesLateFrames(t *testing.T) {
 	}
 	if at, ok := l.Find("a", t0.Add(30*time.Millisecond)); !ok || !at.Equal(t0) {
 		t.Fatalf("find %v %v", at, ok)
+	}
+}
+
+// The drain settles when samples stay unshown (dropped on the console,
+// counted) and only status frames still come; it does not settle, and
+// says so, while sample frames keep arriving.
+func TestDrainSettlesOnDataNotStatus(t *testing.T) {
+	for _, c := range []struct {
+		name        string
+		dataFlowing bool
+	}{{"quiet", false}, {"flowing", true}} {
+		s := &stream{name: "console-00", kind: streamPicture, timed: true}
+		r := &run{tier: &Tier{DrainS: 2}, picture: NewLedger(), traffic: NewReceiptLedger(), streams: []*stream{s}}
+		r.picture.Hand("a", time.Now().Add(-10*time.Second)) // never shown
+		ctx, cancel := context.WithCancel(context.Background())
+		tick := time.NewTicker(50 * time.Millisecond)
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case now := <-tick.C:
+					s.mu.Lock()
+					s.lastStatus = now
+					if c.dataFlowing {
+						s.lastData = now
+					}
+					s.mu.Unlock()
+				}
+			}
+		}()
+		start := time.Now()
+		r.drain(context.Background())
+		took := time.Since(start)
+		cancel()
+		tick.Stop()
+		<-done
+		switch {
+		case !c.dataFlowing && (len(r.errs) != 0 || took > 1500*time.Millisecond):
+			t.Errorf("%s: took %s, errors %v", c.name, took, r.errs)
+		case c.dataFlowing && (len(r.errs) != 1 || !strings.Contains(r.errs[0], "not settled")):
+			t.Errorf("%s: errors %v", c.name, r.errs)
+		}
 	}
 }

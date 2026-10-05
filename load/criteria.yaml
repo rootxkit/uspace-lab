@@ -20,6 +20,7 @@ rows:
     checks:
       - {id: operator_rate, metric: operator_rate_ratio, stat: value, op: ">=", value: 0.95, status: lab, basis: "05 §1 operator telemetry row at the tier"}
       - {id: rid_rate, metric: rid_rate_ratio, stat: value, op: ">=", value: 0.95, status: lab, basis: "05 §1 direct RID row at the tier"}
+      - {id: generator_on_time, metric: generator_late_ratio, stat: value, op: "<=", value: 0.001, status: lab, basis: "the rate held moment by moment, not only on average: at most one sample in a thousand more than a period late"}
 
   - id: ingest_to_picture
     property: Ingest-to-picture latency

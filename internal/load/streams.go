@@ -32,13 +32,16 @@ type stream struct {
 	aircraft *Aircraft // traffic: whose flight
 	timed    bool      // its frames feed a ledger
 
-	mu          sync.Mutex
-	frames      map[string]uint64
-	connects    int
-	lastErr     string
-	dropped     uint64 // the largest dropped_frames a status said
-	lastStatus  time.Time
-	lastFrame   time.Time
+	mu         sync.Mutex
+	frames     map[string]uint64
+	connects   int
+	lastErr    string
+	dropped    uint64 // the largest dropped_frames a status said
+	lastStatus time.Time
+	// lastData is the arrival of the last frame that shows a sample (a
+	// track or a traffic product); status frames keep coming after the
+	// generator stops and say nothing about what is still in flight.
+	lastData    time.Time
 	ready       chan struct{} // closed on the first status (and snapshot, when subscribing)
 	readyOnce   sync.Once
 	needSnap    bool
@@ -214,7 +217,9 @@ func (rd *readers) handle(s *stream, b []byte, at time.Time, alert func([]byte, 
 		return
 	}
 	s.frames[e.Schema]++
-	s.lastFrame = at
+	if e.Schema == wire.SchemaTrack || e.Schema == trafficProduct {
+		s.lastData = at
+	}
 	s.mu.Unlock()
 	switch e.Schema {
 	case wire.SchemaStatus:

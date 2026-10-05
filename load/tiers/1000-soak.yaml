@@ -29,6 +29,7 @@ memory_warmup_s: 900 # the target's 600 s telemetry dedupe window fills first
 required:
   - operator_rate
   - rid_rate
+  - generator_on_time
   - operator_to_console_p99
   - receiver_to_picture_p99
   - proximity_raise_p99

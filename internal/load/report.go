@@ -109,6 +109,9 @@ type Volumes struct {
 	RIDLocationsPerS   float64 `json:"rid_locations_per_s"`
 	RIDTargetPerS      float64 `json:"rid_target_per_s"`
 	ConsoleFramesPerS  float64 `json:"console_frames_per_s"`
+	// GeneratorLate counts samples handed out more than a period after
+	// their slot (a stalled or saturated host).
+	GeneratorLate uint64 `json:"generator_late"`
 }
 
 // Loss is the accounting behind "no silent loss" (05 §7, 05 §5): every
@@ -420,6 +423,7 @@ func (r *Report) Markdown() string {
 	w("| Remote ID locations (msg/s) | %.1f | %.1f |\n", v.RIDLocationsPerS, v.RIDTargetPerS)
 	w("| Console frames in (frames/s, all consoles) | %.1f | |\n", v.ConsoleFramesPerS)
 	w("| Aircraft / operator clients / heard / receivers / consoles / watched | %d / %d / %d / %d / %d / %d | |\n", v.Aircraft, v.Clients, v.Heard, v.Receivers, v.Consoles, v.Watched)
+	w("| Samples handed out more than a period late | %d | |\n", v.GeneratorLate)
 	w("| Intents filed (errors) | %d (%d) | |\n\n", v.IntentsFiled, v.IntentErrors)
 	w("## 05 §7\n\n| Property | Check | Criterion | Observed | n | Result | Figure from |\n|---|---|---|---|---|---|---|\n")
 	for _, row := range r.Rows {

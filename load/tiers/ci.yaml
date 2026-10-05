@@ -29,6 +29,7 @@ memory_warmup_s: 0 # too short to judge memory at all (criteria min_duration_s)
 required:
   - operator_rate
   - rid_rate
+  - generator_on_time
   - operator_to_console_p99
   - receiver_to_picture_p99
   - proximity_raise_p99

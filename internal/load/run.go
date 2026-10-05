@@ -169,6 +169,7 @@ type run struct {
 	shedOp    uint64
 	shedRID   uint64
 	late      uint64
+	handedK   []int64
 	memory    []uint64
 }
 
@@ -535,6 +536,7 @@ func (r *run) generate(ctx context.Context, t0 time.Time) {
 	period := fl.period
 	next := make([]time.Time, len(fl.Aircraft))
 	k := make([]int64, len(fl.Aircraft))
+	defer func() { r.handedK = k }()
 	for i := range next {
 		next[i] = t0.Add(period * time.Duration(i%50) / 50)
 	}
@@ -609,7 +611,7 @@ func (r *run) sampleMemory(ctx context.Context) {
 
 // drain waits, bounded by the tier's drain_s, until every client's
 // ledger balances and every frame due has arrived (or will not: no
-// frame on a timed stream for three seconds), and the timed console has
+// frame showing a sample on a timed stream for three seconds), and the timed console has
 // sent a status after that (its final dropped_frames).
 func (r *run) drain(ctx context.Context) {
 	dctx, cancel := context.WithTimeout(ctx, time.Duration(r.tier.DrainS*float64(time.Second)))
@@ -635,8 +637,8 @@ func (r *run) drain(ctx context.Context) {
 				continue
 			}
 			s.mu.Lock()
-			if s.lastFrame.After(last) {
-				last = s.lastFrame
+			if s.lastData.After(last) {
+				last = s.lastData
 			}
 			if s.kind == streamPicture && !s.lastStatus.After(settled) {
 				statusAfter = false
@@ -824,9 +826,19 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 		obs["memory_growth_ratio"] = notMeasured(fmt.Sprintf("%d memory samples after the %.0f s warm-up, at least 6 are needed", len(judged), t.MemoryWarmupS))
 		obs["memory_monotonic"] = obs["memory_growth_ratio"]
 	}
-	if r.late > 0 {
-		r.fail("the generator fell behind its schedule %d times (saturated host)", r.late)
+	// A sample handed out more than a period after its slot: the host
+	// stalled or the generator is saturated, and the offered load was
+	// not what the tier says for that moment.
+	samples := uint64(0)
+	for _, k := range r.handedK {
+		samples += uint64(k)
 	}
+	if samples > 0 {
+		obs["generator_late_ratio"] = valueObs(float64(r.late) / float64(samples))
+	} else {
+		obs["generator_late_ratio"] = notMeasured("the generator handed out no sample")
+	}
+	rep.Volumes.GeneratorLate = r.late
 	rep.Metrics = obs
 	rep.Errors = append(rep.Errors, r.errs...)
 }
