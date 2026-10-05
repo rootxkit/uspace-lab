@@ -1,0 +1,49 @@
+# Synthetic paths over the demo area (WP-L8): offsets in metres from the
+# lab origin (sim/sitl.env SITL_HOME, named by the targets file), never a
+# coordinate (INV-03). Loaded with the tier; every separation below is
+# checked against the policy before anything runs (internal/load
+# config.go), so the only alerts due are the pairs' crossings and the
+# expected set is exact.
+#
+# The policy is the demo policy (docs/PLAN.md §7.1 L-Q4: CPA t_cpa_max_s
+# 60, d_horizontal_min_m 60, d_vertical_min_m 20, neighbour radius 800 m),
+# pending GCAA.
+policy: ../scenarios/policy/demo.yaml
+seed: 1
+
+# The box every path stays inside (the demo area east and north of the
+# origin; 5000 walkers on the grid below need about 50 x 50 km).
+bounds_m: {south_m: -6000, north_m: 60000, west_m: -2000, east_m: 60000}
+
+# Random walks: one per grid cell, inside a disc around the cell centre,
+# turning at most turn_deg_per_s, on one of four altitude layers in a 2 x 2
+# pattern. Two walkers on one layer are at least two cells apart, so in
+# t_cpa_max_s they stay 2 * 700 - 2 * 100 - 2 * 8 * 60 = 240 m apart, above
+# the 60 m minimum; neighbours on other layers are 25 m apart vertically,
+# above the 20 m minimum. Each walker still has neighbours inside the
+# 800 m CPA radius, so the monitor checks pairs as it would in traffic.
+walkers:
+  origin: {north_m: 2000, east_m: 2000}
+  spacing_m: 700
+  radius_m: 100
+  speed_ms: 8
+  turn_deg_per_s: 30
+  layers_rel_m: [15, 40, 65, 90]
+  layer_tile: 2
+  margin_m: 5
+
+# Scripted conflicts: two aircraft per east-west line, mirrored, meeting
+# head on at the line's centre at first_crossing_s and every
+# 2 * amplitude_m / speed_ms (180 s) after it, at an altitude no walker
+# uses. Each crossing is one expected proximity raise on each member,
+# due between crossing - t_cpa_max_s - raise_margin_s and crossing +
+# raise_margin_s, and its clear within clear_within_s of the crossing.
+pairs:
+  origin: {north_m: -3000, east_m: 1000}
+  spacing_m: 3500
+  alt_rel_m: 115
+  speed_ms: 10
+  amplitude_m: 900
+  first_crossing_s: 75
+  raise_margin_s: 5
+  clear_within_s: 30

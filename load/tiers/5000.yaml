@@ -1,0 +1,52 @@
+# Load tier 5000 (WP-L8): 5000 drones for 60 minutes (attempted: the report says what breaks first)
+# Volumes from spec 05 §1, column 5000. Figures marked pending GCAA are
+# the spec's defaults (docs/PLAN.md §7.1); GCAA has not answered.
+tier: "5000"
+title: "5000 drones for 60 minutes (attempted: the report says what breaks first)"
+column: 5000
+duration_s: 3600
+drain_s: 120
+operators:
+  aircraft: 5000
+  clients: 200
+  telemetry_hz: 1
+  telemetry_hz_status: pending GCAA # Art. 8(3) determination; 05 §1
+  poll_ms: 50
+  intents: all
+receivers:
+  heard_fraction: 0.4 # 05 §1: ~40 % heard by at least one receiver
+  aircraft_per_receiver: 25
+  transports: [pack, single] # BT5 / Wi-Fi packs and BT4 legacy, alternating per receiver
+  batch_ms: 100
+consoles: 60
+watch:
+  pairs: 15
+  walkers: 15
+min_samples: 1000
+memory_sample_s: 10
+required:
+  - operator_rate
+  - rid_rate
+  - operator_to_console_p99
+  - receiver_to_picture_p99
+  - proximity_raise_p99
+  - expected_set
+  - missed_raises
+  - missed_clears
+  - no_false_alarm
+  - alerts_traceable
+  - operator_identity
+  - receiver_identity
+  - picture_identity
+  - picture_traceable
+  - evaluation_period
+  - memory_monotonic
+scale:
+  - {quantity: console viewports, spec: "60 consoles each viewing <= 200 tracks (05 §1)", here: "the same count, each subscribed to the whole area", factor: 1, why: "the reference picture has no viewport throttle; whole-area subscriptions are the worst case"}
+# 05 §7 load sources this harness does not drive yet (the report lists
+# them; their rows stay "not measured").
+not_generated:
+  - {source: "ANSP manned feed (tens of aircraft)", why: "the reference target has no manned intake; the systems mode is not built yet"}
+  - {source: "sim-ussp as the second USSP on a local DSS", why: "the reference target has no DSS or peer interface; the F3411 and F3548 rows wait for the systems mode"}
+  - {source: "authority DP polls of the USSPs (05 §1: one view per 1 Hz)", why: "the reference authority has no DP poller"}
+  - {source: "optional national push USSP -> authority", why: "disabled by default (02 F6) and not in the reference target"}
