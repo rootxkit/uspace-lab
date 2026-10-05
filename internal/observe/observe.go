@@ -245,6 +245,45 @@ func (r *Recorder) Handle(s Stream, st *streamState, b []byte, at time.Time) {
 		r.manned(s, st, e, at)
 	case wire.SchemaStatus:
 		r.status(s, st, e, at)
+	case wire.SchemaSnapshot:
+		r.snapshot(s, st, e, at)
+	}
+}
+
+// maxSnapshotAlerts bounds the alerts read from one snapshot.
+const maxSnapshotAlerts = 1000
+
+// snapshot reads the alerts of a console/snapshot/v1 (schemas/common/
+// console/snapshot/v1: every item a full alert/v1 or violation/v1
+// frame). A system sends one on every (re)connection, so an alert that
+// was raised while the stream was down, or under a new id after the
+// system restarted, is seen there first: each item goes through the
+// same rules as a live frame (an alert this stream had not seen raised
+// is a raise; one it had is an update and is not recorded again).
+func (r *Recorder) snapshot(s Stream, st *streamState, e wire.Envelope, at time.Time) {
+	var b struct {
+		Alerts []json.RawMessage `json:"alerts"`
+	}
+	if json.Unmarshal(e.Body, &b) != nil {
+		r.frame(s.Name, "console/snapshot/v1:unreadable")
+		return
+	}
+	for i, a := range b.Alerts {
+		if i >= maxSnapshotAlerts {
+			r.frame(s.Name, "console/snapshot/v1:alerts_dropped")
+			break
+		}
+		ae, err := wire.ParseEnvelope(a)
+		if err != nil {
+			r.frame(s.Name, "console/snapshot/v1:unreadable_alert")
+			continue
+		}
+		switch ae.Schema {
+		case wire.SchemaAlert:
+			r.alert(s, st, ae, at)
+		case wire.SchemaViolation:
+			r.violation(s, st, ae, at)
+		}
 	}
 }
 

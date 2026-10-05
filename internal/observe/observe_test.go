@@ -184,3 +184,40 @@ func TestWithoutOnAddRecordingIsUnchanged(t *testing.T) {
 		t.Fatalf("%+v", ev)
 	}
 }
+
+// An alert first seen in the snapshot a system sends on (re)connect is
+// a raise; the same alert in a later snapshot, or as an update, is not
+// recorded again; a new id in a snapshot is a second raise (what a
+// restart that loses an alert's identity looks like).
+func TestSnapshotAlertsAreSeenOnce(t *testing.T) {
+	r := NewRecorder(map[string]string{"LABSER1": "c"})
+	st := NewStreamState()
+	s := Stream{Name: "pic", System: "authority"}
+	vb := func(id, state string) map[string]any {
+		return map[string]any{"violation_id": id, "kind": "zone_incursion", "state": state, "severity": "warning",
+			"track_ref": "LABSER1", "serial": "LABSER1", "zone_id": "GEO/Z", "captured_at": "2026-10-03T12:00:00.000Z",
+			"opened_at": "2026-10-03T12:00:00.000Z", "clear_reason": nil}
+	}
+	snap := func(items ...map[string]any) []byte {
+		var alerts []json.RawMessage
+		for _, it := range items {
+			alerts = append(alerts, frame(t, wire.SchemaViolation, it))
+		}
+		return frame(t, wire.SchemaSnapshot, map[string]any{"tracks": []any{}, "alerts": alerts, "manned": []any{}, "zones_version": "1"})
+	}
+	r.Handle(s, st, snap(vb("01J00000000000000000000001", "updated")), time.Now())
+	r.Handle(s, st, snap(vb("01J00000000000000000000001", "updated")), time.Now())
+	r.Handle(s, st, frame(t, wire.SchemaViolation, vb("01J00000000000000000000001", "updated")), time.Now())
+	if ev := r.Events(); len(ev) != 1 || ev[0].Phase != PhaseRaised || ev[0].Aircraft != "c" {
+		t.Fatalf("one raise expected: %+v", ev)
+	}
+	r.Handle(s, st, snap(vb("01J00000000000000000000002", "updated")), time.Now())
+	if ev := r.Events(); len(ev) != 2 || ev[1].AlertID != "01J00000000000000000000002" || ev[1].Phase != PhaseRaised {
+		t.Fatalf("a new id in a snapshot is a raise: %+v", ev)
+	}
+	// A snapshot without alerts records nothing.
+	r.Handle(s, st, snap(), time.Now())
+	if len(r.Events()) != 2 {
+		t.Fatal("an empty snapshot recorded an event")
+	}
+}
