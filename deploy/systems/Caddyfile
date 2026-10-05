@@ -4,6 +4,13 @@
 # and the mTLS routes (mTLS is off in the lab). The certificate is the
 # lab CA's wildcard for the demo domain (deploy/systems/gen-secrets.sh);
 # no ACME, no internal issuer.
+#
+# One difference from the droplet, for the conformance suite: the
+# authority's /healthz, /readyz and /metrics (its api process's admin
+# listener, ADMIN_ADDR, which the droplet never routes) and the ANSP's
+# /metrics (served by ansp-api) are routed, because their contracts
+# declare them as operations and the suite reaches a system only
+# through this front. Every other host still answers /metrics 404.
 {
 	admin localhost:2019
 	auto_https disable_redirects
@@ -16,6 +23,9 @@
 (lab_tls) {
 	tls /etc/caddy/tls/cert.pem /etc/caddy/tls/key.pem
 	request_header -X-Client-Cert-Subject
+}
+
+(no_metrics) {
 	@metrics path /metrics /metrics/*
 	handle @metrics {
 		respond 404
@@ -24,6 +34,10 @@
 
 {$AUTHORITY_HOST} {
 	import lab_tls
+	@admin path /healthz /readyz /metrics
+	handle @admin {
+		reverse_proxy authority-api:9090
+	}
 	@rid path /v1/rid/observations
 	handle @rid {
 		reverse_proxy authority-rid-ingest:8081
@@ -43,6 +57,7 @@
 
 {$CISP_HOST} {
 	import lab_tls
+	import no_metrics
 	handle {
 		reverse_proxy cisp-api:8080
 	}
@@ -50,6 +65,7 @@
 
 {$USSP_HOST} {
 	import lab_tls
+	import no_metrics
 	@telemetry path /v1/telemetry /v1/telemetry/*
 	handle @telemetry {
 		reverse_proxy ussp-telemetry-ingest:8081
@@ -69,6 +85,7 @@
 
 {$ANSP_HOST} {
 	import lab_tls
+	# /metrics, /healthz and /readyz reach ansp-api with the rest.
 	@feed path /v1/manned-traffic/*
 	handle @feed {
 		reverse_proxy ansp-manned-feed:8080
@@ -80,6 +97,7 @@
 
 {$LAB_HOST} {
 	import lab_tls
+	import no_metrics
 	@dss path /rid/* /dss/* /aux/* /healthy
 	handle @dss {
 		reverse_proxy dss:8082
