@@ -15,7 +15,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
+	"runtime/metrics"
+	"runtime/pprof"
 	"strconv"
 	"strings"
 	"sync"
@@ -48,7 +49,11 @@ type Options struct {
 	// HostName names the machine (L-Q1: "the droplet, resized or not,
 	// or a second host"); recorded as given.
 	HostName string
-	Log      *slog.Logger
+	// HeapProfile, when set, is where a heap profile (pprof, after a GC)
+	// is written at the end of the drain, before anything is torn down:
+	// what the memory row's growth is made of.
+	HeapProfile string
+	Log         *slog.Logger
 	// ReadyTimeout bounds the wait for every client and stream to come
 	// up before the generator starts (0: 60 s).
 	ReadyTimeout time.Duration
@@ -225,6 +230,11 @@ func (r *run) execute(ctx context.Context, rep *Report) {
 	memCancel()
 	memWG.Wait()
 	r.drain(ctx)
+	if r.opt.HeapProfile != "" {
+		if err := writeHeapProfile(r.opt.HeapProfile); err != nil {
+			r.fail("heap profile: %v", err)
+		}
+	}
 	r.collect(rep, t0, genS)
 	simCancel()
 	obsCancel()
@@ -548,6 +558,9 @@ func (r *run) generate(ctx context.Context, t0 time.Time) {
 	}
 }
 
+// liveHeap is the runtime metric the memory row samples.
+const liveHeap = "/gc/heap/live:bytes"
+
 func (r *run) sampleMemory(ctx context.Context) {
 	tk := time.NewTicker(time.Duration(r.tier.MemorySampleS * float64(time.Second)))
 	defer tk.Stop()
@@ -557,10 +570,13 @@ func (r *run) sampleMemory(ctx context.Context) {
 			return
 		case <-tk.C:
 		}
-		var m runtime.MemStats
-		runtime.ReadMemStats(&m)
-		if len(r.memory) < 100_000 {
-			r.memory = append(r.memory, m.HeapAlloc)
+		// The live heap as of the last GC: what the process holds, not
+		// the garbage the next GC will take (HeapAlloc grows and falls
+		// with GOGC's target and reads as growth when nothing leaks).
+		s := []metrics.Sample{{Name: liveHeap}}
+		metrics.Read(s)
+		if s[0].Value.Kind() == metrics.KindUint64 && len(r.memory) < 100_000 {
+			r.memory = append(r.memory, s[0].Value.Uint64())
 		}
 	}
 }
@@ -761,7 +777,12 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 	// Alerts.
 	r.judgeAlerts(rep, obs, t0)
 	// Memory.
-	if ratio, mono, ok := memoryVerdict(r.memory); ok {
+	// The first memory_warmup_s are left out: the target's replay and
+	// dedupe windows fill then (600 s for telemetry), and a filling
+	// window is not a leak.
+	skip := int(t.MemoryWarmupS / t.MemorySampleS)
+	judged := r.memory[min(skip, len(r.memory)):]
+	if ratio, mono, ok := memoryVerdict(judged); ok {
 		obs["memory_growth_ratio"] = valueObs(round3(ratio))
 		m := 0.0
 		if mono {
@@ -769,7 +790,7 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 		}
 		obs["memory_monotonic"] = valueObs(m)
 	} else {
-		obs["memory_growth_ratio"] = notMeasured(fmt.Sprintf("%d memory samples, at least 6 are needed", len(r.memory)))
+		obs["memory_growth_ratio"] = notMeasured(fmt.Sprintf("%d memory samples after the %.0f s warm-up, at least 6 are needed", len(judged), t.MemoryWarmupS))
 		obs["memory_monotonic"] = obs["memory_growth_ratio"]
 	}
 	if r.late > 0 {
@@ -790,107 +811,25 @@ func (r *run) intentErrors() int {
 }
 
 // judgeAlerts compares the observed proximity alerts with the expected
-// set, times each matched raise from the sample it names, and counts
-// what was missed, what was unexpected and what is untraceable.
+// set (judge) and turns the outcome into observations.
 func (r *run) judgeAlerts(rep *Report, obs map[string]Observation, t0 time.Time) {
-	byAircraft := map[string][]observe.Event{}
-	events := r.rec.Events()
-	for i := range events {
-		e := &events[i]
-		if e.System != scenario.SystemUSSP || e.Kind != "proximity" {
-			continue
-		}
-		byAircraft[e.Aircraft] = append(byAircraft[e.Aircraft], *e)
-	}
-	used := map[string]bool{}
-	hist := NewHistogram()
-	sum := AlertSummary{Expected: len(r.fleet.Expected)}
-	rel := func(t time.Time) float64 { return t.Sub(t0).Seconds() }
 	evalMax := 0.0
 	for _, s := range r.streams {
 		s.mu.Lock()
 		evalMax = math.Max(evalMax, s.evalPeriodS)
 		s.mu.Unlock()
 	}
-	for _, x := range r.fleet.Expected {
-		var raise *observe.Event
-		for i := range byAircraft[x.Aircraft] {
-			e := &byAircraft[x.Aircraft][i]
-			if e.Phase == observe.PhaseRaised && !used[e.AlertID] && rel(e.ObservedAt) >= x.RaiseFromS && rel(e.ObservedAt) <= x.RaiseToS {
-				raise = e
-				break
-			}
-		}
-		if raise == nil {
-			if len(sum.Missed) < maxListed {
-				sum.Missed = append(sum.Missed, x)
-			}
-			continue
-		}
-		used[raise.AlertID] = true
-		sum.Raised++
-		rec := RaiseRecord{Aircraft: x.Aircraft, AlertID: raise.AlertID, ObservedS: round3(rel(raise.ObservedAt))}
-		if raise.CapturedAt == nil {
-			sum.Untraceable++
-		} else {
-			c := round3(rel(*raise.CapturedAt))
-			rec.CapturedS = &c
-			if handed, ok := r.readers.handedFor(raise.AlertID); ok && !raise.ObservedAt.Before(handed) {
-				lat := raise.ObservedAt.Sub(handed)
-				hist.Add(lat)
-				l := round3(lat.Seconds())
-				rec.LatencyS = &l
-			} else {
-				// No sample of the pair at that captured_at, or one handed
-				// out after the raise arrived: either way not a latency.
-				sum.Untraceable++
-			}
-		}
-		if len(sum.Raises) < maxListed {
-			sum.Raises = append(sum.Raises, rec)
-		}
-		cleared := false
-		for i := range byAircraft[x.Aircraft] {
-			e := &byAircraft[x.Aircraft][i]
-			if e.Phase == observe.PhaseCleared && e.AlertID == raise.AlertID && rel(e.ObservedAt) <= x.ClearToS {
-				cleared = true
-				break
-			}
-		}
-		if cleared {
-			sum.Cleared++
-		} else if len(sum.MissedClear) < maxListed {
-			sum.MissedClear = append(sum.MissedClear, x)
-		}
-	}
-	unexpected := 0
-	names := make([]string, 0, len(byAircraft))
-	for n := range byAircraft {
-		names = append(names, n)
-	}
-	sort.Strings(names)
-	for _, n := range names {
-		for i := range byAircraft[n] {
-			e := &byAircraft[n][i]
-			if e.Phase == observe.PhaseRaised && !used[e.AlertID] {
-				unexpected++
-				if len(sum.Unexpected) < maxListed {
-					sum.Unexpected = append(sum.Unexpected, fmt.Sprintf("%s raised at %+.1f s (peer %s)", n, rel(e.ObservedAt), e.Peer))
-				}
-			}
-		}
-	}
-	rep.Alerts = sum
-	missed := len(r.fleet.Expected) - sum.Raised
-	obs["expected_raises"] = valueObs(float64(len(r.fleet.Expected)))
-	if len(r.fleet.Expected) == 0 {
+	j := judge(r.fleet.Expected, r.rec.Events(), t0, r.readers.handedFor)
+	rep.Alerts = j.Summary
+	obs["expected_raises"] = valueObs(float64(j.DueRaises))
+	if j.DueRaises == 0 {
 		why := notMeasured("the run makes no alert due (no pair crossing inside it): nothing to miss")
 		obs["missed_raises"], obs["missed_clears"], obs["alert_raise_s"], obs["alert_untraceable"] = why, why, why, why
 	} else {
-		obs["missed_raises"] = valueObs(float64(missed))
-		obs["missed_clears"] = valueObs(float64(sum.Raised - sum.Cleared))
-		obs["alert_raise_s"] = hist.Observe(1)
-		obs["alert_untraceable"] = valueObs(float64(sum.Untraceable))
+		obs["missed_raises"] = valueObs(float64(j.MissedRaises))
+		obs["missed_clears"] = valueObs(float64(j.MissedClears))
+		obs["alert_raise_s"] = j.Latency.Observe(1)
+		obs["alert_untraceable"] = valueObs(float64(j.Summary.Untraceable))
 	}
 	watched := 0
 	for _, a := range r.fleet.Aircraft {
@@ -899,7 +838,7 @@ func (r *run) judgeAlerts(rep *Report, obs map[string]Observation, t0 time.Time)
 		}
 	}
 	if watched > 0 {
-		obs["unexpected_alerts"] = valueObs(float64(unexpected))
+		obs["unexpected_alerts"] = valueObs(float64(j.Unexpected))
 	} else {
 		obs["unexpected_alerts"] = notMeasured("no aircraft is watched")
 	}
@@ -913,6 +852,19 @@ func (r *run) judgeAlerts(rep *Report, obs map[string]Observation, t0 time.Time)
 // originLatLon is the lab origin as a position.
 func (fl *Fleet) originLatLon() core.LatLon {
 	return core.LatLon{LatDeg: fl.origin.LatDeg, LonDeg: fl.origin.LonDeg}
+}
+
+func writeHeapProfile(path string) error {
+	runtime.GC()
+	f, err := os.Create(path) //nolint:gosec // the operator names the profile
+	if err != nil {
+		return err
+	}
+	if err := pprof.WriteHeapProfile(f); err != nil {
+		_ = f.Close()
+		return err
+	}
+	return f.Close()
 }
 
 func hostInfo(name string) Host {

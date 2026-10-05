@@ -53,10 +53,12 @@ type Report struct {
 	Loss       Loss                   `json:"loss"`
 	Alerts     AlertSummary           `json:"alerts"`
 	Streams    []StreamStats          `json:"streams"`
-	Memory     []uint64               `json:"memory_heap_bytes,omitempty"`
-	Errors     []string               `json:"errors,omitempty"`
-	Measured   int                    `json:"checks_measured"`
-	Unmeasured int                    `json:"checks_not_measured"`
+	// Memory is the live heap every memory_sample_s, generator and
+	// reference target together (one process).
+	Memory     []uint64 `json:"memory_live_heap_bytes,omitempty"`
+	Errors     []string `json:"errors,omitempty"`
+	Measured   int      `json:"checks_measured"`
+	Unmeasured int      `json:"checks_not_measured"`
 	// Complete is true only when every check of every row was measured.
 	Complete bool     `json:"complete"`
 	Verdict  string   `json:"verdict"`
@@ -436,7 +438,7 @@ func (r *Report) Markdown() string {
 				res += ": " + c.Reason
 			}
 			n := ""
-			if c.Observed.N > 0 {
+			if c.Observed.N > 0 && Metrics[c.Metric].Kind == KindLatency { // a count is one value, not n samples
 				n = strconv.FormatUint(c.Observed.N, 10)
 			}
 			w("| %s | `%s`%s | %s %s %s%s | %s | %s | %s | %s |\n", prop, c.ID, req, c.Stat, c.Op, fmtNum(c.Value), unit(c.Unit), observed(c), n, res, c.Status)

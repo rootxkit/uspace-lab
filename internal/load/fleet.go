@@ -42,9 +42,14 @@ type Aircraft struct {
 	rng                    *rand.Rand
 }
 
-// Expected is one alert the scripted conflicts make due (05 §7 "the
+// Expected is one alert a scripted crossing makes due (05 §7 "the
 // scenario's expected set"): a raise in [RaiseFromS, RaiseToS] and a
 // clear in [CrossingS, ClearToS], seconds after the generator's start.
+// A crossing near the end of the run is listed when its raise window
+// opens inside the run; RaiseDue and ClearDue say whether the run lasts
+// long enough to count the raise or the clear as missed, so a raise
+// that arrives for it is matched (never a false alarm) without the run
+// demanding what it ended too early to see.
 type Expected struct {
 	Aircraft   string  `json:"aircraft"`
 	Peer       string  `json:"peer"`
@@ -53,6 +58,8 @@ type Expected struct {
 	RaiseFromS float64 `json:"raise_from_s"`
 	RaiseToS   float64 `json:"raise_to_s"`
 	ClearToS   float64 `json:"clear_to_s"`
+	RaiseDue   bool    `json:"raise_due"`
+	ClearDue   bool    `json:"clear_due"`
 }
 
 // Fleet is the tier's aircraft on the paths.
@@ -133,8 +140,8 @@ func macOfIndex(i int) string {
 	return fmt.Sprintf("02:4C:44:%02X:%02X:%02X", (i>>16)&0xff, (i>>8)&0xff, i&0xff)
 }
 
-// expect lists the alerts the pairs make due: each crossing whose clear
-// window ends inside the run raises proximity on both members.
+// expect lists the alerts the pairs make due: each crossing whose raise
+// window opens inside the run raises proximity on both members.
 func (fl *Fleet) expect(pol *scenario.Policy, durationS float64) {
 	pr := &fl.paths.Pairs
 	half := 2 * pr.AmplitudeM / pr.SpeedMS
@@ -143,9 +150,14 @@ func (fl *Fleet) expect(pol *scenario.Policy, durationS float64) {
 			continue
 		}
 		peer := fl.Aircraft[a.Index^1]
-		for c := pr.FirstCrossingS; c+pr.ClearWithinS <= durationS; c += half {
-			fl.Expected = append(fl.Expected, Expected{Aircraft: a.Name, Peer: peer.Name, Pair: a.Pair, CrossingS: c,
-				RaiseFromS: math.Max(0, c-pol.CPA.TCPAMaxS-pr.RaiseMarginS), RaiseToS: c + pr.RaiseMarginS, ClearToS: c + pr.ClearWithinS})
+		for c := pr.FirstCrossingS; ; c += half {
+			x := Expected{Aircraft: a.Name, Peer: peer.Name, Pair: a.Pair, CrossingS: c,
+				RaiseFromS: math.Max(0, c-pol.CPA.TCPAMaxS-pr.RaiseMarginS), RaiseToS: c + pr.RaiseMarginS, ClearToS: c + pr.ClearWithinS}
+			if x.RaiseFromS >= durationS {
+				break
+			}
+			x.RaiseDue, x.ClearDue = x.RaiseToS <= durationS, x.ClearToS <= durationS
+			fl.Expected = append(fl.Expected, x)
 		}
 	}
 }

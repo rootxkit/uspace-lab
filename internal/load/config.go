@@ -84,8 +84,11 @@ type Tier struct {
 	// MinSamples is the default number of samples a latency check needs
 	// before its percentile counts as measured.
 	MinSamples int `yaml:"min_samples" json:"min_samples"`
-	// MemorySampleS is the period of the memory samples.
+	// MemorySampleS is the period of the memory samples (the live heap).
 	MemorySampleS float64 `yaml:"memory_sample_s" json:"memory_sample_s"`
+	// MemoryWarmupS is how much of the start the memory row leaves out:
+	// the time the target's windows take to fill.
+	MemoryWarmupS float64 `yaml:"memory_warmup_s" json:"memory_warmup_s"`
 	// Required are the check ids this tier must measure and pass.
 	Required []string `yaml:"required" json:"required"`
 	// Scale says what this tier changes from 05 §1 / 05 §7, with the
@@ -343,6 +346,8 @@ func (t *Tier) validate() error {
 		return fmt.Errorf("min_samples must be at least 1")
 	case t.MemorySampleS <= 0 || t.MemorySampleS > 600:
 		return fmt.Errorf("memory_sample_s %v is not in (0, 600]", t.MemorySampleS)
+	case t.MemoryWarmupS < 0 || t.MemoryWarmupS >= t.DurationS:
+		return fmt.Errorf("memory_warmup_s %v is not in [0, duration_s)", t.MemoryWarmupS)
 	}
 	for _, tr := range t.Receivers.Transports {
 		if !slices.Contains(transports, tr) {

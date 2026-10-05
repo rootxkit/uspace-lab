@@ -24,6 +24,7 @@ watch:
   walkers: 8
 min_samples: 1000
 memory_sample_s: 10
+memory_warmup_s: 900 # the target's 600 s telemetry dedupe window fills first
 required:
   - operator_rate
   - rid_rate

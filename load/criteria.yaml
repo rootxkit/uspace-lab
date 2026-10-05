@@ -116,8 +116,8 @@ rows:
     property: Memory
     criterion: "no monotonic growth over the soak"
     checks:
-      - {id: memory_monotonic, metric: memory_monotonic, stat: value, op: "==", value: 0, status: spec, basis: "05 §7", min_duration_s: 600}
-      - {id: memory_growth, metric: memory_growth_ratio, stat: value, op: "<=", value: 1.5, status: lab, basis: "the heap at the end against the start of the soak (generator and reference target together)", min_duration_s: 600}
+      - {id: memory_monotonic, metric: memory_monotonic, stat: value, op: "==", value: 0, status: spec, basis: "05 §7", min_duration_s: 1800}
+      - {id: memory_growth, metric: memory_growth_ratio, stat: value, op: "<=", value: 1.5, status: lab, basis: "the live heap at the end against the start of the soak after the warm-up (generator and reference target together)", min_duration_s: 1800}
 
   - id: vectors
     property: Vectors

@@ -4,7 +4,7 @@
 //	loadgen check [--paths load/paths.yaml] [--criteria load/criteria.yaml] load/tiers/*.yaml
 //	loadgen run --tier load/tiers/ci.yaml [--targets targets/reference.yaml] \
 //	    [--paths load/paths.yaml] [--criteria load/criteria.yaml] \
-//	    [--out results/load] [--run <id>] [--duration-s N] [--host NAME]
+//	    [--out results/load] [--run <id>] [--duration-s N] [--host NAME] [--heap-profile FILE]
 //	loadgen render results/load/<run>/report.json
 //
 // run drives the tier's operators, receivers and consoles against the
@@ -87,6 +87,7 @@ func runTier(args []string) int {
 	runID := fs.String("run", "", "run id (default the UTC start time and the tier)")
 	duration := fs.Float64("duration-s", 0, "override the tier's duration (recorded as a scale factor)")
 	host := fs.String("host", "", "name the host and its size, recorded in the report (L-Q1)")
+	heap := fs.String("heap-profile", "", "write a heap profile at the end of the drain (pprof)")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -113,7 +114,7 @@ func runTier(args []string) int {
 	ctx, stop := cli.SignalContext()
 	defer stop()
 	rep, err := load.Run(ctx, load.Options{Files: files, TargetsPath: *targets, Run: id, DurationS: *duration,
-		RepoRoot: runner.RepoRoot("."), HostName: *host, Log: log})
+		RepoRoot: runner.RepoRoot("."), HostName: *host, HeapProfile: *heap, Log: log})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "loadgen:", err)
 		return 2

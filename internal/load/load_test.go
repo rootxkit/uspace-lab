@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/rootxkit/uspace-lab/internal/geoidx"
+	"github.com/rootxkit/uspace-lab/internal/observe"
 	"github.com/rootxkit/uspace-lab/internal/vehicle"
 	"github.com/rootxkit/uspace-lab/internal/wire/wiretest"
 )
@@ -330,5 +331,73 @@ func TestSystemsModeRefused(t *testing.T) {
 	_, err := Run(context.Background(), Options{Files: f, TargetsPath: repo("targets/systems.example.yaml"), Run: "x"})
 	if err == nil || !strings.Contains(err.Error(), "only the reference target") {
 		t.Fatalf("%v", err)
+	}
+}
+
+// The judgement both ways: a due raise and its clear seen pass; a due
+// raise not seen is missed and a due clear not seen is missed; a raise
+// for a crossing the run ended inside is taken, not a false alarm, and
+// its absence is not a miss; a raise nobody expected is unexpected.
+func TestJudge(t *testing.T) {
+	t0 := time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)
+	at := func(s float64) time.Time { return t0.Add(time.Duration(s * float64(time.Second))) }
+	ev := func(aircraft, id, phase string, s float64) observe.Event {
+		c := at(s - 0.01)
+		return observe.Event{System: "ussp", Kind: "proximity", AlertID: id, Phase: phase, Aircraft: aircraft, ObservedAt: at(s), CapturedAt: &c}
+	}
+	expected := []Expected{
+		{Aircraft: "a", CrossingS: 75, RaiseFromS: 10, RaiseToS: 80, ClearToS: 105, RaiseDue: true, ClearDue: true},
+		{Aircraft: "b", CrossingS: 75, RaiseFromS: 10, RaiseToS: 80, ClearToS: 105, RaiseDue: true, ClearDue: true},
+		{Aircraft: "c", CrossingS: 75, RaiseFromS: 10, RaiseToS: 80, ClearToS: 105, RaiseDue: true, ClearDue: true},
+		{Aircraft: "a", CrossingS: 255, RaiseFromS: 190, RaiseToS: 260, ClearToS: 285, RaiseDue: false, ClearDue: false},
+		{Aircraft: "b", CrossingS: 255, RaiseFromS: 190, RaiseToS: 260, ClearToS: 285, RaiseDue: false, ClearDue: false},
+	}
+	events := []observe.Event{
+		ev("a", "a1", "raised", 35), ev("a", "a1", "cleared", 82),
+		ev("b", "b1", "raised", 35), // its clear never comes
+		// c's raise never comes
+		ev("a", "a2", "raised", 215), // inside the run's last, cut crossing
+		ev("w", "w1", "raised", 50),  // a walker: nobody expects it
+		ev("a", "a3", "raised", 150), // between crossings: unexpected
+		{System: "authority", Kind: "zone_incursion", AlertID: "v", Phase: "raised", ObservedAt: at(40)},
+	}
+	handed := func(id string) (time.Time, bool) { return at(30), id != "a2" }
+	j := judge(expected, events, t0, handed)
+	if j.DueRaises != 3 || j.MissedRaises != 1 || j.MissedClears != 1 || j.Unexpected != 2 {
+		t.Fatalf("due %d, missed %d, clears missed %d, unexpected %d: %+v", j.DueRaises, j.MissedRaises, j.MissedClears, j.Unexpected, j.Summary)
+	}
+	if j.Summary.Raised != 3 || j.Summary.Cleared != 1 || j.Summary.Untraceable != 1 || j.Latency.N() != 2 {
+		t.Fatalf("%+v, %d timed", j.Summary, j.Latency.N())
+	}
+	if len(j.Summary.Missed) != 1 || j.Summary.Missed[0].Aircraft != "c" {
+		t.Fatalf("missed %+v", j.Summary.Missed)
+	}
+}
+
+// A run that ends inside a crossing lists it, not due: the raise that
+// comes for it is matched rather than read as a false alarm.
+func TestExpectedSetAtTheEndOfTheRun(t *testing.T) {
+	f, err := LoadFiles(repo("load/tiers/ci.yaml"), repo("load/paths.yaml"), repo("load/criteria.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.Tier.DurationS = 420 // crossings at 75, 255 and 435 s; 435's raise window opens at 370 s
+	fl, err := NewFleet(f, vehicle.Home{LatDeg: 41.7151, LonDeg: 44.8271, AltAMSLM: 605}, geoidx.Constant(15.9))
+	if err != nil {
+		t.Fatal(err)
+	}
+	due, cut := 0, 0
+	for _, x := range fl.Expected {
+		switch {
+		case x.RaiseDue && x.ClearDue:
+			due++
+		case !x.RaiseDue && !x.ClearDue && x.CrossingS == 435:
+			cut++
+		default:
+			t.Fatalf("%+v", x)
+		}
+	}
+	if pairs := f.Tier.Watch.Pairs; due != 2*2*pairs || cut != 2*pairs {
+		t.Fatalf("%d due, %d cut, want %d and %d", due, cut, 4*pairs, 2*pairs)
 	}
 }
