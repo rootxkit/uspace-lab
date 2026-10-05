@@ -1,0 +1,3538 @@
+{
+  "format": "load-report/v1",
+  "run": "20261005-c69c6c3-5000",
+  "started_at": "2026-10-05T09:06:17.3941548Z",
+  "ended_at": "2026-10-05T09:16:47.2647895Z",
+  "generator_s": 600.015,
+  "tier": {
+    "tier": "5000",
+    "title": "5000 drones for 60 minutes (attempted: the report says what breaks first)",
+    "column": 5000,
+    "duration_s": 600,
+    "drain_s": 120,
+    "operators": {
+      "aircraft": 5000,
+      "clients": 200,
+      "telemetry_hz": 1,
+      "telemetry_hz_status": "pending GCAA",
+      "poll_ms": 50,
+      "ramp_per_s": 250,
+      "intents": "all"
+    },
+    "receivers": {
+      "heard_fraction": 0.4,
+      "aircraft_per_receiver": 25,
+      "transports": [
+        "pack",
+        "single"
+      ],
+      "batch_ms": 100
+    },
+    "consoles": 60,
+    "watch": {
+      "pairs": 15,
+      "walkers": 15
+    },
+    "min_samples": 1000,
+    "memory_sample_s": 10,
+    "memory_warmup_s": 900,
+    "required": [
+      "operator_rate",
+      "rid_rate",
+      "generator_on_time",
+      "operator_to_console_p99",
+      "receiver_to_picture_p99",
+      "proximity_raise_p99",
+      "expected_set",
+      "missed_raises",
+      "missed_clears",
+      "no_false_alarm",
+      "alerts_traceable",
+      "operator_identity",
+      "receiver_identity",
+      "picture_identity",
+      "picture_traceable",
+      "traffic_traceable",
+      "evaluation_period",
+      "memory_monotonic"
+    ],
+    "scale": [
+      {
+        "quantity": "console viewports",
+        "spec": "60 consoles each viewing \u003c= 200 tracks (05 §1)",
+        "here": "the same count, each subscribed to the whole area",
+        "factor": 1,
+        "why": "the reference picture has no viewport throttle; whole-area subscriptions are the worst case"
+      },
+      {
+        "quantity": "duration (override)",
+        "spec": "3600 s (this tier)",
+        "here": "600 s",
+        "factor": 0.16666666666666666,
+        "why": "--duration-s given for this run"
+      }
+    ],
+    "not_generated": [
+      {
+        "source": "ANSP manned feed (tens of aircraft)",
+        "why": "the reference target has no manned intake; the systems mode is not built yet"
+      },
+      {
+        "source": "sim-ussp as the second USSP on a local DSS",
+        "why": "the reference target has no DSS or peer interface; the F3411 and F3548 rows wait for the systems mode"
+      },
+      {
+        "source": "authority DP polls of the USSPs (05 §1: one view per 1 Hz)",
+        "why": "the reference authority has no DP poller"
+      },
+      {
+        "source": "optional national push USSP -\u003e authority",
+        "why": "disabled by default (02 F6) and not in the reference target"
+      }
+    ]
+  },
+  "scaled": true,
+  "target": {
+    "mode": "reference",
+    "name": "reference",
+    "evidence": "The lab's in-process reference target (internal/reftarget): it proves the harness and is never evidence for a system (docs/PLAN.md L-D4); generator and target share this host's CPUs."
+  },
+  "host": {
+    "name": "dev workstation (Windows 11, 16 logical CPUs, 16 GB; not the droplet)",
+    "os": "windows",
+    "arch": "amd64",
+    "cpus": 16,
+    "mem_total_bytes": null,
+    "go": "go1.27.1",
+    "note": "the host the generator and the reference target ran on together (L-Q1)"
+  },
+  "commits": {
+    "lab": "c69c6c368af5fb80a6382dfc163866eb645f30e3",
+    "lab_dirty": false,
+    "core": "v1.3.0",
+    "go": "go1.27.1"
+  },
+  "files": {
+    "criteria": "sha256:eb56088a7aa8f57ebfda2dd945eb02f4acf0082df1fce776348d05a668183f82",
+    "paths": "sha256:06224ea5ff7f874d6238f66b3a7e3307b917f2f137ded43218eccc64a36c0db0",
+    "policy": "sha256:19124b6573ade992e321dbb2f18313bf01ec7ac262db03d75216da38f94db8df",
+    "tier": "sha256:aee4992c39fd0d740e80158bb23db1801d96ad1c9a7683dcaec1986494a90e87"
+  },
+  "policy": {
+    "policy_version": 1,
+    "source": "docs/PLAN.md §7.1 L-Q4 (owner-only, open; GCAA answers); knowledge/scenarios.md conventions",
+    "deviation": {
+      "h_m": 50,
+      "v_m": 15,
+      "t_s": 60
+    },
+    "telemetry_lost_s": 5,
+    "lost_link_s": 15,
+    "nonconformance_nearby_radius_m": 2000,
+    "cpa": {
+      "t_cpa_max_s": 60,
+      "d_horizontal_min_m": 60,
+      "d_vertical_min_m": 20,
+      "neighbour_radius_m": 800,
+      "neighbour_max_age_s": 10
+    },
+    "height_limit_agl_m": 120,
+    "monitor": {
+      "clear_after_s": 3,
+      "stale_after_s": 15,
+      "live_max_age_s": 10,
+      "pressure_uncertainty_m": 250,
+      "conditional_severity": "warning"
+    }
+  },
+  "lab": {
+    "file": "sim\\sitl.env.example",
+    "origin_lat_deg": 41.7151,
+    "origin_lon_deg": 44.8271,
+    "origin_alt_amsl_m": 605,
+    "geoid": "constant N = 15.9 m"
+  },
+  "volumes": {
+    "aircraft": 5000,
+    "operator_clients": 200,
+    "heard_aircraft": 2000,
+    "receivers": 80,
+    "consoles": 60,
+    "watched_aircraft": 45,
+    "intents_filed": 5000,
+    "intent_errors": 0,
+    "operator_msgs_per_s": 4991.315,
+    "operator_target_per_s": 5000,
+    "rid_locations_per_s": 1996.784,
+    "rid_target_per_s": 2000,
+    "console_frames_per_s": 117839.721,
+    "generator_late": 4600
+  },
+  "rows": [
+    {
+      "id": "offered_load",
+      "property": "Offered load",
+      "criterion": "the tier's 05 §1 rates were reached (a latency measured at a lower load proves nothing about the tier)",
+      "result": "fail",
+      "checks": [
+        {
+          "id": "operator_rate",
+          "metric": "operator_rate_ratio",
+          "stat": "value",
+          "op": "\u003e=",
+          "value": 0.95,
+          "unit": "",
+          "status": "lab",
+          "basis": "05 §1 operator telemetry row at the tier",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0.998
+          },
+          "result": "pass"
+        },
+        {
+          "id": "rid_rate",
+          "metric": "rid_rate_ratio",
+          "stat": "value",
+          "op": "\u003e=",
+          "value": 0.95,
+          "unit": "",
+          "status": "lab",
+          "basis": "05 §1 direct RID row at the tier",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0.998
+          },
+          "result": "pass"
+        },
+        {
+          "id": "generator_on_time",
+          "metric": "generator_late_ratio",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 0.001,
+          "unit": "",
+          "status": "lab",
+          "basis": "the rate held moment by moment, not only on average: at most one sample in a thousand more than a period late",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0.0015357905982905983
+          },
+          "result": "fail",
+          "reason": "generator_late_ratio value is 0.0015357905982905983, the criterion is \u003c= 0.001"
+        }
+      ]
+    },
+    {
+      "id": "ingest_to_picture",
+      "property": "Ingest-to-picture latency",
+      "criterion": "p99 \u003c 1 s (operator telemetry to USSP console frame; receiver frame to authority picture)",
+      "result": "fail",
+      "checks": [
+        {
+          "id": "operator_to_console_p99",
+          "metric": "operator_to_ussp_console_s",
+          "stat": "p99",
+          "op": "\u003c",
+          "value": 1,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (Art. 11 traffic information without delay; the figure is the spec's)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 26797,
+            "p50": 0.201,
+            "p95": 0.385,
+            "p99": 0.813,
+            "max": 2.385,
+            "mean": 0.204
+          },
+          "result": "pass"
+        },
+        {
+          "id": "receiver_to_picture_p99",
+          "metric": "receiver_to_authority_picture_s",
+          "stat": "p99",
+          "op": "\u003c",
+          "value": 1,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (the figure is the spec's)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1180641,
+            "p50": 0.682,
+            "p95": 10.379,
+            "p99": 38.121,
+            "max": 65.881,
+            "mean": 2.246
+          },
+          "result": "fail",
+          "reason": "receiver_to_authority_picture_s p99 is 38.121, the criterion is \u003c 1"
+        }
+      ]
+    },
+    {
+      "id": "f3411_timing",
+      "property": "F3411 timing",
+      "criterion": "SP GET /uss/flights p95 \u003c= 1 s, p99 \u003c= 3 s; DP display p95 \u003c= 1 s, p99 \u003c= 3 s; details p95 \u003c= 2 s, p99 \u003c= 6 s; DP cache empty of anything older than 24 h",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "sp_flights_p95",
+          "metric": "f3411_sp_flights_s",
+          "stat": "p95",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "sp_flights_p99",
+          "metric": "f3411_sp_flights_s",
+          "stat": "p99",
+          "op": "\u003c=",
+          "value": 3,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "dp_display_p95",
+          "metric": "f3411_dp_display_s",
+          "stat": "p95",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "dp_display_p99",
+          "metric": "f3411_dp_display_s",
+          "stat": "p99",
+          "op": "\u003c=",
+          "value": 3,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "details_p95",
+          "metric": "f3411_details_s",
+          "stat": "p95",
+          "op": "\u003c=",
+          "value": 2,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "details_p99",
+          "metric": "f3411_details_s",
+          "stat": "p99",
+          "op": "\u003c=",
+          "value": 6,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "dp_cache_24h",
+          "metric": "f3411_dp_cache_over_24h",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "standard",
+          "basis": "F3411 v22a NetDpMaxDataRetentionPeriodSeconds 86400",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        }
+      ]
+    },
+    {
+      "id": "f3548_timing",
+      "property": "F3548 timing",
+      "criterion": "peer notification of an intent change \u003c= 5 s; conflicting-intent notification \u003c= 1 s; details answered \u003c= 1 s; constraint notification \u003c= 5 s",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "intent_change_notify",
+          "metric": "f3548_intent_change_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 5,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "conflict_notify",
+          "metric": "f3548_conflict_notify_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "details_answered",
+          "metric": "f3548_details_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "constraint_notify",
+          "metric": "f3548_constraint_notify_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 5,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        }
+      ]
+    },
+    {
+      "id": "alert_latency",
+      "property": "Alert latency",
+      "criterion": "proximity / nonconformance raised p99 \u003c 2 s after the triggering sample's captured_at; zone alert within one tick of entry; Art. 13(2) notices to peers and ANSP within 5 s and acknowledged",
+      "result": "partial",
+      "checks": [
+        {
+          "id": "proximity_raise_p99",
+          "metric": "alert_raise_s",
+          "stat": "p99",
+          "op": "\u003c",
+          "value": 2,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (Art. 13 without delay; the figure is the spec's)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 120,
+            "p50": 0.132,
+            "p95": 0.247,
+            "p99": 0.261,
+            "max": 0.261,
+            "mean": 0.145
+          },
+          "result": "pass"
+        },
+        {
+          "id": "zone_alert_tick",
+          "metric": "zone_alert_ticks",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the load paths script no zone entry yet; zone alerts are proved by the scenario suite (sc-03)"
+          },
+          "result": "not measured",
+          "reason": "the load paths script no zone entry yet; zone alerts are proved by the scenario suite (sc-03)"
+        },
+        {
+          "id": "art13_notice",
+          "metric": "art13_notice_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 5,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (Art. 13(2); the figure is the spec's)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "Art. 13(2) notices go to peers and the ANSP, neither of which the load harness drives yet"
+          },
+          "result": "not measured",
+          "reason": "Art. 13(2) notices go to peers and the ANSP, neither of which the load harness drives yet"
+        }
+      ]
+    },
+    {
+      "id": "missed_alerts",
+      "property": "Missed alerts",
+      "criterion": "zero against the scenario's expected set; every expected clear observed",
+      "result": "pass",
+      "checks": [
+        {
+          "id": "expected_set",
+          "metric": "expected_raises",
+          "stat": "value",
+          "op": "\u003e=",
+          "value": 1,
+          "unit": "",
+          "status": "lab",
+          "basis": "a run with no alert due cannot count a miss",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 90
+          },
+          "result": "pass"
+        },
+        {
+          "id": "missed_raises",
+          "metric": "missed_raises",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "missed_clears",
+          "metric": "missed_clears",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "no_false_alarm",
+          "metric": "unexpected_alerts",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "lab",
+          "basis": "the paths keep every walker outside the CPA minima (load/paths.yaml, checked at load); an alert there is a false alarm or a broken expected set",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "alerts_traceable",
+          "metric": "alert_untraceable",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "lab",
+          "basis": "every raise names a captured_at the generator sent",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "no_silent_loss",
+      "property": "No silent loss",
+      "criterion": "every dropped_*, gap, degraded counter accounted for in the report; sum of accepted + dropped = sent",
+      "result": "fail",
+      "checks": [
+        {
+          "id": "operator_identity",
+          "metric": "operator_ledgers_unbalanced",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7, 05 §5 (operator WS: accepted + refused + dropped + duplicate = sent, per client)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "receiver_identity",
+          "metric": "receiver_ledgers_unbalanced",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7, 05 §5 (receiver -\u003e authority: accepted + duplicates + refused = sent)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "picture_identity",
+          "metric": "picture_silent_loss",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7: every heard sample is on the picture or in a counted loss",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 1730
+          },
+          "result": "fail",
+          "reason": "picture_silent_loss value is 1730, the criterion is == 0"
+        },
+        {
+          "id": "picture_traceable",
+          "metric": "picture_untraceable_frames",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "lab",
+          "basis": "every track frame names a sample the generator sent",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 1532
+          },
+          "result": "fail",
+          "reason": "picture_untraceable_frames value is 1532, the criterion is == 0"
+        },
+        {
+          "id": "traffic_traceable",
+          "metric": "traffic_untraceable_frames",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "lab",
+          "basis": "every own track in a traffic product names a sample the generator sent",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "cpa_budget",
+      "property": "CPA budget",
+      "criterion": "pair checks per worker per second within budget; evaluation_period_s never above 2 s",
+      "result": "partial",
+      "checks": [
+        {
+          "id": "pair_checks",
+          "metric": "cpa_pair_checks_per_worker",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §1 (~50 000 pair checks per second per core)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "read from a system's /metrics by name; the reference target has no /metrics and systems mode is not built yet"
+          },
+          "result": "not measured",
+          "reason": "read from a system's /metrics by name; the reference target has no /metrics and systems mode is not built yet"
+        },
+        {
+          "id": "evaluation_period",
+          "metric": "cpa_evaluation_period_max_s",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 2,
+          "unit": "s",
+          "status": "spec",
+          "basis": "05 §5 CPA workers",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 1
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "property": "Storage",
+      "criterion": "write rate sustained with writer queue \u003c 10 s; compression job keeps up; disk growth matches the model within 20 %",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "writer_queue",
+          "metric": "writer_queue_max_s",
+          "stat": "value",
+          "op": "\u003c",
+          "value": 10,
+          "unit": "s",
+          "status": "spec",
+          "basis": "05 §5 TimescaleDB writer",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the reference target has no database; storage is measured against the systems' images"
+          },
+          "result": "not measured",
+          "reason": "the reference target has no database; storage is measured against the systems' images"
+        },
+        {
+          "id": "compression",
+          "metric": "compression_lag_chunks",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §4",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the reference target has no database; storage is measured against the systems' images"
+          },
+          "result": "not measured",
+          "reason": "the reference target has no database; storage is measured against the systems' images"
+        },
+        {
+          "id": "disk_model",
+          "metric": "disk_growth_vs_model",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1.2,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §4 (within 20 %)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the reference target has no database; storage is measured against the systems' images"
+          },
+          "result": "not measured",
+          "reason": "the reference target has no database; storage is measured against the systems' images"
+        }
+      ]
+    },
+    {
+      "id": "restart",
+      "property": "Restart",
+      "criterion": "kill each component in turn mid-run: picture recovers within 10 s, no duplicate alerts, no lost backlog",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "restart_recovery",
+          "metric": "restart_recovery_s",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 10,
+          "unit": "s",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        },
+        {
+          "id": "restart_duplicates",
+          "metric": "restart_duplicate_alerts",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        },
+        {
+          "id": "restart_backlog",
+          "metric": "restart_lost_backlog",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        }
+      ]
+    },
+    {
+      "id": "partition",
+      "property": "Partition",
+      "criterion": "kill NATS of one system for 60 s: ingest spills and replays; other systems show nothing",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "partition_replay",
+          "metric": "partition_unreplayed",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §6 NATS row",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        },
+        {
+          "id": "partition_isolation",
+          "metric": "partition_cross_effects",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §6",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        }
+      ]
+    },
+    {
+      "id": "cross_system_outage",
+      "property": "Cross-system outage",
+      "criterion": "CISP, authority, DSS, ANSP each taken down for 5 min: the degraded behaviours of 02 observed, nothing hidden, everything flagged with age",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "outage_flagged",
+          "metric": "outage_unflagged",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §6, 02 failure columns",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        }
+      ]
+    },
+    {
+      "id": "memory",
+      "property": "Memory",
+      "criterion": "no monotonic growth over the soak",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "memory_monotonic",
+          "metric": "memory_monotonic",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "min_duration_s": 1800,
+          "required": true,
+          "observed": {
+            "measured": false,
+            "reason": "0 memory samples after the 900 s warm-up, at least 6 are needed"
+          },
+          "result": "not measured",
+          "reason": "0 memory samples after the 900 s warm-up, at least 6 are needed"
+        },
+        {
+          "id": "memory_growth",
+          "metric": "memory_growth_ratio",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1.5,
+          "unit": "",
+          "status": "lab",
+          "basis": "the live heap at the end against the start of the soak after the warm-up (generator and reference target together)",
+          "min_duration_s": 1800,
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "0 memory samples after the 900 s warm-up, at least 6 are needed"
+          },
+          "result": "not measured",
+          "reason": "0 memory samples after the 900 s warm-up, at least 6 are needed"
+        }
+      ]
+    },
+    {
+      "id": "vectors",
+      "property": "Vectors",
+      "criterion": "all knowledge/vectors behaviour vectors pass against the packages in every image under test; schema examples pass everywhere",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "vectors_pass",
+          "metric": "vectors_failed",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the vectors run in uspace-core's CI and per image in the conformance suite, not in a load run"
+          },
+          "result": "not measured",
+          "reason": "the vectors run in uspace-core's CI and per image in the conformance suite, not in a load run"
+        }
+      ]
+    }
+  ],
+  "metrics": {
+    "alert_raise_s": {
+      "measured": true,
+      "n": 120,
+      "p50": 0.132,
+      "p95": 0.247,
+      "p99": 0.261,
+      "max": 0.261,
+      "mean": 0.145
+    },
+    "alert_untraceable": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "art13_notice_s": {
+      "measured": false,
+      "reason": "Art. 13(2) notices go to peers and the ANSP, neither of which the load harness drives yet"
+    },
+    "compression_lag_chunks": {
+      "measured": false,
+      "reason": "the reference target has no database; storage is measured against the systems' images"
+    },
+    "cpa_evaluation_period_max_s": {
+      "measured": true,
+      "n": 1,
+      "value": 1
+    },
+    "cpa_pair_checks_per_worker": {
+      "measured": false,
+      "reason": "read from a system's /metrics by name; the reference target has no /metrics and systems mode is not built yet"
+    },
+    "disk_growth_vs_model": {
+      "measured": false,
+      "reason": "the reference target has no database; storage is measured against the systems' images"
+    },
+    "expected_raises": {
+      "measured": true,
+      "n": 1,
+      "value": 90
+    },
+    "f3411_details_s": {
+      "measured": false,
+      "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3411_dp_cache_over_24h": {
+      "measured": false,
+      "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3411_dp_display_s": {
+      "measured": false,
+      "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3411_sp_flights_s": {
+      "measured": false,
+      "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3548_conflict_notify_s": {
+      "measured": false,
+      "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3548_constraint_notify_s": {
+      "measured": false,
+      "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3548_details_s": {
+      "measured": false,
+      "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3548_intent_change_s": {
+      "measured": false,
+      "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "generator_late_ratio": {
+      "measured": true,
+      "n": 1,
+      "value": 0.0015357905982905983
+    },
+    "memory_growth_ratio": {
+      "measured": false,
+      "reason": "0 memory samples after the 900 s warm-up, at least 6 are needed"
+    },
+    "memory_monotonic": {
+      "measured": false,
+      "reason": "0 memory samples after the 900 s warm-up, at least 6 are needed"
+    },
+    "missed_clears": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "missed_raises": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "operator_ledgers_unbalanced": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "operator_rate_ratio": {
+      "measured": true,
+      "n": 1,
+      "value": 0.998
+    },
+    "operator_to_ussp_console_s": {
+      "measured": true,
+      "n": 26797,
+      "p50": 0.201,
+      "p95": 0.385,
+      "p99": 0.813,
+      "max": 2.385,
+      "mean": 0.204
+    },
+    "outage_unflagged": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "partition_cross_effects": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "partition_unreplayed": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "picture_silent_loss": {
+      "measured": true,
+      "n": 1,
+      "value": 1730
+    },
+    "picture_untraceable_frames": {
+      "measured": true,
+      "n": 1,
+      "value": 1532
+    },
+    "receiver_ledgers_unbalanced": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "receiver_to_authority_picture_s": {
+      "measured": true,
+      "n": 1180641,
+      "p50": 0.682,
+      "p95": 10.379,
+      "p99": 38.121,
+      "max": 65.881,
+      "mean": 2.246
+    },
+    "restart_duplicate_alerts": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "restart_lost_backlog": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "restart_recovery_s": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "rid_rate_ratio": {
+      "measured": true,
+      "n": 1,
+      "value": 0.998
+    },
+    "traffic_untraceable_frames": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "unexpected_alerts": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "vectors_failed": {
+      "measured": false,
+      "reason": "the vectors run in uspace-core's CI and per image in the conformance suite, not in a load run"
+    },
+    "writer_queue_max_s": {
+      "measured": false,
+      "reason": "the reference target has no database; storage is measured against the systems' images"
+    },
+    "zone_alert_ticks": {
+      "measured": false,
+      "reason": "the load paths script no zone entry yet; zone alerts are proved by the scenario suite (sc-03)"
+    }
+  },
+  "loss": {
+    "operator": {
+      "sent": 2994864,
+      "accepted": 2988700,
+      "refused": 0,
+      "dropped": 6164,
+      "duplicate": 0,
+      "queue_shed": 0,
+      "pending": 0,
+      "unbalanced": 0,
+      "outcomes": {
+        "accepted": 2988700,
+        "dropped_rate": 6164
+      }
+    },
+    "receivers": {
+      "observed": 1535228,
+      "sent": 1535228,
+      "accepted": 1535228,
+      "duplicates": 0,
+      "refused": 0,
+      "backlog_shed": 0,
+      "dropped_by_knob": 0,
+      "pending": 0,
+      "unbalanced": 0
+    },
+    "generator_shed_operator": 0,
+    "generator_shed_rid": 0,
+    "picture": {
+      "handed": 1198100,
+      "shown": 1180641,
+      "unshown": 17459,
+      "repeats": 114,
+      "untraceable": 1532,
+      "negative_latencies": 0
+    },
+    "traffic": {
+      "handed": 26956,
+      "shown": 26797,
+      "unshown": 159,
+      "repeats": 92,
+      "untraceable": 0,
+      "negative_latencies": 0
+    },
+    "picture_dropped_frames": 15729,
+    "picture_accounted": 15729,
+    "picture_silent": 1730,
+    "target_counters": {
+      "authority_monitor": {
+        "conflict_checks_skipped": 1025001,
+        "height_checks_not_evaluated": 1025001,
+        "placement_behind_stale": 5576,
+        "rejected_backlog": 173015
+      },
+      "direct_rid": {
+        "accepted": 1535228,
+        "backlog": 221415
+      },
+      "operator_ws": {
+        "accepted": 2988700,
+        "dropped_rate": 6164
+      },
+      "ussp_monitor": {}
+    }
+  },
+  "alerts": {
+    "expected": 90,
+    "raised": 120,
+    "cleared": 90,
+    "untraceable": 0,
+    "raises": [
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "94479721-33f1-46bd-891e-266279401dea",
+        "observed_s": 36.017,
+        "captured_s": 36.013,
+        "latency_s": 0.011
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "90250095-8556-46e7-8d87-5e467b151593",
+        "observed_s": 217.19,
+        "captured_s": 217.051,
+        "latency_s": 0.188
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "c1ba3577-69b3-42af-8d5d-df9606ca8078",
+        "observed_s": 397.113,
+        "captured_s": 397.022,
+        "latency_s": 0.108
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "e77693a8-aafe-4744-848e-89172ce42883",
+        "observed_s": 577.139,
+        "captured_s": 577.064,
+        "latency_s": 0.132
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "4b534620-412f-42e7-b5f3-67c5b244a99c",
+        "observed_s": 36.017,
+        "captured_s": 36.013,
+        "latency_s": 0.011
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "25911685-1c10-457e-af21-972bd24cee61",
+        "observed_s": 217.19,
+        "captured_s": 217.051,
+        "latency_s": 0.188
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "441961ff-2e8f-4c78-b37d-5bfca892b46a",
+        "observed_s": 397.113,
+        "captured_s": 397.022,
+        "latency_s": 0.108
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "5092711d-e62b-4826-8192-cec3cd90b5f7",
+        "observed_s": 577.139,
+        "captured_s": 577.064,
+        "latency_s": 0.132
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "39990a88-fb3a-49d1-a8c1-65c4e0b753ba",
+        "observed_s": 36.129,
+        "captured_s": 36.121,
+        "latency_s": 0.049
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "ae50a4d8-30f1-443a-acea-3a14f756d3dd",
+        "observed_s": 218.041,
+        "captured_s": 217.966,
+        "latency_s": 0.106
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "daf4ef24-8dfb-449c-970f-9a18e65b846c",
+        "observed_s": 398.171,
+        "captured_s": 398.017,
+        "latency_s": 0.235
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "bf9d24fd-36ba-4e3c-8f55-97446311bf80",
+        "observed_s": 578.053,
+        "captured_s": 578.048,
+        "latency_s": 0.117
+      },
+      {
+        "aircraft": "ac-00003",
+        "alert_id": "4481564f-1ad6-44bb-8cbd-088e12c2e516",
+        "observed_s": 36.129,
+        "captured_s": 36.121,
+        "latency_s": 0.049
+      },
+      {
+        "aircraft": "ac-00003",
+        "alert_id": "2389a3e7-7c74-4deb-b67f-fb6aa340349b",
+        "observed_s": 218.041,
+        "captured_s": 217.966,
+        "latency_s": 0.106
+      },
+      {
+        "aircraft": "ac-00003",
+        "alert_id": "03125c1d-776f-4253-b311-1f7f0561d872",
+        "observed_s": 398.171,
+        "captured_s": 398.017,
+        "latency_s": 0.235
+      },
+      {
+        "aircraft": "ac-00003",
+        "alert_id": "8bed3f86-6fba-48ec-b14b-8d0312b1526e",
+        "observed_s": 578.053,
+        "captured_s": 578.048,
+        "latency_s": 0.117
+      },
+      {
+        "aircraft": "ac-00004",
+        "alert_id": "5b9b9852-e816-417d-88fb-6ddcaab874b0",
+        "observed_s": 36.132,
+        "captured_s": 36.124,
+        "latency_s": 0.023
+      },
+      {
+        "aircraft": "ac-00004",
+        "alert_id": "eba2b9cb-39c2-4c60-9f29-e411d46bfbf5",
+        "observed_s": 218.034,
+        "captured_s": 217.966,
+        "latency_s": 0.099
+      },
+      {
+        "aircraft": "ac-00004",
+        "alert_id": "9c4cad17-270a-4f64-8a63-915cbc7608b0",
+        "observed_s": 398.171,
+        "captured_s": 398.017,
+        "latency_s": 0.235
+      },
+      {
+        "aircraft": "ac-00004",
+        "alert_id": "ea14b3fe-3838-44b2-96dd-625301156a91",
+        "observed_s": 578.053,
+        "captured_s": 578.048,
+        "latency_s": 0.117
+      },
+      {
+        "aircraft": "ac-00005",
+        "alert_id": "69979778-4456-4d1c-9024-404153d99100",
+        "observed_s": 36.132,
+        "captured_s": 36.124,
+        "latency_s": 0.023
+      },
+      {
+        "aircraft": "ac-00005",
+        "alert_id": "82a43c71-fdb6-405f-b0b8-737fa7f8f355",
+        "observed_s": 218.034,
+        "captured_s": 217.966,
+        "latency_s": 0.099
+      },
+      {
+        "aircraft": "ac-00005",
+        "alert_id": "8cb8ecd5-565c-4395-b28b-6523cbfb6a7d",
+        "observed_s": 398.171,
+        "captured_s": 398.017,
+        "latency_s": 0.235
+      },
+      {
+        "aircraft": "ac-00005",
+        "alert_id": "ef186060-eacf-471a-871d-5bfb85a12255",
+        "observed_s": 578.053,
+        "captured_s": 578.048,
+        "latency_s": 0.117
+      },
+      {
+        "aircraft": "ac-00006",
+        "alert_id": "5fadae32-8ee9-4963-9e5a-766d08923fdd",
+        "observed_s": 36.195,
+        "captured_s": 36.19,
+        "latency_s": 0.049
+      },
+      {
+        "aircraft": "ac-00006",
+        "alert_id": "bd846448-ecab-4c68-acac-b5d5b8eb3d88",
+        "observed_s": 218.178,
+        "captured_s": 218.045,
+        "latency_s": 0.242
+      },
+      {
+        "aircraft": "ac-00006",
+        "alert_id": "9b2a62ba-bde2-4f9d-b318-0690a71137da",
+        "observed_s": 398.168,
+        "captured_s": 398.032,
+        "latency_s": 0.233
+      },
+      {
+        "aircraft": "ac-00006",
+        "alert_id": "dbb1ba38-c5c4-4ec7-abea-3c7e44a28087",
+        "observed_s": 578.133,
+        "captured_s": 578.059,
+        "latency_s": 0.197
+      },
+      {
+        "aircraft": "ac-00007",
+        "alert_id": "5f065cc6-28e5-463c-af79-cb8fcff3364f",
+        "observed_s": 36.195,
+        "captured_s": 36.19,
+        "latency_s": 0.049
+      },
+      {
+        "aircraft": "ac-00007",
+        "alert_id": "7f09b3c5-acfd-45f9-874a-963d59bf02d5",
+        "observed_s": 218.146,
+        "captured_s": 218.045,
+        "latency_s": 0.21
+      },
+      {
+        "aircraft": "ac-00007",
+        "alert_id": "bcc1d6bc-4a37-4152-a95a-c413efb52f72",
+        "observed_s": 398.168,
+        "captured_s": 398.032,
+        "latency_s": 0.233
+      },
+      {
+        "aircraft": "ac-00007",
+        "alert_id": "ccfec6af-4135-4917-9500-9915b1f07a67",
+        "observed_s": 578.133,
+        "captured_s": 578.059,
+        "latency_s": 0.197
+      },
+      {
+        "aircraft": "ac-00008",
+        "alert_id": "413e8ef3-da24-4fb3-be82-4844df44c12f",
+        "observed_s": 36.214,
+        "captured_s": 36.213,
+        "latency_s": 0.029
+      },
+      {
+        "aircraft": "ac-00008",
+        "alert_id": "e1ab3420-a8a9-4009-9a35-6fa4ceee9f37",
+        "observed_s": 218.079,
+        "captured_s": 217.966,
+        "latency_s": 0.144
+      },
+      {
+        "aircraft": "ac-00008",
+        "alert_id": "e75ab1eb-db5c-468a-9b95-eb78c5486b0f",
+        "observed_s": 398.037,
+        "captured_s": 398.032,
+        "latency_s": 0.102
+      },
+      {
+        "aircraft": "ac-00008",
+        "alert_id": "b1c678ce-f0e9-4230-83b3-5637c02e94ce",
+        "observed_s": 578.053,
+        "captured_s": 578.048,
+        "latency_s": 0.117
+      },
+      {
+        "aircraft": "ac-00009",
+        "alert_id": "5af7d018-3f40-4755-b2f5-d1c64e0610ab",
+        "observed_s": 36.217,
+        "captured_s": 36.213,
+        "latency_s": 0.031
+      },
+      {
+        "aircraft": "ac-00009",
+        "alert_id": "a947336a-ece8-46ee-9b96-a5b7c864b021",
+        "observed_s": 218.085,
+        "captured_s": 217.966,
+        "latency_s": 0.15
+      },
+      {
+        "aircraft": "ac-00009",
+        "alert_id": "183ee5d4-4c3f-4934-9a2a-67b99d8a53d1",
+        "observed_s": 398.037,
+        "captured_s": 398.032,
+        "latency_s": 0.102
+      },
+      {
+        "aircraft": "ac-00009",
+        "alert_id": "1572be6e-709e-41ce-9771-22e1b5662c1b",
+        "observed_s": 578.053,
+        "captured_s": 578.048,
+        "latency_s": 0.117
+      },
+      {
+        "aircraft": "ac-00010",
+        "alert_id": "5e346070-defa-45c9-86bc-8110e6026668",
+        "observed_s": 36.306,
+        "captured_s": 36.306,
+        "latency_s": 0.073
+      },
+      {
+        "aircraft": "ac-00010",
+        "alert_id": "8b4a49f2-f328-4d3b-b370-fec457ab195c",
+        "observed_s": 218.185,
+        "captured_s": 218.045,
+        "latency_s": 0.249
+      },
+      {
+        "aircraft": "ac-00010",
+        "alert_id": "a53eea6c-2877-4bad-bd11-8a9a0b3ef7e5",
+        "observed_s": 398.171,
+        "captured_s": 398.032,
+        "latency_s": 0.235
+      },
+      {
+        "aircraft": "ac-00010",
+        "alert_id": "73873ea1-440b-4b47-a265-7dc74c344acd",
+        "observed_s": 578.151,
+        "captured_s": 578.059,
+        "latency_s": 0.216
+      },
+      {
+        "aircraft": "ac-00011",
+        "alert_id": "4116a833-a6c7-4926-a35f-d645147fb2e8",
+        "observed_s": 36.306,
+        "captured_s": 36.306,
+        "latency_s": 0.073
+      },
+      {
+        "aircraft": "ac-00011",
+        "alert_id": "308d87c0-80fd-4839-906a-54da0bc7aae4",
+        "observed_s": 218.185,
+        "captured_s": 218.045,
+        "latency_s": 0.249
+      },
+      {
+        "aircraft": "ac-00011",
+        "alert_id": "c867d463-9623-4c0e-98a5-1c7bb94a239f",
+        "observed_s": 398.18,
+        "captured_s": 398.032,
+        "latency_s": 0.244
+      },
+      {
+        "aircraft": "ac-00011",
+        "alert_id": "86318728-3c8c-4141-b5df-c0dee83e8afa",
+        "observed_s": 578.153,
+        "captured_s": 578.059,
+        "latency_s": 0.218
+      },
+      {
+        "aircraft": "ac-00012",
+        "alert_id": "53830ef3-64e8-4ef4-b4d7-36c8ced25aa7",
+        "observed_s": 36.307,
+        "captured_s": 36.305,
+        "latency_s": 0.038
+      },
+      {
+        "aircraft": "ac-00012",
+        "alert_id": "4851b706-9b97-4d9b-aff0-e39be5e555c8",
+        "observed_s": 218.182,
+        "captured_s": 218.066,
+        "latency_s": 0.246
+      }
+    ]
+  },
+  "streams": [
+    {
+      "name": "console-00",
+      "kind": "picture",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1182287
+      },
+      "dropped_frames": 15729,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ]
+    },
+    {
+      "name": "console-01",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1179140
+      },
+      "dropped_frames": 18876,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ]
+    },
+    {
+      "name": "console-02",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1176610
+      },
+      "dropped_frames": 21406,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-03",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1179312
+      },
+      "dropped_frames": 18704,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ]
+    },
+    {
+      "name": "console-04",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1180543
+      },
+      "dropped_frames": 17473,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-05",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1179668
+      },
+      "dropped_frames": 18348,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-06",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1180942
+      },
+      "dropped_frames": 17074,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-07",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1177984
+      },
+      "dropped_frames": 20032,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-08",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1179035
+      },
+      "dropped_frames": 18981,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-09",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1176478
+      },
+      "dropped_frames": 21538,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-10",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1179698
+      },
+      "dropped_frames": 18318,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-11",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1176330
+      },
+      "dropped_frames": 21686,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-12",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1179215
+      },
+      "dropped_frames": 18801,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-13",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178236
+      },
+      "dropped_frames": 19780,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ]
+    },
+    {
+      "name": "console-14",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1179036
+      },
+      "dropped_frames": 18980,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-15",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178447
+      },
+      "dropped_frames": 19569,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ]
+    },
+    {
+      "name": "console-16",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178495
+      },
+      "dropped_frames": 19521,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-17",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178000
+      },
+      "dropped_frames": 20016,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-18",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1176021
+      },
+      "dropped_frames": 21995,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-19",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178323
+      },
+      "dropped_frames": 19693,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ]
+    },
+    {
+      "name": "console-20",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178155
+      },
+      "dropped_frames": 19861,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-21",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1175320
+      },
+      "dropped_frames": 22696,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-22",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178225
+      },
+      "dropped_frames": 19791,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-23",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178068
+      },
+      "dropped_frames": 19948,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-24",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178188
+      },
+      "dropped_frames": 19828,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ]
+    },
+    {
+      "name": "console-25",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178949
+      },
+      "dropped_frames": 19067,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-26",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178572
+      },
+      "dropped_frames": 19444,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-27",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178813
+      },
+      "dropped_frames": 19203,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ]
+    },
+    {
+      "name": "console-28",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1177049
+      },
+      "dropped_frames": 20967,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-29",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1177926
+      },
+      "dropped_frames": 20090,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-30",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1177964
+      },
+      "dropped_frames": 20052,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-31",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1177844
+      },
+      "dropped_frames": 20172,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-32",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1175253
+      },
+      "dropped_frames": 22763,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-33",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178297
+      },
+      "dropped_frames": 19719,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ]
+    },
+    {
+      "name": "console-34",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178234
+      },
+      "dropped_frames": 19782,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-35",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1176996
+      },
+      "dropped_frames": 21020,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-36",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1176822
+      },
+      "dropped_frames": 21194,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-37",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178041
+      },
+      "dropped_frames": 19975,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-38",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1175802
+      },
+      "dropped_frames": 22214,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-39",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178262
+      },
+      "dropped_frames": 19754,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-40",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178540
+      },
+      "dropped_frames": 19476,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-41",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1179031
+      },
+      "dropped_frames": 18985,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ]
+    },
+    {
+      "name": "console-42",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1181050
+      },
+      "dropped_frames": 16966,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-43",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178016
+      },
+      "dropped_frames": 20000,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-44",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1174974
+      },
+      "dropped_frames": 23042,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-45",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178076
+      },
+      "dropped_frames": 19940,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-46",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178153
+      },
+      "dropped_frames": 19863,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-47",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1175999
+      },
+      "dropped_frames": 22017,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-48",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1180208
+      },
+      "dropped_frames": 17808,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ]
+    },
+    {
+      "name": "console-49",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178647
+      },
+      "dropped_frames": 19369,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-50",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178443
+      },
+      "dropped_frames": 19573,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-51",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178237
+      },
+      "dropped_frames": 19779,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ]
+    },
+    {
+      "name": "console-52",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1176145
+      },
+      "dropped_frames": 21871,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ]
+    },
+    {
+      "name": "console-53",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1177636
+      },
+      "dropped_frames": 20380,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-54",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178745
+      },
+      "dropped_frames": 19271,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-55",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178825
+      },
+      "dropped_frames": 19191,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ]
+    },
+    {
+      "name": "console-56",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1176478
+      },
+      "dropped_frames": 21538,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-57",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1175301
+      },
+      "dropped_frames": 22715,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-58",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1179312
+      },
+      "dropped_frames": 18704,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-59",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 313,
+        "track/telemetry/v1": 1178361
+      },
+      "dropped_frames": 19655,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00000",
+      "kind": "traffic",
+      "aircraft": "ac-00000",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 168,
+        "console/status/v1": 313,
+        "traffic/product/v1": 598
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ]
+    },
+    {
+      "name": "traffic-ac-00001",
+      "kind": "traffic",
+      "aircraft": "ac-00001",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 168,
+        "console/status/v1": 313,
+        "traffic/product/v1": 598
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00002",
+      "kind": "traffic",
+      "aircraft": "ac-00002",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 169,
+        "console/status/v1": 313,
+        "traffic/product/v1": 597
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00003",
+      "kind": "traffic",
+      "aircraft": "ac-00003",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 169,
+        "console/status/v1": 313,
+        "traffic/product/v1": 596
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00004",
+      "kind": "traffic",
+      "aircraft": "ac-00004",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 167,
+        "console/status/v1": 313,
+        "traffic/product/v1": 598
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00005",
+      "kind": "traffic",
+      "aircraft": "ac-00005",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 167,
+        "console/status/v1": 313,
+        "traffic/product/v1": 596
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ]
+    },
+    {
+      "name": "traffic-ac-00006",
+      "kind": "traffic",
+      "aircraft": "ac-00006",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 167,
+        "console/status/v1": 313,
+        "traffic/product/v1": 599
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00007",
+      "kind": "traffic",
+      "aircraft": "ac-00007",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 167,
+        "console/status/v1": 313,
+        "traffic/product/v1": 597
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00008",
+      "kind": "traffic",
+      "aircraft": "ac-00008",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 168,
+        "console/status/v1": 313,
+        "traffic/product/v1": 599
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ]
+    },
+    {
+      "name": "traffic-ac-00009",
+      "kind": "traffic",
+      "aircraft": "ac-00009",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 168,
+        "console/status/v1": 313,
+        "traffic/product/v1": 597
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ]
+    },
+    {
+      "name": "traffic-ac-00010",
+      "kind": "traffic",
+      "aircraft": "ac-00010",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 168,
+        "console/status/v1": 313,
+        "traffic/product/v1": 597
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00011",
+      "kind": "traffic",
+      "aircraft": "ac-00011",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 168,
+        "console/status/v1": 313,
+        "traffic/product/v1": 596
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00012",
+      "kind": "traffic",
+      "aircraft": "ac-00012",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 168,
+        "console/status/v1": 313,
+        "traffic/product/v1": 599
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ]
+    },
+    {
+      "name": "traffic-ac-00013",
+      "kind": "traffic",
+      "aircraft": "ac-00013",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 168,
+        "console/status/v1": 313,
+        "traffic/product/v1": 599
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00014",
+      "kind": "traffic",
+      "aircraft": "ac-00014",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 168,
+        "console/status/v1": 313,
+        "traffic/product/v1": 596
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00015",
+      "kind": "traffic",
+      "aircraft": "ac-00015",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 168,
+        "console/status/v1": 313,
+        "traffic/product/v1": 599
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00016",
+      "kind": "traffic",
+      "aircraft": "ac-00016",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 166,
+        "console/status/v1": 313,
+        "traffic/product/v1": 598
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00017",
+      "kind": "traffic",
+      "aircraft": "ac-00017",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 166,
+        "console/status/v1": 313,
+        "traffic/product/v1": 599
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00018",
+      "kind": "traffic",
+      "aircraft": "ac-00018",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 168,
+        "console/status/v1": 313,
+        "traffic/product/v1": 598
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00019",
+      "kind": "traffic",
+      "aircraft": "ac-00019",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 168,
+        "console/status/v1": 313,
+        "traffic/product/v1": 597
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00020",
+      "kind": "traffic",
+      "aircraft": "ac-00020",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 168,
+        "console/status/v1": 313,
+        "traffic/product/v1": 599
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00021",
+      "kind": "traffic",
+      "aircraft": "ac-00021",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 168,
+        "console/status/v1": 313,
+        "traffic/product/v1": 598
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00022",
+      "kind": "traffic",
+      "aircraft": "ac-00022",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 169,
+        "console/status/v1": 313,
+        "traffic/product/v1": 597
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00023",
+      "kind": "traffic",
+      "aircraft": "ac-00023",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 169,
+        "console/status/v1": 313,
+        "traffic/product/v1": 596
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00024",
+      "kind": "traffic",
+      "aircraft": "ac-00024",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 168,
+        "console/status/v1": 313,
+        "traffic/product/v1": 596
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00025",
+      "kind": "traffic",
+      "aircraft": "ac-00025",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 168,
+        "console/status/v1": 313,
+        "traffic/product/v1": 598
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00026",
+      "kind": "traffic",
+      "aircraft": "ac-00026",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 170,
+        "console/status/v1": 313,
+        "traffic/product/v1": 598
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00027",
+      "kind": "traffic",
+      "aircraft": "ac-00027",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 170,
+        "console/status/v1": 313,
+        "traffic/product/v1": 596
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00028",
+      "kind": "traffic",
+      "aircraft": "ac-00028",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 168,
+        "console/status/v1": 313,
+        "traffic/product/v1": 598
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ]
+    },
+    {
+      "name": "traffic-ac-00029",
+      "kind": "traffic",
+      "aircraft": "ac-00029",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 168,
+        "console/status/v1": 313,
+        "traffic/product/v1": 598
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00030",
+      "kind": "traffic",
+      "aircraft": "ac-00030",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/status/v1": 313,
+        "traffic/product/v1": 598
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ]
+    },
+    {
+      "name": "traffic-ac-00031",
+      "kind": "traffic",
+      "aircraft": "ac-00031",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/status/v1": 313,
+        "traffic/product/v1": 596
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ]
+    },
+    {
+      "name": "traffic-ac-00032",
+      "kind": "traffic",
+      "aircraft": "ac-00032",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/status/v1": 313,
+        "traffic/product/v1": 597
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00033",
+      "kind": "traffic",
+      "aircraft": "ac-00033",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/status/v1": 313,
+        "traffic/product/v1": 598
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00034",
+      "kind": "traffic",
+      "aircraft": "ac-00034",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/status/v1": 313,
+        "traffic/product/v1": 597
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00035",
+      "kind": "traffic",
+      "aircraft": "ac-00035",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/status/v1": 313,
+        "traffic/product/v1": 598
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ]
+    },
+    {
+      "name": "traffic-ac-00036",
+      "kind": "traffic",
+      "aircraft": "ac-00036",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/status/v1": 313,
+        "traffic/product/v1": 598
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00037",
+      "kind": "traffic",
+      "aircraft": "ac-00037",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/status/v1": 313,
+        "traffic/product/v1": 598
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00038",
+      "kind": "traffic",
+      "aircraft": "ac-00038",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/status/v1": 313,
+        "traffic/product/v1": 598
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00039",
+      "kind": "traffic",
+      "aircraft": "ac-00039",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/status/v1": 313,
+        "traffic/product/v1": 598
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00040",
+      "kind": "traffic",
+      "aircraft": "ac-00040",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/status/v1": 313,
+        "traffic/product/v1": 596
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ]
+    },
+    {
+      "name": "traffic-ac-00041",
+      "kind": "traffic",
+      "aircraft": "ac-00041",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/status/v1": 313,
+        "traffic/product/v1": 597
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00042",
+      "kind": "traffic",
+      "aircraft": "ac-00042",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/status/v1": 313,
+        "traffic/product/v1": 598
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ]
+    },
+    {
+      "name": "traffic-ac-00043",
+      "kind": "traffic",
+      "aircraft": "ac-00043",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/status/v1": 313,
+        "traffic/product/v1": 598
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00044",
+      "kind": "traffic",
+      "aircraft": "ac-00044",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/status/v1": 313,
+        "traffic/product/v1": 597
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    }
+  ],
+  "memory_live_heap_bytes": [
+    259909128,
+    279526672,
+    306761344,
+    314692552,
+    295869344,
+    329108744,
+    345504792,
+    341013824,
+    360883832,
+    345946152,
+    352848920,
+    417068408,
+    418874472,
+    404761744,
+    427908480,
+    439416136,
+    429900712,
+    412803336,
+    428464752,
+    419215624,
+    429429528,
+    409363488,
+    526112968,
+    512207032,
+    526297720,
+    552326208,
+    503576376,
+    565874768,
+    537063152,
+    556341288,
+    547375448,
+    555632848,
+    512034992,
+    543404448,
+    562446520,
+    551022232,
+    524039872,
+    554214200,
+    580668528,
+    536552224,
+    564449792,
+    585158984,
+    570214056,
+    530785640,
+    598564936,
+    767537272,
+    707039840,
+    749342520,
+    743401696,
+    747370304,
+    740683216,
+    743291120,
+    724522736,
+    722843952,
+    750340744,
+    727593976,
+    728297312,
+    735649792,
+    745949488,
+    763400024
+  ],
+  "checks_measured": 17,
+  "checks_not_measured": 26,
+  "complete": false,
+  "verdict": "fail",
+  "failures": [
+    "generator_on_time: generator_late_ratio value is 0.0015357905982905983, the criterion is \u003c= 0.001",
+    "receiver_to_picture_p99: receiver_to_authority_picture_s p99 is 38.121, the criterion is \u003c 1",
+    "picture_identity: picture_silent_loss value is 1730, the criterion is == 0",
+    "picture_traceable: picture_untraceable_frames value is 1532, the criterion is == 0",
+    "memory_monotonic: required and not measured: 0 memory samples after the 900 s warm-up, at least 6 are needed"
+  ]
+}

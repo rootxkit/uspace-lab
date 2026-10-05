@@ -1,0 +1,2596 @@
+{
+  "format": "load-report/v1",
+  "run": "20261005-c69c6c3-100",
+  "started_at": "2026-10-05T09:16:47.4961893Z",
+  "ended_at": "2026-10-05T10:16:51.8306124Z",
+  "generator_s": 3600.001,
+  "tier": {
+    "tier": "100",
+    "title": "100 drones for 60 minutes",
+    "column": 100,
+    "duration_s": 3600,
+    "drain_s": 30,
+    "operators": {
+      "aircraft": 100,
+      "clients": 10,
+      "telemetry_hz": 1,
+      "telemetry_hz_status": "pending GCAA",
+      "poll_ms": 50,
+      "ramp_per_s": 250,
+      "intents": "all"
+    },
+    "receivers": {
+      "heard_fraction": 0.4,
+      "aircraft_per_receiver": 10,
+      "transports": [
+        "pack",
+        "single"
+      ],
+      "batch_ms": 100
+    },
+    "consoles": 10,
+    "watch": {
+      "pairs": 8,
+      "walkers": 8
+    },
+    "min_samples": 1000,
+    "memory_sample_s": 10,
+    "memory_warmup_s": 900,
+    "required": [
+      "operator_rate",
+      "rid_rate",
+      "generator_on_time",
+      "operator_to_console_p99",
+      "receiver_to_picture_p99",
+      "proximity_raise_p99",
+      "expected_set",
+      "missed_raises",
+      "missed_clears",
+      "no_false_alarm",
+      "alerts_traceable",
+      "operator_identity",
+      "receiver_identity",
+      "picture_identity",
+      "picture_traceable",
+      "traffic_traceable",
+      "evaluation_period",
+      "memory_monotonic"
+    ],
+    "scale": [
+      {
+        "quantity": "console viewports",
+        "spec": "10 consoles each viewing \u003c= 200 tracks (05 §1)",
+        "here": "the same count, each subscribed to the whole area",
+        "factor": 1,
+        "why": "the reference picture has no viewport throttle; whole-area subscriptions are the worst case"
+      }
+    ],
+    "not_generated": [
+      {
+        "source": "ANSP manned feed (tens of aircraft)",
+        "why": "the reference target has no manned intake; the systems mode is not built yet"
+      },
+      {
+        "source": "sim-ussp as the second USSP on a local DSS",
+        "why": "the reference target has no DSS or peer interface; the F3411 and F3548 rows wait for the systems mode"
+      },
+      {
+        "source": "authority DP polls of the USSPs (05 §1: one view per 1 Hz)",
+        "why": "the reference authority has no DP poller"
+      },
+      {
+        "source": "optional national push USSP -\u003e authority",
+        "why": "disabled by default (02 F6) and not in the reference target"
+      }
+    ]
+  },
+  "scaled": true,
+  "target": {
+    "mode": "reference",
+    "name": "reference",
+    "evidence": "The lab's in-process reference target (internal/reftarget): it proves the harness and is never evidence for a system (docs/PLAN.md L-D4); generator and target share this host's CPUs."
+  },
+  "host": {
+    "name": "dev workstation (Windows 11, 16 logical CPUs, 16 GB; not the droplet)",
+    "os": "windows",
+    "arch": "amd64",
+    "cpus": 16,
+    "mem_total_bytes": null,
+    "go": "go1.27.1",
+    "note": "the host the generator and the reference target ran on together (L-Q1)"
+  },
+  "commits": {
+    "lab": "c69c6c368af5fb80a6382dfc163866eb645f30e3",
+    "lab_dirty": false,
+    "core": "v1.3.0",
+    "go": "go1.27.1"
+  },
+  "files": {
+    "criteria": "sha256:eb56088a7aa8f57ebfda2dd945eb02f4acf0082df1fce776348d05a668183f82",
+    "paths": "sha256:06224ea5ff7f874d6238f66b3a7e3307b917f2f137ded43218eccc64a36c0db0",
+    "policy": "sha256:19124b6573ade992e321dbb2f18313bf01ec7ac262db03d75216da38f94db8df",
+    "tier": "sha256:6aa83d8f7826f8bd6ad676d4a179769e8b73433da587e9a5de026aa6f6860944"
+  },
+  "policy": {
+    "policy_version": 1,
+    "source": "docs/PLAN.md §7.1 L-Q4 (owner-only, open; GCAA answers); knowledge/scenarios.md conventions",
+    "deviation": {
+      "h_m": 50,
+      "v_m": 15,
+      "t_s": 60
+    },
+    "telemetry_lost_s": 5,
+    "lost_link_s": 15,
+    "nonconformance_nearby_radius_m": 2000,
+    "cpa": {
+      "t_cpa_max_s": 60,
+      "d_horizontal_min_m": 60,
+      "d_vertical_min_m": 20,
+      "neighbour_radius_m": 800,
+      "neighbour_max_age_s": 10
+    },
+    "height_limit_agl_m": 120,
+    "monitor": {
+      "clear_after_s": 3,
+      "stale_after_s": 15,
+      "live_max_age_s": 10,
+      "pressure_uncertainty_m": 250,
+      "conditional_severity": "warning"
+    }
+  },
+  "lab": {
+    "file": "sim\\sitl.env.example",
+    "origin_lat_deg": 41.7151,
+    "origin_lon_deg": 44.8271,
+    "origin_alt_amsl_m": 605,
+    "geoid": "constant N = 15.9 m"
+  },
+  "volumes": {
+    "aircraft": 100,
+    "operator_clients": 10,
+    "heard_aircraft": 40,
+    "receivers": 4,
+    "consoles": 10,
+    "watched_aircraft": 24,
+    "intents_filed": 100,
+    "intent_errors": 0,
+    "operator_msgs_per_s": 100,
+    "operator_target_per_s": 100,
+    "rid_locations_per_s": 40,
+    "rid_target_per_s": 40,
+    "console_frames_per_s": 405.011,
+    "generator_late": 0
+  },
+  "rows": [
+    {
+      "id": "offered_load",
+      "property": "Offered load",
+      "criterion": "the tier's 05 §1 rates were reached (a latency measured at a lower load proves nothing about the tier)",
+      "result": "pass",
+      "checks": [
+        {
+          "id": "operator_rate",
+          "metric": "operator_rate_ratio",
+          "stat": "value",
+          "op": "\u003e=",
+          "value": 0.95,
+          "unit": "",
+          "status": "lab",
+          "basis": "05 §1 operator telemetry row at the tier",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 1
+          },
+          "result": "pass"
+        },
+        {
+          "id": "rid_rate",
+          "metric": "rid_rate_ratio",
+          "stat": "value",
+          "op": "\u003e=",
+          "value": 0.95,
+          "unit": "",
+          "status": "lab",
+          "basis": "05 §1 direct RID row at the tier",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 1
+          },
+          "result": "pass"
+        },
+        {
+          "id": "generator_on_time",
+          "metric": "generator_late_ratio",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 0.001,
+          "unit": "",
+          "status": "lab",
+          "basis": "the rate held moment by moment, not only on average: at most one sample in a thousand more than a period late",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "ingest_to_picture",
+      "property": "Ingest-to-picture latency",
+      "criterion": "p99 \u003c 1 s (operator telemetry to USSP console frame; receiver frame to authority picture)",
+      "result": "pass",
+      "checks": [
+        {
+          "id": "operator_to_console_p99",
+          "metric": "operator_to_ussp_console_s",
+          "stat": "p99",
+          "op": "\u003c",
+          "value": 1,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (Art. 11 traffic information without delay; the figure is the spec's)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 86400,
+            "p50": 0.031,
+            "p95": 0.049,
+            "p99": 0.05,
+            "max": 0.093,
+            "mean": 0.03
+          },
+          "result": "pass"
+        },
+        {
+          "id": "receiver_to_picture_p99",
+          "metric": "receiver_to_authority_picture_s",
+          "stat": "p99",
+          "op": "\u003c",
+          "value": 1,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (the figure is the spec's)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 144000,
+            "p50": 0.04,
+            "p95": 0.099,
+            "p99": 0.1,
+            "max": 0.104,
+            "mean": 0.038
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "f3411_timing",
+      "property": "F3411 timing",
+      "criterion": "SP GET /uss/flights p95 \u003c= 1 s, p99 \u003c= 3 s; DP display p95 \u003c= 1 s, p99 \u003c= 3 s; details p95 \u003c= 2 s, p99 \u003c= 6 s; DP cache empty of anything older than 24 h",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "sp_flights_p95",
+          "metric": "f3411_sp_flights_s",
+          "stat": "p95",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "sp_flights_p99",
+          "metric": "f3411_sp_flights_s",
+          "stat": "p99",
+          "op": "\u003c=",
+          "value": 3,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "dp_display_p95",
+          "metric": "f3411_dp_display_s",
+          "stat": "p95",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "dp_display_p99",
+          "metric": "f3411_dp_display_s",
+          "stat": "p99",
+          "op": "\u003c=",
+          "value": 3,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "details_p95",
+          "metric": "f3411_details_s",
+          "stat": "p95",
+          "op": "\u003c=",
+          "value": 2,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "details_p99",
+          "metric": "f3411_details_s",
+          "stat": "p99",
+          "op": "\u003c=",
+          "value": 6,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "dp_cache_24h",
+          "metric": "f3411_dp_cache_over_24h",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "standard",
+          "basis": "F3411 v22a NetDpMaxDataRetentionPeriodSeconds 86400",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        }
+      ]
+    },
+    {
+      "id": "f3548_timing",
+      "property": "F3548 timing",
+      "criterion": "peer notification of an intent change \u003c= 5 s; conflicting-intent notification \u003c= 1 s; details answered \u003c= 1 s; constraint notification \u003c= 5 s",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "intent_change_notify",
+          "metric": "f3548_intent_change_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 5,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "conflict_notify",
+          "metric": "f3548_conflict_notify_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "details_answered",
+          "metric": "f3548_details_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        },
+        {
+          "id": "constraint_notify",
+          "metric": "f3548_constraint_notify_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 5,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+          },
+          "result": "not measured",
+          "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+        }
+      ]
+    },
+    {
+      "id": "alert_latency",
+      "property": "Alert latency",
+      "criterion": "proximity / nonconformance raised p99 \u003c 2 s after the triggering sample's captured_at; zone alert within one tick of entry; Art. 13(2) notices to peers and ANSP within 5 s and acknowledged",
+      "result": "partial",
+      "checks": [
+        {
+          "id": "proximity_raise_p99",
+          "metric": "alert_raise_s",
+          "stat": "p99",
+          "op": "\u003c",
+          "value": 2,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (Art. 13 without delay; the figure is the spec's)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 320,
+            "p50": 0.019,
+            "p95": 0.029,
+            "p99": 0.03,
+            "max": 0.031,
+            "mean": 0.017
+          },
+          "result": "pass"
+        },
+        {
+          "id": "zone_alert_tick",
+          "metric": "zone_alert_ticks",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the load paths script no zone entry yet; zone alerts are proved by the scenario suite (sc-03)"
+          },
+          "result": "not measured",
+          "reason": "the load paths script no zone entry yet; zone alerts are proved by the scenario suite (sc-03)"
+        },
+        {
+          "id": "art13_notice",
+          "metric": "art13_notice_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 5,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (Art. 13(2); the figure is the spec's)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "Art. 13(2) notices go to peers and the ANSP, neither of which the load harness drives yet"
+          },
+          "result": "not measured",
+          "reason": "Art. 13(2) notices go to peers and the ANSP, neither of which the load harness drives yet"
+        }
+      ]
+    },
+    {
+      "id": "missed_alerts",
+      "property": "Missed alerts",
+      "criterion": "zero against the scenario's expected set; every expected clear observed",
+      "result": "pass",
+      "checks": [
+        {
+          "id": "expected_set",
+          "metric": "expected_raises",
+          "stat": "value",
+          "op": "\u003e=",
+          "value": 1,
+          "unit": "",
+          "status": "lab",
+          "basis": "a run with no alert due cannot count a miss",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 320
+          },
+          "result": "pass"
+        },
+        {
+          "id": "missed_raises",
+          "metric": "missed_raises",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "missed_clears",
+          "metric": "missed_clears",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "no_false_alarm",
+          "metric": "unexpected_alerts",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "lab",
+          "basis": "the paths keep every walker outside the CPA minima (load/paths.yaml, checked at load); an alert there is a false alarm or a broken expected set",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "alerts_traceable",
+          "metric": "alert_untraceable",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "lab",
+          "basis": "every raise names a captured_at the generator sent",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "no_silent_loss",
+      "property": "No silent loss",
+      "criterion": "every dropped_*, gap, degraded counter accounted for in the report; sum of accepted + dropped = sent",
+      "result": "pass",
+      "checks": [
+        {
+          "id": "operator_identity",
+          "metric": "operator_ledgers_unbalanced",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7, 05 §5 (operator WS: accepted + refused + dropped + duplicate = sent, per client)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "receiver_identity",
+          "metric": "receiver_ledgers_unbalanced",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7, 05 §5 (receiver -\u003e authority: accepted + duplicates + refused = sent)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "picture_identity",
+          "metric": "picture_silent_loss",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7: every heard sample is on the picture or in a counted loss",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "picture_traceable",
+          "metric": "picture_untraceable_frames",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "lab",
+          "basis": "every track frame names a sample the generator sent",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "traffic_traceable",
+          "metric": "traffic_untraceable_frames",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "lab",
+          "basis": "every own track in a traffic product names a sample the generator sent",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "cpa_budget",
+      "property": "CPA budget",
+      "criterion": "pair checks per worker per second within budget; evaluation_period_s never above 2 s",
+      "result": "partial",
+      "checks": [
+        {
+          "id": "pair_checks",
+          "metric": "cpa_pair_checks_per_worker",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §1 (~50 000 pair checks per second per core)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "read from a system's /metrics by name; the reference target has no /metrics and systems mode is not built yet"
+          },
+          "result": "not measured",
+          "reason": "read from a system's /metrics by name; the reference target has no /metrics and systems mode is not built yet"
+        },
+        {
+          "id": "evaluation_period",
+          "metric": "cpa_evaluation_period_max_s",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 2,
+          "unit": "s",
+          "status": "spec",
+          "basis": "05 §5 CPA workers",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 1
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "property": "Storage",
+      "criterion": "write rate sustained with writer queue \u003c 10 s; compression job keeps up; disk growth matches the model within 20 %",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "writer_queue",
+          "metric": "writer_queue_max_s",
+          "stat": "value",
+          "op": "\u003c",
+          "value": 10,
+          "unit": "s",
+          "status": "spec",
+          "basis": "05 §5 TimescaleDB writer",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the reference target has no database; storage is measured against the systems' images"
+          },
+          "result": "not measured",
+          "reason": "the reference target has no database; storage is measured against the systems' images"
+        },
+        {
+          "id": "compression",
+          "metric": "compression_lag_chunks",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §4",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the reference target has no database; storage is measured against the systems' images"
+          },
+          "result": "not measured",
+          "reason": "the reference target has no database; storage is measured against the systems' images"
+        },
+        {
+          "id": "disk_model",
+          "metric": "disk_growth_vs_model",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1.2,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §4 (within 20 %)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the reference target has no database; storage is measured against the systems' images"
+          },
+          "result": "not measured",
+          "reason": "the reference target has no database; storage is measured against the systems' images"
+        }
+      ]
+    },
+    {
+      "id": "restart",
+      "property": "Restart",
+      "criterion": "kill each component in turn mid-run: picture recovers within 10 s, no duplicate alerts, no lost backlog",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "restart_recovery",
+          "metric": "restart_recovery_s",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 10,
+          "unit": "s",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        },
+        {
+          "id": "restart_duplicates",
+          "metric": "restart_duplicate_alerts",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        },
+        {
+          "id": "restart_backlog",
+          "metric": "restart_lost_backlog",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        }
+      ]
+    },
+    {
+      "id": "partition",
+      "property": "Partition",
+      "criterion": "kill NATS of one system for 60 s: ingest spills and replays; other systems show nothing",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "partition_replay",
+          "metric": "partition_unreplayed",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §6 NATS row",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        },
+        {
+          "id": "partition_isolation",
+          "metric": "partition_cross_effects",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §6",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        }
+      ]
+    },
+    {
+      "id": "cross_system_outage",
+      "property": "Cross-system outage",
+      "criterion": "CISP, authority, DSS, ANSP each taken down for 5 min: the degraded behaviours of 02 observed, nothing hidden, everything flagged with age",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "outage_flagged",
+          "metric": "outage_unflagged",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §6, 02 failure columns",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+          },
+          "result": "not measured",
+          "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+        }
+      ]
+    },
+    {
+      "id": "memory",
+      "property": "Memory",
+      "criterion": "no monotonic growth over the soak",
+      "result": "pass",
+      "checks": [
+        {
+          "id": "memory_monotonic",
+          "metric": "memory_monotonic",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "min_duration_s": 1800,
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "memory_growth",
+          "metric": "memory_growth_ratio",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1.5,
+          "unit": "",
+          "status": "lab",
+          "basis": "the live heap at the end against the start of the soak after the warm-up (generator and reference target together)",
+          "min_duration_s": 1800,
+          "required": false,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 1.025
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "vectors",
+      "property": "Vectors",
+      "criterion": "all knowledge/vectors behaviour vectors pass against the packages in every image under test; schema examples pass everywhere",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "vectors_pass",
+          "metric": "vectors_failed",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the vectors run in uspace-core's CI and per image in the conformance suite, not in a load run"
+          },
+          "result": "not measured",
+          "reason": "the vectors run in uspace-core's CI and per image in the conformance suite, not in a load run"
+        }
+      ]
+    }
+  ],
+  "metrics": {
+    "alert_raise_s": {
+      "measured": true,
+      "n": 320,
+      "p50": 0.019,
+      "p95": 0.029,
+      "p99": 0.03,
+      "max": 0.031,
+      "mean": 0.017
+    },
+    "alert_untraceable": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "art13_notice_s": {
+      "measured": false,
+      "reason": "Art. 13(2) notices go to peers and the ANSP, neither of which the load harness drives yet"
+    },
+    "compression_lag_chunks": {
+      "measured": false,
+      "reason": "the reference target has no database; storage is measured against the systems' images"
+    },
+    "cpa_evaluation_period_max_s": {
+      "measured": true,
+      "n": 1,
+      "value": 1
+    },
+    "cpa_pair_checks_per_worker": {
+      "measured": false,
+      "reason": "read from a system's /metrics by name; the reference target has no /metrics and systems mode is not built yet"
+    },
+    "disk_growth_vs_model": {
+      "measured": false,
+      "reason": "the reference target has no database; storage is measured against the systems' images"
+    },
+    "expected_raises": {
+      "measured": true,
+      "n": 1,
+      "value": 320
+    },
+    "f3411_details_s": {
+      "measured": false,
+      "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3411_dp_cache_over_24h": {
+      "measured": false,
+      "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3411_dp_display_s": {
+      "measured": false,
+      "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3411_sp_flights_s": {
+      "measured": false,
+      "reason": "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3548_conflict_notify_s": {
+      "measured": false,
+      "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3548_constraint_notify_s": {
+      "measured": false,
+      "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3548_details_s": {
+      "measured": false,
+      "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "f3548_intent_change_s": {
+      "measured": false,
+      "reason": "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+    },
+    "generator_late_ratio": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "memory_growth_ratio": {
+      "measured": true,
+      "n": 1,
+      "value": 1.025
+    },
+    "memory_monotonic": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "missed_clears": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "missed_raises": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "operator_ledgers_unbalanced": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "operator_rate_ratio": {
+      "measured": true,
+      "n": 1,
+      "value": 1
+    },
+    "operator_to_ussp_console_s": {
+      "measured": true,
+      "n": 86400,
+      "p50": 0.031,
+      "p95": 0.049,
+      "p99": 0.05,
+      "max": 0.093,
+      "mean": 0.03
+    },
+    "outage_unflagged": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "partition_cross_effects": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "partition_unreplayed": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "picture_silent_loss": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "picture_untraceable_frames": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "receiver_ledgers_unbalanced": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "receiver_to_authority_picture_s": {
+      "measured": true,
+      "n": 144000,
+      "p50": 0.04,
+      "p95": 0.099,
+      "p99": 0.1,
+      "max": 0.104,
+      "mean": 0.038
+    },
+    "restart_duplicate_alerts": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "restart_lost_backlog": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "restart_recovery_s": {
+      "measured": false,
+      "reason": "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+    },
+    "rid_rate_ratio": {
+      "measured": true,
+      "n": 1,
+      "value": 1
+    },
+    "traffic_untraceable_frames": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "unexpected_alerts": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "vectors_failed": {
+      "measured": false,
+      "reason": "the vectors run in uspace-core's CI and per image in the conformance suite, not in a load run"
+    },
+    "writer_queue_max_s": {
+      "measured": false,
+      "reason": "the reference target has no database; storage is measured against the systems' images"
+    },
+    "zone_alert_ticks": {
+      "measured": false,
+      "reason": "the load paths script no zone entry yet; zone alerts are proved by the scenario suite (sc-03)"
+    }
+  },
+  "loss": {
+    "operator": {
+      "sent": 360000,
+      "accepted": 360000,
+      "refused": 0,
+      "dropped": 0,
+      "duplicate": 0,
+      "queue_shed": 0,
+      "pending": 0,
+      "unbalanced": 0,
+      "outcomes": {
+        "accepted": 360000
+      }
+    },
+    "receivers": {
+      "observed": 184232,
+      "sent": 184232,
+      "accepted": 184232,
+      "duplicates": 0,
+      "refused": 0,
+      "backlog_shed": 0,
+      "dropped_by_knob": 0,
+      "pending": 0,
+      "unbalanced": 0
+    },
+    "generator_shed_operator": 0,
+    "generator_shed_rid": 0,
+    "picture": {
+      "handed": 144000,
+      "shown": 144000,
+      "unshown": 0,
+      "repeats": 0,
+      "untraceable": 0,
+      "negative_latencies": 0
+    },
+    "traffic": {
+      "handed": 86400,
+      "shown": 86400,
+      "unshown": 0,
+      "repeats": 0,
+      "untraceable": 0,
+      "negative_latencies": 0
+    },
+    "picture_dropped_frames": 0,
+    "picture_accounted": 0,
+    "picture_silent": 0,
+    "target_counters": {
+      "authority_monitor": {
+        "conflict_checks_skipped": 144000,
+        "height_checks_not_evaluated": 144000
+      },
+      "direct_rid": {
+        "accepted": 184232
+      },
+      "operator_ws": {
+        "accepted": 360000
+      },
+      "ussp_monitor": {}
+    }
+  },
+  "alerts": {
+    "expected": 320,
+    "raised": 320,
+    "cleared": 320,
+    "untraceable": 0,
+    "raises": [
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "447886c7-30d8-49f9-b7eb-a546c5bb5a6e",
+        "observed_s": 36.03,
+        "captured_s": 36.031,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "7e18ee76-3b98-46eb-a02f-c7353e9552d6",
+        "observed_s": 216.03,
+        "captured_s": 216.037,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "ff35b502-0214-48a9-b71e-fbc33a481769",
+        "observed_s": 396.03,
+        "captured_s": 396.042,
+        "latency_s": 0.008
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "1cee9732-b612-4e23-a99b-1d1a88573fbd",
+        "observed_s": 576.03,
+        "captured_s": 576.049,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "522f3875-e062-454a-9590-fd16cca59c5b",
+        "observed_s": 756.03,
+        "captured_s": 756.054,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "381cf3df-a30b-47a6-83db-d4e089942b87",
+        "observed_s": 936.03,
+        "captured_s": 936.06,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "219178b5-dbbd-4dfc-8bac-6bd5ea4f9f01",
+        "observed_s": 1116.03,
+        "captured_s": 1116.066,
+        "latency_s": 0.008
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "3f17275b-8f9c-4d23-a8b9-337964152ee0",
+        "observed_s": 1296.03,
+        "captured_s": 1296.072,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "99031c9b-89fe-4145-ae36-827187530ac7",
+        "observed_s": 1476.03,
+        "captured_s": 1476.077,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "79e64c0c-023b-4e97-aed3-59d5ed726d97",
+        "observed_s": 1656.03,
+        "captured_s": 1656.082,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "ea35d4fa-2b06-47d1-a8e8-03e95a01853b",
+        "observed_s": 1836.03,
+        "captured_s": 1836.088,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "cd03929e-cd2f-45b9-89c2-3e39662803cd",
+        "observed_s": 2016.03,
+        "captured_s": 2016.093,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "f818452c-ee00-4cab-8ee0-196ffea1e893",
+        "observed_s": 2196.03,
+        "captured_s": 2196.099,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "74d385c0-fdbd-4565-bde1-a2382c592871",
+        "observed_s": 2376.03,
+        "captured_s": 2376.103,
+        "latency_s": 0.008
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "22759aff-f29a-479e-9330-3389d989e29c",
+        "observed_s": 2556.03,
+        "captured_s": 2556.109,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "53e5b79a-8da8-4e0c-bbd2-39c68c01576d",
+        "observed_s": 2736.03,
+        "captured_s": 2736.114,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "6484d1ec-7ee2-4b4f-886b-19bf5ee2183e",
+        "observed_s": 2916.03,
+        "captured_s": 2916.119,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "420fa56a-b901-45a0-91c1-b35eb843115b",
+        "observed_s": 3096.03,
+        "captured_s": 3096.124,
+        "latency_s": 0.008
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "9ed91d5b-7866-4fba-9762-7ad142418b7f",
+        "observed_s": 3276.03,
+        "captured_s": 3276.129,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "e54c8a1d-80cb-40e0-a20d-547c22951407",
+        "observed_s": 3456.03,
+        "captured_s": 3456.133,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "11f65b9b-960c-438a-be28-5df213ba84d4",
+        "observed_s": 36.03,
+        "captured_s": 36.031,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "041e27df-71c7-4516-ad67-e2d0582410ba",
+        "observed_s": 216.03,
+        "captured_s": 216.037,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "0897b2a0-3444-428b-a4b8-c1a48ebb73b9",
+        "observed_s": 396.03,
+        "captured_s": 396.042,
+        "latency_s": 0.008
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "80e5f35a-a757-4d37-9d61-a37406578b55",
+        "observed_s": 576.03,
+        "captured_s": 576.049,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "8b28a07f-e95b-4f18-a699-42292b5e15ab",
+        "observed_s": 756.03,
+        "captured_s": 756.054,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "162acc88-866a-437a-9b2a-d710ead7149e",
+        "observed_s": 936.03,
+        "captured_s": 936.06,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "8ff203ee-855c-43a7-87d3-cd1599cfb26a",
+        "observed_s": 1116.03,
+        "captured_s": 1116.066,
+        "latency_s": 0.008
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "cd7c2cc2-f2b3-4bb0-8334-e8be27c56df7",
+        "observed_s": 1296.03,
+        "captured_s": 1296.072,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "2798a2ae-2c3f-4469-9fb1-6bebeb023c6d",
+        "observed_s": 1476.03,
+        "captured_s": 1476.077,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "81c9f616-6a69-43d5-84e7-ac230e13ce0e",
+        "observed_s": 1656.03,
+        "captured_s": 1656.082,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "f4eb084d-127a-4c9a-a88b-b4a563dbd1fe",
+        "observed_s": 1836.03,
+        "captured_s": 1836.088,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "f10716e5-f192-4195-b07b-b22fc9b5309f",
+        "observed_s": 2016.03,
+        "captured_s": 2016.093,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "c09f9360-2beb-4c49-bca3-a1a3937b3448",
+        "observed_s": 2196.03,
+        "captured_s": 2196.099,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "7e22b081-fbae-4b08-a8b2-aba831a25fc5",
+        "observed_s": 2376.03,
+        "captured_s": 2376.103,
+        "latency_s": 0.008
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "a8077175-2288-4287-8e77-69cff910e63c",
+        "observed_s": 2556.03,
+        "captured_s": 2556.109,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "4c4b6a20-d36b-4c7c-af35-56ffb37f7afc",
+        "observed_s": 2736.03,
+        "captured_s": 2736.114,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "0dcfc319-e943-49b7-870a-733dd88bc03a",
+        "observed_s": 2916.03,
+        "captured_s": 2916.119,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "e2516007-842c-4a4d-b2d7-0a8aebf04cea",
+        "observed_s": 3096.03,
+        "captured_s": 3096.124,
+        "latency_s": 0.008
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "fbcfbda5-70ef-4d23-9e47-4560fbaaaceb",
+        "observed_s": 3276.03,
+        "captured_s": 3276.129,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "3888856a-0002-46ed-81a4-5ee489ca51c8",
+        "observed_s": 3456.03,
+        "captured_s": 3456.133,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "28c1da9f-a841-4353-9b3f-a2ef7fb040a0",
+        "observed_s": 36.079,
+        "captured_s": 36.08,
+        "latency_s": 0.018
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "6ba8e566-7b39-4dd8-8ad9-ee4049929fcc",
+        "observed_s": 216.079,
+        "captured_s": 216.086,
+        "latency_s": 0.018
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "be7bbbf9-350b-4410-9062-7af1e687495e",
+        "observed_s": 396.079,
+        "captured_s": 396.092,
+        "latency_s": 0.018
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "1a66b6cb-a7bd-49ba-98ca-a4d37b7a5a21",
+        "observed_s": 576.079,
+        "captured_s": 576.098,
+        "latency_s": 0.018
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "ef4525fa-9554-4699-9d6d-cf24110f77b4",
+        "observed_s": 756.08,
+        "captured_s": 756.104,
+        "latency_s": 0.018
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "541dfefa-2395-45b3-bda5-b1c5f105c9b2",
+        "observed_s": 936.08,
+        "captured_s": 936.11,
+        "latency_s": 0.018
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "ece67b76-8703-48f2-aaf9-a839f31dc475",
+        "observed_s": 1116.08,
+        "captured_s": 1116.116,
+        "latency_s": 0.018
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "d450af01-8291-4313-a557-5e70d05b76f2",
+        "observed_s": 1296.079,
+        "captured_s": 1296.121,
+        "latency_s": 0.018
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "00716a29-7efd-42ff-ad55-839c7c07a01d",
+        "observed_s": 1476.08,
+        "captured_s": 1476.127,
+        "latency_s": 0.018
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "4f670fdc-0a29-4ef9-a1db-3b90cc5cb327",
+        "observed_s": 1656.08,
+        "captured_s": 1656.132,
+        "latency_s": 0.018
+      }
+    ]
+  },
+  "streams": [
+    {
+      "name": "console-00",
+      "kind": "picture",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 1803,
+        "track/telemetry/v1": 144000
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-01",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 1803,
+        "track/telemetry/v1": 144000
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-02",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 1803,
+        "track/telemetry/v1": 144000
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-03",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 1803,
+        "track/telemetry/v1": 144000
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-04",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 1803,
+        "track/telemetry/v1": 144000
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-05",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 1803,
+        "track/telemetry/v1": 144000
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ]
+    },
+    {
+      "name": "console-06",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 1803,
+        "track/telemetry/v1": 144000
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-07",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 1803,
+        "track/telemetry/v1": 144000
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ]
+    },
+    {
+      "name": "console-08",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 1803,
+        "track/telemetry/v1": 144000
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "console-09",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 1803,
+        "track/telemetry/v1": 144000
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00000",
+      "kind": "traffic",
+      "aircraft": "ac-00000",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 945,
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ]
+    },
+    {
+      "name": "traffic-ac-00001",
+      "kind": "traffic",
+      "aircraft": "ac-00001",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 945,
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00002",
+      "kind": "traffic",
+      "aircraft": "ac-00002",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 940,
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00003",
+      "kind": "traffic",
+      "aircraft": "ac-00003",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 940,
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00004",
+      "kind": "traffic",
+      "aircraft": "ac-00004",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 948,
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ]
+    },
+    {
+      "name": "traffic-ac-00005",
+      "kind": "traffic",
+      "aircraft": "ac-00005",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 948,
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00006",
+      "kind": "traffic",
+      "aircraft": "ac-00006",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 940,
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00007",
+      "kind": "traffic",
+      "aircraft": "ac-00007",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 940,
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00008",
+      "kind": "traffic",
+      "aircraft": "ac-00008",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 940,
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00009",
+      "kind": "traffic",
+      "aircraft": "ac-00009",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 940,
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ]
+    },
+    {
+      "name": "traffic-ac-00010",
+      "kind": "traffic",
+      "aircraft": "ac-00010",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 940,
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00011",
+      "kind": "traffic",
+      "aircraft": "ac-00011",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 940,
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ]
+    },
+    {
+      "name": "traffic-ac-00012",
+      "kind": "traffic",
+      "aircraft": "ac-00012",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 940,
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ]
+    },
+    {
+      "name": "traffic-ac-00013",
+      "kind": "traffic",
+      "aircraft": "ac-00013",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 940,
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00014",
+      "kind": "traffic",
+      "aircraft": "ac-00014",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 940,
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "registry_projection_absent",
+        "source_control_unknown",
+        "terrain_unavailable"
+      ]
+    },
+    {
+      "name": "traffic-ac-00015",
+      "kind": "traffic",
+      "aircraft": "ac-00015",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "alert/v1": 940,
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00016",
+      "kind": "traffic",
+      "aircraft": "ac-00016",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00017",
+      "kind": "traffic",
+      "aircraft": "ac-00017",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ]
+    },
+    {
+      "name": "traffic-ac-00018",
+      "kind": "traffic",
+      "aircraft": "ac-00018",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "source_control_unknown",
+        "terrain_unavailable",
+        "registry_projection_absent"
+      ]
+    },
+    {
+      "name": "traffic-ac-00019",
+      "kind": "traffic",
+      "aircraft": "ac-00019",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00020",
+      "kind": "traffic",
+      "aircraft": "ac-00020",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00021",
+      "kind": "traffic",
+      "aircraft": "ac-00021",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00022",
+      "kind": "traffic",
+      "aircraft": "ac-00022",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    },
+    {
+      "name": "traffic-ac-00023",
+      "kind": "traffic",
+      "aircraft": "ac-00023",
+      "timed": true,
+      "connects": 1,
+      "frames": {
+        "console/status/v1": 1803,
+        "traffic/product/v1": 3600
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "terrain_unavailable",
+        "registry_projection_absent",
+        "source_control_unknown"
+      ]
+    }
+  ],
+  "memory_live_heap_bytes": [
+    8600264,
+    8948312,
+    9144568,
+    9551232,
+    9744448,
+    10287008,
+    10483128,
+    10911656,
+    10828528,
+    11099152,
+    11117656,
+    12041192,
+    11970192,
+    12203472,
+    12289608,
+    12148880,
+    12164200,
+    12471568,
+    12499328,
+    12462200,
+    12455120,
+    12589088,
+    14354032,
+    14380904,
+    14453152,
+    14509672,
+    14589184,
+    14606648,
+    14625960,
+    14681160,
+    14806256,
+    14813360,
+    14986064,
+    15129520,
+    15028264,
+    15038288,
+    15242968,
+    15307024,
+    15365864,
+    15308616,
+    15535152,
+    15439952,
+    15529624,
+    15760752,
+    16777016,
+    18963824,
+    19188760,
+    19168352,
+    19196896,
+    19185456,
+    19250664,
+    19303088,
+    19371256,
+    19502112,
+    19464184,
+    19584312,
+    19655496,
+    19816832,
+    19979792,
+    19816840,
+    19912016,
+    19922192,
+    20039352,
+    19906240,
+    20068112,
+    19927768,
+    19924464,
+    19859024,
+    20001976,
+    19940144,
+    20056624,
+    19822192,
+    19913280,
+    19953880,
+    19928032,
+    20020504,
+    19946520,
+    19941264,
+    19908448,
+    19941768,
+    19951744,
+    19999312,
+    20019864,
+    20007360,
+    19996816,
+    20130440,
+    19949040,
+    20007280,
+    19981408,
+    20036864,
+    20032008,
+    19868448,
+    20031568,
+    19927624,
+    19947648,
+    20042672,
+    20052944,
+    19907600,
+    19902320,
+    20107880,
+    20091968,
+    20028752,
+    19956792,
+    20005944,
+    20049064,
+    20028096,
+    20042224,
+    20007112,
+    20067344,
+    19904352,
+    20184016,
+    20089432,
+    20155976,
+    19984088,
+    20024240,
+    19968016,
+    19993288,
+    20059800,
+    20050256,
+    20095280,
+    20136720,
+    20171120,
+    20272688,
+    20121704,
+    19984632,
+    20226856,
+    19991280,
+    20008456,
+    20042832,
+    20125272,
+    20150288,
+    20124056,
+    20101128,
+    19954224,
+    20081448,
+    19969448,
+    20098248,
+    19982224,
+    20128928,
+    20107952,
+    20279344,
+    20067752,
+    20052888,
+    20143472,
+    20278128,
+    20003920,
+    20032104,
+    20206944,
+    20103656,
+    20115240,
+    20065200,
+    20086808,
+    20030888,
+    20223008,
+    20075856,
+    20193072,
+    20314600,
+    20150936,
+    20382824,
+    20179000,
+    20246496,
+    20296592,
+    20141104,
+    20191128,
+    20154080,
+    20253888,
+    20336936,
+    20151896,
+    20267952,
+    20131584,
+    20125992,
+    20104784,
+    20158160,
+    20113448,
+    20365640,
+    20284328,
+    20458872,
+    20338072,
+    20345792,
+    20244392,
+    20205072,
+    20447000,
+    20282528,
+    20257920,
+    20357560,
+    20159504,
+    20253752,
+    20411928,
+    20184544,
+    20227632,
+    20216528,
+    20371944,
+    20266944,
+    20281256,
+    20187136,
+    20143192,
+    20166464,
+    20302576,
+    20512032,
+    20320712,
+    20310552,
+    20297624,
+    20479008,
+    20393288,
+    20259496,
+    20469024,
+    20331480,
+    20299912,
+    20272752,
+    20266552,
+    20397392,
+    20274552,
+    20234968,
+    20230760,
+    20293264,
+    20385448,
+    20304824,
+    20317936,
+    20378632,
+    20473896,
+    20303008,
+    20352888,
+    20301864,
+    20477520,
+    20476688,
+    20313088,
+    20254688,
+    20258176,
+    20332312,
+    20388664,
+    20298432,
+    20318472,
+    20386952,
+    20381488,
+    20438936,
+    20378712,
+    20444704,
+    20382904,
+    20450176,
+    20313984,
+    20499232,
+    20317520,
+    20277608,
+    20304456,
+    20318024,
+    20239496,
+    20323960,
+    20464032,
+    20306440,
+    20375816,
+    20499672,
+    20491960,
+    20523384,
+    20444688,
+    20438160,
+    20350128,
+    20432440,
+    20376736,
+    20428568,
+    20366920,
+    20397768,
+    20461112,
+    20320696,
+    20397544,
+    20442888,
+    20430256,
+    20299544,
+    20527496,
+    20319384,
+    20307160,
+    20366864,
+    20525504,
+    20468720,
+    20563880,
+    20441568,
+    20507880,
+    20476648,
+    20491632,
+    20502184,
+    20492512,
+    20415208,
+    20418728,
+    20423088,
+    20482544,
+    20353616,
+    20466104,
+    20377160,
+    20609088,
+    20485248,
+    20405536,
+    20433664,
+    20574960,
+    20593480,
+    20503816,
+    20494872,
+    20528568,
+    20434848,
+    20576448,
+    20568848,
+    20457328,
+    20546856,
+    20594416,
+    20469352,
+    20489768,
+    20426064,
+    20432992,
+    20485096,
+    20577848,
+    20521920,
+    20799120,
+    20587960,
+    20654496,
+    20617920,
+    20631408,
+    20739184,
+    20658120,
+    20643368,
+    20640152,
+    20645960,
+    20658272,
+    20746584,
+    20695936,
+    20615944,
+    20533712,
+    20552944,
+    20514808,
+    20754912,
+    20713320,
+    20788176,
+    20740584,
+    20689080,
+    20679048,
+    20705456,
+    20604248,
+    20655200,
+    20761424,
+    20820552,
+    20636384,
+    20767568,
+    20758472,
+    20611360,
+    20628608,
+    20690000,
+    20736648,
+    20700456,
+    20677464,
+    20726872,
+    20619664,
+    20777584,
+    20604168,
+    20661760,
+    20710272,
+    20861800,
+    20717128,
+    20802520,
+    20714008,
+    20849832,
+    20915400,
+    20684800,
+    20757280
+  ],
+  "checks_measured": 19,
+  "checks_not_measured": 24,
+  "complete": false,
+  "verdict": "pass"
+}
