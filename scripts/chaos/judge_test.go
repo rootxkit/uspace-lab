@@ -159,6 +159,25 @@ func TestStatusExpectationsBothWays(t *testing.T) {
 	}
 }
 
+// status_absent is a claim about frames: with none in the phase nothing
+// was observed, and the claim fails; with frames that do not list the
+// slug it passes (the case above).
+func TestStatusAbsentNeedsAFrame(t *testing.T) {
+	e := Expect{System: StringList{"authority"}, StatusNot: "nats_down"}
+	for name, frames := range map[string]map[string][]StatusFrame{
+		"no stream":    nil,
+		"empty stream": {"authority": {}},
+	} {
+		if r := judgeExpect(e, phaseDuring, e.System, t0, nil, nil, frames); r.Pass {
+			t.Errorf("%s: status_absent passed on no frame: %s", name, r.Observed)
+		}
+	}
+	live := map[string][]StatusFrame{"authority": {{At: at(1), Degraded: []string{}}}}
+	if r := judgeExpect(e, phaseDuring, e.System, t0, nil, nil, live); !r.Pass {
+		t.Fatalf("status_absent failed on a frame without the slug: %s", r.Observed)
+	}
+}
+
 func TestNotInBothWays(t *testing.T) {
 	frames := map[string][]StatusFrame{"authority": {{At: at(1), NATS: "connected"}, {At: at(3), NATS: "unavailable"}}}
 	e := Expect{System: StringList{"authority"}, Field: "nats", NotIn: []string{"connected"}, WithinS: 5}

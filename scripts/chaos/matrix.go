@@ -118,7 +118,8 @@ type Row struct {
 //	                    fault ok again, within within_s
 //	status              the system's console/status/v1 lists the
 //	                    degraded slug within within_s ("status_absent":
-//	                    it does not list it in any frame)
+//	                    it does not list it in any frame, and there is at
+//	                    least one frame: no frame proves nothing)
 //	source + in         the system's console/status/v1 shows the source
 //	                    ("source/instance", "*" for the type) in one of
 //	                    the states within within_s

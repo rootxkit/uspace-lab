@@ -292,6 +292,13 @@ func judgeExpect(e Expect, phase string, systems []string, start time.Time, samp
 				obs = append(obs, fmt.Sprintf("%s console status %s %s until +%gs in %d frame(s), want %v", sys, e.Field, last, e.WithinS, len(status[sys]), e.In))
 			}
 		case e.StatusNot != "":
+			// An absence is observed only on frames: with none in the
+			// phase the stream said nothing, and nothing is proven.
+			if len(status[sys]) == 0 {
+				res.Pass = false
+				obs = append(obs, fmt.Sprintf("%s console status: no frame in the phase, so %q not listed is not observed", sys, e.StatusNot))
+				continue
+			}
 			bad := false
 			for _, f := range status[sys] {
 				if slices.Contains(f.Degraded, e.StatusNot) {
