@@ -216,3 +216,20 @@ conformance-axe-test:
 # axe over CONFORMANCE_PAGES into conformance/axe/axe-results.json (informative, L-Q10).
 conformance-axe:
 	cd conformance/axe && npx playwright test tests/pages.spec.ts
+
+# --- WP-L8 load test (load/, cmd/loadgen, internal/load) -----------------------
+.PHONY: load load-check
+
+# One tier against the targets file (docs/RUNBOOKS/load.md): make load
+# TIER=ci|100|1000|1000-soak|5000. Writes results/load/<run>/report.json
+# and report.md; exits 1 when the run fails, which includes a run that
+# measured nothing. LOAD_FLAGS passes --run, --duration-s, --host.
+TIER         ?= ci
+LOAD_TARGETS ?= targets/reference.yaml
+LOAD_FLAGS   ?=
+load:
+	$(GO) run ./cmd/loadgen run --tier load/tiers/$(TIER).yaml --targets $(LOAD_TARGETS) $(LOAD_FLAGS)
+
+# Every tier, the paths and the criteria loaded and checked (offline).
+load-check:
+	$(GO) run ./cmd/loadgen check load/tiers/*.yaml
