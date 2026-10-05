@@ -1,6 +1,8 @@
 # Decision record: defects the conformance suite found, 2026-10-05
 
-Status: **open**. Defects the conformance suite (WP-L7, L-M4)
+Status: **open** for C2, C3, C8 and the USSP's part of C6; C1, C4, C5,
+C7 and the authority's part of C6 are closed (below, each with the fix
+and the run that shows it gone). Defects the conformance suite (WP-L7, L-M4)
 observed in runs against real code: C1 to C3 in the first runs, C4 to
 C8 in the runs against the ANSP, the authority and the USSP on the
 systems stack (`conformance/report/records/README.md`, `*-demo/`). They are recorded here, in the lab,
@@ -19,14 +21,14 @@ GCAA's open questions (L-Q3, L-Q10, L-Q12) stay in
 
 | Id | Defect | Owner | Status |
 |---|---|---|---|
-| C1 | The CISP's `503 console_unavailable` problem body has no `errors[]` | uspace-cisp | open |
+| C1 | The CISP's `503 console_unavailable` problem body has no `errors[]` | uspace-cisp | closed (uspace-cisp#27) |
 | C2 | Decision record Q-A7 names `dp.observe` where InterUSS observes with `dss.read.identification_service_areas` | uspace-authority, decision record 2026-10-02 | open |
 | C3 | The lab issuer writes `aud` as an array; the InterUSS mock USS accepts only a string | uspace-core (`auth.Issuer`) | open |
-| C4 | A WebSocket upgrade without credential or Origin is refused 403, not 401 | uspace-ansp, uspace-authority | open |
-| C5 | The ANSP's `login` and `verifyMfa` answer an empty body 401, not the declared 400 | uspace-ansp | open |
-| C6 | A request without credential is answered 400 `validation`, not 401 | uspace-authority, uspace-ussp | open |
-| C7 | The authority's `postDPISANotification` answers 401 and 403 with a body its contract does not declare | uspace-authority | open |
-| C8 | The USSP's telemetry and traffic streams answer a handshake without credential 101 | uspace-ussp | open |
+| C4 | A WebSocket upgrade without credential or Origin is refused 403, not 401 | uspace-ansp, uspace-authority | closed (uspace-authority#49, uspace-ansp#26) |
+| C5 | The ANSP's `login` and `verifyMfa` answer an empty body 401, not the declared 400 | uspace-ansp | closed (uspace-ansp#26) |
+| C6 | A request without credential is answered 400 `validation`, not 401 | uspace-authority, uspace-ussp | open for the USSP until uspace-ussp#37; closed for the authority (uspace-authority#49) |
+| C7 | The authority's `postDPISANotification` answers 401 and 403 with a body its contract does not declare | uspace-authority | closed (uspace-authority#49) |
+| C8 | The USSP's telemetry and traffic streams answer a handshake without credential 101 | uspace-ussp | open until uspace-ussp#37 |
 
 ## C1: CISP 503 body without errors
 
@@ -54,6 +56,16 @@ failing checks; a further failing check of NAT-UNAUTH or NAT-INVALID is
 still a regression. When the CISP answers with `errors: []`, the two
 requirements become pass or not applicable, the gate reports "a known
 failure now passes", and the baseline is rewritten from that run.
+
+**Closed.** uspace-cisp#27 ("send errors on every problem body", merged
+as `24659a5`). Record `conformance/report/records/20261005T021137Z-cisp/`:
+the CISP at `24659a5` through its `tools/conformance.sh`, NAT-UNAUTH
+(21 checks) and NAT-INVALID pass, nothing fails, and the gate reported
+both as "a known failure now passes". `conformance/baseline/cisp.json`
+is rewritten from that run with no known failure left, so a console
+503 without `errors[]` is a regression again, and
+`conformance/national/contracts/PINS` names `24659a5`, the CISP that
+CI's gate builds.
 
 ## C2: Q-A7 scope name
 
@@ -125,6 +137,14 @@ the contract and decision record M22 that a credential-less upgrade is
 refused as a browser's. The suite sends no `Origin`: it is a machine
 client.
 
+**Closed.** uspace-authority#49 (`9a35cba`) and uspace-ansp#26
+(`a26e00b`): an upgrade without credential is answered 401 before the
+Origin is judged. Records
+`conformance/report/records/20261005T022343Z-authority-demo/` and
+`conformance/report/records/20261005T022348Z-ansp-demo/` (their
+published images at those commits): `getPictureWS` and the ANSP's
+three streams answer 401, and NAT-UNAUTH passes on both systems.
+
 ## C5: ANSP login with an empty body
 
 **Observed.** Record `20261004T230115Z-ansp-demo/`: `POST
@@ -137,6 +157,11 @@ refuses; NAT-INVALID asks for it, with `errors[]` naming the fields.
 
 **Owner.** uspace-ansp: validate the body before judging the
 credentials, or drop `400` from those operations' responses.
+
+**Closed.** uspace-ansp#26 (`a26e00b`). Record
+`conformance/report/records/20261005T022348Z-ansp-demo/`: `login` and
+`verifyMfa` answer the empty body 400 with `errors[]`, and NAT-INVALID
+passes.
 
 ## C6: 400 before 401
 
@@ -157,6 +182,12 @@ do not say which check comes first.
 either authenticate first, or record that validation may precede
 authentication, and the suite will then report these not applicable.
 
+**Closed for the authority.** uspace-authority#49 (`9a35cba`). Record
+`conformance/report/records/20261005T022343Z-authority-demo/`: the six
+operations answer the request without credential 401. **Open for the
+USSP** (`openAlertStream`) until uspace-ussp#37 is merged and a run
+shows it.
+
 ## C7: authority ISA notification bodies
 
 **Observed.** Record `20261004T230117Z-authority-demo/`:
@@ -170,6 +201,12 @@ the suite refuses a body the contract does not declare.
 
 **Owner.** uspace-authority: declare the InterUSS error body for this
 InterUSS-facing operation, or answer without one.
+
+**Closed.** uspace-authority#49 (`9a35cba`) declares the refusals'
+problem body. Record
+`conformance/report/records/20261005T022343Z-authority-demo/`:
+`postDPISANotification` answers 401 and 403 as declared, and NAT-SCOPE
+passes.
 
 ## C8: USSP streams upgrade without credential
 
@@ -187,3 +224,34 @@ contract the suite reads.
 **Owner.** uspace-ussp: refuse before upgrading, or declare that the
 refusal of these streams is a close code after the upgrade, which the
 suite would then test as such.
+
+**Open** until uspace-ussp#37 is merged and a run against the USSP
+shows the streams refused 401 before the upgrade.
+
+## On the lab's side
+
+What the runs showed wrong in the lab itself rather than in a system.
+These are not defects of the systems and have no entry above.
+
+- The lab Caddy answered `/metrics` 404 on every host and sent the
+  authority's `/healthz` and `/readyz` to its api, where they are not
+  served (they are on its admin listener). Fixed in this repository:
+  `deploy/systems/Caddyfile` routes the authority's three to
+  `authority-api:9090` and the ANSP's `/metrics` to `ansp-api`; the
+  other hosts keep `/metrics` closed, as the droplet does.
+- Once `/metrics` was reached, the suite judged its Prometheus text as
+  JSON. Fixed: a `text/plain` answer is validated as the string its
+  contract declares.
+- `deploy/systems/gen-secrets.sh` stopped without a word under Git Bash
+  when `MSYS_NO_PATHCONV` was set (as `deploy/demo-up.sh` sets it).
+  Fixed: it drops the variable, and every failure names its step.
+- Still failing on the authority: REG-NOPII and NAT-SUCCESS
+  `validateRegistry`, because the lab has no operator registration to
+  name (`AUTHORITY_CONFORMANCE_OPERATOR`; no fixture yet); and
+  NAT-INVALID on `createOperatorOccurrence`,
+  `submitRegistryApplication` and `requestOperatorLink`, which answer
+  404 because the lab stack leaves the authority's registry portal
+  switched off (`REGISTRY_APPLICATIONS`, `REGISTRY_OPERATOR_REPORTS`,
+  default `off`). Both are open on the lab's side: an operator fixture,
+  and either turning the portal on or the suite reading a switched-off
+  404 as not applicable.
