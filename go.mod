@@ -6,7 +6,7 @@ require (
 	github.com/coder/websocket v1.8.15
 	github.com/goccy/go-yaml v1.19.2
 	github.com/lestrrat-go/jwx/v3 v3.3.0
-	github.com/rootxkit/uspace-core v1.5.1-0.20261013183409-770379db7556
+	github.com/rootxkit/uspace-core v1.6.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	golang.org/x/image v0.45.0
 )
