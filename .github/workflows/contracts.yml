@@ -66,7 +66,7 @@ jobs:
           git diff --exit-code -- go.mod go.sum
       # Pinned like uspace-core (and the Makefile); bump all together.
       - name: staticcheck
-        run: go run honnef.co/go/tools/cmd/staticcheck@v0.8.1 ./...
+        run: go run honnef.co/go/tools/cmd/staticcheck@v0.8.2 ./...
       - name: golangci-lint
         uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # v8
         with:
