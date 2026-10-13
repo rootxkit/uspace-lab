@@ -55,6 +55,21 @@ resource of v0.36.0 requires of its auth adapter) to `lab-01` only.
 `library/environment.yaml` and `deploy/issuer/clients.yaml` to each
 other.
 
+## The test operator a system under test injects with
+
+A USSP's test-interfaces process injects and plans for uss_qualifier as
+a test operator, which the USSP admits only once the authority's
+registry answers F8 validity `valid` for it.
+`conformance/fixtures/test-operators.yaml` holds that operator
+(`GEOTESTWP210001`, uspace-ussp WP-21) and its `TEST-WP21-*` serials;
+the registry step of `cmd/demo-seed` registers them at the lab
+authority beside the scenarios' operators (`--test-operators`, default
+that file; empty: none):
+
+```
+go run ./cmd/demo-seed --env <the stack's env file> --lab sim/sitl.env.example --steps registry scenarios/*.yaml
+```
+
 ## What was observed (2026-10-05)
 
 - `check.sh`: the image embeds `GIT_COMMIT_HASH=0fabe238...`, compose
