@@ -24,6 +24,7 @@ environment (an unset one is an error). Participant ids are client ids
 ```
 make dss-up                                        # the lab DSS and issuer
 export MOCK_USS_AUTH_SPEC="ClientIdClientSecret(token_endpoint=http://lab-issuer:8080/oauth/token,client_id=lab-01,client_secret=<lab-01's secret>,send_request_as_data=true)"
+export QUALIFIER_CA_FILE=<the lab CA certificate, e.g. deploy/local-demo/ca/ca.pem; never its key>
 docker compose -p uspace-lab-qualifier -f conformance/uss_qualifier/compose.yaml up -d --wait
 export QUALIFIER_PARTICIPANT=authority-01 \
   QUALIFIER_TARGET_INTERFACE_URL=<the target's interface as the containers reach it> \
@@ -48,7 +49,29 @@ The lab issuer issues the InterUSS automated-testing scopes the
 qualifier and the mock USS request (`rid.inject_test_data`,
 `dss.read.identification_service_areas`,
 `interuss.flight_planning.direct_automated_test`,
-`interuss.flight_planning.plan`) to `lab-01` only.
+`interuss.flight_planning.plan`, and
+`interuss.versioning.read_system_versions` and `interuss.pool_status.read`,
+which the F3548 DSS resource of v0.36.0 requires of its auth adapter,
+and `utm.inject_test_data`, which an F3411 scenario injects through the
+mock USS with) to `lab-01` only.
+`internal/issuer` `TestQualifierScopesIssuedToLab` holds
+`library/environment.yaml` and `deploy/issuer/clients.yaml` to each
+other.
+
+## The test operator a system under test injects with
+
+A USSP's test-interfaces process injects and plans for uss_qualifier as
+a test operator, which the USSP admits only once the authority's
+registry answers F8 validity `valid` for it.
+`conformance/fixtures/test-operators.yaml` holds that operator
+(`GEOTESTWP210001`, uspace-ussp WP-21) and its `TEST-WP21-*` serials;
+the registry step of `cmd/demo-seed` registers them at the lab
+authority beside the scenarios' operators (`--test-operators`, default
+that file; empty: none):
+
+```
+go run ./cmd/demo-seed --env <the stack's env file> --lab sim/sitl.env.example --steps registry scenarios/*.yaml
+```
 
 ## What was observed (2026-10-05)
 

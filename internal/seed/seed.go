@@ -71,6 +71,11 @@ type Options struct {
 	// that far north of their place: how a zone is taken off the area
 	// before the next scenario (a newer version supersedes it).
 	ZonesAwayNorthM float64
+	// TestOperators is a test operators file
+	// (conformance/fixtures/test-operators.yaml) whose operators and
+	// aircraft StepRegistry registers beside the scenarios'; empty: none.
+	// It is read and checked before any system is called.
+	TestOperators string
 	// ADSBListen is where the runner serves sim-adsb (feed manned-1),
 	// reached by the ANSP's adapter; SITLReader and SITLFly the
 	// runner's commands for a SITL vehicle (targets.sitl).
@@ -118,6 +123,12 @@ func Run(ctx context.Context, o Options) error {
 	env, err := Env(o.Env)
 	if err != nil {
 		return fmt.Errorf("seed: %w", err)
+	}
+	var testOps *TestOperators
+	if o.TestOperators != "" {
+		if testOps, err = LoadTestOperators(o.TestOperators); err != nil {
+			return err
+		}
 	}
 	deployDir := filepath.Dir(o.Env)
 	rel := func(p string) string {
@@ -210,7 +221,14 @@ func Run(ctx context.Context, o Options) error {
 				return err
 			}
 		}
-		o.Log("authority: %d operators and %d aircraft in the registry", len(ops), len(st.RegistryUAS))
+		if testOps != nil {
+			n, err := auth.EnsureTestOperators(ctx, reg, testOps, o.Now())
+			if err != nil {
+				return err
+			}
+			o.Log("authority: %d test operators and their %d aircraft in the registry (%s)", len(testOps.Operators), n, o.TestOperators)
+		}
+		o.Log("authority: %d operators and %d aircraft in the registry", len(st.RegistryOperators), len(st.RegistryUAS))
 	}
 
 	if has[StepUSpace] {

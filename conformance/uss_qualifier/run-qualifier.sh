@@ -17,6 +17,9 @@
 #   QUALIFIER_MOCK_RIDSP_URL, QUALIFIER_MOCK_RIDDP_URL, QUALIFIER_MOCK_SCD_URL,
 #   QUALIFIER_MOCK_URL_REGEX     the mock USS (compose.yaml)
 #   QUALIFIER_TOKEN_URL          the lab issuer's token endpoint as the containers reach it
+#   QUALIFIER_CA_FILE            the lab CA's certificate (never its key): the
+#                                target's TLS chains to it (required; compose.yaml
+#                                hands it to the mock USS the same way)
 #   LAB_SECRETS_JSON             the issuer's client-secrets.json (lab-01's
 #                                secret; default deploy/local/client-secrets.json)
 #   QUALIFIER_DOCKER_NETWORK     the network the containers join (default uspace-lab_lab)
@@ -48,6 +51,8 @@ secrets="${LAB_SECRETS_JSON:-$lab/deploy/local/client-secrets.json}"
 secret="$(jq -r '."lab-01" // empty' "$(hostpath "$secrets")")"
 [ -n "$secret" ] || { echo "run-qualifier: $secrets has no lab-01 secret" >&2; exit 2; }
 : "${QUALIFIER_TOKEN_URL:?set QUALIFIER_TOKEN_URL (the lab issuer as the containers reach it)}"
+[ -r "${QUALIFIER_CA_FILE:?set QUALIFIER_CA_FILE to the lab CA certificate}" ] ||
+  { echo "run-qualifier: QUALIFIER_CA_FILE $QUALIFIER_CA_FILE is not readable" >&2; exit 2; }
 AUTH_SPEC="ClientIdClientSecret(token_endpoint=${QUALIFIER_TOKEN_URL},client_id=lab-01,client_secret=${secret},send_request_as_data=true)"
 export AUTH_SPEC
 
@@ -58,7 +63,8 @@ echo "run-qualifier: $config with $ref (commit $commit) -> $out/qualifier"
 rc=0
 timeout "${QUALIFIER_TIMEOUT_S:-3600}" docker run --rm \
   --network "${QUALIFIER_DOCKER_NETWORK:-uspace-lab_lab}" \
-  -e AUTH_SPEC -e PYTHONUNBUFFERED=1 \
+  -e AUTH_SPEC -e PYTHONUNBUFFERED=1 -e REQUESTS_CA_BUNDLE=/etc/lab-ca/ca.pem \
+  -v "$(hostpath "$QUALIFIER_CA_FILE"):/etc/lab-ca/ca.pem:ro" \
   -u "$(id -u):$(id -g)" \
   -v "$(hostpath "$out/config"):/cfg:ro" -v "$(hostpath "$out/qualifier"):/out" \
   -w /app/monitoring/uss_qualifier \

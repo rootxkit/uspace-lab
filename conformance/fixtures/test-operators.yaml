@@ -1,0 +1,33 @@
+# Test operators the lab registers in the authority's registry
+# (internal/seed, the registry step of cmd/demo-seed), so that a system
+# under test asking F8 validity (GET /v1/registry/validate) for them is
+# answered `valid` and can admit them. Test data only: no production
+# value, no personal data of anyone, no secret.
+#
+# GEOTESTWP210001 is the test operator of uspace-ussp WP-21
+# (deploy/conformance/test-operator.yaml there): the operator whose
+# client the USSP's test-interfaces process injects and plans with for
+# uss_qualifier. Its number has no hyphen: the authority validates a
+# registration number with uspace-core regnum under the active policy's
+# pattern, whose default (pending GCAA, spec 08 Q5) is three letters
+# then 8 to 16 letters and digits, and regnum refuses any hyphen (only
+# the public part is registered, spec 06 §5). Its serials are the pool
+# the test-interfaces process flies an injected flight under; an
+# unlabelled aircraft needs only a non-empty serial (2019/945, G-06).
+format: lab-test-operators/v1
+operators:
+  - registration_number: GEOTESTWP210001
+    name: InterUSS test operator (uspace-ussp WP-21)
+    email: test-operator@example.test
+    phone: "+995000000901"
+    # Registered valid from the seed's run for this many days.
+    valid_days: 365
+    serials:
+      - TEST-WP21-0001
+      - TEST-WP21-0002
+      - TEST-WP21-0003
+      - TEST-WP21-0004
+      - TEST-WP21-0005
+      - TEST-WP21-0006
+      - TEST-WP21-0007
+      - TEST-WP21-0008

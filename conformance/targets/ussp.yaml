@@ -31,6 +31,15 @@ session:
 fixtures:
   operator: ${USSP_CONFORMANCE_OPERATOR:-}
 pages: []
+# The InterUSS automated-testing interfaces of the USSP's
+# test-interfaces process (uspace-ussp WP-21), as uss_qualifier reaches
+# them: F3411-SP drives rid_injection, F3411-DP rid_observation and
+# F3548-SCD flight_planning (conformance/uss_qualifier/coverage.yaml).
+# The observation interface is a Display Provider's and is held to
+# F3411-22a's area bound: a view whose diagonal is over
+# NetMaxDisplayAreaDiagonalKm (7 km, uspace-core f3411) must be refused,
+# which uss_qualifier checks ("Too long diagonal query fails").
 interfaces:
   rid_injection: ${USSP_CONFORMANCE_RID_INJECTION_URL:-}
+  rid_observation: ${USSP_CONFORMANCE_RID_OBSERVATION_URL:-}
   flight_planning: ${USSP_CONFORMANCE_FLIGHT_PLANNING_URL:-}

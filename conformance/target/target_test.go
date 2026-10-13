@@ -117,3 +117,39 @@ func TestRefusesUnknownMembersAndValues(t *testing.T) {
 		}
 	}
 }
+
+// The USSP's target declares the three InterUSS interfaces its
+// test-interfaces process serves (uspace-ussp WP-21), each from its own
+// variable, so F3411-SP, F3411-DP and F3548-SCD each apply when the run
+// supplies the URL; an interface whose variable is unset is not
+// declared, and its requirement says why (coverage.yaml).
+func TestUSSPTargetDeclaresItsInterfaces(t *testing.T) {
+	vals := map[string]string{
+		"USSP_CONFORMANCE_BASE_URL":            "https://ussp.lab.test",
+		"LAB_TOKEN_URL":                        "https://lab.lab.test/oauth/token",
+		"USSP_CONFORMANCE_RID_INJECTION_URL":   "http://ussp:8087/test/rid/v1/injection",
+		"USSP_CONFORMANCE_RID_OBSERVATION_URL": "http://ussp:8087/test/rid/v1/observation",
+		"USSP_CONFORMANCE_FLIGHT_PLANNING_URL": "http://ussp:8087/test/flight_planning/v1",
+	}
+	f, err := Load(filepath.Join("..", "targets", "ussp.yaml"), lookup(vals))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, v := range map[string]string{
+		"rid_injection":   "USSP_CONFORMANCE_RID_INJECTION_URL",
+		"rid_observation": "USSP_CONFORMANCE_RID_OBSERVATION_URL",
+		"flight_planning": "USSP_CONFORMANCE_FLIGHT_PLANNING_URL",
+	} {
+		if f.Interfaces[name] != vals[v] {
+			t.Errorf("interfaces.%s = %q, want %s's %q", name, f.Interfaces[name], v, vals[v])
+		}
+	}
+	delete(vals, "USSP_CONFORMANCE_RID_OBSERVATION_URL")
+	f, err = Load(filepath.Join("..", "targets", "ussp.yaml"), lookup(vals))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := f.Interfaces["rid_observation"]; ok || len(f.Interfaces) != 2 {
+		t.Errorf("without its variable: interfaces %v", f.Interfaces)
+	}
+}

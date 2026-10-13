@@ -9,7 +9,7 @@ PKGS ?= ./...
 # §6). Change the Makefile and the workflow together. `make tools`
 # installs them into $(go env GOPATH)/bin.
 GOLANGCI_LINT_VERSION ?= v2.14.0
-STATICCHECK_VERSION   ?= v0.8.1
+STATICCHECK_VERSION   ?= v0.8.2
 
 .PHONY: build vet fmt fmt-check tools staticcheck lint test tidy
 

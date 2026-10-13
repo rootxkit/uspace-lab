@@ -2,6 +2,8 @@ package issuer
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
@@ -105,6 +107,36 @@ func TestTokenIsBoundToItsAudience(t *testing.T) {
 	var te *auth.TokenError
 	if !errors.As(err, &te) || te.Claim != "aud" {
 		t.Fatalf("other audience: %v, want an aud refusal", err)
+	}
+}
+
+// The token's aud is a JSON string, not a one-element array: the
+// InterUSS mock USS beside uss_qualifier (monitoring v0.36.0) compares
+// aud as a string and refused every array token 401 (finding C3,
+// docs/decisions/2026-10-05-conformance-findings.md). The string still
+// binds the token to its audience: core's verifier for another host
+// refuses it (TestTokenIsBoundToItsAudience) and for its own accepts it.
+func TestTokenAudienceIsAString(t *testing.T) {
+	f := newFixture(t)
+	tok := f.accessToken(t, f.post(t, f.tokenForm("lab-01", "rid.inject_test_data", "mock-ridsp"), nil))
+	parts := strings.Split(tok, ".")
+	if len(parts) != 3 {
+		t.Fatalf("token has %d parts", len(parts))
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cl map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &cl); err != nil {
+		t.Fatal(err)
+	}
+	if got := string(cl["aud"]); got != `"mock-ridsp"` {
+		t.Fatalf("aud %s, want the string \"mock-ridsp\"", got)
+	}
+	c, err := f.verifier(t, "mock-ridsp").Verify(context.Background(), tok)
+	if err != nil || c.Audience != "mock-ridsp" {
+		t.Fatalf("core refused the string aud: %v (%+v)", err, c)
 	}
 }
 
