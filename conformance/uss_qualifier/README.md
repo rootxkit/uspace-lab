@@ -24,6 +24,7 @@ environment (an unset one is an error). Participant ids are client ids
 ```
 make dss-up                                        # the lab DSS and issuer
 export MOCK_USS_AUTH_SPEC="ClientIdClientSecret(token_endpoint=http://lab-issuer:8080/oauth/token,client_id=lab-01,client_secret=<lab-01's secret>,send_request_as_data=true)"
+export QUALIFIER_CA_FILE=<the lab CA certificate, e.g. deploy/local-demo/ca/ca.pem; never its key>
 docker compose -p uspace-lab-qualifier -f conformance/uss_qualifier/compose.yaml up -d --wait
 export QUALIFIER_PARTICIPANT=authority-01 \
   QUALIFIER_TARGET_INTERFACE_URL=<the target's interface as the containers reach it> \

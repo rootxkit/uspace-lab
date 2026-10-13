@@ -13,12 +13,16 @@
 # uspace-lab_lab), reach the DSS and the issuer there, and trust the lab
 # issuer's public key from LAB_STATE_DIR/public. MOCK_USS_AUTH_SPEC holds
 # lab-01's secret and comes from the environment of `docker compose`.
+# QUALIFIER_CA_FILE is the lab CA's certificate (never its key), which
+# a system under test's TLS chains to: the mock Display Provider queries
+# a Service Provider at the https URL the DSS names.
 
 x-mock: &mock
   image: docker.io/interuss/monitoring@sha256:a771c82cda62b83be707e650ddd2550bbabf6790120c4a57f76153a8f5504bb7
   command: mock_uss/start.sh
   volumes:
     - ${LAB_STATE_DIR:-../../deploy/local}/public:/var/lab-issuer:ro
+    - ${QUALIFIER_CA_FILE:?set QUALIFIER_CA_FILE to the lab CA certificate}:/etc/lab-ca/ca.pem:ro
   networks: [lab]
   restart: "no"
 
@@ -34,6 +38,7 @@ services:
       MOCK_USS_SERVICES: ridsp
       MOCK_USS_RID_VERSION: F3411-22a
       MOCK_USS_PORT: "80"
+      REQUESTS_CA_BUNDLE: /etc/lab-ca/ca.pem
   mock-riddp:
     <<: *mock
     environment:
@@ -45,6 +50,7 @@ services:
       MOCK_USS_SERVICES: riddp
       MOCK_USS_RID_VERSION: F3411-22a
       MOCK_USS_PORT: "80"
+      REQUESTS_CA_BUNDLE: /etc/lab-ca/ca.pem
   mock-scd:
     <<: *mock
     environment:
@@ -56,6 +62,7 @@ services:
       MOCK_USS_SERVICES: scdsc,flight_planning,interaction_logging
       MOCK_USS_INTERACTIONS_LOG_DIR: output/scdsc_interaction_logs
       MOCK_USS_PORT: "80"
+      REQUESTS_CA_BUNDLE: /etc/lab-ca/ca.pem
     # The interaction log directory must exist at start (mock_uss/
     # interaction_logging/config.py); the logs live only as long as the run.
     tmpfs:
