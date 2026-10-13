@@ -140,6 +140,60 @@ func TestTokenAudienceIsAString(t *testing.T) {
 	}
 }
 
+// Every client of deploy/issuer/clients.yaml that is issued a token gets
+// aud as a string, for every scope it holds, national and standard: the
+// changelog says so for every lab client, and TestTokenAudienceIsAString
+// asks lab-01 alone. A client with no scopes (cisp-01) is issued no
+// token at all, so it has no aud to judge; its refusal is checked so the
+// skip is not silent.
+func TestEveryLabClientGetsAStringAudience(t *testing.T) {
+	f := newFixture(t)
+	issued, refused := 0, 0
+	for _, id := range f.reg.IDs() {
+		c, _ := f.reg.Client(id)
+		if len(c.Scopes) == 0 {
+			r := f.post(t, f.tokenForm(id, "cis.read", "cisp"), nil)
+			if r.status == http.StatusOK {
+				t.Fatalf("%s holds no scope and was issued a token", id)
+			}
+			refused++
+			continue
+		}
+		for _, scope := range c.Scopes {
+			aud := "dss"
+			if kind, ok := ScopeKind(scope); !ok {
+				t.Fatalf("%s holds %s, which is not in the catalogue", id, scope)
+			} else if kind == National {
+				if len(c.Audiences) == 0 {
+					t.Fatalf("%s holds national %s and no audience", id, scope)
+				}
+				aud = c.Audiences[0]
+			}
+			tok := f.accessToken(t, f.post(t, f.tokenForm(id, scope, aud), nil))
+			parts := strings.Split(tok, ".")
+			if len(parts) != 3 {
+				t.Fatalf("%s %s: token has %d parts", id, scope, len(parts))
+			}
+			raw, err := base64.RawURLEncoding.DecodeString(parts[1])
+			if err != nil {
+				t.Fatal(err)
+			}
+			var cl map[string]json.RawMessage
+			if err := json.Unmarshal(raw, &cl); err != nil {
+				t.Fatal(err)
+			}
+			want, _ := json.Marshal(aud)
+			if got := string(cl["aud"]); got != string(want) {
+				t.Fatalf("%s %s: aud %s, want the string %s", id, scope, got, want)
+			}
+			issued++
+		}
+	}
+	if issued == 0 || refused == 0 || issued+refused < len(f.reg.IDs()) {
+		t.Fatalf("judged %d tokens and %d refusals over %d clients", issued, refused, len(f.reg.IDs()))
+	}
+}
+
 // Every refusal beside the acceptance it differs from by one thing
 // (LESSONS E-01). Each refusal is a problem/v1 body with its slug, and
 // increments refused_<slug>.
