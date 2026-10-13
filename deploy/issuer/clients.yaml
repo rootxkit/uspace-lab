@@ -66,6 +66,7 @@ clients:
       - dss.read.identification_service_areas
       - interuss.flight_planning.direct_automated_test
       - interuss.flight_planning.plan
+      - interuss.versioning.read_system_versions
     audiences:
       - ${LAB_AUTHORITY_AUDIENCES}
       - ${LAB_CISP_AUDIENCES}

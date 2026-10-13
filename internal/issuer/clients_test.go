@@ -32,7 +32,8 @@ func TestLabClientsFile(t *testing.T) {
 	for _, id := range r.IDs() {
 		c, _ := r.Client(id)
 		for _, labOnly := range []string{"dp.observe", "rid.inject_test_data", "dss.read.identification_service_areas",
-			"interuss.flight_planning.direct_automated_test", "interuss.flight_planning.plan"} {
+			"interuss.flight_planning.direct_automated_test", "interuss.flight_planning.plan",
+			"interuss.versioning.read_system_versions"} {
 			if id != LabClientID && slices.Contains(c.Scopes, labOnly) {
 				t.Errorf("%s holds %s", id, labOnly)
 			}

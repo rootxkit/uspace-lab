@@ -69,6 +69,9 @@ var catalogue = map[string]scopeInfo{
 	"dss.read.identification_service_areas":          {kind: Standard, labOnly: true},
 	"interuss.flight_planning.direct_automated_test": {kind: Standard, labOnly: true},
 	"interuss.flight_planning.plan":                  {kind: Standard, labOnly: true},
+	// The InterUSS versioning interface: the F3548 DSS resource of
+	// uss_qualifier asks the DSS for its system versions with it.
+	"interuss.versioning.read_system_versions": {kind: Standard, labOnly: true},
 }
 
 // ScopeKind returns the audience rule of scope and whether scope is in

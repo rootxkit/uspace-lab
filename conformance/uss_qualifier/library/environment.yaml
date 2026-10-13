@@ -18,6 +18,7 @@ utm_auth:
       - dp.observe
       - interuss.flight_planning.direct_automated_test
       - interuss.flight_planning.plan
+      - interuss.versioning.read_system_versions
       - utm.strategic_coordination
       - utm.conformance_monitoring_sa
       - utm.availability_arbitration

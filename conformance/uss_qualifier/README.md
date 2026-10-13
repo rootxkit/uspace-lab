@@ -48,7 +48,12 @@ The lab issuer issues the InterUSS automated-testing scopes the
 qualifier and the mock USS request (`rid.inject_test_data`,
 `dss.read.identification_service_areas`,
 `interuss.flight_planning.direct_automated_test`,
-`interuss.flight_planning.plan`) to `lab-01` only.
+`interuss.flight_planning.plan`, and
+`interuss.versioning.read_system_versions`, which the F3548 DSS
+resource of v0.36.0 requires of its auth adapter) to `lab-01` only.
+`internal/issuer` `TestQualifierScopesIssuedToLab` holds
+`library/environment.yaml` and `deploy/issuer/clients.yaml` to each
+other.
 
 ## What was observed (2026-10-05)
 
