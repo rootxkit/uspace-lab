@@ -69,10 +69,14 @@ func NewServer(cfg Config) (*Server, error) {
 	if cfg.Now == nil {
 		cfg.Now = time.Now
 	}
-	iss, err := auth.NewIssuer(cfg.IssuerURL, cfg.Key, cfg.Kid)
+	base, err := auth.NewIssuer(cfg.IssuerURL, cfg.Key, cfg.Kid)
 	if err != nil {
 		return nil, err
 	}
+	// aud as a string, not a one-element array: the InterUSS mock USS
+	// beside uss_qualifier compares it as a string (finding C3); the DSS
+	// and every system verifying with uspace-core accept either form.
+	iss := base.WithStringAudience()
 	jwks, err := json.Marshal(iss.JWKS())
 	if err != nil {
 		return nil, err
