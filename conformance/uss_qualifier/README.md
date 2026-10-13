@@ -49,8 +49,10 @@ qualifier and the mock USS request (`rid.inject_test_data`,
 `dss.read.identification_service_areas`,
 `interuss.flight_planning.direct_automated_test`,
 `interuss.flight_planning.plan`, and
-`interuss.versioning.read_system_versions`, which the F3548 DSS
-resource of v0.36.0 requires of its auth adapter) to `lab-01` only.
+`interuss.versioning.read_system_versions` and `interuss.pool_status.read`,
+which the F3548 DSS resource of v0.36.0 requires of its auth adapter,
+and `utm.inject_test_data`, which an F3411 scenario injects through the
+mock USS with) to `lab-01` only.
 `internal/issuer` `TestQualifierScopesIssuedToLab` holds
 `library/environment.yaml` and `deploy/issuer/clients.yaml` to each
 other.

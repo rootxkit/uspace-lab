@@ -19,6 +19,8 @@ utm_auth:
       - interuss.flight_planning.direct_automated_test
       - interuss.flight_planning.plan
       - interuss.versioning.read_system_versions
+      - interuss.pool_status.read
+      - utm.inject_test_data
       - utm.strategic_coordination
       - utm.conformance_monitoring_sa
       - utm.availability_arbitration

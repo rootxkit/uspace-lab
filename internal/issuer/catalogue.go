@@ -72,6 +72,10 @@ var catalogue = map[string]scopeInfo{
 	// The InterUSS versioning interface: the F3548 DSS resource of
 	// uss_qualifier asks the DSS for its system versions with it.
 	"interuss.versioning.read_system_versions": {kind: Standard, labOnly: true},
+	// The DSS pool status the F3548 DSS resource reads, and the mock
+	// USS's test-data injection an F3411 scenario drives.
+	"interuss.pool_status.read": {kind: Standard, labOnly: true},
+	"utm.inject_test_data":      {kind: Standard, labOnly: true},
 }
 
 // ScopeKind returns the audience rule of scope and whether scope is in

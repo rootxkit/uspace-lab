@@ -24,6 +24,13 @@ var qualifierNeeds = []string{
 	"interuss.flight_planning.direct_automated_test",
 	"interuss.flight_planning.plan",
 	"interuss.versioning.read_system_versions",
+	// Observed in the second run (2026-10-13): the F3548 DSS resource
+	// also reads the DSS pool status, and the F3411 Service Provider
+	// notification scenario injects through the mock USS with
+	// utm.inject_test_data; each stopped its scenario with "Unable to
+	// retrieve access token" or "is not declared ... as authorized".
+	"interuss.pool_status.read",
+	"utm.inject_test_data",
 }
 
 // The qualifier's auth adapter declares every scope it needs, and every
