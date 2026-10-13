@@ -15,7 +15,6 @@ utm_auth:
       - dss.read.identification_service_areas
       - rid.service_provider
       - rid.display_provider
-      - dp.observe
       - interuss.flight_planning.direct_automated_test
       - interuss.flight_planning.plan
       - interuss.versioning.read_system_versions

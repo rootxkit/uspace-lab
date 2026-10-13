@@ -74,6 +74,12 @@ func TestQualifierScopesIssuedToLab(t *testing.T) {
 			t.Errorf("%s is declared to uss_qualifier but reserved (never issued)", s)
 		case !slices.Contains(lab.Scopes, s):
 			t.Errorf("%s is declared to uss_qualifier but deploy/issuer/clients.yaml does not grant it to lab-01", s)
+		case info.kind != Standard:
+			// The DSS AuthenticationValidation scenario asks for every
+			// declared scope with the DSS as audience; a national scope
+			// is issued only for its configured hosts and is refused
+			// (third WP-21 run: dp.observe, 403 forbidden_audience).
+			t.Errorf("%s is declared to uss_qualifier but is a national scope, refused for the DSS audience", s)
 		}
 	}
 	for _, id := range r.IDs() {
