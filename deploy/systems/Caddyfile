@@ -14,6 +14,13 @@
 {
 	admin localhost:2019
 	auto_https disable_redirects
+	# X-Forwarded-For is kept (and appended to) only for a request from
+	# the host's address on the egress network (compose LAB_HOST_GATEWAY):
+	# the load harness names each simulated receiver's own address there.
+	# From anywhere else it is replaced by the peer's address.
+	servers {
+		trusted_proxies static {$LAB_HOST_GATEWAY}/32
+	}
 	log {
 		output stdout
 		format json

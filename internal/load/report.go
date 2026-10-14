@@ -55,10 +55,16 @@ type Report struct {
 	Streams    []StreamStats          `json:"streams"`
 	// Memory is the live heap every memory_sample_s, generator and
 	// reference target together (one process).
-	Memory     []uint64 `json:"memory_live_heap_bytes,omitempty"`
-	Errors     []string `json:"errors,omitempty"`
-	Measured   int      `json:"checks_measured"`
-	Unmeasured int      `json:"checks_not_measured"`
+	Memory []uint64 `json:"memory_live_heap_bytes,omitempty"`
+	// Systems is what the probes read of the systems (a systems run).
+	Systems *Systems `json:"systems,omitempty"`
+	// Faults are the faults the run injected and what they did.
+	Faults []FaultRecord `json:"faults,omitempty"`
+	// F3411 is what the lab's DP polls of the USSP saw (a systems run).
+	F3411      *F3411Polls `json:"f3411,omitempty"`
+	Errors     []string    `json:"errors,omitempty"`
+	Measured   int         `json:"checks_measured"`
+	Unmeasured int         `json:"checks_not_measured"`
 	// Complete is true only when every check of every row was measured.
 	Complete bool     `json:"complete"`
 	Verdict  string   `json:"verdict"`
@@ -71,6 +77,9 @@ type TargetInfo struct {
 	Name     string            `json:"name"`
 	Evidence string            `json:"evidence"`
 	Images   map[string]string `json:"images,omitempty"`
+	// Receivers says from which addresses the receivers reached the
+	// target (systems mode).
+	Receivers string `json:"receivers,omitempty"`
 }
 
 // Host is the machine the run used (L-Q1: numbers are comparable only
@@ -96,14 +105,17 @@ type LabInfo struct {
 
 // Volumes are what the run offered, against what 05 §1 asks at the tier.
 type Volumes struct {
-	Aircraft           int     `json:"aircraft"`
-	Clients            int     `json:"operator_clients"`
-	Heard              int     `json:"heard_aircraft"`
-	Receivers          int     `json:"receivers"`
-	Consoles           int     `json:"consoles"`
-	Watched            int     `json:"watched_aircraft"`
-	IntentsFiled       int     `json:"intents_filed"`
-	IntentErrors       int     `json:"intent_errors"`
+	Aircraft     int `json:"aircraft"`
+	Clients      int `json:"operator_clients"`
+	Heard        int `json:"heard_aircraft"`
+	Receivers    int `json:"receivers"`
+	Consoles     int `json:"consoles"`
+	Watched      int `json:"watched_aircraft"`
+	IntentsFiled int `json:"intents_filed"`
+	IntentErrors int `json:"intent_errors"`
+	// IntentsEnded is how many of the intents filed the run ended when
+	// it ended (an intent left authorised holds its airspace).
+	IntentsEnded       int     `json:"intents_ended"`
 	OperatorMsgsPerS   float64 `json:"operator_msgs_per_s"`
 	OperatorTargetPerS float64 `json:"operator_target_per_s"`
 	RIDLocationsPerS   float64 `json:"rid_locations_per_s"`
@@ -148,16 +160,19 @@ type OperatorLoss struct {
 
 // ReceiverLoss sums the receivers' ledgers (simrx).
 type ReceiverLoss struct {
-	Observed      uint64   `json:"observed"`
-	Sent          uint64   `json:"sent"`
-	Accepted      uint64   `json:"accepted"`
-	Duplicates    uint64   `json:"duplicates"`
-	Refused       uint64   `json:"refused"`
-	BacklogShed   uint64   `json:"backlog_shed"`
-	DroppedByKnob uint64   `json:"dropped_by_knob"`
-	Pending       uint64   `json:"pending"`
-	Unbalanced    uint64   `json:"unbalanced"`
-	Unbalance     []string `json:"unbalance,omitempty"`
+	Observed    uint64 `json:"observed"`
+	Sent        uint64 `json:"sent"`
+	Accepted    uint64 `json:"accepted"`
+	Duplicates  uint64 `json:"duplicates"`
+	Refused     uint64 `json:"refused"`
+	BacklogShed uint64 `json:"backlog_shed"`
+	// BacklogLocations are the samples the authority accepted as backlog
+	// (replayed after an outage): stored, in the past, not shown live.
+	BacklogLocations uint64   `json:"backlog_locations_accepted"`
+	DroppedByKnob    uint64   `json:"dropped_by_knob"`
+	Pending          uint64   `json:"pending"`
+	Unbalanced       uint64   `json:"unbalanced"`
+	Unbalance        []string `json:"unbalance,omitempty"`
 }
 
 // AlertSummary is the expected set against what was observed.
@@ -388,6 +403,9 @@ func (r *Report) Markdown() string {
 		w(" (05 §7 is not fully observed by this run).\n\n")
 	}
 	w("- Target: %s (%s). %s\n", r.Target.Name, r.Target.Mode, r.Target.Evidence)
+	if r.Target.Receivers != "" {
+		w("- Receivers: %s.\n", r.Target.Receivers)
+	}
 	for _, k := range sortedKeys(r.Target.Images) {
 		w("- Image %s: `%s`\n", k, r.Target.Images[k])
 	}
@@ -424,7 +442,8 @@ func (r *Report) Markdown() string {
 	w("| Console frames in (frames/s, all consoles) | %.1f | |\n", v.ConsoleFramesPerS)
 	w("| Aircraft / operator clients / heard / receivers / consoles / watched | %d / %d / %d / %d / %d / %d | |\n", v.Aircraft, v.Clients, v.Heard, v.Receivers, v.Consoles, v.Watched)
 	w("| Samples handed out more than a period late | %d | |\n", v.GeneratorLate)
-	w("| Intents filed (errors) | %d (%d) | |\n\n", v.IntentsFiled, v.IntentErrors)
+	w("| Intents filed (errors) | %d (%d) | |\n", v.IntentsFiled, v.IntentErrors)
+	w("| Intents ended after the run | %d | |\n\n", v.IntentsEnded)
 	w("## 05 §7\n\n| Property | Check | Criterion | Observed | n | Result | Figure from |\n|---|---|---|---|---|---|---|\n")
 	for _, row := range r.Rows {
 		for i := range row.Checks {
@@ -452,12 +471,21 @@ func (r *Report) Markdown() string {
 	l := r.Loss
 	w("- Operator telemetry: sent %d = accepted %d + refused %d + dropped %d + duplicate %d; %d pending; %d clients unbalanced.\n",
 		l.Operator.Sent, l.Operator.Accepted, l.Operator.Refused, l.Operator.Dropped, l.Operator.Duplicate, l.Operator.Pending, l.Operator.Unbalanced)
-	w("- Receivers: observed %d, sent %d = accepted %d + duplicates %d + refused %d; shed %d; pending %d; %d receivers unbalanced.\n",
-		l.Receivers.Observed, l.Receivers.Sent, l.Receivers.Accepted, l.Receivers.Duplicates, l.Receivers.Refused, l.Receivers.BacklogShed, l.Receivers.Pending, l.Receivers.Unbalanced)
-	w("- Picture (timed console): handed %d, shown %d, unshown %d, accounted %d (refused, dropped_frames %d, sheds), silent %d; untraceable frames %d.\n",
+	w("- Receivers: observed %d, sent %d = accepted %d + duplicates %d + refused %d; shed %d; pending %d; %d samples accepted as backlog; %d receivers unbalanced.\n",
+		l.Receivers.Observed, l.Receivers.Sent, l.Receivers.Accepted, l.Receivers.Duplicates, l.Receivers.Refused, l.Receivers.BacklogShed, l.Receivers.Pending, l.Receivers.BacklogLocations, l.Receivers.Unbalanced)
+	w("- Picture (timed console): handed %d, shown %d, unshown %d, accounted %d (refused, dropped_frames %d, sheds, accepted as backlog), silent %d; untraceable frames %d.\n",
 		l.Picture.Handed, l.Picture.Shown, l.Picture.Unshown, l.PictureAccounted, l.PictureDroppedFrames, l.PictureSilent, l.Picture.Untraceable)
 	w("- Traffic streams (watched flights): handed %d, shown %d, unshown %d, untraceable %d.\n", l.Traffic.Handed, l.Traffic.Shown, l.Traffic.Unshown, l.Traffic.Untraceable)
 	w("- Generator sheds: operator %d, Remote ID %d.\n\n", l.GeneratorShedOperator, l.GeneratorShedRID)
+	if r.Systems != nil {
+		r.systemsMarkdown(w)
+	}
+	if len(r.Faults) > 0 {
+		r.faultsMarkdown(w)
+	}
+	if f := r.F3411; f != nil {
+		w("## F3411 display-provider polls of the USSP\n\n%d views, %d polls, %d flights returned, %d details answered, %d failures, %d of them inside a fault the run injected (statuses %v).\n\n", f.Views, f.Polls, f.Flights, f.DetailsOK, f.Failures, f.FailuresDuringFaults, f.Statuses)
+	}
 	a := r.Alerts
 	w("## Alerts\n\nExpected %d, raised %d, cleared %d, missed %d, clears missed %d, unexpected %d, untraceable %d.\n\n",
 		a.Expected, a.Raised, a.Cleared, len(a.Missed), len(a.MissedClear), len(a.Unexpected), a.Untraceable)
@@ -502,4 +530,54 @@ func sortedKeys(m map[string]string) []string {
 	}
 	slices.Sort(keys)
 	return keys
+}
+
+// systemsMarkdown renders what the probes read of the systems.
+func (r *Report) systemsMarkdown(w func(format string, a ...any)) {
+	sys := r.Systems
+	w("## The systems (read by the probes)\n\n| Process | Resident memory first / last / max (MB) | Samples | Growth | Monotonic |\n|---|---|---|---|---|\n")
+	for _, m := range sys.Memory {
+		w("| %s | %.1f / %.1f / %.1f | %d | %s | %t |\n", m.Process, float64(m.FirstB)/1e6, float64(m.LastB)/1e6, float64(m.MaxB)/1e6, m.Samples, fmtNum(m.Growth), m.Rising)
+	}
+	w("\n| Database | Fleet samples | Before (MB) | After (MB) | Model (MB) | Growth / model | Compression lag (chunks) |\n|---|---|---|---|---|---|---|\n")
+	for _, st := range sys.Storage {
+		w("| %s | %d | %.1f | %.1f | %.1f | %s | %s |\n", st.System, st.Samples, st.BeforeB/1e6, st.AfterB/1e6, st.ModelB/1e6, fmtNum(st.Ratio), fmtNum(st.LagChunks))
+	}
+	w("\n")
+	for _, proc := range sortedKeysOf(sys.PairChecksPerS) {
+		w("- Pair checks of %s: %s a second over the run.\n", proc, fmtNum(sys.PairChecksPerS[proc]))
+	}
+	w("\nLoss counters that moved during the run (05 §7: accounted for in the report; the systems' own counters, listed, not judged):\n\n")
+	if len(sys.Counters) == 0 {
+		w("- none\n")
+	}
+	for _, c := range sys.Counters {
+		w("- %s `%s`: +%s\n", c.Process, c.Series, fmtNum(c.Delta))
+	}
+	if sys.CountersMore > 0 {
+		w("- and %d more\n", sys.CountersMore)
+	}
+	if sys.ErrorsN > 0 {
+		w("\nProbe errors: %d (the first %d are among the run's errors).\n", sys.ErrorsN, len(sys.Errors))
+	}
+	if sys.ErrorsDuringFaults > 0 {
+		w("\nProbes that failed inside a fault the run injected: %d.\n", sys.ErrorsDuringFaults)
+	}
+	w("\n")
+}
+
+// faultsMarkdown renders the faults the run injected.
+func (r *Report) faultsMarkdown(w func(format string, a ...any)) {
+	w("## Faults\n\n| Row | Script | At (s) | Hold (s) | Picture back after restore (s) | Traffic back (s) | Error |\n|---|---|---|---|---|---|---|\n")
+	opt := func(p *float64) string {
+		if p == nil {
+			return "never"
+		}
+		return fmtNum(*p)
+	}
+	for i := range r.Faults {
+		f := &r.Faults[i]
+		w("| %s | `%s.sh %s` | %s | %s | %s | %s | %s |\n", f.Row, f.Domain, strings.Join(f.Args, " "), fmtNum(f.AtS), fmtNum(f.HoldS), opt(f.PictureBackS), opt(f.TrafficBackS), f.Error)
+	}
+	w("\n")
 }

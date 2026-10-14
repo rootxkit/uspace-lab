@@ -1,0 +1,365 @@
+package load
+
+import (
+	"context"
+	"encoding/hex"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"github.com/rootxkit/uspace-lab/internal/geoidx"
+	"github.com/rootxkit/uspace-lab/internal/runner"
+	"github.com/rootxkit/uspace-lab/internal/scenario"
+	"github.com/rootxkit/uspace-lab/internal/wire"
+)
+
+// systemsTargets writes a systems targets file for f's fleet as loadgen
+// seed would, its secrets beside it, every endpoint at base; edit
+// changes the text before it is written.
+func systemsTargets(t *testing.T, f *Files, base string, edit func(string) string) string {
+	t.Helper()
+	dir := t.TempDir()
+	lab, err := scenario.LoadLab(repo("sim/sitl.env.example"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	fl, err := NewFleet(f, lab.Origin, geoidx.Constant(15.9))
+	if err != nil {
+		t.Fatal(err)
+	}
+	put := func(name, v string) string {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(v+"\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return name
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "mode: systems\nname: test\ngeoid: \"constant:15.9\"\nlab: %s\n", filepath.ToSlash(repo("sim/sitl.env.example")))
+	fmt.Fprintf(&b, "ussp: {base_url: %s, token_url: %s/oauth/token, audience: ussp.test}\n", base, base)
+	fmt.Fprintf(&b, "authority: {base_url: %s, picture_url: %s/v1/picture/ws, origin: %s, session_file: %s}\n",
+		base, strings.Replace(base, "http", "ws", 1), base, put("session", "console-session"))
+	sf := fl.SeedFleet(f.Tier.Tier)
+	fmt.Fprintf(&b, "load:\n  tier: %s\n  fleet: %s\n  clients:\n", sf.Tier, sf.Digest)
+	for i := range sf.Clients {
+		fmt.Fprintf(&b, "    - {client_id: op-%d, secret_file: %s}\n", i, put(fmt.Sprintf("op-%d", i), fmt.Sprintf("secret-%d", i)))
+	}
+	fmt.Fprintf(&b, "  receivers:\n")
+	for _, r := range sf.Receivers {
+		fmt.Fprintf(&b, "    - {id: %s, bearer_key_file: %s, hmac_key_file: %s}\n", r.ID,
+			put(r.ID+".bearer", "bearer-"+r.ID), put(r.ID+".hmac", hex.EncodeToString(make([]byte, 32))))
+	}
+	text := b.String()
+	if edit != nil {
+		text = edit(text)
+	}
+	p := filepath.Join(dir, "targets.yaml")
+	if err := os.WriteFile(p, []byte(text), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+// counting answers 503 to everything and counts the requests.
+func counting(t *testing.T) (string, *atomic.Int64) {
+	t.Helper()
+	var n atomic.Int64
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		n.Add(1)
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	t.Cleanup(srv.Close)
+	return srv.URL, &n
+}
+
+// A systems targets file that cannot drive this fleet is refused before
+// anything is sent: no load block (not seeded), seeded for another tier,
+// for another fleet layout, with a client or a receiver missing, with
+// another receiver's id, a secret file missing or an HMAC key that is
+// not 32 bytes. Every refusal names the reason and the systems saw no
+// request. The matching file is the other half: the run starts and
+// talks to the systems.
+func TestSystemsTargetsFailClosed(t *testing.T) {
+	f := loadSmall(t)
+	f.Paths.Pairs.InnerGapM = 30
+	base, n := counting(t)
+	cases := map[string]struct {
+		edit func(string) string
+		want string
+	}{
+		"not seeded":       {func(s string) string { head, _, _ := strings.Cut(s, "load:"); return head }, "no load block"},
+		"another tier":     {func(s string) string { return strings.Replace(s, "tier: test", "tier: ci", 1) }, "seeded for tier"},
+		"another fleet":    {func(s string) string { return strings.Replace(s, "fleet: sha256:", "fleet: sha256:0", 1) }, "seeded for fleet"},
+		"client missing":   {func(s string) string { return strings.Replace(s, "    - {client_id: op-1,", "    #", 1) }, "operator clients"},
+		"receiver missing": {func(s string) string { return s[:strings.LastIndex(s, "    - {id:")] }, "receivers"},
+		"another receiver": {func(s string) string { return strings.Replace(s, "-0001,", "-0009,", 1) }, "in the fleet"},
+		"secret missing":   {func(s string) string { return strings.Replace(s, "secret_file: op-0", "secret_file: absent", 1) }, "no secret"},
+		"short hmac key":   {func(s string) string { return strings.Replace(s, ".hmac}", ".bearer}", 1) }, "32 bytes"},
+		"no ussp":          {func(s string) string { return strings.Replace(s, "ussp: {", "ussp_off: {", 1) }, "ussp_off"},
+	}
+	for name, c := range cases {
+		p := systemsTargets(t, f, base, c.edit)
+		_, err := Run(context.Background(), Options{Files: f, TargetsPath: p, Run: "x", RepoRoot: repo(".")})
+		if err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%s: %v, want an error naming %q", name, err, c.want)
+		}
+	}
+	if n.Load() != 0 {
+		t.Fatalf("a refused targets file sent %d requests to the systems", n.Load())
+	}
+	p := systemsTargets(t, f, base, nil)
+	rep, err := Run(context.Background(), Options{Files: f, TargetsPath: p, Run: "x", RepoRoot: repo("."), ReadyTimeout: 2 * time.Second})
+	if err != nil {
+		t.Fatalf("the matching targets file was refused: %v", err)
+	}
+	if n.Load() == 0 || rep.Target.Mode != "systems" || !strings.Contains(rep.Target.Evidence, "seeded for this fleet") {
+		t.Fatalf("%d requests, target %+v", n.Load(), rep.Target)
+	}
+	if rep.Verdict != VerdictFail {
+		t.Fatalf("a run against systems answering 503 passed")
+	}
+	for _, e := range rep.Errors {
+		for _, s := range []string{"secret-0", "bearer-load", "console-session"} {
+			if strings.Contains(e, s) {
+				t.Fatalf("an error carries a secret: %s", e)
+			}
+		}
+	}
+}
+
+// The receiver ledger takes only what a receiver heard: the systems'
+// picture also shows the same aircraft from the authority's DP poller
+// (network_rid), whose frames would otherwise be tied to the receiver's
+// samples and timed as if a receiver had sent them. A direct_rid frame
+// is shown (the presence half); a network_rid one is neither shown nor
+// untraceable.
+func TestPictureLedgerTakesDirectRIDOnly(t *testing.T) {
+	a := &Aircraft{Name: "ac-00000", Serial: AircraftSerial(0, 1)}
+	rd := &readers{picture: NewLedger(), traffic: NewReceiptLedger(), bySer: map[string]*Aircraft{a.Serial: a}, byMAC: map[string]*Aircraft{}}
+	s := &stream{name: "console-00", kind: streamPicture, timed: true, ready: make(chan struct{})}
+	captured := time.Now().Add(-time.Second).UTC()
+	rd.picture.Hand(a.Name, captured)
+	frame := func(source string) []byte {
+		b, err := wire.New(wire.SchemaTrack, "authority", captured, captured, nil, "gnss", false, map[string]any{
+			"track_id": "t-" + source, "source": source, "identification": map[string]any{"serial": a.Serial}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return b
+	}
+	rd.handle(s, frame("network_rid"), time.Now(), func([]byte, time.Time) {})
+	if c := rd.picture.Counts(); c.Shown != 0 || c.Untraceable != 0 {
+		t.Fatalf("a network_rid frame counted: %+v", c)
+	}
+	rd.handle(s, frame("direct_rid"), time.Now(), func([]byte, time.Time) {})
+	if c := rd.picture.Counts(); c.Shown != 1 || c.Untraceable != 0 {
+		t.Fatalf("the direct_rid frame: %+v", c)
+	}
+}
+
+// trackFrame is a track/telemetry/v1 on the picture, captured at
+// captured, from source with the identification given.
+func trackFrame(t *testing.T, trackID, source string, serial *string, captured time.Time) []byte {
+	t.Helper()
+	b, err := wire.New(wire.SchemaTrack, "authority", captured, captured, nil, "gnss", false, map[string]any{
+		"track_id": trackID, "source": source, "identification": map[string]any{"serial": serial}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
+}
+
+// A frame that shows no new sample says nothing about what is still in
+// flight: the systems' picture and traffic streams go on sending the
+// last state of a track (stale) after the generator stops, and the
+// drain, which waited for three seconds without data, never settled
+// (drain_s spent on every systems run). Only a frame that shows a
+// sample for the first time is data; a repeat is not (the absence
+// half), a new sample is (presence).
+func TestOnlyANewSampleIsData(t *testing.T) {
+	a := &Aircraft{Name: "ac-00000", Serial: AircraftSerial(0, 1)}
+	rd := &readers{picture: NewLedger(), traffic: NewReceiptLedger(), bySer: map[string]*Aircraft{a.Serial: a}, byMAC: map[string]*Aircraft{}}
+	s := &stream{name: "console-00", kind: streamPicture, timed: true, ready: make(chan struct{})}
+	captured := time.Now().Add(-time.Second).UTC()
+	rd.picture.Hand(a.Name, captured)
+	sn := a.Serial
+	first := time.Now()
+	rd.handle(s, trackFrame(t, "t1", sourceDirectRID, &sn, captured), first, func([]byte, time.Time) {})
+	if !s.lastData.Equal(first) {
+		t.Fatalf("a new sample did not count as data: %v", s.lastData)
+	}
+	rd.handle(s, trackFrame(t, "t1", sourceDirectRID, &sn, captured), first.Add(5*time.Second), func([]byte, time.Time) {})
+	rd.handle(s, trackFrame(t, "t1", "network_rid", &sn, captured), first.Add(6*time.Second), func([]byte, time.Time) {})
+	if !s.lastData.Equal(first) {
+		t.Fatalf("a repeated or other-source frame counted as data: %v", s.lastData)
+	}
+}
+
+// The authority shows a track before it has heard the aircraft's Basic
+// ID: its frames carry no serial and an opaque track id until then. Such
+// a frame is held, and shown (timed from its own arrival) once a frame
+// of the same track names the serial; a track never identified is
+// untraceable at the end, and frames past the bound are untraceable at
+// once. They used to be untraceable at once, which failed every systems
+// run (picture_untraceable_frames 15, and their samples counted as
+// silent loss).
+func TestAnUnidentifiedTrackIsTiedOnceIdentified(t *testing.T) {
+	a := &Aircraft{Name: "ac-00000", Serial: AircraftSerial(0, 1)}
+	rd := &readers{picture: NewLedger(), traffic: NewReceiptLedger(), bySer: map[string]*Aircraft{a.Serial: a}, byMAC: map[string]*Aircraft{}}
+	s := &stream{name: "console-00", kind: streamPicture, timed: true, ready: make(chan struct{})}
+	t0 := time.Now().Add(-10 * time.Second).UTC()
+	c1, c2 := t0, t0.Add(time.Second)
+	rd.picture.Hand(a.Name, c1)
+	rd.picture.Hand(a.Name, c2)
+	arrived := t0.Add(300 * time.Millisecond)
+	rd.handle(s, trackFrame(t, "u-1", sourceDirectRID, nil, c1), arrived, func([]byte, time.Time) {})
+	if c := rd.picture.Counts(); c.Shown != 0 || c.Untraceable != 0 {
+		t.Fatalf("the unidentified frame: %+v", c)
+	}
+	sn := a.Serial
+	rd.handle(s, trackFrame(t, "u-1", sourceDirectRID, &sn, c2), t0.Add(1300*time.Millisecond), func([]byte, time.Time) {})
+	if c := rd.picture.Counts(); c.Shown != 2 || c.Untraceable != 0 {
+		t.Fatalf("after the serial: %+v", c)
+	}
+	if o := rd.picture.Histogram().Observe(1); o.Max == nil || *o.Max > 0.4 {
+		t.Fatalf("the held frame was not timed from its own arrival: %+v", o)
+	}
+	// A later frame of the identified track without a serial is tied by
+	// its track id.
+	c3 := t0.Add(2 * time.Second)
+	rd.picture.Hand(a.Name, c3)
+	rd.handle(s, trackFrame(t, "u-1", sourceDirectRID, nil, c3), t0.Add(2300*time.Millisecond), func([]byte, time.Time) {})
+	if c := rd.picture.Counts(); c.Shown != 3 {
+		t.Fatalf("by track id: %+v", c)
+	}
+	// Never identified: untraceable at the end.
+	rd.handle(s, trackFrame(t, "u-2", sourceDirectRID, nil, c3), time.Now(), func([]byte, time.Time) {})
+	if c := rd.picture.Counts(); c.Untraceable != 0 {
+		t.Fatalf("held frame counted early: %+v", c)
+	}
+	rd.closeHeld()
+	if c := rd.picture.Counts(); c.Untraceable != 1 {
+		t.Fatalf("at the end: %+v", c)
+	}
+	// Past the bound: untraceable at once.
+	for i := range maxHeldPerTrack + 1 {
+		rd.handle(s, trackFrame(t, "u-3", sourceDirectRID, nil, c3.Add(time.Duration(i)*time.Millisecond)), time.Now(), func([]byte, time.Time) {})
+	}
+	if c := rd.picture.Counts(); c.Untraceable != 2 {
+		t.Fatalf("past the bound: %+v", c)
+	}
+}
+
+// receivers_forwarded_for gives receiver i the address i+1 of the
+// prefix, which it names in X-Forwarded-For, and the report says so; a
+// prefix that is not an IPv4 one, or too small for the receivers, is
+// refused before anything is sent. Without it the receivers share the
+// host's address, and the report says that instead.
+func TestReceiversGetTheirOwnAddresses(t *testing.T) {
+	f := loadSmall(t)
+	f.Paths.Pairs.InnerGapM = 30
+	lab, err := scenario.LoadLab(repo("sim/sitl.env.example"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	fl, err := NewFleet(f, lab.Origin, geoidx.Constant(15.9))
+	if err != nil {
+		t.Fatal(err)
+	}
+	base, n := counting(t)
+	with := func(prefix string) func(string) string {
+		return func(s string) string {
+			return strings.Replace(s, "  receivers:\n", "  receivers_forwarded_for: "+prefix+"\n  receivers:\n", 1)
+		}
+	}
+	p := systemsTargets(t, f, base, with("10.77.0.0/16"))
+	tg, err := runner.LoadTargets(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st, err := systemsCreds(tg, fl, f.Tier.Tier)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := map[string]bool{}
+	for i, c := range st.rx {
+		if want := fmt.Sprintf("10.77.0.%d", i+1); c.addr != want {
+			t.Fatalf("receiver %d at %q, want %s", i, c.addr, want)
+		}
+		seen[c.addr] = true
+	}
+	if len(seen) != len(fl.Receivers) || !strings.Contains(st.addresses, "10.77.0.0/16") {
+		t.Fatalf("addresses %v, note %q", seen, st.addresses)
+	}
+	none, err := systemsCreds(mustTargets(t, systemsTargets(t, f, base, nil)), fl, f.Tier.Tier)
+	if err != nil || none.rx[0].addr != "" || !strings.Contains(none.addresses, "one address") {
+		t.Fatalf("without a prefix: %v %+v %q", err, none.rx, none.addresses)
+	}
+	for _, bad := range []string{"10.77.0.0/31", "fd00::/64", "not-a-prefix"} {
+		_, err := Run(context.Background(), Options{Files: f, TargetsPath: systemsTargets(t, f, base, with(bad)), Run: "x", RepoRoot: repo(".")})
+		if err == nil || !strings.Contains(err.Error(), "receivers_forwarded_for") {
+			t.Errorf("prefix %s: %v", bad, err)
+		}
+	}
+	if n.Load() != 0 {
+		t.Fatalf("%d requests", n.Load())
+	}
+}
+
+func mustTargets(t *testing.T, p string) *runner.Targets {
+	t.Helper()
+	tg, err := runner.LoadTargets(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return tg
+}
+
+// operators_forwarded_for gives operator client i the address i+1 of the
+// prefix: every request the client makes (its tokens, its intents, its
+// sockets) names it in X-Forwarded-For, so the USSP's per-address
+// budgets apply per operator, as for real ones. Without it, no header.
+func TestOperatorsGetTheirOwnAddresses(t *testing.T) {
+	f := loadSmall(t)
+	f.Paths.Pairs.InnerGapM = 30
+	var mu sync.Mutex
+	seen := map[string]map[string]bool{} // path -> addresses
+	fake := &fakeUSSP{ended: map[string]bool{}, decide: func(int) string { return "accepted" }}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		if seen[r.URL.Path] == nil {
+			seen[r.URL.Path] = map[string]bool{}
+		}
+		seen[r.URL.Path][r.Header.Get("X-Forwarded-For")] = true
+		mu.Unlock()
+		fake.ServeHTTP(w, r)
+	}))
+	t.Cleanup(srv.Close)
+	with := func(s string) string {
+		return strings.Replace(s, "  receivers:\n", "  operators_forwarded_for: 10.78.0.0/16\n  receivers:\n", 1)
+	}
+	if _, err := Run(context.Background(), Options{Files: f, TargetsPath: systemsTargets(t, f, srv.URL, with), Run: "x", RepoRoot: repo("."), ReadyTimeout: time.Second}); err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	tok, intents := seen["/oauth/token"], seen["/v1/intents"]
+	mu.Unlock()
+	if len(tok) != 2 || !tok["10.78.0.1"] || !tok["10.78.0.2"] || len(intents) != 2 || !intents["10.78.0.1"] {
+		t.Fatalf("token requests from %v, intents from %v", tok, intents)
+	}
+	seen = map[string]map[string]bool{}
+	if _, err := Run(context.Background(), Options{Files: f, TargetsPath: systemsTargets(t, f, srv.URL, nil), Run: "x", RepoRoot: repo("."), ReadyTimeout: time.Second}); err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(seen["/oauth/token"]) != 1 || !seen["/oauth/token"][""] {
+		t.Fatalf("without a prefix: %v", seen["/oauth/token"])
+	}
+}

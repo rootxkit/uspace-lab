@@ -39,3 +39,6 @@ conformance/axe/node_modules/
 conformance/axe/test-results/
 conformance/axe/playwright-report/
 conformance/axe/axe-results.json
+
+# deploy/demo-down.sh: its env files while it runs (removed on exit).
+deploy/.demo-down-env.*

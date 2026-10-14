@@ -10,6 +10,7 @@ import (
 	"io"
 	mrand "math/rand/v2"
 	"net/http"
+	"net/netip"
 	"strings"
 	"sync"
 	"time"
@@ -47,8 +48,12 @@ const (
 	CounterBatchFailures  = "batch_failures"
 	CounterBacklogBatches = "backlog_batches"
 	CounterBacklogShed    = "backlog_shed"
-	CounterNoUTC          = "locations_without_utc"
-	CounterEncodeErrors   = "encode_errors"
+	// CounterBacklogLocations counts the Location observations the
+	// authority accepted in backlog batches: stored, and in the past, so
+	// a live picture rightly does not show them.
+	CounterBacklogLocations = "backlog_locations_accepted"
+	CounterNoUTC            = "locations_without_utc"
+	CounterEncodeErrors     = "encode_errors"
 )
 
 // Config configures one simulated receiver (02 F9).
@@ -75,6 +80,11 @@ type Config struct {
 	// unreachable (E-10); past it the oldest are shed and counted.
 	BacklogMax   int
 	Transmitters []Transmitter
+	// ForwardedFor, when set, is the receiver's own address, named in
+	// X-Forwarded-For on every batch: the load harness's receivers all
+	// run on one host, and the lab stack judges each under its own
+	// address (its Caddy trusts the header from the host only).
+	ForwardedFor string
 	HTTP         *http.Client
 	Now          func() time.Time
 }
@@ -87,11 +97,14 @@ type txState struct {
 }
 
 type obs struct {
-	Transmitter string           `json:"transmitter"`
-	PayloadHex  string           `json:"payload_hex"`
-	RSSIDBm     *float64         `json:"rssi_dbm"`
-	RxTS        *string          `json:"rx_ts"`
-	Position    *receiverPostion `json:"receiver_position,omitempty"`
+	Transmitter string   `json:"transmitter"`
+	PayloadHex  string   `json:"payload_hex"`
+	RSSIDBm     *float64 `json:"rssi_dbm"`
+	// location is whether the observation carries the sample's Location
+	// (the first payload of a sample; never sent).
+	location bool
+	RxTS     *string          `json:"rx_ts"`
+	Position *receiverPostion `json:"receiver_position,omitempty"`
 }
 
 type receiverPostion struct {
@@ -130,6 +143,11 @@ func New(cfg Config) (*Receiver, error) {
 	}
 	if len(cfg.HMACKey) < auth.MinReceiverKeyBytes {
 		return nil, core.Fieldf("hmac_key", "at least %d bytes", auth.MinReceiverKeyBytes)
+	}
+	if cfg.ForwardedFor != "" {
+		if _, err := netip.ParseAddr(cfg.ForwardedFor); err != nil {
+			return nil, core.Fieldf("forwarded_for", "%q is not an address", cfg.ForwardedFor)
+		}
 	}
 	if cfg.Transport == "" {
 		cfg.Transport = TransportPack
@@ -282,14 +300,14 @@ func (r *Receiver) hear(s *vehicle.Sample) {
 				payloads = append(payloads, b[:])
 			}
 		}
-		for _, p := range payloads {
+		for i, p := range payloads {
 			r.counters.Inc(CounterObserved)
 			if r.cfg.DropRate > 0 && r.rng.Float64() < r.cfg.DropRate {
 				r.counters.Inc(CounterDroppedByKnob)
 				continue
 			}
 			rx := wire.Format(now)
-			o := obs{Transmitter: t.MAC, PayloadHex: hex.EncodeToString(p), RxTS: &rx}
+			o := obs{Transmitter: t.MAC, PayloadHex: hex.EncodeToString(p), RxTS: &rx, location: i == 0}
 			if r.cfg.RSSIDBm != 0 {
 				v := r.cfg.RSSIDBm
 				o.RSSIDBm = &v
@@ -401,6 +419,9 @@ func (r *Receiver) post(ctx context.Context, os []obs, backlog bool) (retry bool
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+r.cfg.BearerKey)
 	req.Header.Set("X-Report-Signature", auth.SignReport(r.cfg.HMACKey, body))
+	if r.cfg.ForwardedFor != "" {
+		req.Header.Set("X-Forwarded-For", r.cfg.ForwardedFor)
+	}
 	r.counters.Inc(CounterBatches)
 	if backlog {
 		r.counters.Inc(CounterBacklogBatches)
@@ -423,6 +444,15 @@ func (r *Receiver) post(ctx context.Context, os []obs, backlog bool) (retry bool
 		r.counters.Add(CounterSent, uint64(len(os)))
 		r.counters.Add(CounterAccepted, uint64(ack.Accepted))
 		r.counters.Add(CounterDuplicates, uint64(ack.Duplicates))
+		if backlog {
+			locs := 0
+			for i := range os {
+				if os[i].location {
+					locs++
+				}
+			}
+			r.counters.Add(CounterBacklogLocations, uint64(min(locs, max(ack.Accepted, 0))))
+		}
 		return false, nil
 	case resp.StatusCode == http.StatusServiceUnavailable || resp.StatusCode >= 500:
 		return true, fmt.Errorf("simrx: authority answered %d: %s", resp.StatusCode, short(rb))
@@ -442,17 +472,20 @@ func short(b []byte) string {
 
 // Ledger is what the receiver reported and what the authority said.
 type Ledger struct {
-	ReceiverID    string            `json:"receiver_id"`
-	Observed      uint64            `json:"observed"`
-	DroppedByKnob uint64            `json:"dropped_by_knob"`
-	Sent          uint64            `json:"sent"`
-	Accepted      uint64            `json:"accepted"`
-	Duplicates    uint64            `json:"duplicates"`
-	Refused       uint64            `json:"refused"`
-	BacklogShed   uint64            `json:"backlog_shed"`
-	Pending       int               `json:"pending"`
-	Balanced      bool              `json:"balanced"`
-	Counters      map[string]uint64 `json:"counters"`
+	ReceiverID    string `json:"receiver_id"`
+	Observed      uint64 `json:"observed"`
+	DroppedByKnob uint64 `json:"dropped_by_knob"`
+	Sent          uint64 `json:"sent"`
+	Accepted      uint64 `json:"accepted"`
+	Duplicates    uint64 `json:"duplicates"`
+	Refused       uint64 `json:"refused"`
+	BacklogShed   uint64 `json:"backlog_shed"`
+	// BacklogLocations are the Location observations accepted as
+	// backlog (CounterBacklogLocations).
+	BacklogLocations uint64            `json:"backlog_locations_accepted"`
+	Pending          int               `json:"pending"`
+	Balanced         bool              `json:"balanced"`
+	Counters         map[string]uint64 `json:"counters"`
 }
 
 // Ledger reads the counters now.
@@ -463,7 +496,8 @@ func (r *Receiver) Ledger() Ledger {
 		ReceiverID: r.cfg.ReceiverID, Observed: r.counters.Get(CounterObserved), DroppedByKnob: r.counters.Get(CounterDroppedByKnob),
 		Sent: r.counters.Get(CounterSent), Accepted: r.counters.Get(CounterAccepted), Duplicates: r.counters.Get(CounterDuplicates),
 		Refused: r.counters.Get(CounterRefused), BacklogShed: r.counters.Get(CounterBacklogShed),
-		Pending: len(r.pending) + len(r.backlog), Counters: r.counters.Snapshot(),
+		BacklogLocations: r.counters.Get(CounterBacklogLocations),
+		Pending:          len(r.pending) + len(r.backlog), Counters: r.counters.Snapshot(),
 	}
 	l.Balanced = l.Sent == l.Accepted+l.Duplicates+l.Refused &&
 		l.Observed == l.DroppedByKnob+l.Sent+l.BacklogShed+uint64(l.Pending)

@@ -14,12 +14,17 @@ operators:
   poll_ms: 50
   ramp_per_s: 250 # clients connecting per second at the start
   intents: all
+  intents_per_s: 8 # lab: inside the authority's request budget for the USSP's registry checks (one per intent)
 receivers:
   heard_fraction: 0.4 # 05 §1: ~40 % heard by at least one receiver
   aircraft_per_receiver: 20
   transports: [pack, single] # BT5 / Wi-Fi packs and BT4 legacy, alternating per receiver
   batch_ms: 100
 consoles: 30
+dp:
+  views: 50 # 05 §1: the authority's DP views at 1000 drones, polled by the lab as the display provider in a systems run
+  view_side_m: 4000 # standard: F3411 NetMaxDisplayAreaDiagonalKm 7 bounds a view's diagonal (4.9 km of side)
+  poll_ms: 1000 # 05 §1: one poll a second per active view
 watch:
   pairs: 15
   walkers: 15
@@ -51,7 +56,7 @@ scale:
 # 05 §7 load sources this harness does not drive yet (the report lists
 # them; their rows stay "not measured").
 not_generated:
-  - {source: "ANSP manned feed (tens of aircraft)", why: "the reference target has no manned intake; the systems mode is not built yet"}
-  - {source: "sim-ussp as the second USSP on a local DSS", why: "the reference target has no DSS or peer interface; the F3411 and F3548 rows wait for the systems mode"}
-  - {source: "authority DP polls of the USSPs (05 §1: one view per 1 Hz)", why: "the reference authority has no DP poller"}
+  - {source: "ANSP manned feed (tens of aircraft)", why: "the reference target has no manned intake; in a systems run the ANSP adapter polls a sim-adsb the load harness does not serve, so the USSP shows manned traffic unavailable (its degraded state, in the report)"}
+  - {source: "sim-ussp as the second USSP on a local DSS", why: "the reference target has no DSS or peer interface; in a systems run the F3548 rows need the fleet's intents inside U-space airspace (DSS-backed) and sim-ussp subscribed as the peer, which the load harness does not drive"}
+  - {source: "authority DP polls of the USSPs (05 §1: one view per 1 Hz)", why: "the reference target has no SP; in a systems run the lab polls the USSP's SP as the display provider (dp), the authority's own DP poller has no view in the lab stack"}
   - {source: "optional national push USSP -> authority", why: "disabled by default (02 F6) and not in the reference target"}

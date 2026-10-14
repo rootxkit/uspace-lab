@@ -120,49 +120,18 @@ func Run(ctx context.Context, o Options) error {
 	if o.Log == nil {
 		o.Log = func(string, ...any) {}
 	}
-	env, err := Env(o.Env)
-	if err != nil {
-		return fmt.Errorf("seed: %w", err)
-	}
 	var testOps *TestOperators
 	if o.TestOperators != "" {
+		var err error
 		if testOps, err = LoadTestOperators(o.TestOperators); err != nil {
 			return err
 		}
 	}
-	deployDir := filepath.Dir(o.Env)
-	rel := func(p string) string {
-		if filepath.IsAbs(p) {
-			return p
-		}
-		return filepath.Join(deployDir, p)
-	}
-	stateDir := rel(def(env["DEMO_STATE_DIR"], "./local-demo"))
-	port, _ := strconv.Atoi(def(env["DEMO_HTTPS_PORT"], "443"))
-	hosts := map[string]string{}
-	for _, k := range []string{"AUTHORITY_HOST", "CISP_HOST", "USSP_HOST", "ANSP_HOST", "LAB_HOST"} {
-		if env[k] == "" {
-			return fmt.Errorf("seed: %s is not set in %s", k, o.Env)
-		}
-		hosts[k] = env[k]
-	}
-	c, err := NewClient(filepath.Join(stateDir, "ca", "ca.pem"), port,
-		[]string{hosts["AUTHORITY_HOST"], hosts["CISP_HOST"], hosts["USSP_HOST"], hosts["ANSP_HOST"], hosts["LAB_HOST"]})
+	sk, err := openStack(o.Env)
 	if err != nil {
 		return err
 	}
-	st, err := LoadState(filepath.Join(stateDir, "seed-state.json"))
-	if err != nil {
-		return err
-	}
-	// The bootstrap admins' passwords are the files the systems read.
-	for sys, file := range map[string]string{"authority": "authority/admin.pw", "ansp": "ansp/admin.pw"} {
-		b, err := os.ReadFile(filepath.Join(stateDir, file)) //nolint:gosec // the state directory
-		if err != nil {
-			return fmt.Errorf("seed: %w", err)
-		}
-		st.Account(sys, "admin").Password = strings.TrimSpace(string(b))
-	}
+	env, stateDir, hosts, c, st := sk.env, sk.stateDir, sk.hosts, sk.c, sk.st
 	lab, err := scenario.LoadLab(o.Lab)
 	if err != nil {
 		return err
@@ -296,6 +265,55 @@ func Run(ctx context.Context, o Options) error {
 		return writeTargets(o, env, stateDir, hosts, st, admin, insp, anspSession)
 	}
 	return nil
+}
+
+// stack is the demo stack as deploy/demo.env describes it: its env, its
+// state directory, its hosts, a client that dials them and the seed's
+// state with the bootstrap admins' passwords.
+type stack struct {
+	env      map[string]string
+	stateDir string
+	hosts    map[string]string
+	c        *Client
+	st       *State
+}
+
+func openStack(envPath string) (*stack, error) {
+	env, err := Env(envPath)
+	if err != nil {
+		return nil, fmt.Errorf("seed: %w", err)
+	}
+	deployDir := filepath.Dir(envPath)
+	stateDir := def(env["DEMO_STATE_DIR"], "./local-demo")
+	if !filepath.IsAbs(stateDir) {
+		stateDir = filepath.Join(deployDir, stateDir)
+	}
+	port, _ := strconv.Atoi(def(env["DEMO_HTTPS_PORT"], "443"))
+	hosts := map[string]string{}
+	for _, k := range []string{"AUTHORITY_HOST", "CISP_HOST", "USSP_HOST", "ANSP_HOST", "LAB_HOST"} {
+		if env[k] == "" {
+			return nil, fmt.Errorf("seed: %s is not set in %s", k, envPath)
+		}
+		hosts[k] = env[k]
+	}
+	c, err := NewClient(filepath.Join(stateDir, "ca", "ca.pem"), port,
+		[]string{hosts["AUTHORITY_HOST"], hosts["CISP_HOST"], hosts["USSP_HOST"], hosts["ANSP_HOST"], hosts["LAB_HOST"]})
+	if err != nil {
+		return nil, err
+	}
+	st, err := LoadState(filepath.Join(stateDir, "seed-state.json"))
+	if err != nil {
+		return nil, err
+	}
+	// The bootstrap admins' passwords are the files the systems read.
+	for sys, file := range map[string]string{"authority": "authority/admin.pw", "ansp": "ansp/admin.pw"} {
+		b, err := os.ReadFile(filepath.Join(stateDir, file)) //nolint:gosec // the state directory
+		if err != nil {
+			return nil, fmt.Errorf("seed: %w", err)
+		}
+		st.Account(sys, "admin").Password = strings.TrimSpace(string(b))
+	}
+	return &stack{env: env, stateDir: stateDir, hosts: hosts, c: c, st: st}, nil
 }
 
 func def(v, d string) string {

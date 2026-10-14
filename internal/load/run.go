@@ -12,6 +12,7 @@ import (
 	"math"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/rootxkit/uspace-core/core"
 	"github.com/rootxkit/uspace-core/geoid"
+	"github.com/rootxkit/uspace-core/regnum"
 
 	"github.com/rootxkit/uspace-lab/conformance/report"
 	"github.com/rootxkit/uspace-lab/internal/geoidx"
@@ -57,6 +59,12 @@ type Options struct {
 	// ReadyTimeout bounds the wait for every client and stream to come
 	// up before the generator starts (0: a minute plus the tier's ramp).
 	ReadyTimeout time.Duration
+	// FaultsPath is a fault plan (load/faults/*.yaml) run during a
+	// systems run; empty: none.
+	FaultsPath string
+	// RenewSession signs a console in again when the authority ends the
+	// picture's session (nil: the session of the targets file only).
+	RenewSession func(ctx context.Context) (string, error)
 }
 
 // referenceAudience is the reference target's host (never resolved).
@@ -76,12 +84,12 @@ func Prepare(opt *Options) (*runner.Targets, *scenario.Lab, geoid.Undulator, str
 	if err != nil {
 		return nil, nil, nil, "", err
 	}
-	if tg.Mode != runner.ModeReference {
+	if tg.Mode == runner.ModeSystems {
 		// Fail closed rather than load a system with a fleet it has not
-		// registered: the systems mode needs the tier's serials bound at
-		// the USSP and its receivers registered at the authority first.
-		return nil, nil, nil, "", fmt.Errorf("load: targets mode %q: only the reference target is driven yet; a systems run needs the tier's %d serials bound at the USSP and its receivers registered at the authority first (docs/RUNBOOKS/load.md)",
-			tg.Mode, opt.Files.Tier.Operators.Aircraft)
+		// registered: the fleet itself is compared in Run, once laid out.
+		if err := checkSystemsTargets(tg, opt.Files.Tier); err != nil {
+			return nil, nil, nil, "", err
+		}
 	}
 	labPath := tg.Lab
 	if labPath != "" && !filepath.IsAbs(labPath) {
@@ -130,10 +138,37 @@ func Run(ctx context.Context, opt Options) (*Report, error) {
 	}
 	r := &run{opt: opt, files: &runFiles, tier: &tier, fleet: fl, geo: geo, log: opt.Log,
 		picture: NewLedger(), traffic: NewReceiptLedger(), rec: observe.NewRecorder(nil)}
+	evidence := "The lab's in-process reference target (internal/reftarget): it proves the harness and is never evidence for a system (docs/PLAN.md L-D4); generator and target share this host's CPUs."
+	if tg.Mode == runner.ModeSystems {
+		// Every credential is read and the fleet compared with the one
+		// the systems were seeded for before anything is sent.
+		if r.systems, err = systemsCreds(tg, fl, files.Tier.Tier); err != nil {
+			return nil, err
+		}
+		if tg.Load.Probes != nil {
+			r.probes = newProbes(tg.Load.Probes)
+		}
+		evidence = "The systems' images as the targets file names them, seeded for this fleet (loadgen seed); evidence for the images and digests listed, on the host named, when the run passes (docs/PLAN.md L-D4)."
+	}
+	if opt.FaultsPath != "" {
+		// Faults act on the systems' containers: checked, like the rest,
+		// before anything starts.
+		if r.systems == nil {
+			return nil, fmt.Errorf("load: --faults needs a systems target: the reference target has no containers")
+		}
+		plan, err := LoadFaults(opt.FaultsPath, filepath.Join(opt.RepoRoot, "scripts", "chaos"), tier.DurationS)
+		if err != nil {
+			return nil, err
+		}
+		r.faults = newFaultRunner(plan, filepath.Join(opt.RepoRoot, "scripts", "chaos"))
+	}
+	receivers := ""
+	if r.systems != nil {
+		receivers = r.systems.addresses
+	}
 	rep := &Report{Format: ReportFormat, Run: opt.Run, StartedAt: time.Now().UTC(), Tier: &tier, Scaled: len(tier.Scale) > 0,
-		Target: TargetInfo{Mode: tg.Mode, Name: tg.Name, Images: tg.Images,
-			Evidence: "The lab's in-process reference target (internal/reftarget): it proves the harness and is never evidence for a system (docs/PLAN.md L-D4); generator and target share this host's CPUs."},
-		Host: hostInfo(opt.HostName), Commits: report.LabCommits(opt.RepoRoot), Files: files.Digests, Policy: files.Policy,
+		Target: TargetInfo{Mode: tg.Mode, Name: tg.Name, Images: tg.Images, Evidence: evidence, Receivers: receivers},
+		Host:   hostInfo(opt.HostName, tg.Mode), Commits: report.LabCommits(opt.RepoRoot), Files: files.Digests, Policy: files.Policy,
 		Lab: LabInfo{File: lab.Path, OriginLat: lab.Origin.LatDeg, OriginLon: lab.Origin.LonDeg, OriginAMSL: lab.Origin.AltAMSLM, Geoid: geoDesc}}
 	r.execute(ctx, rep)
 	rep.EndedAt = time.Now().UTC()
@@ -152,30 +187,48 @@ type run struct {
 	traffic *Ledger
 	rec     *observe.Recorder
 
-	base      string
-	target    *reftarget.Target
-	tokens    []*oauth.ClientCredentials
-	console   string
-	rxCreds   []rxCred
-	intents   map[int]string
-	operators []*simop.Client
-	opIn      []chan vehicle.Sample
-	receivers []*simrx.Receiver
-	rxIn      []chan vehicle.Sample
-	streams   []*stream
-	readers   *readers
-	errs      []string
-	errMu     sync.Mutex
-	shedOp    uint64
-	shedRID   uint64
-	late      uint64
-	handedK   []int64
-	memory    []uint64
+	// usspBase and authBase are where the operators and the receivers
+	// send; pictureURL and pictureHeader open a console.
+	usspBase      string
+	authBase      string
+	pictureURL    string
+	pictureHeader http.Header
+	// pictureHeaderFor, when set, makes each console's header function
+	// (systems mode: the session, signed in again when it ended).
+	pictureHeaderFor func() func(ctx context.Context, renew bool) (http.Header, error)
+	target           *reftarget.Target
+	systems          *systemsTarget
+	probes           *probes
+	sp               *spPoller
+	faults           *faultRunner
+	tokens           []*oauth.ClientCredentials
+	// clientHTTP and clientAddr are each operator client's HTTP client
+	// and own address (nil, "": the defaults; systems mode).
+	clientHTTP []*http.Client
+	clientAddr []string
+	rxCreds    []rxCred
+	intents    map[int]string
+	operators  []*simop.Client
+	opIn       []chan vehicle.Sample
+	receivers  []*simrx.Receiver
+	rxIn       []chan vehicle.Sample
+	streams    []*stream
+	readers    *readers
+	errs       []string
+	errMu      sync.Mutex
+	shedOp     uint64
+	shedRID    uint64
+	late       uint64
+	handedK    []int64
+	memory     []uint64
 }
 
 type rxCred struct {
 	id, bearer string
 	key        []byte
+	// addr is the address the receiver names in X-Forwarded-For ("" for
+	// none).
+	addr string
 }
 
 func (r *run) fail(format string, a ...any) {
@@ -200,12 +253,25 @@ func (r *run) execute(ctx context.Context, rep *Report) {
 	var wg sync.WaitGroup
 	defer wg.Wait()
 	defer cancel()
-	if err := r.startReference(ctx, &wg); err != nil {
-		r.fail("reference target: %v", err)
+	start, what := r.startReference, "reference target"
+	if r.systems != nil {
+		start, what = r.startSystems, "systems"
+	}
+	if err := start(ctx, &wg); err != nil {
+		r.fail("%s: %v", what, err)
 		r.finish(rep)
 		return
 	}
 	r.fileIntents(ctx)
+	// Registered after the target's teardown, so it runs before it.
+	defer r.endIntents(ctx, rep)
+	if n := r.intentErrors(); n > 0 {
+		// A flight without an authorised intent is refused by the USSP:
+		// the run would measure a fleet the target is not flying.
+		r.fail("not ready: %d of the fleet's intents not authorised (each is listed above); nothing else was started", n)
+		r.finish(rep)
+		return
+	}
 	simCtx, simCancel := context.WithCancel(ctx)
 	defer simCancel()
 	// The consoles first, then the clients at the tier's ramp: five
@@ -216,6 +282,9 @@ func (r *run) execute(ctx context.Context, rep *Report) {
 	deadline := time.NewTimer(r.opt.ReadyTimeout)
 	defer deadline.Stop()
 	r.startStreams(obsCtx, &wg)
+	if r.faults != nil {
+		r.readers.onShown = r.faults.shown
+	}
 	if err := r.waitStreams(ctx, deadline.C); err != nil {
 		r.fail("not ready: %v", err)
 		r.finish(rep)
@@ -235,14 +304,43 @@ func (r *run) execute(ctx context.Context, rep *Report) {
 	var memWG sync.WaitGroup
 	memWG.Add(1)
 	go func() { defer memWG.Done(); r.sampleMemory(memCtx) }()
+	if r.probes != nil {
+		// The databases' sizes before the generator, and the processes'
+		// /metrics every memory_sample_s while it runs.
+		r.probes.sizes(ctx, false)
+		memWG.Add(1)
+		go func() {
+			defer memWG.Done()
+			r.probes.run(memCtx, time.Duration(r.tier.MemorySampleS*float64(time.Second)))
+		}()
+	}
+	if r.systems != nil && r.systems.dp != nil && r.tier.DP != nil {
+		// The lab as the DP: every view polled while the generator runs.
+		r.sp = newSPPoller(r.usspBase, r.systems.dp, r.fleet.dpViews(r.tier.DP.ViewSideM, r.tier.DP.Views), time.Duration(r.tier.DP.PollMS)*time.Millisecond)
+		memWG.Add(1)
+		go func() { defer memWG.Done(); r.sp.run(memCtx) }()
+	}
 	t0 := time.Now()
+	var faultWG sync.WaitGroup
+	if r.faults != nil {
+		faultWG.Add(1)
+		go func() { defer faultWG.Done(); r.faults.execute(ctx, t0, r.fail) }()
+	}
 	r.log.Info("generator started", "tier", r.tier.Tier, "aircraft", len(r.fleet.Aircraft), "duration_s", r.tier.DurationS)
 	r.generate(ctx, t0)
 	genS := time.Since(t0).Seconds()
+	// Every fault is restored before the run's end (LoadFaults): a
+	// cancelled run waits for its restore.
+	faultWG.Wait()
 	r.log.Info("generator stopped; draining", "after_s", math.Round(genS))
 	memCancel()
 	memWG.Wait()
 	r.drain(ctx)
+	if r.probes != nil {
+		// After the drain: the counters' last values and the sizes.
+		r.probes.scrape(ctx)
+		r.probes.sizes(ctx, true)
+	}
 	if r.opt.HeapProfile != "" {
 		if err := writeHeapProfile(r.opt.HeapProfile); err != nil {
 			r.fail("heap profile: %v", err)
@@ -287,9 +385,9 @@ func (r *run) startReference(ctx context.Context, wg *sync.WaitGroup) error {
 		r.rxCreds = append(r.rxCreds, c)
 		receivers[i] = reftarget.Receiver{ID: c.id, BearerKey: c.bearer, HMACKey: c.key}
 	}
-	r.console = randomHex(16)
+	console := randomHex(16)
 	tgt, err := reftarget.New(ctx, reftarget.Config{Policy: r.files.Policy, Geoid: r.geo, Audience: referenceAudience,
-		Clients: clients, Receivers: receivers, ConsoleToken: r.console})
+		Clients: clients, Receivers: receivers, ConsoleToken: console})
 	if err != nil {
 		return err
 	}
@@ -298,36 +396,55 @@ func (r *run) startReference(ctx context.Context, wg *sync.WaitGroup) error {
 		return err
 	}
 	srv := &http.Server{Handler: tgt.Handler(), ReadHeaderTimeout: 5 * time.Second}
-	r.target, r.base = tgt, "http://"+ln.Addr().String()
+	base := "http://" + ln.Addr().String()
+	r.target, r.usspBase, r.authBase = tgt, base, base
+	r.pictureURL, r.pictureHeader = wsURL(base)+"/v1/picture/ws", http.Header{"Authorization": {"Bearer " + console}}
 	wg.Add(3)
 	go func() { defer wg.Done(); tgt.Run(ctx) }()
 	go func() { defer wg.Done(); _ = srv.Serve(ln) }()
 	go func() { defer wg.Done(); <-ctx.Done(); _ = srv.Close() }()
 	for i := range clients {
-		r.tokens = append(r.tokens, &oauth.ClientCredentials{TokenURL: r.base + "/oauth/token", ClientID: clients[i].ID,
+		r.tokens = append(r.tokens, &oauth.ClientCredentials{TokenURL: base + "/oauth/token", ClientID: clients[i].ID,
 			ClientSecret: secrets[i], Audience: referenceAudience, Scopes: clients[i].Scopes})
 	}
 	return nil
 }
 
-// intentRequest is one aircraft's intent: a circle over its path, its
-// altitude +-30 m as WGS84 heights, for the run's span.
+// intentRequest is one aircraft's intent: a circle over its path (a box
+// on its own side for a pair member with an inner gap), its altitude
+// +-30 m as WGS84 heights, for the run's span.
 func (r *run) intentRequest(a *Aircraft, start, end time.Time) (simop.IntentRequest, error) {
 	fl := r.fleet
-	radius := r.files.Paths.Walkers.RadiusM + 100
-	if a.Role == RolePair {
-		radius = r.files.Paths.Pairs.AmplitudeM + 100
-	}
 	c := scenario.Move(fl.originLatLon(), a.centre)
+	var shape simop.Volume3D
+	if a.Role == RolePair && r.files.Paths.Pairs.InnerGapM > 0 {
+		// A box on the member's own side of the line: the two members'
+		// intents never share airspace (pairBox).
+		b := fl.pairBox(a)
+		var poly simop.Polygon
+		for _, o := range []scenario.Offset{{NorthM: -pairIntentMarginM, EastM: b.WestM}, {NorthM: -pairIntentMarginM, EastM: b.EastM},
+			{NorthM: pairIntentMarginM, EastM: b.EastM}, {NorthM: pairIntentMarginM, EastM: b.WestM}} {
+			p := scenario.Move(fl.originLatLon(), scenario.Offset{NorthM: a.centre.NorthM + o.NorthM, EastM: a.centre.EastM + o.EastM})
+			poly.Vertices = append(poly.Vertices, simop.Point{Lat: p.LatDeg, Lng: p.LonDeg})
+		}
+		c = scenario.Move(fl.originLatLon(), scenario.Offset{NorthM: a.centre.NorthM, EastM: a.centre.EastM + (b.WestM+b.EastM)/2})
+		shape.OutlinePolygon = &poly
+	} else {
+		radius := r.files.Paths.Walkers.RadiusM + pairIntentMarginM
+		if a.Role == RolePair {
+			radius = r.files.Paths.Pairs.AmplitudeM + pairIntentMarginM
+		}
+		shape.OutlineCircle = &simop.Circle{Center: simop.Point{Lat: c.LatDeg, Lng: c.LonDeg}, Radius: simop.Radius{Value: radius, Units: "M"}}
+	}
 	n, err := r.geo.UndulationM(c)
 	if err != nil {
 		return simop.IntentRequest{}, fmt.Errorf("geoid at %s: %w", a.Name, err)
 	}
 	amsl := fl.origin.AltAMSLM + a.AltRelM
+	shape.AltitudeLower = simop.IntentAltitude{Value: geoid.HAEFromAMSL(amsl-30, n), Reference: "W84", Units: "M"}
+	shape.AltitudeUpper = simop.IntentAltitude{Value: geoid.HAEFromAMSL(amsl+30, n), Reference: "W84", Units: "M"}
 	vol := simop.Volume4D{
-		Volume: simop.Volume3D{OutlineCircle: &simop.Circle{Center: simop.Point{Lat: c.LatDeg, Lng: c.LonDeg}, Radius: simop.Radius{Value: radius, Units: "M"}},
-			AltitudeLower: simop.IntentAltitude{Value: geoid.HAEFromAMSL(amsl-30, n), Reference: "W84", Units: "M"},
-			AltitudeUpper: simop.IntentAltitude{Value: geoid.HAEFromAMSL(amsl+30, n), Reference: "W84", Units: "M"}},
+		Volume:    shape,
 		TimeStart: simop.IntentTime{Value: start.Format(time.RFC3339), Format: "RFC3339"},
 		TimeEnd:   simop.IntentTime{Value: end.Format(time.RFC3339), Format: "RFC3339"},
 	}
@@ -337,9 +454,9 @@ func (r *run) intentRequest(a *Aircraft, start, end time.Time) (simop.IntentRequ
 		ref = "load-" + hex.EncodeToString(sum[:12])
 	}
 	return simop.IntentRequest{
-		ClientRef: ref, UASSerial: a.Serial, Mode: "VLOS", FlightType: "normal", Category: "open", Volumes: []simop.Volume4D{vol},
+		ClientRef: ref, UASSerial: a.Serial, Mode: "VLOS", FlightType: "normal", Category: "open", Subcategory: LoadSubcategory, ClassLabel: LoadClassLabel, Volumes: []simop.Volume4D{vol},
 		IdentificationTechnology: "network", ConnectivityMethods: []string{"lte"}, EnduranceS: int(end.Sub(start).Seconds()) + 600,
-		LossOfC2Procedure: "return to the take-off point and land", OperatorReg: "LAB-LOAD-OPERATOR",
+		LossOfC2Procedure: "return to the take-off point and land", OperatorReg: a.OperatorReg,
 		Takeoff:     &simop.Point{Lat: c.LatDeg, Lng: c.LonDeg},
 		Contingency: simop.IntentContingency{Procedure: "land at the take-off point"}, EmergencyContactRef: "lab-load",
 	}, nil
@@ -347,7 +464,7 @@ func (r *run) intentRequest(a *Aircraft, start, end time.Time) (simop.IntentRequ
 
 // fileIntents files and activates the intents (05 §1: intent operations
 // compressed into the run; "watched" files only those whose traffic is
-// read). Eight at a time.
+// read), at the tier's intents_per_s, eight in flight at most.
 func (r *run) fileIntents(ctx context.Context) {
 	r.intents = map[int]string{}
 	start := time.Now().Add(-time.Minute).UTC()
@@ -369,13 +486,20 @@ func (r *run) fileIntents(ctx context.Context) {
 				req, err := r.intentRequest(a, start, end)
 				var id string
 				if err == nil {
-					in := &simop.Intents{BaseURL: r.base, Tokens: r.tokens[a.Client]}
+					in := &simop.Intents{BaseURL: r.usspBase, Tokens: r.tokens[a.Client], HTTP: r.httpOf(a.Client)}
 					var d simop.Decision
-					if d, err = in.File(ctx, req); err == nil {
+					if d, err = in.File(ctx, req); err == nil && d.State == "accepted" {
+						d, err = in.Change(ctx, d.IntentID, "activate")
+					}
+					// Only an activated intent flies: anything else
+					// (rejected, held pending) is the USSP's refusal,
+					// said with its reasons.
+					switch {
+					case err != nil:
+					case d.State != "activated":
+						err = fmt.Errorf("%s (%s)", d.State, reasonsOf(d.Conflicts))
+					default:
 						id = d.IntentID
-						if d.State == "accepted" {
-							_, err = in.Change(ctx, d.IntentID, "activate")
-						}
 					}
 				}
 				mu.Lock()
@@ -388,10 +512,22 @@ func (r *run) fileIntents(ctx context.Context) {
 			}
 		}()
 	}
-	for _, a := range todo {
+	// One intent per tick of the tier's intents_per_s, the first at once.
+	tk := time.NewTicker(time.Duration(float64(time.Second) / r.tier.Operators.IntentsPerS))
+	defer tk.Stop()
+send:
+	for i, a := range todo {
+		if i > 0 {
+			select {
+			case <-tk.C:
+			case <-ctx.Done():
+				break send
+			}
+		}
 		select {
 		case work <- a:
 		case <-ctx.Done():
+			break send
 		}
 	}
 	close(work)
@@ -415,7 +551,7 @@ func (r *run) startClients(ctx context.Context, wg *sync.WaitGroup) error {
 			case <-tk.C:
 			}
 		}
-		c, err := simop.New(simop.Config{BaseURL: r.base, Tokens: r.tokens[a.Client], Serial: a.Serial, Transport: simop.TransportWS,
+		c, err := simop.New(simop.Config{BaseURL: r.usspBase, Tokens: r.tokens[a.Client], HTTP: r.httpOf(a.Client), Serial: a.Serial, Transport: simop.TransportWS,
 			Period: poll, Geoid: r.geo, IntentID: r.intents[a.Index], Seed: uint64(a.Index) + 1, Epoch: "load-" + r.opt.Run})
 		if err != nil {
 			return err
@@ -430,11 +566,11 @@ func (r *run) startClients(ctx context.Context, wg *sync.WaitGroup) error {
 		var txs []simrx.Transmitter
 		for _, ai := range idx {
 			a := r.fleet.Aircraft[ai]
-			txs = append(txs, simrx.Transmitter{Sysid: a.Sysid, MAC: a.MAC, Serial: a.Serial, OperatorID: "LAB-LOAD-OPERATOR"})
+			txs = append(txs, simrx.Transmitter{Sysid: a.Sysid, MAC: a.MAC, Serial: a.Serial, OperatorID: regnum.PublicPart(a.OperatorReg)})
 		}
 		c := r.rxCreds[i]
-		rx, err := simrx.New(simrx.Config{BaseURL: r.base, ReceiverID: c.id, BearerKey: c.bearer, HMACKey: c.key,
-			Transport: t.Receivers.Transports[i%len(t.Receivers.Transports)], Geoid: r.geo, Seed: uint64(i) + 1,
+		rx, err := simrx.New(simrx.Config{BaseURL: r.authBase, ReceiverID: c.id, BearerKey: c.bearer, HMACKey: c.key,
+			Transport: t.Receivers.Transports[i%len(t.Receivers.Transports)], Geoid: r.geo, Seed: uint64(i) + 1, ForwardedFor: c.addr,
 			// Every sample is a Location (the generator's period is the
 			// broadcast rate); statics every 3 s as F3411 asks.
 			LocationPeriod: time.Millisecond, BatchPeriod: time.Duration(t.Receivers.BatchMS) * time.Millisecond, Transmitters: txs})
@@ -471,21 +607,32 @@ func (r *run) startStreams(ctx context.Context, wg *sync.WaitGroup) {
 	bb := r.fleet.BBox
 	sub, _ := json.Marshal(map[string]any{"schema": "console/subscribe/v1", "body": map[string]any{"bbox": bb[:], "layers": []string{"tracks", "alerts"}}})
 	for i := range r.tier.Consoles {
-		r.streams = append(r.streams, &stream{name: fmt.Sprintf("console-%02d", i), kind: streamPicture, url: wsURL(r.base) + "/v1/picture/ws",
-			header: http.Header{"Authorization": {"Bearer " + r.console}}, onOpen: sub, timed: i == 0, needSnap: true, ready: make(chan struct{})})
+		r.streams = append(r.streams, &stream{name: fmt.Sprintf("console-%02d", i), kind: streamPicture, url: r.pictureURL,
+			header: r.pictureHeader.Clone(), headerFn: r.consoleHeader(), onOpen: sub, timed: i == 0, needSnap: true, ready: make(chan struct{})})
 	}
 	for _, a := range r.fleet.Aircraft {
 		id, ok := r.intents[a.Index]
 		if !a.Watched || !ok {
 			continue
 		}
-		tok, err := r.tokens[a.Client].Token(ctx)
-		if err != nil {
-			r.fail("token for the traffic of %s: %v", a.Name, err)
-			continue
-		}
-		r.streams = append(r.streams, &stream{name: "traffic-" + a.Name, kind: streamTraffic, url: wsURL(r.base) + "/v1/traffic?intent_id=" + id,
-			header: http.Header{"Authorization": {"Bearer " + tok}}, aircraft: a, timed: true, ready: make(chan struct{})})
+		// The token of each connection: the client's, renewed by it as it
+		// expires (a 60-minute run outlives the first).
+		tokens, addr := r.tokens[a.Client], r.addrOf(a.Client)
+		r.streams = append(r.streams, &stream{name: "traffic-" + a.Name, kind: streamTraffic, url: wsURL(r.usspBase) + "/v1/traffic?intent_id=" + url.QueryEscape(id),
+			headerFn: func(ctx context.Context, renew bool) (http.Header, error) {
+				if renew {
+					tokens.Invalidate()
+				}
+				tok, err := tokens.Token(ctx)
+				if err != nil {
+					return nil, err
+				}
+				h := http.Header{"Authorization": {"Bearer " + tok}}
+				if addr != "" {
+					h.Set("X-Forwarded-For", addr)
+				}
+				return h, nil
+			}, aircraft: a, timed: true, ready: make(chan struct{})})
 	}
 	for _, s := range r.streams {
 		wg.Add(1)
@@ -715,6 +862,7 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 		lr.Duplicates += l.Duplicates
 		lr.Refused += l.Refused
 		lr.BacklogShed += l.BacklogShed
+		lr.BacklogLocations += l.BacklogLocations
 		lr.DroppedByKnob += l.DroppedByKnob
 		lr.Pending += uint64(l.Pending)
 		if !l.Balanced || l.Pending > 0 {
@@ -727,8 +875,11 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 	}
 	rep.Loss.Operator, rep.Loss.Receivers = lo, lr
 	rep.Loss.GeneratorShedOperator, rep.Loss.GeneratorShedRID = r.shedOp, r.shedRID
+	r.readers.closeHeld()
 	rep.Loss.Picture, rep.Loss.Traffic = r.picture.Close(), r.traffic.Close()
-	rep.Loss.TargetCounters = r.target.Counters()
+	if r.target != nil {
+		rep.Loss.TargetCounters = r.target.Counters()
+	}
 	var timed *stream
 	consoleFrames := uint64(0)
 	for _, s := range r.streams {
@@ -790,7 +941,10 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 	if timed != nil && heard > 0 {
 		pc := rep.Loss.Picture
 		dropped := timed.stats().DroppedFrames
-		accounted := lr.Refused + dropped + r.shedRID + lr.BacklogShed + lr.DroppedByKnob + lr.Pending
+		// A sample accepted as backlog (replayed after the authority was
+		// unreachable) is stored and in the past: the live picture rightly
+		// does not show it, and it is not lost.
+		accounted := lr.Refused + dropped + r.shedRID + lr.BacklogShed + lr.DroppedByKnob + lr.Pending + lr.BacklogLocations
 		silent := uint64(0)
 		if pc.Unshown > accounted {
 			silent = pc.Unshown - accounted
@@ -825,6 +979,62 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 	} else {
 		obs["memory_growth_ratio"] = notMeasured(fmt.Sprintf("%d memory samples after the %.0f s warm-up, at least 6 are needed", len(judged), t.MemoryWarmupS))
 		obs["memory_monotonic"] = obs["memory_growth_ratio"]
+	}
+	// The faults: restart and partition rows.
+	if r.faults != nil {
+		lost := lo.QueueShed + lo.Pending + lr.BacklogShed + lr.Pending
+		r.readers.flagMu.Lock()
+		flags := append([]flagSeen(nil), r.readers.flags...)
+		r.readers.flagMu.Unlock()
+		rep.Faults = r.faults.observe(obs, t0.Add(seconds(genS)), r.rec.Events(), lost, rep.Loss.PictureSilent, flags)
+	} else {
+		why := notMeasured(niChaos)
+		if r.systems != nil {
+			why = notMeasured("no fault plan in the run (loadgen run --faults load/faults/<plan>.yaml)")
+		}
+		for _, m := range []string{"restart_recovery_s", "restart_duplicate_alerts", "restart_lost_backlog", "partition_unreplayed", "partition_cross_effects"} {
+			obs[m] = why
+		}
+	}
+	// The F3411 SP, as the lab polled it.
+	switch {
+	case r.sp != nil:
+		st, fail := r.sp.observe(obs, t.MinSamples, r.excused())
+		rep.F3411 = &st
+		if fail != "" {
+			r.fail("%s", fail)
+		}
+	case r.systems != nil && r.tier.DP == nil:
+		obs["f3411_sp_flights_s"], obs["f3411_details_s"] = notMeasured("the tier polls no DP view (dp)"), notMeasured("the tier polls no DP view (dp)")
+	case r.systems != nil:
+		why := notMeasured("the targets file names no f3411_dp client (loadgen seed writes it)")
+		obs["f3411_sp_flights_s"], obs["f3411_details_s"] = why, why
+	default:
+		obs["f3411_sp_flights_s"], obs["f3411_details_s"] = notMeasured(niF3411), notMeasured(niF3411)
+	}
+	// What the probes read of the systems. In a systems run the memory
+	// row is the systems' processes, never the harness's own heap.
+	probed := []string{"cpa_pair_checks_per_worker", "writer_queue_max_s", "compression_lag_chunks", "disk_growth_vs_model"}
+	switch {
+	case r.probes != nil:
+		fleetSamples := uint64(0)
+		for _, k := range r.handedK {
+			fleetSamples += uint64(k)
+		}
+		rep.Systems = r.probes.observe(obs, r.files.Criteria.Models, fleetSamples, skip, r.excused())
+		for _, e := range rep.Systems.Errors {
+			r.fail("probe: %s", e)
+		}
+	case r.systems != nil:
+		why := notMeasured("the targets file names no probes (loadgen seed writes them): the systems' metrics and databases are not read")
+		for _, m := range append(probed, "memory_growth_ratio", "memory_monotonic") {
+			obs[m] = why
+		}
+	default:
+		for _, m := range probed {
+			obs[m] = notMeasured(niMetrics)
+		}
+		obs["writer_queue_max_s"], obs["compression_lag_chunks"], obs["disk_growth_vs_model"] = notMeasured(niStorage), notMeasured(niStorage), notMeasured(niStorage)
 	}
 	// A sample handed out more than a period after its slot: the host
 	// stalled or the generator is saturated, and the offered load was
@@ -910,12 +1120,15 @@ func writeHeapProfile(path string) error {
 	return f.Close()
 }
 
-func hostInfo(name string) Host {
+func hostInfo(name, mode string) Host {
 	if name == "" {
 		name = "unnamed (pass --host)"
 	}
-	h := Host{Name: name, OS: runtime.GOOS, Arch: runtime.GOARCH, CPUs: runtime.NumCPU(), Go: runtime.Version(),
-		Note: "the host the generator and the reference target ran on together (L-Q1)"}
+	note := "the host the generator and the reference target ran on together (L-Q1)"
+	if mode == runner.ModeSystems {
+		note = "the host the generator ran on (L-Q1); where the systems ran is the --host name's to say"
+	}
+	h := Host{Name: name, OS: runtime.GOOS, Arch: runtime.GOARCH, CPUs: runtime.NumCPU(), Go: runtime.Version(), Note: note}
 	if b, err := os.ReadFile("/proc/meminfo"); err == nil {
 		for _, line := range strings.Split(string(b), "\n") {
 			if f := strings.Fields(line); len(f) >= 2 && f[0] == "MemTotal:" {
@@ -927,4 +1140,108 @@ func hostInfo(name string) Host {
 		}
 	}
 	return h
+}
+
+// reasonsOf is the reasons of a decision's conflicts, at most three.
+func reasonsOf(conflicts []any) string {
+	var out []string
+	for _, c := range conflicts {
+		if m, ok := c.(map[string]any); ok {
+			if s, ok := m["reason"].(string); ok && len(out) < 3 {
+				out = append(out, s)
+			}
+		}
+	}
+	if len(out) == 0 {
+		return "no reason given"
+	}
+	return strings.Join(out, ", ")
+}
+
+// endIntentsTimeout bounds ending the run's intents, which happens
+// whatever ended the run (a signal included).
+const endIntentsTimeout = 2 * time.Minute
+
+// endIntents ends every intent the run activated, eight at a time: an
+// intent left authorised holds its airspace for its whole window, and
+// the next run's intents are rejected (intent_filed_first). An intent
+// the USSP does not end is an error of the run.
+func (r *run) endIntents(ctx context.Context, rep *Report) {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), endIntentsTimeout)
+	defer cancel()
+	type job struct {
+		a  *Aircraft
+		id string
+	}
+	work := make(chan job)
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	ended := 0
+	var errs []string
+	for range 8 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := range work {
+				in := &simop.Intents{BaseURL: r.usspBase, Tokens: r.tokens[j.a.Client], HTTP: r.httpOf(j.a.Client)}
+				d, err := in.Change(ctx, j.id, "end")
+				mu.Lock()
+				switch {
+				case err != nil:
+					errs = append(errs, fmt.Sprintf("intent of %s not ended: %v", j.a.Name, err))
+				case d.State != "ended":
+					errs = append(errs, fmt.Sprintf("intent of %s not ended: %s", j.a.Name, d.State))
+				default:
+					ended++
+				}
+				mu.Unlock()
+			}
+		}()
+	}
+	for idx, id := range r.intents {
+		work <- job{a: r.fleet.Aircraft[idx], id: id}
+	}
+	close(work)
+	wg.Wait()
+	rep.Volumes.IntentsEnded = ended
+	if len(errs) > 0 {
+		r.log.Warn("intents not ended", "count", len(errs))
+		if len(errs) > maxListed {
+			errs = append(errs[:maxListed], fmt.Sprintf("and %d more intents not ended", len(errs)-maxListed))
+		}
+		rep.Errors = append(rep.Errors, errs...)
+	}
+}
+
+// excused is whether a failure at a time falls inside a fault the run
+// injected (nil when it injected none).
+func (r *run) excused() func(time.Time) bool {
+	if r.faults == nil {
+		return nil
+	}
+	return r.faults.during
+}
+
+// httpOf is operator client c's HTTP client (nil: the default).
+func (r *run) httpOf(c int) *http.Client {
+	if c < len(r.clientHTTP) {
+		return r.clientHTTP[c]
+	}
+	return nil
+}
+
+// addrOf is operator client c's own address ("": none).
+func (r *run) addrOf(c int) string {
+	if c < len(r.clientAddr) {
+		return r.clientAddr[c]
+	}
+	return ""
+}
+
+// consoleHeader is one console's header function (nil: the fixed header).
+func (r *run) consoleHeader() func(context.Context, bool) (http.Header, error) {
+	if r.pictureHeaderFor == nil {
+		return nil
+	}
+	return r.pictureHeaderFor()
 }

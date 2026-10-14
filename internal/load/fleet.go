@@ -28,13 +28,18 @@ type Aircraft struct {
 	// Sysid is the in-process vehicle number the bridges key on (it is
 	// never written as a sim/vehicle/v1 line, so 05 §1's 5000 aircraft
 	// are not held to MAVLink's 1..254).
-	Sysid    int     `json:"-"`
-	Pair     int     `json:"pair,omitempty"`
-	Side     float64 `json:"-"`
-	AltRelM  float64 `json:"alt_rel_m"`
-	Client   int     `json:"client"`
-	Receiver int     `json:"receiver"` // -1: not heard
-	Watched  bool    `json:"watched"`
+	Sysid   int     `json:"-"`
+	Pair    int     `json:"pair,omitempty"`
+	Side    float64 `json:"-"`
+	AltRelM float64 `json:"alt_rel_m"`
+	Client  int     `json:"client"`
+	// OperatorReg is the registration number of the aircraft's client
+	// (ClientRegistration): the operator a systems run registers and
+	// binds the aircraft under, and the one its intent and its Remote ID
+	// Operator ID name.
+	OperatorReg string `json:"operator_reg"`
+	Receiver    int    `json:"receiver"` // -1: not heard
+	Watched     bool   `json:"watched"`
 
 	centre scenario.Offset
 	// walker state, advanced one nominal period per sample
@@ -74,6 +79,7 @@ type Fleet struct {
 	paths  *Paths
 	period time.Duration
 	geo    geoid.Undulator
+	digest string
 }
 
 // NewFleet lays the tier's aircraft on the paths from origin.
@@ -90,8 +96,9 @@ func NewFleet(f *Files, origin vehicle.Home, geo geoid.Undulator) (*Fleet, error
 	cols, _ := gridOf(walkers)
 	tile := p.Walkers.LayerTile
 	for i := range n {
-		a := &Aircraft{Index: i, Name: fmt.Sprintf("ac-%05d", i), Serial: fmt.Sprintf("LAB-LOAD-%05d", i), MAC: macOfIndex(i),
+		a := &Aircraft{Index: i, Name: fmt.Sprintf("ac-%05d", i), Serial: AircraftSerial(i, t.Operators.Clients), MAC: macOfIndex(i),
 			Sysid: i + 1, Client: i % t.Operators.Clients, Receiver: -1}
+		a.OperatorReg = ClientRegistration(a.Client, t.Operators.Clients)
 		if i < 2*pairs {
 			a.Role, a.Pair, a.Watched = RolePair, i/2, true
 			a.Side = 1
@@ -132,8 +139,36 @@ func NewFleet(f *Files, origin vehicle.Home, geo geoid.Undulator) (*Fleet, error
 	}
 	fl.expect(f.Policy, t.DurationS)
 	fl.bbox()
+	fl.digest = fl.layoutDigest()
 	return fl, nil
 }
+
+// The fleet's aircraft are open-category A2 aircraft of class C2, as
+// the scenario suite's are: the USSP judges an open intent only with a
+// subcategory and a class label (Annex IV), and the seed registers the
+// class with the aircraft and its binding so the registry agrees.
+const (
+	LoadSubcategory = "A2"
+	LoadClassLabel  = "C2"
+)
+
+// AircraftSerial is aircraft i's serial in a fleet of clients operator
+// clients: an ANSI/CTA-2063-A serial (manufacturer code LABX, length C,
+// then L, the client count, N and the aircraft's number), because the
+// systems register and bind only such serials (uspace-core serial).
+// The client count is in it because aircraft i flies for client
+// i mod clients: a fleet with another client count binds its aircraft
+// to other clients, and the USSP refuses a serial bound to another
+// client, so the two fleets must not share serials. Distinct for every
+// i below a million and clients up to 9999, above maxAircraft and
+// maxClients.
+func AircraftSerial(i, clients int) string { return fmt.Sprintf("LABXCL%04dN%06d", clients, i) }
+
+// ClientRegistration is operator client c's registration number in a
+// fleet of clients clients: the default EU shape uspace-core regnum
+// validates (three letters, then 8 to 16 letters and digits), distinct
+// per client and per client count (AircraftSerial says why).
+func ClientRegistration(c, clients int) string { return fmt.Sprintf("GEOLOAD%04d%04d", clients, c+1) }
 
 // macOfIndex is a locally administered unicast address per aircraft.
 func macOfIndex(i int) string {
@@ -170,8 +205,13 @@ func (fl *Fleet) bbox() {
 }
 
 // pairPos is a pair member's east offset from its line centre and its
-// east velocity at t seconds after the start: a triangle wave between
-// -A and +A, the members mirrored, crossing at FirstCrossingS + k * 2A/v.
+// east velocity at t seconds after the start: a triangle wave x between
+// -A and +A, the members mirrored, at the centre together at
+// FirstCrossingS + k * 2A/v. Without an inner gap the members cross
+// there. With one (InnerGapM, g) each member stays on its own side:
+// its offset is -(g/2 + (A - g/2) |x| / A) for the member of side +1, so
+// it turns back at g/2 from the centre when x is 0 and is at -A when x
+// is; the members are then g apart at each crossing time.
 func (fl *Fleet) pairPos(a *Aircraft, t float64) (eastM, veMS float64) {
 	pr := &fl.paths.Pairs
 	amp, v := pr.AmplitudeM, pr.SpeedMS
@@ -183,8 +223,40 @@ func (fl *Fleet) pairPos(a *Aircraft, t float64) (eastM, veMS float64) {
 	if u > 2*amp {
 		x, dir = 3*amp-u, -1
 	}
+	if g := pr.InnerGapM; g > 0 {
+		half := g / 2
+		k := (amp - half) / amp
+		sign := 1.0
+		if x < 0 {
+			sign = -1
+		}
+		return -a.Side * (half + k*math.Abs(x)), -a.Side * k * sign * dir * v
+	}
 	return a.Side * x, a.Side * dir * v
 }
+
+// pairBox is the east extent of a pair member's intent about its line
+// centre: with an inner gap, from the far end of its side (100 m past
+// the amplitude) to a quarter of the gap short of the centre, so the
+// two members' boxes are half the gap apart; without one, the whole
+// line.
+type pairBox struct{ WestM, EastM float64 }
+
+func (fl *Fleet) pairBox(a *Aircraft) pairBox {
+	pr := &fl.paths.Pairs
+	far := pr.AmplitudeM + pairIntentMarginM
+	if pr.InnerGapM <= 0 {
+		return pairBox{WestM: -far, EastM: far}
+	}
+	if -a.Side < 0 {
+		return pairBox{WestM: -far, EastM: -pr.InnerGapM / 4}
+	}
+	return pairBox{WestM: pr.InnerGapM / 4, EastM: far}
+}
+
+// pairIntentMarginM is how far a pair member's intent reaches past its
+// path, along and across the line.
+const pairIntentMarginM = 100
 
 // step advances a walker one period: a bounded random turn, and a turn
 // back towards the centre when the step would leave its disc.

@@ -1,0 +1,36 @@
+# What the load harness reads of this compose's systems during a systems
+# run (WP-L8; internal/load probes, docs/RUNBOOKS/load.md). loadgen seed
+# turns it into the targets file's load.probes, the container names from
+# the compose project (COMPOSE_PROJECT_NAME, default uspace-demo).
+#
+# The processes' /metrics are reached from inside the stack: the lab
+# Caddy's container GETs each URL with busybox wget (fetch_via), so
+# nothing is published or routed for them. Each URL is a compose service
+# and the listener its system serves /metrics on (the authority's admin
+# listener ADMIN_ADDR, the USSP's USSP_<PROCESS>_ADDR defaults, the
+# ANSP's and the CISP's api).
+format: lab-load-probes/v1
+fetch_via: caddy
+metrics:
+  authority-api: http://authority-api:9090/metrics
+  authority-rid-ingest: http://authority-rid-ingest:9090/metrics
+  authority-dp-poller: http://authority-dp-poller:9090/metrics
+  authority-manned-ingest: http://authority-manned-ingest:9090/metrics
+  authority-detect: http://authority-detect:9090/metrics
+  authority-tsdb-writer: http://authority-tsdb-writer:9090/metrics
+  authority-picture-ws: http://authority-picture-ws:9090/metrics
+  cisp-api: http://cisp-api:8080/metrics
+  ussp-api: http://ussp-api:8080/metrics
+  ussp-telemetry-ingest: http://ussp-telemetry-ingest:8081/metrics
+  ussp-rid-sp: http://ussp-rid-sp:8082/metrics
+  ussp-monitor: http://ussp-monitor:8083/metrics
+  ussp-traffic-ws: http://ussp-traffic-ws:8084/metrics
+  ussp-dss-sync: http://ussp-dss-sync:8085/metrics
+  ussp-tsdb-writer: http://ussp-tsdb-writer:8086/metrics
+  ansp-api: http://ansp-api:8080/metrics
+  ansp-manned-feed: http://ansp-manned-feed:8080/metrics
+# The telemetry databases, read with psql in their own container (the
+# postgres superuser over the local socket; no password leaves it).
+databases:
+  - {system: ussp, service: ussp-timescaledb, database: ussp_timeseries}
+  - {system: authority, service: authority-postgres, database: authority_ts}

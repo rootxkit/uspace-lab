@@ -4,6 +4,7 @@ import (
 	"os"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -181,5 +182,101 @@ func TestSystemsImagesFromTheEnvByDigest(t *testing.T) {
 	}
 	if !strings.Contains(env, "ANSP_SOURCE_COMMIT=") {
 		t.Error("the locally built ANSP image names no source commit")
+	}
+}
+
+// Every system takes the address X-Forwarded-For names from the lab
+// Caddy only, as on the droplet (uspace-deploy compose/*.yaml trust their
+// edge Caddy's address): the lab Caddy has a fixed address on a fixed
+// lab subnet from demo.env, and every *_TRUSTED_PROXIES (the CISP's
+// _CIDR) is exactly that address. With them empty every client of a
+// system was the Caddy, one rate-limit budget and one audit address for
+// all: seeding a 100-aircraft load fleet was refused 429 part of the
+// way through, and the USSP's registry checks of its intents with it.
+// The check is shown able to fail on an empty value (E-01).
+func TestSystemsTrustTheLabCaddyOnly(t *testing.T) {
+	compose := read(t, "systems/compose.yaml")
+	env := read(t, "demo.env.example")
+	subnet := regexp.MustCompile(`(?m)^DEMO_LAB_SUBNET=(\d+\.\d+\.\d+)\.0/24$`).FindStringSubmatch(env)
+	ipRange := regexp.MustCompile(`(?m)^DEMO_LAB_IP_RANGE=(\d+\.\d+\.\d+)\.0/25$`).FindStringSubmatch(env)
+	ip := regexp.MustCompile(`(?m)^DEMO_CADDY_IP=(\d+\.\d+\.\d+)\.(\d+)$`).FindStringSubmatch(env)
+	// The Caddy's address is in the subnet and outside the range Docker
+	// hands out (the lower half): the first stack up with it at .2
+	// failed "Address already in use", the DSS's datastore had it.
+	if subnet == nil || ipRange == nil || ip == nil || ip[1] != subnet[1] || ipRange[1] != subnet[1] || !hostAbove(ip[2], 128) {
+		t.Fatalf("demo.env.example: DEMO_LAB_SUBNET %v, DEMO_LAB_IP_RANGE %v, DEMO_CADDY_IP %v: not an address in the /24 above the /25", subnet, ipRange, ip)
+	}
+	if !strings.Contains(compose, "subnet: ${DEMO_LAB_SUBNET:?deploy/demo.env}") ||
+		!strings.Contains(compose, "ip_range: ${DEMO_LAB_IP_RANGE:?deploy/demo.env}") ||
+		!strings.Contains(compose, "ipv4_address: ${DEMO_CADDY_IP:?deploy/demo.env}") {
+		t.Fatal("systems/compose.yaml does not place the lab Caddy at DEMO_CADDY_IP on DEMO_LAB_SUBNET")
+	}
+	trusted := regexp.MustCompile(`(?m)^\s*(\w+_TRUSTED_PROX\w*):\s*(.*)$`)
+	want := `"${DEMO_CADDY_IP}/32"`
+	// The authority and the USSP trust the host's address on the egress
+	// network too: the load harness gives each simulated receiver and
+	// operator its own address through it (TestReceiversHaveTheirOwnAddress).
+	wantFor := map[string]string{"AUTHORITY_TRUSTED_PROXIES": `"${DEMO_CADDY_IP}/32,${DEMO_HOST_GATEWAY}/32"`,
+		"USSP_TRUSTED_PROXIES": `"${DEMO_CADDY_IP}/32,${DEMO_HOST_GATEWAY}/32"`}
+	seen := map[string]bool{}
+	for _, m := range trusted.FindAllStringSubmatch(compose, -1) {
+		seen[m[1]] = true
+		w := want
+		if v, ok := wantFor[m[1]]; ok {
+			w = v
+		}
+		if strings.TrimSpace(m[2]) != w {
+			t.Errorf("systems/compose.yaml %s: %s, want %s", m[1], m[2], w)
+		}
+	}
+	for _, k := range []string{"AUTHORITY_TRUSTED_PROXIES", "CISP_TRUSTED_PROXY_CIDR", "USSP_TRUSTED_PROXIES", "ANSP_TRUSTED_PROXIES"} {
+		if !seen[k] {
+			t.Errorf("systems/compose.yaml sets no %s", k)
+		}
+	}
+	if m := trusted.FindStringSubmatch(`  USSP_TRUSTED_PROXIES: ""`); len(m) < 3 || strings.TrimSpace(m[2]) == want {
+		t.Fatal("the check accepts an empty value")
+	}
+}
+
+// hostAbove is whether the last octet n is in [lo, 254].
+func hostAbove(n string, lo int) bool {
+	v, err := strconv.Atoi(n)
+	return err == nil && v >= lo && v <= 254
+}
+
+// In the lab every client reaches the stack from one host, so every
+// simulated receiver of a load run had one address: the authority's
+// per-address request budget (20 a second) refused part of what four
+// receivers posting every 100 ms sent (586 observations, 440 requests,
+// at the ci tier), which ten real receivers on their own addresses
+// would not see. The host's address on the egress network is fixed
+// (DEMO_HOST_GATEWAY, the network's gateway, where Docker's published
+// port comes from); the lab Caddy trusts X-Forwarded-For from it only,
+// and the authority trusts it beside the Caddy, so a receiver that
+// names its own address is judged under it. Nothing else changes for a
+// client that names none.
+func TestReceiversHaveTheirOwnAddress(t *testing.T) {
+	compose := read(t, "systems/compose.yaml")
+	env := read(t, "demo.env.example")
+	caddy := read(t, "systems/Caddyfile")
+	subnet := regexp.MustCompile(`(?m)^DEMO_EGRESS_SUBNET=(\d+\.\d+\.\d+)\.0/24$`).FindStringSubmatch(env)
+	gw := regexp.MustCompile(`(?m)^DEMO_HOST_GATEWAY=(\d+\.\d+\.\d+)\.1$`).FindStringSubmatch(env)
+	lab := regexp.MustCompile(`(?m)^DEMO_LAB_SUBNET=(\d+\.\d+\.\d+)\.0/24$`).FindStringSubmatch(env)
+	if subnet == nil || gw == nil || gw[1] != subnet[1] || lab == nil || lab[1] == subnet[1] {
+		t.Fatalf("demo.env.example: DEMO_EGRESS_SUBNET %v, DEMO_HOST_GATEWAY %v (the .1 of it, apart from the lab subnet %v)", subnet, gw, lab)
+	}
+	for _, want := range []string{"subnet: ${DEMO_EGRESS_SUBNET:?deploy/demo.env}", "gateway: ${DEMO_HOST_GATEWAY:?deploy/demo.env}",
+		"LAB_HOST_GATEWAY: ${DEMO_HOST_GATEWAY:?deploy/demo.env}"} {
+		if !strings.Contains(compose, want) {
+			t.Errorf("systems/compose.yaml lacks %q", want)
+		}
+	}
+	global, _, _ := strings.Cut(caddy, "(lab_tls)")
+	if !regexp.MustCompile(`(?m)^\s*trusted_proxies static \{\$LAB_HOST_GATEWAY\}/32\s*$`).MatchString(global) {
+		t.Error("the lab Caddy's global options do not trust X-Forwarded-For from {$LAB_HOST_GATEWAY}/32 only")
+	}
+	if strings.Count(caddy, "trusted_proxies") != 1 {
+		t.Error("the Caddyfile trusts a proxy somewhere else too")
 	}
 }

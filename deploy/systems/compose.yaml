@@ -33,6 +33,15 @@
 #     audience "dss:8082" (host with port), which the lab issuer refuses
 #     as not a bare host (M18); without a port both agree.
 #   - mTLS off everywhere (each system says so at error level).
+#   - The lab Caddy at a fixed address (DEMO_CADDY_IP on DEMO_LAB_SUBNET),
+#     trusted by every system for X-Forwarded-For as the droplet's edge
+#     Caddy is, so each client keeps its own rate-limit budget and audit
+#     address instead of all of them being the Caddy. The lab Caddy in
+#     turn trusts X-Forwarded-For from the host's address on the egress
+#     network (DEMO_HOST_GATEWAY), and the authority and the USSP trust
+#     that address too: the load harness's simulated receivers and
+#     operators, which all run on the host, each name an address of their
+#     own, as real ones have.
 #   - No web images (the consoles are not needed to judge a scenario).
 #   - The ANSP's manned-adapter polls the lab's sim-adsb (dump1090_json)
 #     on the host instead of replaying its own file; it is the one
@@ -100,7 +109,7 @@ x-authority-env: &authority-env
   AUTHORITY_PUBLIC_URL: https://${AUTHORITY_HOST:?deploy/demo.env}
   AUTHORITY_AUDIENCES: ${AUTHORITY_HOST},authority
   AUTHORITY_MTLS_MODE: "off"
-  AUTHORITY_TRUSTED_PROXIES: ""
+  AUTHORITY_TRUSTED_PROXIES: "${DEMO_CADDY_IP}/32,${DEMO_HOST_GATEWAY}/32"
   CISP_ISSUER_URL: https://${CISP_HOST:?deploy/demo.env}
   CISP_JWKS_URL: https://${CISP_HOST}/.well-known/jwks.json
   ANSP_ISSUER_URL: https://${ANSP_HOST:?deploy/demo.env}
@@ -122,6 +131,9 @@ services:
       USSP_HOST: ${USSP_HOST}
       ANSP_HOST: ${ANSP_HOST}
       LAB_HOST: ${LAB_HOST}
+      # The host's address on the egress network: X-Forwarded-For is
+      # trusted from it only (the load harness's receivers name theirs).
+      LAB_HOST_GATEWAY: ${DEMO_HOST_GATEWAY:?deploy/demo.env}
     volumes:
       - ./systems/Caddyfile:/etc/caddy/Caddyfile:ro
       - ${DEMO_STATE_DIR:-./local-demo}/tls:/etc/caddy/tls:ro
@@ -129,6 +141,10 @@ services:
       - "127.0.0.1:${DEMO_HTTPS_PORT:-443}:443"
     networks:
       lab:
+        # A fixed address, the one every system trusts for
+        # X-Forwarded-For (*_TRUSTED_PROXIES), as the droplet's systems
+        # trust their edge Caddy's.
+        ipv4_address: ${DEMO_CADDY_IP:?deploy/demo.env}
         aliases: ["${AUTHORITY_HOST}", "${CISP_HOST}", "${USSP_HOST}", "${ANSP_HOST}", "${LAB_HOST}"]
       egress: {}
     healthcheck:
@@ -324,7 +340,7 @@ services:
       # The subscribers' callbacks are the lab hosts, private addresses.
       CISP_ALLOW_PRIVATE_CALLBACKS: "true"
       CISP_ALLOW_INSECURE_CALLBACKS: "false"
-      CISP_TRUSTED_PROXY_CIDR: ""
+      CISP_TRUSTED_PROXY_CIDR: "${DEMO_CADDY_IP}/32"
     depends_on:
       cisp-migrate: {condition: service_completed_successfully}
       cisp-nats: {condition: service_healthy}
@@ -415,7 +431,7 @@ services:
       USSP_WS_ALLOWED_ORIGINS: https://${USSP_HOST}
       USSP_MTLS_MODE: "off"
       USSP_GEOID_FILE: /srv/ground/egm2008-2_5.pgm
-      USSP_TRUSTED_PROXIES: ""
+      USSP_TRUSTED_PROXIES: "${DEMO_CADDY_IP}/32,${DEMO_HOST_GATEWAY}/32"
     depends_on:
       ussp-timescaledb: {condition: service_healthy}
 
@@ -579,7 +595,7 @@ services:
       ANSP_WS_ALLOWED_ORIGINS: https://${ANSP_HOST}
       ANSP_COUNTRY: ${DEMO_COUNTRY:?deploy/demo.env}
       ANSP_GEOID_FILE: /srv/ground/egm2008-2_5.pgm
-      ANSP_TRUSTED_PROXIES: ""
+      ANSP_TRUSTED_PROXIES: "${DEMO_CADDY_IP}/32"
     depends_on:
       ansp-timescaledb: {condition: service_healthy}
 
@@ -630,9 +646,24 @@ services:
       ansp-nats: {condition: service_healthy}
 
 networks:
+  # deploy/compose.yaml declares `lab` (internal); the systems profile
+  # gives it a fixed subnet so the lab Caddy's address is known.
+  lab:
+    ipam:
+      config:
+        - subnet: ${DEMO_LAB_SUBNET:?deploy/demo.env}
+          # Docker's own addresses come from this range only, so the
+          # Caddy's fixed one (outside it) is never taken first.
+          ip_range: ${DEMO_LAB_IP_RANGE:?deploy/demo.env}
   # Outbound and published ports only: Caddy (its published port) and the
-  # ANSP adapter (the host's sim-adsb). `lab` stays internal.
-  egress: {}
+  # ANSP adapter (the host's sim-adsb). `lab` stays internal. A fixed
+  # subnet, so the host's address on it (the gateway, where the published
+  # port's connections come from) is known: DEMO_HOST_GATEWAY.
+  egress:
+    ipam:
+      config:
+        - subnet: ${DEMO_EGRESS_SUBNET:?deploy/demo.env}
+          gateway: ${DEMO_HOST_GATEWAY:?deploy/demo.env}
 
 volumes:
   authority-pgdata:

@@ -33,6 +33,7 @@ const (
 	maxConsoles    = 200
 	maxDurationS   = 6 * 3600
 	maxTelemetryHz = 2 // the USSP's per-flight live bound (05 §5)
+	maxIntentsPerS = 100
 )
 
 // Tier is load/tiers/<name>.yaml: the volumes of one 05 §1 column, the
@@ -63,6 +64,12 @@ type Tier struct {
 		// Intents: "all" files one intent per aircraft at the start,
 		// "watched" only for the aircraft whose traffic is read.
 		Intents string `yaml:"intents" json:"intents"`
+		// IntentsPerS is how many intents are filed per second before the
+		// run (05 §1's 2-3 per drone-day are compressed into the start,
+		// but not into one burst: the USSP asks the authority's registry
+		// once per intent, inside the request budget the authority gives
+		// it, and a fleet's intents at once were held pending_validation).
+		IntentsPerS float64 `yaml:"intents_per_s" json:"intents_per_s"`
 	} `yaml:"operators" json:"operators"`
 	Receivers struct {
 		// HeardFraction is 05 §1's ~40 % of airborne UAS heard by a
@@ -77,7 +84,10 @@ type Tier struct {
 	// Consoles read the authority picture with the whole area
 	// subscribed; the first one is timed.
 	Consoles int `yaml:"consoles" json:"consoles"`
-	Watch    struct {
+	// DP are the F3411 display-provider polls of the USSP the harness
+	// makes in a systems run (nil: none).
+	DP    *DPPolls `yaml:"dp" json:"dp,omitempty"`
+	Watch struct {
 		// Pairs is the number of scripted conflict pairs (every one is
 		// watched: its expected alerts are the missed-alert count's set).
 		Pairs int `yaml:"pairs" json:"pairs"`
@@ -163,6 +173,13 @@ type PairPaths struct {
 	SpeedMS        float64         `yaml:"speed_ms" json:"speed_ms"`
 	AmplitudeM     float64         `yaml:"amplitude_m" json:"amplitude_m"`
 	FirstCrossingS float64         `yaml:"first_crossing_s" json:"first_crossing_s"`
+	// InnerGapM, when above 0, turns each member back short of the
+	// line's centre: the members stay on their own sides, InnerGapM
+	// apart at every crossing time, and each one's intent is a box on its
+	// own side. Two intents that share airspace cannot both be
+	// authorised (strategic deconfliction, Art. 10(8)), so a systems run
+	// needs it; 0 is the crossing of the reference runs before it.
+	InnerGapM float64 `yaml:"inner_gap_m" json:"inner_gap_m"`
 	// RaiseMarginS widens the raise window around crossing - t_cpa_max_s.
 	RaiseMarginS float64 `yaml:"raise_margin_s" json:"raise_margin_s"`
 	// ClearWithinS is how long after a crossing its clear is due.
@@ -172,7 +189,22 @@ type PairPaths struct {
 // Criteria is load/criteria.yaml: 05 §7's table as checks.
 type Criteria struct {
 	Source string `yaml:"source" json:"source"`
+	// Models are the 05 figures a measured quantity is compared with.
+	Models Models `yaml:"models" json:"models"`
 	Rows   []Row  `yaml:"rows" json:"rows"`
+}
+
+// Models are spec 05's design figures that turn a measured quantity
+// into a ratio (status spec: the owner's targets, not a national
+// choice).
+type Models struct {
+	// TrackBytes is a stored track sample (05 §1: an internal
+	// track/telemetry/v1 of about 600 B; 05 §4's storage rows follow
+	// from it), the disk growth model.
+	TrackBytes float64 `yaml:"track_bytes" json:"track_bytes"`
+	// CPAPairsPerCorePerS is the pair-check budget of one CPA worker
+	// (05 §1: about 50 000 a second per core).
+	CPAPairsPerCorePerS float64 `yaml:"cpa_pairs_per_core_per_s" json:"cpa_pairs_per_core_per_s"`
 }
 
 // Row is one 05 §7 property.
@@ -331,6 +363,8 @@ func (t *Tier) validate() error {
 		return fmt.Errorf("operators.poll_ms %d is not in [1, 1000]", t.Operators.PollMS)
 	case t.Operators.RampPerS < 10 || t.Operators.RampPerS > 10000:
 		return fmt.Errorf("operators.ramp_per_s %v is not in [10, 10000]", t.Operators.RampPerS)
+	case !(t.Operators.IntentsPerS >= 0.1 && t.Operators.IntentsPerS <= maxIntentsPerS):
+		return fmt.Errorf("operators.intents_per_s %v is not in [0.1, %d]", t.Operators.IntentsPerS, maxIntentsPerS)
 	case t.Operators.Intents != "all" && t.Operators.Intents != "watched":
 		return fmt.Errorf("operators.intents is all or watched")
 	case t.Receivers.HeardFraction < 0 || t.Receivers.HeardFraction > 1:
@@ -354,6 +388,11 @@ func (t *Tier) validate() error {
 		return fmt.Errorf("memory_sample_s %v is not in (0, 600]", t.MemorySampleS)
 	case t.MemoryWarmupS < 0 || t.MemoryWarmupS >= t.DurationS:
 		return fmt.Errorf("memory_warmup_s %v is not in [0, duration_s)", t.MemoryWarmupS)
+	}
+	if t.DP != nil {
+		if err := t.DP.validate(); err != nil {
+			return err
+		}
 	}
 	for _, tr := range t.Receivers.Transports {
 		if !slices.Contains(transports, tr) {
@@ -414,6 +453,9 @@ func (c *Criteria) validate() error {
 			ids[k.ID] = true
 		}
 	}
+	if !(c.Models.TrackBytes > 0 && c.Models.TrackBytes < 1<<20) || !(c.Models.CPAPairsPerCorePerS > 0 && c.Models.CPAPairsPerCorePerS < 1e9) {
+		return fmt.Errorf("models: track_bytes and cpa_pairs_per_core_per_s must be positive (05 §1)")
+	}
 	return nil
 }
 
@@ -460,6 +502,11 @@ func (p *Paths) validate(pol *scenario.Policy, t *Tier) error {
 	// leaves its line by more than the amplitude.
 	if pairGap := pr.SpacingM - 2*pr.AmplitudeM - 2*pr.SpeedMS*tCPA; t.Watch.Pairs > 1 && pairGap < dH+w.MarginM {
 		return fmt.Errorf("pairs: two pairs can come within %.0f m: widen pairs.spacing_m", pairGap)
+	}
+	// The closest approach must still be inside the horizontal minimum,
+	// with the margin, or no alert would be due at all.
+	if !(pr.InnerGapM >= 0 && pr.InnerGapM < dH-w.MarginM) || pr.InnerGapM >= pr.AmplitudeM {
+		return fmt.Errorf("pairs: inner_gap_m %v is not in [0, %.0f) m (the policy's horizontal minimum %.0f m less the margin) and below the amplitude", pr.InnerGapM, dH-w.MarginM, dH)
 	}
 	if pr.FirstCrossingS < 0 || pr.FirstCrossingS*pr.SpeedMS > pr.AmplitudeM {
 		return fmt.Errorf("pairs: first_crossing_s %v puts the members beyond the amplitude (at most %.0f s)", pr.FirstCrossingS, pr.AmplitudeM/pr.SpeedMS)

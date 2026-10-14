@@ -24,10 +24,15 @@ const (
 
 // stream is one WebSocket a run reads, with what it saw.
 type stream struct {
-	name     string
-	kind     string
-	url      string
-	header   http.Header
+	name   string
+	kind   string
+	url    string
+	header http.Header
+	// headerFn, when set, gives the header of each connection instead;
+	// renew asks for fresh credentials (the last connection was refused
+	// as unauthorised: an upgrade answered 401, or a close 4401).
+	headerFn func(ctx context.Context, renew bool) (http.Header, error)
+	renew    bool
 	onOpen   []byte
 	aircraft *Aircraft // traffic: whose flight
 	timed    bool      // its frames feed a ledger
@@ -38,9 +43,10 @@ type stream struct {
 	lastErr    string
 	dropped    uint64 // the largest dropped_frames a status said
 	lastStatus time.Time
-	// lastData is the arrival of the last frame that shows a sample (a
-	// track or a traffic product); status frames keep coming after the
-	// generator stops and say nothing about what is still in flight.
+	// lastData is the arrival of the last frame that showed a sample
+	// for the first time (a track or a traffic product); status frames
+	// and repeated states keep coming after the generator stops and say
+	// nothing about what is still in flight.
 	lastData    time.Time
 	ready       chan struct{} // closed on the first status (and snapshot, when subscribing)
 	readyOnce   sync.Once
@@ -93,7 +99,54 @@ type readers struct {
 	raised   map[string]time.Time
 	// peers names each scripted pair member's peer.
 	peers map[string]string
+	// byTrack ties a picture track id to its aircraft once a frame of the
+	// track named the serial; held keeps the frames of a track not tied
+	// yet (the authority shows a track before it has heard the Basic
+	// ID). Both bounded (E-10).
+	trackMu sync.Mutex
+	byTrack map[string]*Aircraft
+	held    map[string][]heldFrame
+	nHeld   int
+	// onShown is told every sample newly shown (the faults' recovery).
+	onShown func(kind string, at time.Time)
+	// flags are the degraded states the streams showed for the first
+	// time, with when (bounded).
+	flagMu sync.Mutex
+	flags  []flagSeen
 }
+
+const maxFlags = 10_000
+
+func (rd *readers) shown(kind string, at time.Time) {
+	if rd.onShown != nil {
+		rd.onShown(kind, at)
+	}
+}
+
+func (rd *readers) flagSeen(s *stream, flag string, at time.Time) {
+	system := scenario.SystemAuthority
+	if s.kind == streamTraffic {
+		system = scenario.SystemUSSP
+	}
+	rd.flagMu.Lock()
+	if len(rd.flags) < maxFlags {
+		rd.flags = append(rd.flags, flagSeen{system: system, flag: flag, at: at})
+	}
+	rd.flagMu.Unlock()
+}
+
+// heldFrame is a picture frame waiting for its track to be identified.
+type heldFrame struct {
+	captured, arrived time.Time
+	s                 *stream
+}
+
+// Bounds of the held frames and the track ids learned.
+const (
+	maxHeldPerTrack = 32
+	maxHeld         = 50_000
+	maxTrackIDs     = 200_000
+)
 
 const maxRaised = 100_000
 
@@ -164,14 +217,23 @@ func (rd *readers) run(ctx context.Context, s *stream) {
 }
 
 func (rd *readers) read(ctx context.Context, s *stream) error {
+	header := s.header
+	if s.headerFn != nil {
+		h, err := s.headerFn(ctx, s.renew)
+		if err != nil {
+			return fmt.Errorf("%s: credentials: %w", s.name, err)
+		}
+		header, s.renew = h, false
+	}
 	dctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	conn, resp, err := websocket.Dial(dctx, s.url, &websocket.DialOptions{HTTPHeader: s.header})
+	conn, resp, err := websocket.Dial(dctx, s.url, &websocket.DialOptions{HTTPHeader: header})
 	cancel()
 	if resp != nil && resp.Body != nil {
 		_ = resp.Body.Close()
 	}
 	if err != nil {
 		if resp != nil {
+			s.renew = resp.StatusCode == http.StatusUnauthorized
 			return fmt.Errorf("%s: upgrade answered %d", s.name, resp.StatusCode)
 		}
 		return fmt.Errorf("%s: %w", s.name, err)
@@ -197,6 +259,9 @@ func (rd *readers) read(ctx context.Context, s *stream) error {
 			if ctx.Err() != nil {
 				return nil
 			}
+			// The authority closes a console whose session ended with
+			// 4401 ("sign in again").
+			s.renew = websocket.CloseStatus(err) == closeSignInAgain
 			return fmt.Errorf("%s: %w", s.name, err)
 		}
 		rd.handle(s, b, time.Now(), func(b []byte, at time.Time) { rd.rec.Handle(os, st, b, at) })
@@ -217,9 +282,6 @@ func (rd *readers) handle(s *stream, b []byte, at time.Time, alert func([]byte, 
 		return
 	}
 	s.frames[e.Schema]++
-	if e.Schema == wire.SchemaTrack || e.Schema == trafficProduct {
-		s.lastData = at
-	}
 	s.mu.Unlock()
 	switch e.Schema {
 	case wire.SchemaStatus:
@@ -234,7 +296,7 @@ func (rd *readers) handle(s *stream, b []byte, at time.Time, alert func([]byte, 
 		}
 	case wire.SchemaTrack:
 		if s.timed {
-			rd.track(e, at)
+			rd.track(s, e, at)
 		}
 	case trafficProduct:
 		if s.timed {
@@ -251,6 +313,14 @@ func (rd *readers) handle(s *stream, b []byte, at time.Time, alert func([]byte, 
 
 const trafficProduct = "traffic/product/v1"
 
+// closeSignInAgain is the close code the authority's picture ends a
+// console with when its session is no longer valid.
+const closeSignInAgain websocket.StatusCode = 4401
+
+// sourceDirectRID is the track source of what a receiver heard
+// (schemas/common/envelope/v1 $defs.source).
+const sourceDirectRID = "direct_rid"
+
 func (rd *readers) status(s *stream, e wire.Envelope, at time.Time) {
 	var b struct {
 		DroppedFrames uint64   `json:"dropped_frames"`
@@ -266,11 +336,18 @@ func (rd *readers) status(s *stream, e wire.Envelope, at time.Time) {
 	if s.degraded == nil {
 		s.degraded = map[string]bool{}
 	}
+	var fresh []string
 	for _, d := range b.Degraded {
+		if !s.degraded[d] {
+			fresh = append(fresh, d)
+		}
 		s.degraded[d] = true
 	}
 	ready := !s.needSnap
 	s.mu.Unlock()
+	for _, d := range fresh {
+		rd.flagSeen(s, d, at)
+	}
 	if ready {
 		s.readyOnce.Do(func() { close(s.ready) })
 	}
@@ -279,9 +356,10 @@ func (rd *readers) status(s *stream, e wire.Envelope, at time.Time) {
 // track reads a track/telemetry/v1 on the timed console: which aircraft
 // (its serial, else the transmitter address in its track id) and when
 // it was captured.
-func (rd *readers) track(e wire.Envelope, at time.Time) {
+func (rd *readers) track(s *stream, e wire.Envelope, at time.Time) {
 	var b struct {
 		TrackID        string `json:"track_id"`
+		Source         string `json:"source"`
 		Identification struct {
 			Serial *string `json:"serial"`
 		} `json:"identification"`
@@ -289,6 +367,12 @@ func (rd *readers) track(e wire.Envelope, at time.Time) {
 	captured, err := wire.ParseTime(e.CapturedAt)
 	if json.Unmarshal(e.Body, &b) != nil || err != nil {
 		rd.picture.untraceableFrame()
+		return
+	}
+	if b.Source != sourceDirectRID {
+		// The authority's picture also shows what its DP poller reads
+		// from the USSPs (network_rid) and the manned feeds; only what
+		// a receiver heard is on this ledger.
 		return
 	}
 	var a *Aircraft
@@ -301,11 +385,72 @@ func (rd *readers) track(e wire.Envelope, at time.Time) {
 	if a == nil && len(b.TrackID) >= 17 {
 		a = rd.byMAC[strings.ToUpper(b.TrackID[len(b.TrackID)-17:])]
 	}
+	rd.trackMu.Lock()
 	if a == nil {
-		rd.picture.untraceableFrame()
+		a = rd.byTrack[b.TrackID]
+	}
+	if a == nil {
+		// Not identified yet: hold it for the frame that names the
+		// serial, within the bounds; past them it is untraceable now.
+		if len(rd.held[b.TrackID]) < maxHeldPerTrack && rd.nHeld < maxHeld {
+			if rd.held == nil {
+				rd.held = map[string][]heldFrame{}
+			}
+			rd.held[b.TrackID] = append(rd.held[b.TrackID], heldFrame{captured: captured, arrived: at, s: s})
+			rd.nHeld++
+		} else {
+			rd.picture.untraceableFrame()
+		}
+		rd.trackMu.Unlock()
 		return
 	}
-	rd.picture.Show(a.Name, captured, at)
+	var release []heldFrame
+	if b.TrackID != "" && rd.byTrack[b.TrackID] == nil && len(rd.byTrack) < maxTrackIDs {
+		if rd.byTrack == nil {
+			rd.byTrack = map[string]*Aircraft{}
+		}
+		rd.byTrack[b.TrackID] = a
+		release = rd.held[b.TrackID]
+		delete(rd.held, b.TrackID)
+		rd.nHeld -= len(release)
+	}
+	rd.trackMu.Unlock()
+	for _, h := range release {
+		if _, ok := rd.picture.Show(a.Name, h.captured, h.arrived); ok {
+			h.s.noteData(h.arrived)
+			rd.shown(streamPicture, h.arrived)
+		}
+	}
+	if _, ok := rd.picture.Show(a.Name, captured, at); ok {
+		s.noteData(at)
+		rd.shown(streamPicture, at)
+	}
+}
+
+// closeHeld counts every frame still held, of a track never
+// identified, as untraceable (the end of the run).
+func (rd *readers) closeHeld() {
+	rd.trackMu.Lock()
+	defer rd.trackMu.Unlock()
+	for id, hs := range rd.held {
+		for range hs {
+			rd.picture.untraceableFrame()
+		}
+		delete(rd.held, id)
+	}
+	rd.nHeld = 0
+}
+
+// noteData records that a frame arriving at at showed a sample for the
+// first time. A frame that repeats what was shown is not data: the
+// systems go on sending a track's last state (stale) after the
+// generator stops, and the drain waits for data to stop.
+func (s *stream) noteData(at time.Time) {
+	s.mu.Lock()
+	if at.After(s.lastData) {
+		s.lastData = at
+	}
+	s.mu.Unlock()
 }
 
 // product reads a traffic/product/v1: the subscriber's own track and its
@@ -330,7 +475,10 @@ func (rd *readers) product(s *stream, e wire.Envelope, at time.Time) {
 			rd.traffic.untraceableFrame()
 			continue
 		}
-		rd.traffic.Show(s.aircraft.Name, tor, at)
+		if _, ok := rd.traffic.Show(s.aircraft.Name, tor, at); ok {
+			s.noteData(at)
+			rd.shown(streamTraffic, at)
+		}
 	}
 }
 

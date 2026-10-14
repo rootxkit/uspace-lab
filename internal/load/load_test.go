@@ -25,7 +25,7 @@ title: test
 column: 100
 duration_s: 16
 drain_s: 10
-operators: {aircraft: 6, clients: 2, telemetry_hz: 1, telemetry_hz_status: pending GCAA, poll_ms: 20, ramp_per_s: 100, intents: all}
+operators: {aircraft: 6, clients: 2, telemetry_hz: 1, telemetry_hz_status: pending GCAA, poll_ms: 20, ramp_per_s: 100, intents: all, intents_per_s: 50}
 receivers: {heard_fraction: 0.5, aircraft_per_receiver: 2, transports: [pack, single], batch_ms: 50}
 consoles: 1
 watch: {pairs: 1, walkers: 1}
@@ -88,6 +88,8 @@ func TestFilesFailClosed(t *testing.T) {
 		"layers too close":       {smallTier, strings.Replace(smallPaths(policy), "[15, 40, 65, 90]", "[15, 30, 65, 90]", 1), "vertical minimum"},
 		"one alert per crossing": {smallTier, strings.Replace(smallPaths(policy), "amplitude_m: 1300", "amplitude_m: 700", 1), "between a clear and the next raise"},
 		"too fast for a period":  {strings.Replace(smallTier, "telemetry_hz: 1,", "telemetry_hz: 5,", 1), smallPaths(policy), "telemetry_hz"},
+		"intents unpaced":        {strings.Replace(smallTier, ", intents_per_s: 50", "", 1), smallPaths(policy), "intents_per_s"},
+		"intents too fast":       {strings.Replace(smallTier, "intents_per_s: 50", "intents_per_s: 5000", 1), smallPaths(policy), "intents_per_s"},
 	}
 	for name, c := range cases {
 		tp, pp := writeFiles(t, c.tier, c.paths)
@@ -321,16 +323,6 @@ func TestRunThatMeasuresNothingFails(t *testing.T) {
 	}
 	if rep.Verdict != VerdictFail || rep.Measured != 0 || !strings.Contains(strings.Join(rep.Failures, ";"), "measured nothing") {
 		t.Fatalf("verdict %s, measured %d: %v", rep.Verdict, rep.Measured, rep.Failures)
-	}
-}
-
-// Only the reference target is driven: a systems targets file is
-// refused before anything starts.
-func TestSystemsModeRefused(t *testing.T) {
-	f := loadSmall(t)
-	_, err := Run(context.Background(), Options{Files: f, TargetsPath: repo("targets/systems.example.yaml"), Run: "x"})
-	if err == nil || !strings.Contains(err.Error(), "only the reference target") {
-		t.Fatalf("%v", err)
 	}
 }
 

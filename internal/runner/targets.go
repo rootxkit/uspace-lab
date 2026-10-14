@@ -38,8 +38,59 @@ type Targets struct {
 	Requests  map[string]RequestAuth `yaml:"requests"`
 	SITL      *SITLTarget            `yaml:"sitl"`
 	Peer      *PeerTarget            `yaml:"peer"`
-	Extra     map[string]any         `yaml:"extra"`
-	dir       string
+	// Load is the fleet a load run drives in systems mode, as
+	// "loadgen seed" registered it (internal/load).
+	Load  *LoadTarget    `yaml:"load"`
+	Extra map[string]any `yaml:"extra"`
+	dir   string
+}
+
+// LoadTarget is a load tier's fleet as it was registered at the
+// systems: which tier and fleet layout (Fleet, a digest the load
+// harness recomputes and compares before anything starts), the operator
+// clients in client order and the receivers in receiver order.
+type LoadTarget struct {
+	Tier    string   `yaml:"tier"`
+	Fleet   string   `yaml:"fleet"`
+	Clients []Client `yaml:"clients"`
+	// ReceiversForwardedFor, when set, is an IPv4 prefix: receiver i
+	// names the address i+1 of it in X-Forwarded-For, which the lab
+	// stack trusts from the host only (deploy/systems), so each receiver
+	// is judged under its own address as a real one is.
+	ReceiversForwardedFor string `yaml:"receivers_forwarded_for"`
+	// OperatorsForwardedFor is the same for the operator clients: client
+	// i names the address i+1 on its tokens, intents and sockets.
+	OperatorsForwardedFor string         `yaml:"operators_forwarded_for"`
+	Receivers             []LoadReceiver `yaml:"receivers"`
+	// Probes are how the run reads the systems while it loads them.
+	Probes *LoadProbes `yaml:"probes"`
+	// F3411DP is the client the run polls the USSP's F3411 SP with as a
+	// display provider (rid.display_provider at the USSP's audience).
+	F3411DP *TokenCfg `yaml:"f3411_dp"`
+}
+
+// LoadProbes are the operator's commands that read the systems of a load
+// run: Fetch GETs a URL inside the stack (the URL appended; e.g. docker
+// exec into the lab Caddy and busybox wget), Metrics names each
+// process's /metrics URL, and each database's Query runs one SQL
+// statement (appended) and prints the single value.
+type LoadProbes struct {
+	Fetch     []string          `yaml:"fetch"`
+	Metrics   map[string]string `yaml:"metrics"`
+	Databases []LoadDatabase    `yaml:"databases"`
+}
+
+// LoadDatabase is one system's telemetry database.
+type LoadDatabase struct {
+	System string   `yaml:"system"`
+	Query  []string `yaml:"query"`
+}
+
+// LoadReceiver is one registered receiver of a load fleet.
+type LoadReceiver struct {
+	ID            string `yaml:"id"`
+	BearerKeyFile string `yaml:"bearer_key_file"`
+	HMACKeyFile   string `yaml:"hmac_key_file"`
 }
 
 // USSPTarget is a USSP: its base URL and its issuer's operator clients.
@@ -151,6 +202,9 @@ func (t *Targets) path(p string) string {
 	}
 	return filepath.Join(t.dir, p)
 }
+
+// Secret reads a secret file named in the targets file (relative to it).
+func (t *Targets) Secret(p string) (string, error) { return t.secret(p) }
 
 // secret reads a secret file named in the targets file.
 func (t *Targets) secret(p string) (string, error) {
