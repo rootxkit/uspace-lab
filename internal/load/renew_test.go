@@ -71,3 +71,34 @@ func TestStreamsRenewCredentialsWhenRefused(t *testing.T) {
 		}
 	}
 }
+
+// The consoles share one session: when the authority ends it, every
+// console is refused at once, and only the first to ask signs in again;
+// the others take that session. Ten consoles each signing in thrashed
+// the 100-tier run (a sign-in waits for a fresh TOTP step, and the
+// consoles kept asking).
+func TestConsolesShareARenewedSession(t *testing.T) {
+	signIns := 0
+	r := &run{opt: Options{RenewSession: func(context.Context) (string, error) {
+		signIns++
+		return "session-" + string(rune('0'+signIns)), nil
+	}}, systems: &systemsTarget{session: "session-0", origin: "https://authority.test"}}
+	if err := r.startSystems(context.Background(), nil); err != nil {
+		t.Fatal(err)
+	}
+	a, b := r.pictureHeaderFor(), r.pictureHeaderFor()
+	for _, h := range []func(context.Context, bool) (http.Header, error){a, b} {
+		if hd, err := h(context.Background(), false); err != nil || hd.Get("Cookie") != "uspace_session=session-0" {
+			t.Fatalf("start: %v %v", hd, err)
+		}
+	}
+	ha, _ := a(context.Background(), true)
+	hb, _ := b(context.Background(), true)
+	if signIns != 1 || ha.Get("Cookie") != "uspace_session=session-1" || hb.Get("Cookie") != ha.Get("Cookie") {
+		t.Fatalf("%d sign-ins, a %v, b %v", signIns, ha, hb)
+	}
+	// Refused again on the renewed session: a second sign-in.
+	if hb2, _ := b(context.Background(), true); signIns != 2 || hb2.Get("Cookie") != "uspace_session=session-2" {
+		t.Fatalf("%d sign-ins, %v", signIns, hb2)
+	}
+}

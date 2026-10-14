@@ -166,22 +166,30 @@ func (r *run) startSystems(_ context.Context, _ *sync.WaitGroup) error {
 	r.usspBase, r.authBase = s.usspBase, s.authBase
 	r.pictureURL = s.pictureURL
 	r.pictureHeader = http.Header{"Cookie": {"uspace_session=" + s.session}, "Origin": {s.origin}}
+	// One session for every console: when the authority ends it, the
+	// first console to ask signs in again and the others take the new
+	// one (a sign-in waits for a fresh TOTP step).
 	var mu sync.Mutex
-	session := s.session
-	r.pictureHeaderFn = func(ctx context.Context, renew bool) (http.Header, error) {
-		mu.Lock()
-		defer mu.Unlock()
-		if renew {
-			if r.opt.RenewSession == nil {
-				return nil, fmt.Errorf("the console session ended and the run cannot sign in again (loadgen run --lab-env)")
+	session, gen := s.session, 0
+	r.pictureHeaderFor = func() func(context.Context, bool) (http.Header, error) {
+		seen := 0
+		return func(ctx context.Context, renew bool) (http.Header, error) {
+			mu.Lock()
+			defer mu.Unlock()
+			if renew && seen == gen {
+				if r.opt.RenewSession == nil {
+					return nil, fmt.Errorf("the console session ended and the run cannot sign in again (loadgen run --lab-env)")
+				}
+				fresh, err := r.opt.RenewSession(ctx)
+				if err != nil {
+					return nil, fmt.Errorf("signing the console in again: %w", err)
+				}
+				session = fresh
+				gen++
 			}
-			fresh, err := r.opt.RenewSession(ctx)
-			if err != nil {
-				return nil, fmt.Errorf("signing the console in again: %w", err)
-			}
-			session = fresh
+			seen = gen
+			return http.Header{"Cookie": {"uspace_session=" + session}, "Origin": {s.origin}}, nil
 		}
-		return http.Header{"Cookie": {"uspace_session=" + session}, "Origin": {s.origin}}, nil
 	}
 	r.rxCreds = s.rx
 	scopes := []string{"ussp.telemetry", "ussp.intents", "ussp.traffic"}

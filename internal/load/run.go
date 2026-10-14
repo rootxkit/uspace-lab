@@ -193,15 +193,15 @@ type run struct {
 	authBase      string
 	pictureURL    string
 	pictureHeader http.Header
-	// pictureHeaderFn, when set, gives each console connection's header
+	// pictureHeaderFor, when set, makes each console's header function
 	// (systems mode: the session, signed in again when it ended).
-	pictureHeaderFn func(ctx context.Context, renew bool) (http.Header, error)
-	target          *reftarget.Target
-	systems         *systemsTarget
-	probes          *probes
-	sp              *spPoller
-	faults          *faultRunner
-	tokens          []*oauth.ClientCredentials
+	pictureHeaderFor func() func(ctx context.Context, renew bool) (http.Header, error)
+	target           *reftarget.Target
+	systems          *systemsTarget
+	probes           *probes
+	sp               *spPoller
+	faults           *faultRunner
+	tokens           []*oauth.ClientCredentials
 	// clientHTTP and clientAddr are each operator client's HTTP client
 	// and own address (nil, "": the defaults; systems mode).
 	clientHTTP []*http.Client
@@ -608,7 +608,7 @@ func (r *run) startStreams(ctx context.Context, wg *sync.WaitGroup) {
 	sub, _ := json.Marshal(map[string]any{"schema": "console/subscribe/v1", "body": map[string]any{"bbox": bb[:], "layers": []string{"tracks", "alerts"}}})
 	for i := range r.tier.Consoles {
 		r.streams = append(r.streams, &stream{name: fmt.Sprintf("console-%02d", i), kind: streamPicture, url: r.pictureURL,
-			header: r.pictureHeader.Clone(), headerFn: r.pictureHeaderFn, onOpen: sub, timed: i == 0, needSnap: true, ready: make(chan struct{})})
+			header: r.pictureHeader.Clone(), headerFn: r.consoleHeader(), onOpen: sub, timed: i == 0, needSnap: true, ready: make(chan struct{})})
 	}
 	for _, a := range r.fleet.Aircraft {
 		id, ok := r.intents[a.Index]
@@ -1236,4 +1236,12 @@ func (r *run) addrOf(c int) string {
 		return r.clientAddr[c]
 	}
 	return ""
+}
+
+// consoleHeader is one console's header function (nil: the fixed header).
+func (r *run) consoleHeader() func(context.Context, bool) (http.Header, error) {
+	if r.pictureHeaderFor == nil {
+		return nil
+	}
+	return r.pictureHeaderFor()
 }
