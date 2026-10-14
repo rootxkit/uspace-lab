@@ -522,6 +522,10 @@ type probesFile struct {
 
 var composeName = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,62}$`)
 
+// LoadProbes is loadProbes for another harness (the chaos matrix reads
+// the systems' loss counters with the same commands).
+func LoadProbes(path, project string) (*runner.LoadProbes, error) { return loadProbes(path, project) }
+
 // loadProbes reads the probes file and names its containers in the
 // compose project: fetch is docker exec into the fetch_via service's
 // container and busybox wget, each database's query docker exec into

@@ -26,6 +26,7 @@ import (
 
 	"github.com/rootxkit/uspace-lab/internal/runner"
 	"github.com/rootxkit/uspace-lab/internal/scenario"
+	"github.com/rootxkit/uspace-lab/internal/seed"
 )
 
 // ResultFormat names chaos.json's shape.
@@ -93,7 +94,7 @@ func totalHold(rows []Row) float64 {
 
 // common flags of run, watch and skew.
 type common struct {
-	matrix, env, targets, project string
+	matrix, env, targets, project, probes string
 }
 
 func (c *common) bind(fs *flag.FlagSet) {
@@ -101,6 +102,7 @@ func (c *common) bind(fs *flag.FlagSet) {
 	fs.StringVar(&c.env, "env", "deploy/demo.env", "the demo env file (hosts, port, state directory)")
 	fs.StringVar(&c.targets, "targets", "targets/local-demo.yaml", "the targets file demo-seed wrote (console sessions, receiver keys)")
 	fs.StringVar(&c.project, "project", "", "the compose project (default CHAOS_PROJECT, COMPOSE_PROJECT_NAME, uspace-demo)")
+	fs.StringVar(&c.probes, "probes", "deploy/systems/probes.yaml", "what reads every process's /metrics: each row lists the loss counters that rose (empty: none read)")
 }
 
 // siteLab is the sitl.env the targets file names (the origin the
@@ -209,6 +211,12 @@ func cmdRun(args []string) int {
 	if err := startStatus(ctx, h, c.targets, site); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return exitUsage
+	}
+	if c.probes != "" {
+		if h.probes, err = seed.LoadProbes(c.probes, h.lab.Project); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return exitUsage
+		}
 	}
 	for i := range sel {
 		if sel[i].Domain == "clock" {
@@ -588,6 +596,12 @@ func (r *RunResult) Summary() string {
 		}
 		for _, s := range rr.Skew {
 			fmt.Fprintf(&b, " [clock %+gs: left %+.1fs, %s %d]", s.SkewS, s.Measured, s.Got, s.Code)
+		}
+		if a := rr.Audit; a != nil {
+			fmt.Fprintf(&b, " [audit: %s]", a.Note)
+		}
+		for _, c := range rr.Counters {
+			fmt.Fprintf(&b, " [%s %s +%g]", c.Process, c.Series, c.Delta)
 		}
 		b.WriteString("\n")
 		for _, f := range rr.Failures {

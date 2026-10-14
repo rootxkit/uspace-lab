@@ -13,6 +13,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/rootxkit/uspace-lab/internal/load"
+	"github.com/rootxkit/uspace-lab/internal/runner"
 )
 
 // harness runs the rows.
@@ -35,6 +38,9 @@ type harness struct {
 	// admin is the authority's console API as the targets file's admin
 	// session reaches it (the disable row; nil without one).
 	admin *adminAPI
+	// probes read every process's /metrics (deploy/systems/probes.yaml;
+	// nil: the counters are not read).
+	probes *runner.LoadProbes
 }
 
 // dispatch runs a row's act: the disable domain through the admin API,
@@ -228,8 +234,14 @@ type RowResult struct {
 	Skew     []SkewResult   `json:"skew,omitempty"`
 	Expect   []ExpectResult `json:"expectations"`
 	// Audit is what the audit log says of a disable row's switches.
-	Audit  *AuditResult      `json:"audit,omitempty"`
-	Alerts map[string]string `json:"alerts,omitempty"`
+	Audit *AuditResult `json:"audit,omitempty"`
+	// Counters are the systems' loss counters that rose from before the
+	// injection to the end of the recovery (05 §5: every dropped_*,
+	// gap, degraded counter), listed, not judged; CounterErrors the
+	// processes that did not answer either time.
+	Counters      []load.SystemCounter `json:"loss_counters,omitempty"`
+	CounterErrors []string             `json:"loss_counter_errors,omitempty"`
+	Alerts        map[string]string    `json:"alerts,omitempty"`
 	// AlertFindings are the background alert's duplicate raises and
 	// clears inside this row's window (filled after the background ends).
 	AlertFindings []AlertFinding           `json:"alert_findings,omitempty"`
@@ -279,6 +291,17 @@ func (h *harness) runRow(ctx context.Context, r Row) *RowResult {
 	}
 	every := time.Duration(h.m.Probe.EveryS * float64(time.Second))
 	samples := []Sample{base}
+	var counters0 map[string]map[string]float64
+	if h.probes != nil {
+		var errs []string
+		counters0, errs = load.LossCounters(ctx, h.probes)
+		rr.CounterErrors = append(rr.CounterErrors, prefixed("before: ", errs)...)
+		defer func() {
+			after, errs := load.LossCounters(context.WithoutCancel(ctx), h.probes)
+			rr.Counters = load.CounterRises(counters0, after)
+			rr.CounterErrors = append(rr.CounterErrors, prefixed("after: ", errs)...)
+		}()
+	}
 	if spec.Kind == kindDisabled && h.admin != nil {
 		// Seen from the authority's side: its own list of switches.
 		spec.enabled = func(ctx context.Context) (bool, error) { return h.admin.enabled(ctx, spec.Source) }
@@ -404,6 +427,14 @@ func (h *harness) runRow(ctx context.Context, r Row) *RowResult {
 	}
 	h.finishRow(rr, samples)
 	return rr
+}
+
+func prefixed(p string, ss []string) []string {
+	out := make([]string, 0, len(ss))
+	for _, s := range ss {
+		out = append(out, p+s)
+	}
+	return out
 }
 
 // afterMet is every after-expectation already met (the row can stop
