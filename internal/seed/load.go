@@ -258,7 +258,8 @@ func writeLoadTargets(o LoadOptions, sk *stack, ops []*USSPOperator, insp Sessio
 	// gives the receivers their own addresses from, which the stack
 	// trusts from the host only (deploy/systems); empty, they share the
 	// host's.
-	lt := &runner.LoadTarget{Tier: o.Fleet.Tier, Fleet: o.Fleet.Digest, ReceiversForwardedFor: sk.env["DEMO_LOAD_RECEIVER_ADDRESSES"], Probes: probes}
+	lt := &runner.LoadTarget{Tier: o.Fleet.Tier, Fleet: o.Fleet.Digest, ReceiversForwardedFor: sk.env["DEMO_LOAD_RECEIVER_ADDRESSES"],
+		OperatorsForwardedFor: sk.env["DEMO_LOAD_OPERATOR_ADDRESSES"], Probes: probes}
 	for i, op := range ops {
 		if op == nil || op.ClientID == "" || op.ClientSecret == "" {
 			return fmt.Errorf("seed: load client %d has no machine client at the USSP", i)

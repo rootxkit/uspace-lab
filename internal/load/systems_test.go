@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -318,4 +319,47 @@ func mustTargets(t *testing.T, p string) *runner.Targets {
 		t.Fatal(err)
 	}
 	return tg
+}
+
+// operators_forwarded_for gives operator client i the address i+1 of the
+// prefix: every request the client makes (its tokens, its intents, its
+// sockets) names it in X-Forwarded-For, so the USSP's per-address
+// budgets apply per operator, as for real ones. Without it, no header.
+func TestOperatorsGetTheirOwnAddresses(t *testing.T) {
+	f := loadSmall(t)
+	f.Paths.Pairs.InnerGapM = 30
+	var mu sync.Mutex
+	seen := map[string]map[string]bool{} // path -> addresses
+	fake := &fakeUSSP{ended: map[string]bool{}, decide: func(int) string { return "accepted" }}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		if seen[r.URL.Path] == nil {
+			seen[r.URL.Path] = map[string]bool{}
+		}
+		seen[r.URL.Path][r.Header.Get("X-Forwarded-For")] = true
+		mu.Unlock()
+		fake.ServeHTTP(w, r)
+	}))
+	t.Cleanup(srv.Close)
+	with := func(s string) string {
+		return strings.Replace(s, "  receivers:\n", "  operators_forwarded_for: 10.78.0.0/16\n  receivers:\n", 1)
+	}
+	if _, err := Run(context.Background(), Options{Files: f, TargetsPath: systemsTargets(t, f, srv.URL, with), Run: "x", RepoRoot: repo("."), ReadyTimeout: time.Second}); err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	tok, intents := seen["/oauth/token"], seen["/v1/intents"]
+	mu.Unlock()
+	if len(tok) != 2 || !tok["10.78.0.1"] || !tok["10.78.0.2"] || len(intents) != 2 || !intents["10.78.0.1"] {
+		t.Fatalf("token requests from %v, intents from %v", tok, intents)
+	}
+	seen = map[string]map[string]bool{}
+	if _, err := Run(context.Background(), Options{Files: f, TargetsPath: systemsTargets(t, f, srv.URL, nil), Run: "x", RepoRoot: repo("."), ReadyTimeout: time.Second}); err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(seen["/oauth/token"]) != 1 || !seen["/oauth/token"][""] {
+		t.Fatalf("without a prefix: %v", seen["/oauth/token"])
+	}
 }

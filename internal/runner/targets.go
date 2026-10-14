@@ -57,7 +57,10 @@ type LoadTarget struct {
 	// names the address i+1 of it in X-Forwarded-For, which the lab
 	// stack trusts from the host only (deploy/systems), so each receiver
 	// is judged under its own address as a real one is.
-	ReceiversForwardedFor string         `yaml:"receivers_forwarded_for"`
+	ReceiversForwardedFor string `yaml:"receivers_forwarded_for"`
+	// OperatorsForwardedFor is the same for the operator clients: client
+	// i names the address i+1 on its tokens, intents and sockets.
+	OperatorsForwardedFor string         `yaml:"operators_forwarded_for"`
 	Receivers             []LoadReceiver `yaml:"receivers"`
 	// Probes are how the run reads the systems while it loads them.
 	Probes *LoadProbes `yaml:"probes"`

@@ -95,7 +95,7 @@ func TestLoadTargetsWrittenLoad(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "state", "clients", "lab-01.secret"), []byte("lab-01-secret\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	sk := &stack{stateDir: filepath.Join(dir, "state"), env: map[string]string{"DEMO_HTTPS_PORT": "8443", "AUTHORITY_IMAGE": "a@sha256:1", "DEMO_LOAD_RECEIVER_ADDRESSES": "10.77.0.0/16"},
+	sk := &stack{stateDir: filepath.Join(dir, "state"), env: map[string]string{"DEMO_HTTPS_PORT": "8443", "AUTHORITY_IMAGE": "a@sha256:1", "DEMO_LOAD_RECEIVER_ADDRESSES": "10.77.0.0/16", "DEMO_LOAD_OPERATOR_ADDRESSES": "10.78.0.0/16"},
 		hosts: map[string]string{"AUTHORITY_HOST": "authority.test", "USSP_HOST": "ussp.test", "LAB_HOST": "lab.test"}, st: st}
 	ops := []*USSPOperator{{ClientID: "op-a", ClientSecret: "client-secret-a"}, {ClientID: "op-b", ClientSecret: "client-secret-b"}}
 	o := LoadOptions{Fleet: goodFleet(), TargetsOut: filepath.Join(dir, "targets", "load.yaml"), SecretsDir: filepath.Join(dir, "secrets"),
@@ -126,7 +126,7 @@ func TestLoadTargetsWrittenLoad(t *testing.T) {
 	if s, err := tg.Secret(lt.F3411DP.SecretFile); err != nil || s != "lab-01-secret" {
 		t.Fatalf("lab-01 secret %q %v", s, err)
 	}
-	if lt.ReceiversForwardedFor != "10.77.0.0/16" {
+	if lt.ReceiversForwardedFor != "10.77.0.0/16" || lt.OperatorsForwardedFor != "10.78.0.0/16" {
 		t.Fatalf("receivers_forwarded_for %q", lt.ReceiversForwardedFor)
 	}
 	if tg.USSP.BaseURL != "https://ussp.test:8443" || tg.Authority.PictureURL != "wss://authority.test:8443/v1/picture/ws" {

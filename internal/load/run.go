@@ -202,21 +202,25 @@ type run struct {
 	sp              *spPoller
 	faults          *faultRunner
 	tokens          []*oauth.ClientCredentials
-	rxCreds         []rxCred
-	intents         map[int]string
-	operators       []*simop.Client
-	opIn            []chan vehicle.Sample
-	receivers       []*simrx.Receiver
-	rxIn            []chan vehicle.Sample
-	streams         []*stream
-	readers         *readers
-	errs            []string
-	errMu           sync.Mutex
-	shedOp          uint64
-	shedRID         uint64
-	late            uint64
-	handedK         []int64
-	memory          []uint64
+	// clientHTTP and clientAddr are each operator client's HTTP client
+	// and own address (nil, "": the defaults; systems mode).
+	clientHTTP []*http.Client
+	clientAddr []string
+	rxCreds    []rxCred
+	intents    map[int]string
+	operators  []*simop.Client
+	opIn       []chan vehicle.Sample
+	receivers  []*simrx.Receiver
+	rxIn       []chan vehicle.Sample
+	streams    []*stream
+	readers    *readers
+	errs       []string
+	errMu      sync.Mutex
+	shedOp     uint64
+	shedRID    uint64
+	late       uint64
+	handedK    []int64
+	memory     []uint64
 }
 
 type rxCred struct {
@@ -482,7 +486,7 @@ func (r *run) fileIntents(ctx context.Context) {
 				req, err := r.intentRequest(a, start, end)
 				var id string
 				if err == nil {
-					in := &simop.Intents{BaseURL: r.usspBase, Tokens: r.tokens[a.Client]}
+					in := &simop.Intents{BaseURL: r.usspBase, Tokens: r.tokens[a.Client], HTTP: r.httpOf(a.Client)}
 					var d simop.Decision
 					if d, err = in.File(ctx, req); err == nil && d.State == "accepted" {
 						d, err = in.Change(ctx, d.IntentID, "activate")
@@ -547,7 +551,7 @@ func (r *run) startClients(ctx context.Context, wg *sync.WaitGroup) error {
 			case <-tk.C:
 			}
 		}
-		c, err := simop.New(simop.Config{BaseURL: r.usspBase, Tokens: r.tokens[a.Client], Serial: a.Serial, Transport: simop.TransportWS,
+		c, err := simop.New(simop.Config{BaseURL: r.usspBase, Tokens: r.tokens[a.Client], HTTP: r.httpOf(a.Client), Serial: a.Serial, Transport: simop.TransportWS,
 			Period: poll, Geoid: r.geo, IntentID: r.intents[a.Index], Seed: uint64(a.Index) + 1, Epoch: "load-" + r.opt.Run})
 		if err != nil {
 			return err
@@ -613,7 +617,7 @@ func (r *run) startStreams(ctx context.Context, wg *sync.WaitGroup) {
 		}
 		// The token of each connection: the client's, renewed by it as it
 		// expires (a 60-minute run outlives the first).
-		tokens := r.tokens[a.Client]
+		tokens, addr := r.tokens[a.Client], r.addrOf(a.Client)
 		r.streams = append(r.streams, &stream{name: "traffic-" + a.Name, kind: streamTraffic, url: wsURL(r.usspBase) + "/v1/traffic?intent_id=" + url.QueryEscape(id),
 			headerFn: func(ctx context.Context, renew bool) (http.Header, error) {
 				if renew {
@@ -623,7 +627,11 @@ func (r *run) startStreams(ctx context.Context, wg *sync.WaitGroup) {
 				if err != nil {
 					return nil, err
 				}
-				return http.Header{"Authorization": {"Bearer " + tok}}, nil
+				h := http.Header{"Authorization": {"Bearer " + tok}}
+				if addr != "" {
+					h.Set("X-Forwarded-For", addr)
+				}
+				return h, nil
 			}, aircraft: a, timed: true, ready: make(chan struct{})})
 	}
 	for _, s := range r.streams {
@@ -1175,7 +1183,7 @@ func (r *run) endIntents(ctx context.Context, rep *Report) {
 		go func() {
 			defer wg.Done()
 			for j := range work {
-				in := &simop.Intents{BaseURL: r.usspBase, Tokens: r.tokens[j.a.Client]}
+				in := &simop.Intents{BaseURL: r.usspBase, Tokens: r.tokens[j.a.Client], HTTP: r.httpOf(j.a.Client)}
 				d, err := in.Change(ctx, j.id, "end")
 				mu.Lock()
 				switch {
@@ -1212,4 +1220,20 @@ func (r *run) excused() func(time.Time) bool {
 		return nil
 	}
 	return r.faults.during
+}
+
+// httpOf is operator client c's HTTP client (nil: the default).
+func (r *run) httpOf(c int) *http.Client {
+	if c < len(r.clientHTTP) {
+		return r.clientHTTP[c]
+	}
+	return nil
+}
+
+// addrOf is operator client c's own address ("": none).
+func (r *run) addrOf(c int) string {
+	if c < len(r.clientAddr) {
+		return r.clientAddr[c]
+	}
+	return ""
 }

@@ -8,6 +8,7 @@ import (
 	"net/netip"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/rootxkit/uspace-lab/internal/oauth"
 	"github.com/rootxkit/uspace-lab/internal/runner"
@@ -28,6 +29,8 @@ type systemsTarget struct {
 	addresses string
 	// dp is the F3411 display-provider client (nil: none named).
 	dp *oauth.ClientCredentials
+	// opAddrs are the operator clients' own addresses ("": the host's).
+	opAddrs []string
 }
 
 // checkSystemsTargets refuses a systems targets file that cannot drive
@@ -112,6 +115,12 @@ func systemsCreds(tg *runner.Targets, fl *Fleet, tier string) (*systemsTarget, e
 		}
 		st.dp = &oauth.ClientCredentials{TokenURL: d.TokenURL, ClientID: d.ClientID, ClientSecret: sec, Audience: d.Audience, Scopes: d.Scopes}
 	}
+	ops, err := addressesFrom("operators_forwarded_for", lt.OperatorsForwardedFor, len(lt.Clients))
+	if err != nil {
+		return nil, err
+	}
+	st.opAddrs = make([]string, len(lt.Clients))
+	copy(st.opAddrs, ops)
 	addrs, err := receiverAddresses(lt.ReceiversForwardedFor, len(lt.Receivers))
 	if err != nil {
 		return nil, err
@@ -176,26 +185,36 @@ func (r *run) startSystems(_ context.Context, _ *sync.WaitGroup) error {
 	}
 	r.rxCreds = s.rx
 	scopes := []string{"ussp.telemetry", "ussp.intents", "ussp.traffic"}
+	r.clientHTTP, r.clientAddr = make([]*http.Client, len(s.clients)), s.opAddrs
 	for i, c := range s.clients {
+		if a := s.opAddrs[i]; a != "" {
+			r.clientHTTP[i] = &http.Client{Timeout: 10 * time.Second, Transport: forwardedFor{addr: a}}
+		}
 		r.tokens = append(r.tokens, &oauth.ClientCredentials{TokenURL: s.tokenURL, ClientID: c.ClientID, ClientSecret: s.secrets[i],
-			Audience: s.audience, Scopes: scopes})
+			Audience: s.audience, Scopes: scopes, HTTP: r.clientHTTP[i]})
 	}
 	return nil
 }
 
 // receiverAddresses is the address i+1 of prefix for each of n
-// receivers, nil when prefix is empty. Only an IPv4 prefix with room
-// for n hosts is taken.
+// receivers, nil when prefix is empty.
 func receiverAddresses(prefix string, n int) ([]string, error) {
+	return addressesFrom("receivers_forwarded_for", prefix, n)
+}
+
+// addressesFrom is the address i+1 of prefix for each of n clients, nil
+// when prefix is empty. Only an IPv4 prefix with room for n hosts is
+// taken.
+func addressesFrom(field, prefix string, n int) ([]string, error) {
 	if prefix == "" {
 		return nil, nil
 	}
 	p, err := netip.ParsePrefix(prefix)
 	if err != nil || !p.Addr().Is4() {
-		return nil, fmt.Errorf("load: receivers_forwarded_for %q is not an IPv4 prefix", prefix)
+		return nil, fmt.Errorf("load: %s %q is not an IPv4 prefix", field, prefix)
 	}
 	if hosts := 1<<(32-p.Bits()) - 2; n > hosts {
-		return nil, fmt.Errorf("load: receivers_forwarded_for %s has room for %d receivers, the fleet has %d", prefix, hosts, n)
+		return nil, fmt.Errorf("load: %s %s has room for %d clients, the fleet has %d", field, prefix, hosts, n)
 	}
 	out := make([]string, n)
 	a := p.Masked().Addr()
@@ -229,4 +248,17 @@ func checkProbes(p *runner.LoadProbes) error {
 		seen[db.System] = true
 	}
 	return nil
+}
+
+// forwardedFor names a simulated client's own address in
+// X-Forwarded-For on every request it sends (the lab stack trusts the
+// header from the host only), through the default transport of the
+// moment (--lab-env installs the lab's).
+type forwardedFor struct{ addr string }
+
+// RoundTrip sends req with the client's address in X-Forwarded-For.
+func (f forwardedFor) RoundTrip(req *http.Request) (*http.Response, error) {
+	r := req.Clone(req.Context())
+	r.Header.Set("X-Forwarded-For", f.addr)
+	return http.DefaultTransport.RoundTrip(r)
 }
