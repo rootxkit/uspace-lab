@@ -884,6 +884,8 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 	consoleFrames := uint64(0)
 	for _, s := range r.streams {
 		st := s.stats()
+		n, last := s.unexcused(r.excused())
+		st.Unexcused = n
 		rep.Streams = append(rep.Streams, st)
 		if s.kind == streamPicture {
 			for _, n := range st.Frames {
@@ -893,8 +895,8 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 				timed = s
 			}
 		}
-		if st.LastError != "" && st.Connects != 1 {
-			r.fail("stream %s connected %d times; last error: %s", st.Name, st.Connects, st.LastError)
+		if n > 0 {
+			r.fail("stream %s broke %d times outside every fault and credential renewal (%d connections); last: %s", st.Name, n, st.Connects, last)
 		}
 	}
 	// Offered load.

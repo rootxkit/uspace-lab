@@ -54,15 +54,61 @@ type stream struct {
 	gotStatus   bool
 	degraded    map[string]bool
 	evalPeriodS float64
+	// breaks are the connections that ended or failed (bounded);
+	// overBreaks those past the bound.
+	breaks     []streamBreak
+	overBreaks int
+}
+
+// streamBreak is one connection of a stream that ended or failed: when,
+// why, whether it asked for fresh credentials, and how many connections
+// had opened by then.
+type streamBreak struct {
+	at       time.Time
+	err      string
+	renew    bool
+	connects int
+}
+
+// maxBreaks bounds the breaks kept per stream (E-10); later ones are
+// counted as unexcused.
+const maxBreaks = 1000
+
+// unexcused counts the breaks that neither fell inside a fault the run
+// injected (excused, nil: none) nor were a refusal of expired
+// credentials followed by a connection on fresh ones, and returns the
+// last of them. What a break loses shows as unshown samples in the
+// ledgers either way; an unexcused one is a run error because nothing
+// the run did explains it.
+func (s *stream) unexcused(excused func(time.Time) bool) (n int, last string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, b := range s.breaks {
+		switch {
+		case excused != nil && excused(b.at):
+		case b.renew && s.connects > b.connects:
+		default:
+			n++
+			last = b.err
+		}
+	}
+	if s.overBreaks > 0 {
+		n += s.overBreaks
+	}
+	return n, last
 }
 
 // StreamStats is what the report shows of a stream.
 type StreamStats struct {
-	Name          string            `json:"name"`
-	Kind          string            `json:"kind"`
-	Aircraft      string            `json:"aircraft,omitempty"`
-	Timed         bool              `json:"timed"`
-	Connects      int               `json:"connects"`
+	Name     string `json:"name"`
+	Kind     string `json:"kind"`
+	Aircraft string `json:"aircraft,omitempty"`
+	Timed    bool   `json:"timed"`
+	Connects int    `json:"connects"`
+	// Breaks counts the connections that ended or failed; Unexcused
+	// those outside every fault and credential renewal.
+	Breaks        int               `json:"breaks"`
+	Unexcused     int               `json:"breaks_unexcused"`
 	Frames        map[string]uint64 `json:"frames"`
 	DroppedFrames uint64            `json:"dropped_frames"`
 	Degraded      []string          `json:"degraded,omitempty"`
@@ -72,7 +118,8 @@ type StreamStats struct {
 func (s *stream) stats() StreamStats {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	st := StreamStats{Name: s.name, Kind: s.kind, Timed: s.timed, Connects: s.connects, Frames: map[string]uint64{}, DroppedFrames: s.dropped, LastError: s.lastErr}
+	st := StreamStats{Name: s.name, Kind: s.kind, Timed: s.timed, Connects: s.connects, Breaks: len(s.breaks) + s.overBreaks,
+		Frames: map[string]uint64{}, DroppedFrames: s.dropped, LastError: s.lastErr}
 	if s.aircraft != nil {
 		st.Aircraft = s.aircraft.Name
 	}
@@ -206,6 +253,11 @@ func (rd *readers) run(ctx context.Context, s *stream) {
 		if err != nil {
 			s.mu.Lock()
 			s.lastErr = err.Error()
+			if len(s.breaks) < maxBreaks {
+				s.breaks = append(s.breaks, streamBreak{at: time.Now(), err: err.Error(), renew: s.renew, connects: s.connects})
+			} else {
+				s.overBreaks++
+			}
 			s.mu.Unlock()
 		}
 		select {
