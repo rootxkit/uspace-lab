@@ -119,19 +119,22 @@ type probes struct {
 	rss       map[string][]uint64
 	queueMax  float64
 	queueSeen bool
-	first     map[string]map[string]float64 // process -> series at the first scrape
-	firstAt   map[string]time.Time
-	last      map[string]map[string]float64
-	lastAt    map[string]time.Time
-	errs      []probeError
-	sizes0    map[string]float64
-	sizes1    map[string]float64
-	lag       map[string]float64
+	// prev is each process's series at its last scrape, rise the sum of
+	// their increases between scrapes (a fall is a restart: the new
+	// value is all new), firstAt and lastAt the scrapes' times.
+	prev    map[string]map[string]float64
+	rise    map[string]map[string]float64
+	firstAt map[string]time.Time
+	lastAt  map[string]time.Time
+	errs    []probeError
+	sizes0  map[string]float64
+	sizes1  map[string]float64
+	lag     map[string]float64
 }
 
 func newProbes(cfg *runner.LoadProbes) *probes {
-	return &probes{cfg: cfg, rss: map[string][]uint64{}, first: map[string]map[string]float64{}, firstAt: map[string]time.Time{},
-		last: map[string]map[string]float64{}, lastAt: map[string]time.Time{}, sizes0: map[string]float64{}, sizes1: map[string]float64{}, lag: map[string]float64{}}
+	return &probes{cfg: cfg, rss: map[string][]uint64{}, prev: map[string]map[string]float64{}, rise: map[string]map[string]float64{},
+		firstAt: map[string]time.Time{}, lastAt: map[string]time.Time{}, sizes0: map[string]float64{}, sizes1: map[string]float64{}, lag: map[string]float64{}}
 }
 
 // probeError is a probe that failed, and when.
@@ -172,23 +175,39 @@ func (p *probes) scrape(ctx context.Context) {
 			p.fail("metrics of %s: %v", proc, err)
 			continue
 		}
-		m := parseProm(b)
-		now := time.Now()
-		p.mu.Lock()
-		if p.first[proc] == nil {
-			p.first[proc], p.firstAt[proc] = m, now
-		}
-		p.last[proc], p.lastAt[proc] = m, now
-		if v, ok := m[metricRSS]; ok && v >= 0 && len(p.rss[proc]) < probeMaxSamples {
-			p.rss[proc] = append(p.rss[proc], uint64(v))
-		}
+		p.record(proc, parseProm(b), time.Now())
+	}
+}
+
+// record takes one scrape of proc at now.
+func (p *probes) record(proc string, m map[string]float64, now time.Time) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if _, ok := p.firstAt[proc]; !ok {
+		p.firstAt[proc] = now
+		p.rise[proc] = map[string]float64{}
+	} else {
 		for s, v := range m {
-			if strings.HasSuffix(seriesName(s), metricWriterQueueS) && !math.IsNaN(v) {
-				p.queueSeen = true
-				p.queueMax = math.Max(p.queueMax, v)
+			last, seen := p.prev[proc][s]
+			switch {
+			case !seen:
+			case v >= last:
+				p.rise[proc][s] += v - last
+			default:
+				// The process restarted and counts from zero again.
+				p.rise[proc][s] += v
 			}
 		}
-		p.mu.Unlock()
+	}
+	p.prev[proc], p.lastAt[proc] = m, now
+	if v, ok := m[metricRSS]; ok && v >= 0 && len(p.rss[proc]) < probeMaxSamples {
+		p.rss[proc] = append(p.rss[proc], uint64(v))
+	}
+	for s, v := range m {
+		if strings.HasSuffix(seriesName(s), metricWriterQueueS) && !math.IsNaN(v) {
+			p.queueSeen = true
+			p.queueMax = math.Max(p.queueMax, v)
+		}
 	}
 }
 
@@ -366,17 +385,16 @@ func (p *probes) observe(obs map[string]Observation, models Models, fleetSamples
 	}
 	// Pair checks per second, per process (a CPA worker is a process).
 	busiest, seen := 0.0, false
-	for _, proc := range sortedKeysOf(p.last) {
-		f, l := p.first[proc], p.last[proc]
+	for _, proc := range sortedKeysOf(p.prev) {
 		dt := p.lastAt[proc].Sub(p.firstAt[proc]).Seconds()
 		if dt <= 0 {
 			continue
 		}
 		var d float64
 		has := false
-		for s, v := range l {
+		for s := range p.prev[proc] {
 			if strings.HasSuffix(seriesName(s), metricPairChecks) {
-				d += v - f[s]
+				d += p.rise[proc][s]
 				has = true
 			}
 		}
@@ -393,13 +411,13 @@ func (p *probes) observe(obs map[string]Observation, models Models, fleetSamples
 		obs["cpa_pair_checks_per_worker"] = notMeasured("no process exposed a *" + metricPairChecks + " counter read twice")
 	}
 	// Loss counters that moved.
-	for _, proc := range sortedKeysOf(p.last) {
-		f, l := p.first[proc], p.last[proc]
-		for _, s := range sortedKeysOf(l) {
+	for _, proc := range sortedKeysOf(p.rise) {
+		r := p.rise[proc]
+		for _, s := range sortedKeysOf(r) {
 			if !lossCounter.MatchString(seriesName(s)) {
 				continue
 			}
-			if d := l[s] - f[s]; d > 0 {
+			if d := r[s]; d > 0 {
 				if len(sys.Counters) < maxSystemCounters {
 					sys.Counters = append(sys.Counters, SystemCounter{Process: proc, Series: s, Delta: d})
 				} else {

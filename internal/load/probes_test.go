@@ -224,3 +224,25 @@ func TestProbeFailuresDuringAFaultAreExcused(t *testing.T) {
 		t.Fatalf("without faults: %d errors", sys.ErrorsN)
 	}
 }
+
+// A process restarted during the run starts its counters at zero again:
+// the increase over the run is the sum of the increases between scrapes,
+// a fall being a restart (the counter's new value is all new). Taken as
+// last - first, the 100-tier run's restarted monitor reported -33 pair
+// checks a second, and the pair-check row passed on it.
+func TestCountersSurviveARestart(t *testing.T) {
+	p := newProbes(&runner.LoadProbes{Metrics: map[string]string{"m": "http://m"}})
+	t0 := time.Now()
+	for i, v := range []float64{1000, 4000, 7000, 500, 3500} { // restart after 7000
+		p.record("m", map[string]float64{`ussp_traffic_pair_checks{component="cpa"}`: v, `x_dropped_total`: v / 100}, t0.Add(time.Duration(i)*10*time.Second))
+	}
+	obs := map[string]Observation{}
+	sys := p.observe(obs, Models{TrackBytes: 600, CPAPairsPerCorePerS: 50000}, 0, 0, nil)
+	// 3000 + 3000 + 500 + 3000 = 9500 over 40 s.
+	if r := sys.PairChecksPerS["m"]; r != round3(9500.0/40) {
+		t.Fatalf("pair checks %v a second, want %v", r, round3(9500.0/40))
+	}
+	if len(sys.Counters) != 1 || sys.Counters[0].Delta != 95 {
+		t.Fatalf("counters %+v", sys.Counters)
+	}
+}
