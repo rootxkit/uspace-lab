@@ -243,6 +243,26 @@ func TestProbeFailuresDuringAFaultAreExcused(t *testing.T) {
 	}
 }
 
+// A scrape the run cancels (its probes stop when the generator ends)
+// is not a probe failure: the recorded 1000 runs listed every process
+// as failed, "context canceled", at that moment. The same fetch failing
+// on a live context is one per process.
+func TestACancelledScrapeIsNoFailure(t *testing.T) {
+	cfg := helperProbes(t)
+	cfg.Fetch = []string{os.Args[0], "fail"}
+	p := newProbes(cfg)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	p.scrape(ctx)
+	if len(p.errs) != 0 {
+		t.Fatalf("a cancelled scrape failed: %+v", p.errs)
+	}
+	p.scrape(context.Background())
+	if len(p.errs) != 2 {
+		t.Fatalf("a failing scrape: %+v", p.errs)
+	}
+}
+
 // A process restarted during the run starts its counters at zero again:
 // the increase over the run is the sum of the increases between scrapes,
 // a fall being a restart (the counter's new value is all new). Taken as

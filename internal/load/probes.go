@@ -204,6 +204,11 @@ func (p *probes) scrape(ctx context.Context) {
 	for _, proc := range p.processes() {
 		b, err := command(ctx, p.cfg.Fetch, p.cfg.Metrics[proc])
 		if err != nil {
+			if ctx.Err() != nil {
+				// The run stopped the probes mid-scrape (the generator
+				// ended): that says nothing of the process.
+				return
+			}
 			p.fail("metrics of %s: %v", proc, err)
 			continue
 		}
