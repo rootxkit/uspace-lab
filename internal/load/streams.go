@@ -38,9 +38,10 @@ type stream struct {
 	lastErr    string
 	dropped    uint64 // the largest dropped_frames a status said
 	lastStatus time.Time
-	// lastData is the arrival of the last frame that shows a sample (a
-	// track or a traffic product); status frames keep coming after the
-	// generator stops and say nothing about what is still in flight.
+	// lastData is the arrival of the last frame that showed a sample
+	// for the first time (a track or a traffic product); status frames
+	// and repeated states keep coming after the generator stops and say
+	// nothing about what is still in flight.
 	lastData    time.Time
 	ready       chan struct{} // closed on the first status (and snapshot, when subscribing)
 	readyOnce   sync.Once
@@ -217,9 +218,6 @@ func (rd *readers) handle(s *stream, b []byte, at time.Time, alert func([]byte, 
 		return
 	}
 	s.frames[e.Schema]++
-	if e.Schema == wire.SchemaTrack || e.Schema == trafficProduct {
-		s.lastData = at
-	}
 	s.mu.Unlock()
 	switch e.Schema {
 	case wire.SchemaStatus:
@@ -234,7 +232,7 @@ func (rd *readers) handle(s *stream, b []byte, at time.Time, alert func([]byte, 
 		}
 	case wire.SchemaTrack:
 		if s.timed {
-			rd.track(e, at)
+			rd.track(s, e, at)
 		}
 	case trafficProduct:
 		if s.timed {
@@ -283,7 +281,7 @@ func (rd *readers) status(s *stream, e wire.Envelope, at time.Time) {
 // track reads a track/telemetry/v1 on the timed console: which aircraft
 // (its serial, else the transmitter address in its track id) and when
 // it was captured.
-func (rd *readers) track(e wire.Envelope, at time.Time) {
+func (rd *readers) track(s *stream, e wire.Envelope, at time.Time) {
 	var b struct {
 		TrackID        string `json:"track_id"`
 		Source         string `json:"source"`
@@ -316,7 +314,21 @@ func (rd *readers) track(e wire.Envelope, at time.Time) {
 		rd.picture.untraceableFrame()
 		return
 	}
-	rd.picture.Show(a.Name, captured, at)
+	if _, ok := rd.picture.Show(a.Name, captured, at); ok {
+		s.noteData(at)
+	}
+}
+
+// noteData records that a frame arriving at at showed a sample for the
+// first time. A frame that repeats what was shown is not data: the
+// systems go on sending a track's last state (stale) after the
+// generator stops, and the drain waits for data to stop.
+func (s *stream) noteData(at time.Time) {
+	s.mu.Lock()
+	if at.After(s.lastData) {
+		s.lastData = at
+	}
+	s.mu.Unlock()
 }
 
 // product reads a traffic/product/v1: the subscriber's own track and its
@@ -341,7 +353,9 @@ func (rd *readers) product(s *stream, e wire.Envelope, at time.Time) {
 			rd.traffic.untraceableFrame()
 			continue
 		}
-		rd.traffic.Show(s.aircraft.Name, tor, at)
+		if _, ok := rd.traffic.Show(s.aircraft.Name, tor, at); ok {
+			s.noteData(at)
+		}
 	}
 }
 

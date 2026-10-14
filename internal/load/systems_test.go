@@ -160,3 +160,41 @@ func TestPictureLedgerTakesDirectRIDOnly(t *testing.T) {
 		t.Fatalf("the direct_rid frame: %+v", c)
 	}
 }
+
+// trackFrame is a track/telemetry/v1 on the picture, captured at
+// captured, from source with the identification given.
+func trackFrame(t *testing.T, trackID, source string, serial *string, captured time.Time) []byte {
+	t.Helper()
+	b, err := wire.New(wire.SchemaTrack, "authority", captured, captured, nil, "gnss", false, map[string]any{
+		"track_id": trackID, "source": source, "identification": map[string]any{"serial": serial}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
+}
+
+// A frame that shows no new sample says nothing about what is still in
+// flight: the systems' picture and traffic streams go on sending the
+// last state of a track (stale) after the generator stops, and the
+// drain, which waited for three seconds without data, never settled
+// (drain_s spent on every systems run). Only a frame that shows a
+// sample for the first time is data; a repeat is not (the absence
+// half), a new sample is (presence).
+func TestOnlyANewSampleIsData(t *testing.T) {
+	a := &Aircraft{Name: "ac-00000", Serial: AircraftSerial(0, 1)}
+	rd := &readers{picture: NewLedger(), traffic: NewReceiptLedger(), bySer: map[string]*Aircraft{a.Serial: a}, byMAC: map[string]*Aircraft{}}
+	s := &stream{name: "console-00", kind: streamPicture, timed: true, ready: make(chan struct{})}
+	captured := time.Now().Add(-time.Second).UTC()
+	rd.picture.Hand(a.Name, captured)
+	sn := a.Serial
+	first := time.Now()
+	rd.handle(s, trackFrame(t, "t1", sourceDirectRID, &sn, captured), first, func([]byte, time.Time) {})
+	if !s.lastData.Equal(first) {
+		t.Fatalf("a new sample did not count as data: %v", s.lastData)
+	}
+	rd.handle(s, trackFrame(t, "t1", sourceDirectRID, &sn, captured), first.Add(5*time.Second), func([]byte, time.Time) {})
+	rd.handle(s, trackFrame(t, "t1", "network_rid", &sn, captured), first.Add(6*time.Second), func([]byte, time.Time) {})
+	if !s.lastData.Equal(first) {
+		t.Fatalf("a repeated or other-source frame counted as data: %v", s.lastData)
+	}
+}
