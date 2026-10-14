@@ -1179,6 +1179,12 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 			fleetSamples += uint64(k)
 		}
 		rep.Systems = r.probes.observe(obs, r.files.Criteria.Models, fleetSamples, skip, r.excused())
+		if len(r.probes.cfg.HotPath) > 0 {
+			r.readers.frameMu.Lock()
+			frame := r.readers.frame
+			r.readers.frameMu.Unlock()
+			rep.Protobuf = protobufEstimate(frame, r.probes.cfg.HotPath, r.probes.rises())
+		}
 		for _, e := range rep.Systems.Errors {
 			r.fail("probe: %s", e)
 		}

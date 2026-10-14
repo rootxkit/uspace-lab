@@ -27,6 +27,7 @@ const (
 	maxSystemCounters  = 200
 	probeErrorsKept    = 20
 	metricRSS          = "process_resident_memory_bytes"
+	metricCPU          = "process_cpu_seconds_total"
 	metricWriterQueueS = "_tsdb_writer_queue_age_seconds"
 	metricPairChecks   = "_pair_checks"
 )
@@ -232,6 +233,21 @@ func (p *probes) record(proc string, m map[string]float64, now time.Time) {
 			p.queueMax = math.Max(p.queueMax, v)
 		}
 	}
+}
+
+// rises is a copy of every process's series rises so far.
+func (p *probes) rises() map[string]map[string]float64 {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	out := make(map[string]map[string]float64, len(p.rise))
+	for proc, m := range p.rise {
+		c := make(map[string]float64, len(m))
+		for s, v := range m {
+			c[s] = v
+		}
+		out[proc] = c
+	}
+	return out
 }
 
 // run scrapes every period until ctx ends.

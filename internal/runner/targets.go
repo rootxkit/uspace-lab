@@ -110,6 +110,9 @@ type LoadProbes struct {
 	Fetch     []string          `yaml:"fetch"`
 	Metrics   map[string]string `yaml:"metrics"`
 	Databases []LoadDatabase    `yaml:"databases"`
+	// HotPath names, per hot-path process, the series counting its
+	// messages (the 04 §1 estimate of the JSON share).
+	HotPath map[string]string `yaml:"hot_path,omitempty"`
 }
 
 // LoadDatabase is one system's telemetry database.

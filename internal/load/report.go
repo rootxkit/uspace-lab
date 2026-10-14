@@ -68,10 +68,13 @@ type Report struct {
 	// Vectors is the vectors row's evidence (a systems run).
 	Vectors *VectorsReport `json:"vectors,omitempty"`
 	// Zone is the zone's entries against its alerts (a systems run).
-	Zone       *ZoneJudgement `json:"zone,omitempty"`
-	Errors     []string       `json:"errors,omitempty"`
-	Measured   int            `json:"checks_measured"`
-	Unmeasured int            `json:"checks_not_measured"`
+	Zone *ZoneJudgement `json:"zone,omitempty"`
+	// Protobuf is the 04 §1 estimate of the hot path's JSON share (a
+	// systems run with probes).
+	Protobuf   *Protobuf `json:"protobuf,omitempty"`
+	Errors     []string  `json:"errors,omitempty"`
+	Measured   int       `json:"checks_measured"`
+	Unmeasured int       `json:"checks_not_measured"`
 	// Complete is true only when every check of every row was measured.
 	Complete bool     `json:"complete"`
 	Verdict  string   `json:"verdict"`
@@ -491,6 +494,14 @@ func (r *Report) Markdown() string {
 	w("- Generator sheds: operator %d, Remote ID %d.\n\n", l.GeneratorShedOperator, l.GeneratorShedRID)
 	if r.Systems != nil {
 		r.systemsMarkdown(w)
+	}
+	if pb := r.Protobuf; pb != nil {
+		w("## 04 §1: the hot path's JSON share (estimate)\n\nOne encoding/json decode and encode of a %d-byte track frame: %.1f us on this host. %s.\n\n| Process | Messages (series) | CPU (s) | CPU per message (us) | JSON share |\n|---|---|---|---|---|\n",
+			pb.FrameBytes, pb.JSONUS, pb.Note)
+		for _, h := range pb.Processes {
+			w("| %s | %s (%s) | %s | %s | %s |\n", h.Process, fmtNum(h.Msgs), h.Series, fmtNum(h.CPUS), fmtNum(h.CPUPerMsgUS), fmtNum(h.Share))
+		}
+		w("\n")
 	}
 	if z := r.Zone; z != nil {
 		w("## Zone %s\n\n%d entries due, %d raised, %d cleared, %d missed, %d clears missed, %d unexpected; the slowest raise %.2f ticks of %.0f s.\n\n",

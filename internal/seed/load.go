@@ -578,6 +578,7 @@ type probesFile struct {
 	Format    string            `yaml:"format"`
 	FetchVia  string            `yaml:"fetch_via"`
 	Metrics   map[string]string `yaml:"metrics"`
+	HotPath   map[string]string `yaml:"hot_path"`
 	Databases []struct {
 		System   string `yaml:"system"`
 		Service  string `yaml:"service"`
@@ -624,8 +625,13 @@ func loadProbes(path, project string) (*runner.LoadProbes, error) {
 			return nil, fmt.Errorf("seed: probes %s: %q is not a compose project, service or database name", path, n)
 		}
 	}
+	for proc, series := range f.HotPath {
+		if _, ok := f.Metrics[proc]; !ok || series == "" {
+			return nil, fmt.Errorf("seed: probes %s: hot_path names %q, which has no metrics URL, or no series", path, proc)
+		}
+	}
 	container := func(service string) string { return project + "-" + service + "-1" }
-	p := &runner.LoadProbes{Fetch: []string{"docker", "exec", container(f.FetchVia), "wget", "-qO-"}, Metrics: f.Metrics}
+	p := &runner.LoadProbes{Fetch: []string{"docker", "exec", container(f.FetchVia), "wget", "-qO-"}, Metrics: f.Metrics, HotPath: f.HotPath}
 	for _, d := range f.Databases {
 		p.Databases = append(p.Databases, runner.LoadDatabase{System: d.System, DPCache: d.DPCache,
 			Query: []string{"docker", "exec", container(d.Service), "psql", "-U", "postgres", "-d", d.Database, "-tAc"}})

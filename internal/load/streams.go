@@ -159,6 +159,10 @@ type readers struct {
 	nHeld   int
 	// onShown is told every sample newly shown (the faults' recovery).
 	onShown func(kind string, at time.Time)
+	// frame is the first track frame the timed console received, as
+	// sent (the 04 §1 estimate times its JSON).
+	frameMu sync.Mutex
+	frame   []byte
 	// network is told every network_rid track on the timed console (the
 	// peer's display; nil: no peer).
 	network func(instance, trackID string, pos core.LatLon, captured, arrived time.Time)
@@ -354,6 +358,11 @@ func (rd *readers) handle(s *stream, b []byte, at time.Time, alert func([]byte, 
 		}
 	case wire.SchemaTrack:
 		if s.timed {
+			rd.frameMu.Lock()
+			if rd.frame == nil {
+				rd.frame = append([]byte(nil), b...)
+			}
+			rd.frameMu.Unlock()
 			rd.track(s, e, at)
 		}
 	case trafficProduct:
