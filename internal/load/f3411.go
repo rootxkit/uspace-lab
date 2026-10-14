@@ -23,6 +23,9 @@ const (
 	maxViewSideM     = 4949 // F3411 NetMaxDisplayAreaDiagonalKm 7: a square's side
 	spRequestTimeout = 10 * time.Second
 	spMaxBody        = 4 << 20
+	// maxSPFailuresKept bounds the failure times kept; a failure past it
+	// cannot be excused.
+	maxSPFailuresKept = 10_000
 )
 
 // DPPolls are the tier's F3411 display-provider polls of the USSP (05
@@ -113,6 +116,7 @@ type spPoller struct {
 	polls     uint64
 	statuses  map[int]uint64
 	failures  uint64
+	failedAt  []time.Time
 	lastErr   string
 	shown     uint64 // flights returned, summed over the answers
 	next      int
@@ -188,6 +192,9 @@ func (p *spPoller) poll(ctx context.Context, v view) {
 	p.statuses[status]++
 	if err != nil || status != http.StatusOK {
 		p.failures++
+		if len(p.failedAt) < maxSPFailuresKept {
+			p.failedAt = append(p.failedAt, time.Now())
+		}
 		if err != nil {
 			p.lastErr = err.Error()
 		} else {
@@ -204,6 +211,9 @@ func (p *spPoller) poll(ctx context.Context, v view) {
 	}
 	if json.Unmarshal(body, &ans) != nil {
 		p.failures++
+		if len(p.failedAt) < maxSPFailuresKept {
+			p.failedAt = append(p.failedAt, time.Now())
+		}
 		p.lastErr = "GET /uss/flights answered a body that is not a flights response"
 		p.mu.Unlock()
 		return
@@ -227,6 +237,9 @@ func (p *spPoller) poll(ctx context.Context, v view) {
 	p.statuses[status]++
 	if err != nil || status != http.StatusOK {
 		p.failures++
+		if len(p.failedAt) < maxSPFailuresKept {
+			p.failedAt = append(p.failedAt, time.Now())
+		}
 		if err != nil {
 			p.lastErr = err.Error()
 		} else {
@@ -240,20 +253,26 @@ func (p *spPoller) poll(ctx context.Context, v view) {
 
 // F3411Polls is what the report says of the DP polls.
 type F3411Polls struct {
-	Views     int               `json:"views"`
-	Polls     uint64            `json:"polls"`
-	Flights   uint64            `json:"flights_returned"`
-	DetailsOK uint64            `json:"details_answered"`
-	Failures  uint64            `json:"failures"`
-	Statuses  map[string]uint64 `json:"statuses"`
-	LastError string            `json:"last_error,omitempty"`
+	Views     int    `json:"views"`
+	Polls     uint64 `json:"polls"`
+	Flights   uint64 `json:"flights_returned"`
+	DetailsOK uint64 `json:"details_answered"`
+	Failures  uint64 `json:"failures"`
+	// FailuresDuringFaults are the failures inside a fault the run
+	// injected.
+	FailuresDuringFaults uint64            `json:"failures_during_faults,omitempty"`
+	Statuses             map[string]uint64 `json:"statuses"`
+	LastError            string            `json:"last_error,omitempty"`
 }
 
 // observe turns the polls into the F3411 SP rows: a latency is measured
 // only when the answers carried the fleet's flights (an empty answer
 // times nothing the load is about), and a poll the SP did not answer
 // with 200 is a run error.
-func (p *spPoller) observe(obs map[string]Observation, minSamples int) (F3411Polls, string) {
+//
+// excused says whether a failure at t falls inside a fault the run
+// injected (a killed rid-sp answers 502): counted, not a run error.
+func (p *spPoller) observe(obs map[string]Observation, minSamples int, excused func(time.Time) bool) (F3411Polls, string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	st := F3411Polls{Views: len(p.views), Polls: p.polls, Flights: p.shown, DetailsOK: p.detailsOK, Failures: p.failures, LastError: p.lastErr, Statuses: map[string]uint64{}}
@@ -273,9 +292,16 @@ func (p *spPoller) observe(obs map[string]Observation, minSamples int) (F3411Pol
 	} else {
 		obs["f3411_details_s"] = notMeasured("no details request was answered (no poll returned a flight)")
 	}
+	if excused != nil {
+		for _, at := range p.failedAt {
+			if excused(at) {
+				st.FailuresDuringFaults++
+			}
+		}
+	}
 	fail := ""
-	if p.failures > 0 {
-		fail = fmt.Sprintf("F3411: %d of the SP requests failed (statuses %v; last: %s)", p.failures, st.Statuses, p.lastErr)
+	if n := p.failures - st.FailuresDuringFaults; n > 0 {
+		fail = fmt.Sprintf("F3411: %d of the SP requests failed outside any fault (statuses %v; last: %s)", n, st.Statuses, p.lastErr)
 	}
 	return st, fail
 }

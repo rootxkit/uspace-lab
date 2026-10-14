@@ -123,8 +123,7 @@ type probes struct {
 	firstAt   map[string]time.Time
 	last      map[string]map[string]float64
 	lastAt    map[string]time.Time
-	errs      []string
-	nErrs     int
+	errs      []probeError
 	sizes0    map[string]float64
 	sizes1    map[string]float64
 	lag       map[string]float64
@@ -135,12 +134,23 @@ func newProbes(cfg *runner.LoadProbes) *probes {
 		last: map[string]map[string]float64{}, lastAt: map[string]time.Time{}, sizes0: map[string]float64{}, sizes1: map[string]float64{}, lag: map[string]float64{}}
 }
 
+// probeError is a probe that failed, and when.
+type probeError struct {
+	at  time.Time
+	msg string
+}
+
+// maxProbeErrors bounds the failures kept; past it every failure is
+// one the run cannot excuse.
+const maxProbeErrors = 10_000
+
 func (p *probes) fail(format string, a ...any) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.nErrs++
-	if len(p.errs) < probeErrorsKept {
-		p.errs = append(p.errs, fmt.Sprintf(format, a...))
+	p.errs = append(p.errs, probeError{at: time.Now(), msg: fmt.Sprintf(format, a...)})
+	if len(p.errs) > maxProbeErrors {
+		p.errs = p.errs[:maxProbeErrors]
+		p.errs = append(p.errs, probeError{msg: "more probe failures than are kept"})
 	}
 }
 
@@ -289,6 +299,9 @@ type Systems struct {
 	PairChecksPerS map[string]float64 `json:"pair_checks_per_s,omitempty"`
 	Errors         []string           `json:"errors,omitempty"`
 	ErrorsN        int                `json:"errors_count,omitempty"`
+	// ErrorsDuringFaults are the probes that failed inside a fault the
+	// run injected.
+	ErrorsDuringFaults int `json:"errors_during_faults,omitempty"`
 }
 
 // observe turns what the probes read into observations: memory, the
@@ -297,10 +310,24 @@ type Systems struct {
 // §1 stores the whole fleet's raw telemetry in every system with a
 // telemetry hypertable, about track_bytes each); warmup is how many
 // memory samples to leave out.
-func (p *probes) observe(obs map[string]Observation, models Models, fleetSamples uint64, warmup int) *Systems {
+//
+// excused says whether a failure at t falls inside a fault the run
+// injected (a killed process does not answer its /metrics); such a
+// failure is counted, not an error of the run (nil: none is).
+func (p *probes) observe(obs map[string]Observation, models Models, fleetSamples uint64, warmup int, excused func(time.Time) bool) *Systems {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	sys := &Systems{Errors: p.errs, ErrorsN: p.nErrs, PairChecksPerS: map[string]float64{}}
+	sys := &Systems{PairChecksPerS: map[string]float64{}}
+	for _, e := range p.errs {
+		if excused != nil && !e.at.IsZero() && excused(e.at) {
+			sys.ErrorsDuringFaults++
+			continue
+		}
+		sys.ErrorsN++
+		if len(sys.Errors) < probeErrorsKept {
+			sys.Errors = append(sys.Errors, e.msg)
+		}
+	}
 	// Memory: per process, judged as the harness's heap is.
 	worstG, anyRising, judged := 0.0, false, 0
 	for _, proc := range sortedKeysOf(p.rss) {

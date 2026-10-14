@@ -484,7 +484,7 @@ func (r *Report) Markdown() string {
 		r.faultsMarkdown(w)
 	}
 	if f := r.F3411; f != nil {
-		w("## F3411 display-provider polls of the USSP\n\n%d views, %d polls, %d flights returned, %d details answered, %d failures (statuses %v).\n\n", f.Views, f.Polls, f.Flights, f.DetailsOK, f.Failures, f.Statuses)
+		w("## F3411 display-provider polls of the USSP\n\n%d views, %d polls, %d flights returned, %d details answered, %d failures, %d of them inside a fault the run injected (statuses %v).\n\n", f.Views, f.Polls, f.Flights, f.DetailsOK, f.Failures, f.FailuresDuringFaults, f.Statuses)
 	}
 	a := r.Alerts
 	w("## Alerts\n\nExpected %d, raised %d, cleared %d, missed %d, clears missed %d, unexpected %d, untraceable %d.\n\n",
@@ -559,6 +559,9 @@ func (r *Report) systemsMarkdown(w func(format string, a ...any)) {
 	}
 	if sys.ErrorsN > 0 {
 		w("\nProbe errors: %d (the first %d are among the run's errors).\n", sys.ErrorsN, len(sys.Errors))
+	}
+	if sys.ErrorsDuringFaults > 0 {
+		w("\nProbes that failed inside a fault the run injected: %d.\n", sys.ErrorsDuringFaults)
 	}
 	w("\n")
 }

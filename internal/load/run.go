@@ -991,7 +991,7 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 	// The F3411 SP, as the lab polled it.
 	switch {
 	case r.sp != nil:
-		st, fail := r.sp.observe(obs, t.MinSamples)
+		st, fail := r.sp.observe(obs, t.MinSamples, r.excused())
 		rep.F3411 = &st
 		if fail != "" {
 			r.fail("%s", fail)
@@ -1013,7 +1013,7 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 		for _, k := range r.handedK {
 			fleetSamples += uint64(k)
 		}
-		rep.Systems = r.probes.observe(obs, r.files.Criteria.Models, fleetSamples, skip)
+		rep.Systems = r.probes.observe(obs, r.files.Criteria.Models, fleetSamples, skip, r.excused())
 		for _, e := range rep.Systems.Errors {
 			r.fail("probe: %s", e)
 		}
@@ -1203,4 +1203,13 @@ func (r *run) endIntents(ctx context.Context, rep *Report) {
 		}
 		rep.Errors = append(rep.Errors, errs...)
 	}
+}
+
+// excused is whether a failure at a time falls inside a fault the run
+// injected (nil when it injected none).
+func (r *run) excused() func(time.Time) bool {
+	if r.faults == nil {
+		return nil
+	}
+	return r.faults.during
 }

@@ -315,6 +315,24 @@ func duplicateRaises(events []observe.Event) int {
 	return n
 }
 
+// during reports whether t falls inside a fault: from its injection to
+// faultGapS after its restore (or the run's end when it was never
+// restored).
+func (fr *faultRunner) during(t time.Time) bool {
+	fr.mu.Lock()
+	defer fr.mu.Unlock()
+	for i := range fr.records {
+		r := &fr.records[i]
+		if r.InjectedAt == nil || t.Before(*r.InjectedAt) {
+			continue
+		}
+		if r.RestoredAt == nil || !t.After(r.RestoredAt.Add(faultGapS*time.Second)) {
+			return true
+		}
+	}
+	return false
+}
+
 // flagSeen is a degraded flag a stream showed for the first time.
 type flagSeen struct {
 	system, flag string

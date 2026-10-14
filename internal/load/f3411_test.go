@@ -91,7 +91,7 @@ func TestTheLabPollsTheSPAsADisplayProvider(t *testing.T) {
 	f := &fakeSP{flights: []string{"f1", "f2"}}
 	p := pollFor(t, f, 8)
 	obs := map[string]Observation{}
-	st, fail := p.observe(obs, 1)
+	st, fail := p.observe(obs, 1, nil)
 	if fail != "" || f.badView.Load() != 0 || st.Flights == 0 || st.DetailsOK == 0 {
 		t.Fatalf("fail %q, bad views %d, %+v", fail, f.badView.Load(), st)
 	}
@@ -100,12 +100,12 @@ func TestTheLabPollsTheSPAsADisplayProvider(t *testing.T) {
 	}
 	empty := pollFor(t, &fakeSP{}, 4)
 	obs = map[string]Observation{}
-	if _, fail := empty.observe(obs, 1); fail != "" || obs["f3411_sp_flights_s"].Measured || !strings.Contains(obs["f3411_sp_flights_s"].Reason, "none returned a flight") || obs["f3411_details_s"].Measured {
+	if _, fail := empty.observe(obs, 1, nil); fail != "" || obs["f3411_sp_flights_s"].Measured || !strings.Contains(obs["f3411_sp_flights_s"].Reason, "none returned a flight") || obs["f3411_details_s"].Measured {
 		t.Fatalf("empty answers: %q %+v", fail, obs)
 	}
 	refused := pollFor(t, &fakeSP{flights: []string{"f1"}, details: http.StatusServiceUnavailable}, 4)
 	obs = map[string]Observation{}
-	if _, fail := refused.observe(obs, 1); !strings.Contains(fail, "503") || obs["f3411_details_s"].Measured {
+	if _, fail := refused.observe(obs, 1, nil); !strings.Contains(fail, "503") || obs["f3411_details_s"].Measured {
 		t.Fatalf("refused details: %q %+v", fail, obs["f3411_details_s"])
 	}
 }
@@ -140,5 +140,23 @@ func TestDPViewsCoverTheFleet(t *testing.T) {
 	bad := &DPPolls{Views: 10, ViewSideM: 6000, PollMS: 1000}
 	if err := bad.validate(); err == nil {
 		t.Fatal("a view wider than F3411 admits was taken")
+	}
+}
+
+// A failure inside a fault the run injected (a killed rid-sp answers
+// 502) is counted apart and is not a run error; the same failure
+// outside every fault is.
+func TestSPFailuresDuringAFaultAreExcused(t *testing.T) {
+	refused := pollFor(t, &fakeSP{flights: []string{"f1"}, details: http.StatusBadGateway}, 4)
+	inj, res := time.Now().Add(-time.Hour), time.Now().Add(time.Hour)
+	fr := &faultRunner{records: []FaultRecord{{InjectedAt: &inj, RestoredAt: &res}}}
+	st, fail := refused.observe(map[string]Observation{}, 1, fr.during)
+	if fail != "" || st.FailuresDuringFaults == 0 || st.FailuresDuringFaults != st.Failures {
+		t.Fatalf("inside the fault: %q %+v", fail, st)
+	}
+	past := time.Now().Add(-2 * time.Hour)
+	before := &faultRunner{records: []FaultRecord{{InjectedAt: &past, RestoredAt: &past}}}
+	if _, fail := refused.observe(map[string]Observation{}, 1, before.during); !strings.Contains(fail, "outside any fault") {
+		t.Fatalf("outside every fault: %q", fail)
 	}
 }

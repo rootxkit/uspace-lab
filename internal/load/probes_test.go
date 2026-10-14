@@ -103,7 +103,7 @@ func TestProbesReadTheSystems(t *testing.T) {
 	}
 	p.sizes(ctx, true)
 	obs := map[string]Observation{}
-	sys := p.observe(obs, Models{TrackBytes: 600, CPAPairsPerCorePerS: 50000}, 1000, 0)
+	sys := p.observe(obs, Models{TrackBytes: 600, CPAPairsPerCorePerS: 50000}, 1000, 0, nil)
 	if len(sys.Errors) != 0 {
 		t.Fatalf("errors %v", sys.Errors)
 	}
@@ -152,7 +152,7 @@ func TestProbesFailClosed(t *testing.T) {
 	p.scrape(ctx)
 	p.sizes(ctx, true)
 	obs := map[string]Observation{}
-	sys := p.observe(obs, Models{TrackBytes: 600, CPAPairsPerCorePerS: 50000}, 1000, 0)
+	sys := p.observe(obs, Models{TrackBytes: 600, CPAPairsPerCorePerS: 50000}, 1000, 0, nil)
 	if sys.ErrorsN == 0 || !strings.Contains(strings.Join(sys.Errors, ";"), "refused") {
 		t.Fatalf("errors %v", sys.Errors)
 	}
@@ -202,5 +202,25 @@ func TestASystemsRunWithoutProbesSaysSo(t *testing.T) {
 				t.Errorf("reference %s: the harness's heap was not judged: %+v", m, o)
 			}
 		}
+	}
+}
+
+// A probe that fails inside a fault the run injected (the killed
+// process has no /metrics) is counted apart, not a run error; outside
+// every fault it is one.
+func TestProbeFailuresDuringAFaultAreExcused(t *testing.T) {
+	cfg := helperProbes(t)
+	cfg.Fetch = []string{os.Args[0], "fail"}
+	p := newProbes(cfg)
+	p.scrape(context.Background())
+	inj, res := time.Now().Add(-time.Hour), time.Now().Add(time.Hour)
+	fr := &faultRunner{records: []FaultRecord{{InjectedAt: &inj, RestoredAt: &res}}}
+	sys := p.observe(map[string]Observation{}, Models{TrackBytes: 600, CPAPairsPerCorePerS: 50000}, 1, 0, fr.during)
+	if sys.ErrorsN != 0 || sys.ErrorsDuringFaults != 2 {
+		t.Fatalf("inside the fault: %d errors, %d during faults", sys.ErrorsN, sys.ErrorsDuringFaults)
+	}
+	sys = p.observe(map[string]Observation{}, Models{TrackBytes: 600, CPAPairsPerCorePerS: 50000}, 1, 0, nil)
+	if sys.ErrorsN != 2 {
+		t.Fatalf("without faults: %d errors", sys.ErrorsN)
 	}
 }
