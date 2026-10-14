@@ -1,6 +1,6 @@
 # Decision record: defects the chaos matrix found, 2026-10-05
 
-Status: **open**, F1 to F8. Defects the chaos matrix (WP-L9, L-M3)
+Status: **open**, F1 to F10. Defects the chaos matrix (WP-L9, L-M3)
 observed in run `20261005-chaos` against the systems stack
 (`results/20261005-chaos/`, `docs/RUNBOOKS/chaos.md`), each seen in
 runs 2 and 3 of that day and F1, F5 and F7 also in run 1. They are
@@ -31,6 +31,16 @@ under `pending`, each marked pending GCAA (`docs/PLAN.md` §7.1, L-Q4).
 | F6 | An authority restart loses the violation's identity | uspace-authority | `authority-detect`, `authority-down`, `stack-restart` | open |
 | F7 | A NATS outage costs the alert its identity (USSP and authority) | uspace-ussp, uspace-authority | `ussp-nats`, `authority-nats` | open |
 | F8 | After a whole-stack restart the USSP holds two alerts for one incursion | uspace-ussp | `stack-restart` | open |
+| F9 | The authority's console status does not name the network Remote ID source | uspace-authority (or the lab, see F9) | `authority-dp-poller` | open (2026-10-14) |
+| F10 | The authority's picture refuses console sessions while its relational database is down | uspace-authority | `authority-postgres` | open (2026-10-14) |
+
+**Re-run, 2026-10-14** (`results/20261014T215032Z-chaos`, the systems'
+newest images, `docs/RUNBOOKS/chaos.md`). F1, F3, F4, F5, F6 and F7
+were seen again in the same rows. F8 was seen again in `stack-restart`,
+where both systems raised a new id. F2 was not seen at any baseline.
+F9 and F10 are new (the rows are new, or newly judged on stream
+liveness). The load runs of the same day saw F1 and F6/F7 under load
+too (`2026-10-14-load-findings.md` L4, L5).
 
 ## F1: ANSP readiness tied to other systems' JWKS
 
@@ -160,6 +170,40 @@ once, never twice.
 
 **Meanwhile.** `stack-restart` allows a stale clear and one re-raise
 (`stale_ok`), never two open at once; it fails on the overlap.
+
+## F9: the network Remote ID source is not named in the console status
+
+**Observed.** 2026-10-14, authority image `sha256:53d6f97c…`. In
+`authority-dp-poller` (the DP poller killed for 60 s), every console
+status frame of the authority, during the fault and after it, named
+no `network_rid/*` source: the row's expectation (stale or down during,
+live after) found it unknown in 32 and 23 frames.
+
+**Expected.** 05 §6: a dead source instance's tracks age out as stale,
+and consoles show state (SC-22).
+
+**Owner.** Not established. If the authority holds a network Remote ID
+source and does not list it, the fix is uspace-authority's. But
+`scripts/chaos/prepare.sh` adds no DP oversight area (the load seed
+does, `POST /v1/dp/views`), so the display provider may have had no
+view and no source to show. The lab checks that first, by giving
+`prepare.sh` the oversight area.
+
+## F10: console sessions refused while the relational database is down
+
+**Observed.** 2026-10-14. In `authority-postgres` (the authority's
+relational database stopped for 60 s), the authority's picture stream
+went silent for 49.6 s, and over the same row `picture-ws` counted 98
+`uspace_authority_session_refused`. Together these suggest that the
+console's reconnects were refused while the database was down; the
+counter does not record why each one was refused.
+
+**Expected.** 05 §6: with a database down, consumers hold their last
+state and consoles freeze with the age shown; a console already signed
+in keeps its stream.
+
+**Owner.** uspace-authority (`picture-ws`'s sessions while the
+relational database is down).
 
 ## Observed, not judged
 

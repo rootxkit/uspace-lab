@@ -7,6 +7,67 @@ on whether its fault actually happened. The harness and the scripts are
 described in `scripts/chaos/README.md`; the rows and their citations are
 `scripts/chaos/matrix.yaml`. What follows is what was **observed**.
 
+## The observed matrix (run `20261014T215032Z-chaos`)
+
+2026-10-14, 21:50 to 23:20 UTC, the same workstation and Docker
+Desktop, project `uspace-demo`. Lab `b5c9b83` with a clean tree,
+uspace-core v1.6.0. The systems' newest images: authority
+`sha256:53d6f97c…`, CISP `sha256:2e786148…`, USSP `sha256:854cca71…`,
+ANSP `sha256:1fcfb3c9…` (`deploy/demo.env.example`; every container's
+image is in `chaos.json`). There are 30 rows, now with the dead DP
+instance (`authority-dp-poller`) and the console disable
+(`authority-rid-disabled`), and every row lists the loss counters that
+rose across it. Every fault was observed in place, held and observed
+gone. 16 rows pass and 14 fail. One failure was the harness's: the
+disable row's audit check read only `source_disabled`, but the
+authority audits the switch back on as `source_enabled`. It was fixed
+in `f54b2bf`, and the row alone then passed against the same images
+(`results/20261014T232332Z-chaos`). The stream-liveness judgement
+(item 4 above) now applies to every kept alert.
+
+| Row | Verdict | Fault, as observed | What failed, as observed |
+|---|---|---|---|
+| `authority-rid-ingest` | PASS | seen +2.7 s, held 30/30, gone +0.5 s | |
+| `ussp-telemetry-ingest` | PASS | seen +2.7 s, held 30/30, gone +0.6 s | |
+| `authority-api` | FAIL | seen +5.2 s, held 23/23, gone +0.5 s | ANSP not ready, `jwks=down` (F1); USSP `registry` degraded past +10 s after the restore (F3); the authority's picture stream silent 19 s |
+| `ussp-api` | PASS | seen +5.2 s, held 22/22, gone +0.5 s | |
+| `cisp-api` | FAIL | seen +5.3 s, held 22/22, gone +0.5 s | ANSP `cisp_publisher` down past +10 s after the restore (F4) |
+| `ansp-api` | PASS | seen +5.2 s, held 21/21, gone +0.5 s | |
+| `ussp-monitor` | PASS | seen +2.7 s, held 30/30, gone +0.5 s | |
+| `ussp-monitor-stalled` | FAIL | seen +2.2 s, held 30/30, gone +0.5 s | USSP cleared `stale` and raised a new id at +32.8 s (F5) |
+| `ussp-rid-sp` | PASS | seen +2.7 s, held 30/30, gone +0.5 s | |
+| `authority-detect` | FAIL | seen +2.7 s, held 30/30, gone +0.5 s | a second raise, new id, at +33.9 s (F6) |
+| `cisp-deliver` | PASS | seen +2.7 s, held 30/30, gone +0.5 s | |
+| `ansp-manned-feed` | PASS | seen +2.3 s, held 60/60, gone +0.5 s | |
+| `authority-dp-poller` | FAIL | seen +2.3 s, held 60/60, gone +0.5 s | the authority's console status never named `network_rid/*` (unknown in every frame, during and after) (F9) |
+| `authority-rid-disabled` | FAIL, then PASS alone | seen +0.5 s, held 60/60, gone +0.5 s | the audit check (the harness's, fixed); a second raise by the authority at +62.6 s after the switch on (F6) |
+| `ussp-nats` | FAIL | seen +2.5 s, held 60/60, gone +0.5 s | a duplicate raise at +65.1 s; the alerts stream silent 64 s (F7) |
+| `authority-nats` | FAIL | seen +2.4 s, held 60/60, gone +0.5 s | cleared `stale` and raised a new id at +64.8 s (F7) |
+| `cisp-nats` | PASS | seen +2.4 s, held 60/60, gone +0.5 s | |
+| `ansp-nats` | PASS | seen +2.4 s, held 60/60, gone +0.5 s | |
+| `ussp-timescaledb` | PASS | seen +2.4 s, held 60/60, gone +0.5 s | |
+| `authority-timescaledb` | PASS | seen +2.4 s, held 60/60, gone +0.5 s | |
+| `ussp-postgres` | PASS | seen +2.4 s, held 60/60, gone +0.5 s | |
+| `authority-postgres` | FAIL | seen +2.4 s, held 60/60, gone +0.5 s | the authority's picture stream silent 49.6 s; `picture-ws` refused 98 sessions (F10) |
+| `ussp-dbhost` | PASS | seen +2.4 s, held 60/60, gone +0.5 s | |
+| `ussp-partition` | FAIL | seen +22.8 s, held 18/18, gone +0.6 s | the USSP alerts stream silent 139 s, past the row's window |
+| `cisp-down` | FAIL | seen +11.7 s, held 110/110, gone +0.5 s | the same silence carried in; a USSP duplicate raise at +8.6 s |
+| `authority-down` | FAIL | seen +19.8 s, held 113/113, gone +0.5 s | ANSP not ready (F1); a duplicate raise at +359.7 s (F6) |
+| `dss-down` | PASS | seen +4.8 s, held 112/112, gone +2.9 s | |
+| `issuer-down` | FAIL | seen +4.8 s, held 45/45, gone +3.0 s | ANSP not ready (F1) |
+| `receiver-clock` | PASS | −10 s accepted 202; +45 s and −45 s refused 401 | |
+| `stack-restart` | FAIL | seen +12.2 s, held 30/30, gone +11.7 s | both systems raised a new id after the restart (F6, F8) |
+
+Against `20261005-chaos`, `cisp-api`'s F4 and `authority-api`'s F3 are
+still there. F2, the ANSP's held CIS version, is no longer seen at
+baseline. `ussp-monitor` keeps its alert across a kill, as before.
+`ussp-partition`, `cisp-down` and `authority-postgres`, which passed
+before the stream-liveness judgement, now fail on a silent stream.
+In an earlier run the same day (`5a8dcc2`, not kept),
+`authority-rid-ingest` failed once on the CISP's readiness ("migrate
+relational status: context deadline exceeded"), which the load runs
+also saw (`docs/decisions/2026-10-14-load-findings.md` L6).
+
 ## The observed matrix (run `20261005-chaos`)
 
 2026-10-05, 07:32 to 08:58 UTC, Windows 11 with Docker Desktop (16
@@ -186,7 +247,11 @@ and slow to see the CISP back (F4); the USSP's registry poll hanging
 through an authority restart (F3) and the alert's identity lost to a
 stalled monitor (F5) and a stack restart (F8); the authority's
 violation identity lost to restarts (F6); and both systems' alert
-identity lost to a NATS outage (F7).
+identity lost to a NATS outage (F7). The 2026-10-14 run adds F9 (the
+authority's console status does not name the network Remote ID source,
+so a dead DP instance is not shown) and F10 (the authority's picture
+refuses console sessions while its relational database is down). F2
+was not seen in that run.
 
 ### Lab (this repository)
 
@@ -200,9 +265,18 @@ identity lost to a NATS outage (F7).
   the lab Caddy's address for rate limits and audit rows
   (`client_address` degraded at every baseline); the lab Caddy now has a
   fixed address that every system trusts, as on the droplet.
+- Fixed since (2026-10-14): a fault's state outlived the containers it
+  named. A load run killed during its authority outage left
+  `system-authority.order`, and the next matrix's `authority-down`
+  refused to start; `demo-down.sh` now removes the fault state. The
+  disable row's switch lost its end time, so it held for no time, and
+  its audit check missed `source_enabled`.
 - Open: the seed's state file outlives the volumes it describes
   (`prepare.sh --fresh`); a stack on a port other than 443 loses the
-  authority's picture (origin check).
+  authority's picture (origin check). It is also not established
+  whether F9 is the authority's or the lab's: `prepare.sh` adds no DP
+  oversight area to the authority (the load seed does), so its display
+  provider may have had no view to poll.
 
 ### The three "nothing hidden" checks (SC-22)
 
@@ -214,8 +288,10 @@ identity lost to a NATS outage (F7).
   with its serving age. Not every system's console stream is read (the
   CISP's and the USSP's console status are not), so this is observed
   for the authority and the ANSP only.
-- Every disable an audited act: not exercised (no disable through a
-  console API, see below).
+- Every disable an audited act: exercised by `authority-rid-disabled`
+  (2026-10-14). Both switches were found in the authority's audit log
+  as acts of the admin user, with the run's reason
+  (`results/20261014T232332Z-chaos`).
 
 ## Not covered, and why
 
