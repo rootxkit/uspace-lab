@@ -4,6 +4,7 @@ import (
 	"os"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -182,4 +183,55 @@ func TestSystemsImagesFromTheEnvByDigest(t *testing.T) {
 	if !strings.Contains(env, "ANSP_SOURCE_COMMIT=") {
 		t.Error("the locally built ANSP image names no source commit")
 	}
+}
+
+// Every system takes the address X-Forwarded-For names from the lab
+// Caddy only, as on the droplet (uspace-deploy compose/*.yaml trust their
+// edge Caddy's address): the lab Caddy has a fixed address on a fixed
+// lab subnet from demo.env, and every *_TRUSTED_PROXIES (the CISP's
+// _CIDR) is exactly that address. With them empty every client of a
+// system was the Caddy, one rate-limit budget and one audit address for
+// all: seeding a 100-aircraft load fleet was refused 429 part of the
+// way through, and the USSP's registry checks of its intents with it.
+// The check is shown able to fail on an empty value (E-01).
+func TestSystemsTrustTheLabCaddyOnly(t *testing.T) {
+	compose := read(t, "systems/compose.yaml")
+	env := read(t, "demo.env.example")
+	subnet := regexp.MustCompile(`(?m)^DEMO_LAB_SUBNET=(\d+\.\d+\.\d+)\.0/24$`).FindStringSubmatch(env)
+	ipRange := regexp.MustCompile(`(?m)^DEMO_LAB_IP_RANGE=(\d+\.\d+\.\d+)\.0/25$`).FindStringSubmatch(env)
+	ip := regexp.MustCompile(`(?m)^DEMO_CADDY_IP=(\d+\.\d+\.\d+)\.(\d+)$`).FindStringSubmatch(env)
+	// The Caddy's address is in the subnet and outside the range Docker
+	// hands out (the lower half): the first stack up with it at .2
+	// failed "Address already in use", the DSS's datastore had it.
+	if subnet == nil || ipRange == nil || ip == nil || ip[1] != subnet[1] || ipRange[1] != subnet[1] || !hostAbove(ip[2], 128) {
+		t.Fatalf("demo.env.example: DEMO_LAB_SUBNET %v, DEMO_LAB_IP_RANGE %v, DEMO_CADDY_IP %v: not an address in the /24 above the /25", subnet, ipRange, ip)
+	}
+	if !strings.Contains(compose, "subnet: ${DEMO_LAB_SUBNET:?deploy/demo.env}") ||
+		!strings.Contains(compose, "ip_range: ${DEMO_LAB_IP_RANGE:?deploy/demo.env}") ||
+		!strings.Contains(compose, "ipv4_address: ${DEMO_CADDY_IP:?deploy/demo.env}") {
+		t.Fatal("systems/compose.yaml does not place the lab Caddy at DEMO_CADDY_IP on DEMO_LAB_SUBNET")
+	}
+	trusted := regexp.MustCompile(`(?m)^\s*(\w+_TRUSTED_PROX\w*):\s*(.*)$`)
+	want := `"${DEMO_CADDY_IP}/32"`
+	seen := map[string]bool{}
+	for _, m := range trusted.FindAllStringSubmatch(compose, -1) {
+		seen[m[1]] = true
+		if strings.TrimSpace(m[2]) != want {
+			t.Errorf("systems/compose.yaml %s: %s, want %s", m[1], m[2], want)
+		}
+	}
+	for _, k := range []string{"AUTHORITY_TRUSTED_PROXIES", "CISP_TRUSTED_PROXY_CIDR", "USSP_TRUSTED_PROXIES", "ANSP_TRUSTED_PROXIES"} {
+		if !seen[k] {
+			t.Errorf("systems/compose.yaml sets no %s", k)
+		}
+	}
+	if m := trusted.FindStringSubmatch(`  USSP_TRUSTED_PROXIES: ""`); m == nil || strings.TrimSpace(m[2]) == want {
+		t.Fatal("the check accepts an empty value")
+	}
+}
+
+// hostAbove is whether the last octet n is in [lo, 254].
+func hostAbove(n string, lo int) bool {
+	v, err := strconv.Atoi(n)
+	return err == nil && v >= lo && v <= 254
 }

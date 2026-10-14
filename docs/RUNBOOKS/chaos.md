@@ -182,10 +182,12 @@ identity lost to a NATS outage (F7).
   asked the issuer for its client in lower case (every outgoing token
   401); the scenario recorder ignored the alerts in console snapshots
   and read stream credentials once (both streams lost after a restart).
-- Open: `deploy/systems/compose.yaml` leaves `USSP_TRUSTED_PROXIES`
-  empty, so every client of the USSP shares the lab Caddy's address for
-  rate limits and audit rows (`client_address` degraded at every
-  baseline); the seed's state file outlives the volumes it describes
+- Fixed since (WP-L8 systems mode): `deploy/systems/compose.yaml` left
+  every `*_TRUSTED_PROXIES` empty, so every client of a system shared
+  the lab Caddy's address for rate limits and audit rows
+  (`client_address` degraded at every baseline); the lab Caddy now has a
+  fixed address that every system trusts, as on the droplet.
+- Open: the seed's state file outlives the volumes it describes
   (`prepare.sh --fresh`); a stack on a port other than 443 loses the
   authority's picture (origin check).
 
