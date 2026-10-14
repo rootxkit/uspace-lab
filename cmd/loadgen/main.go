@@ -6,6 +6,16 @@
 //	    [--paths load/paths.yaml] [--criteria load/criteria.yaml] \
 //	    [--out results/load] [--run <id>] [--duration-s N] [--host NAME] [--heap-profile FILE]
 //	loadgen render results/load/<run>/report.json
+//	loadgen seed --tier load/tiers/ci.yaml [--env deploy/demo.env] [--lab sim/sitl.env] \
+//	    --geoid <egm2008-2_5.pgm> [--targets targets/local-load-<tier>.yaml] [--secrets secrets/load-<tier>]
+//
+// seed registers the tier's fleet at the systems of the demo stack
+// (deploy/demo-up.sh) through their public APIs: one operator per client
+// in the authority's registry and active at the USSP with its aircraft
+// bound, every aircraft in the registry, every receiver at the authority;
+// then it writes the targets file of a systems run (mode: systems, with
+// the load block the run checks) and the secret files it names. A
+// second seed of the same fleet registers nothing again.
 //
 // run drives the tier's operators, receivers and consoles against the
 // target, measures every 05 §7 row it can, and writes
@@ -18,6 +28,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -25,8 +36,11 @@ import (
 	"time"
 
 	"github.com/rootxkit/uspace-lab/internal/cli"
+	"github.com/rootxkit/uspace-lab/internal/geoidx"
 	"github.com/rootxkit/uspace-lab/internal/load"
 	"github.com/rootxkit/uspace-lab/internal/runner"
+	"github.com/rootxkit/uspace-lab/internal/scenario"
+	"github.com/rootxkit/uspace-lab/internal/seed"
 )
 
 func main() {
@@ -35,7 +49,7 @@ func main() {
 
 func run(args []string) int {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: loadgen check TIER... | loadgen run --tier FILE [flags] | loadgen render REPORT")
+		fmt.Fprintln(os.Stderr, "usage: loadgen check TIER... | loadgen run --tier FILE [flags] | loadgen render REPORT | loadgen seed --tier FILE --geoid G [flags]")
 		return 2
 	}
 	switch args[0] {
@@ -45,6 +59,8 @@ func run(args []string) int {
 		return runTier(args[1:])
 	case "render":
 		return render(args[1:])
+	case "seed":
+		return seedFleet(args[1:])
 	}
 	fmt.Fprintln(os.Stderr, "loadgen: unknown command", args[0])
 	return 2
@@ -152,5 +168,66 @@ func render(args []string) int {
 		return 2
 	}
 	fmt.Print(rep.Markdown())
+	return 0
+}
+
+func seedFleet(args []string) int {
+	fs := flag.NewFlagSet("seed", flag.ContinueOnError)
+	tier := fs.String("tier", "", "the tier file (load/tiers/<name>.yaml)")
+	paths := fs.String("paths", "load/paths.yaml", "the paths file")
+	criteria := fs.String("criteria", "load/criteria.yaml", "the criteria file")
+	env := fs.String("env", "deploy/demo.env", "the demo env file (hosts, port, state directory)")
+	labFile := fs.String("lab", "sim/sitl.env", "the sitl.env the fleet flies from (the origin)")
+	geo := fs.String("geoid", "", "targets.geoid: the grid the systems use (R-16)")
+	targets := fs.String("targets", "", "the targets file written (default targets/local-load-<tier>.yaml)")
+	secrets := fs.String("secrets", "", "the directory of the secret files it names (default secrets/load-<tier>)")
+	timeout := fs.Duration("timeout", time.Hour, "bound on the whole seed")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if *tier == "" || *geo == "" || fs.NArg() > 0 {
+		fmt.Fprintln(os.Stderr, "loadgen seed: --tier and --geoid are required and it takes no other argument")
+		return 2
+	}
+	files, err := load.LoadFiles(*tier, *paths, *criteria)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "loadgen:", err)
+		return 2
+	}
+	lab, err := scenario.LoadLab(*labFile)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "loadgen:", err)
+		return 2
+	}
+	g, _, err := geoidx.Load(*geo)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "loadgen:", err)
+		return 2
+	}
+	fl, err := load.NewFleet(files, lab.Origin, g)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "loadgen:", err)
+		return 2
+	}
+	name := files.Tier.Tier
+	if *targets == "" {
+		*targets = filepath.Join("targets", "local-load-"+name+".yaml")
+	}
+	if *secrets == "" {
+		*secrets = filepath.Join("secrets", "load-"+name)
+	}
+	log := cli.Logger("loadgen")
+	ctx, stop := cli.SignalContext()
+	defer stop()
+	ctx, cancel := context.WithTimeout(ctx, *timeout)
+	defer cancel()
+	err = seed.SeedLoad(ctx, seed.LoadOptions{Env: *env, Fleet: fl.SeedFleet(name), TargetsOut: *targets, SecretsDir: *secrets,
+		Geoid: *geo, Lab: *labFile, Log: func(f string, a ...any) { log.Info(fmt.Sprintf(f, a...)) }})
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "loadgen:", err)
+		return 1
+	}
+	fmt.Printf("seeded tier %s (%d aircraft, %d clients, %d receivers, fleet %s): %s\n",
+		name, len(fl.Aircraft), files.Tier.Operators.Clients, len(fl.Receivers), fl.Digest(), *targets)
 	return 0
 }

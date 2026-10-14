@@ -79,6 +79,7 @@ type Fleet struct {
 	paths  *Paths
 	period time.Duration
 	geo    geoid.Undulator
+	digest string
 }
 
 // NewFleet lays the tier's aircraft on the paths from origin.
@@ -138,8 +139,18 @@ func NewFleet(f *Files, origin vehicle.Home, geo geoid.Undulator) (*Fleet, error
 	}
 	fl.expect(f.Policy, t.DurationS)
 	fl.bbox()
+	fl.digest = fl.layoutDigest()
 	return fl, nil
 }
+
+// The fleet's aircraft are open-category A2 aircraft of class C2, as
+// the scenario suite's are: the USSP judges an open intent only with a
+// subcategory and a class label (Annex IV), and the seed registers the
+// class with the aircraft and its binding so the registry agrees.
+const (
+	LoadSubcategory = "A2"
+	LoadClassLabel  = "C2"
+)
 
 // AircraftSerial is aircraft i's serial in a fleet of clients operator
 // clients: an ANSI/CTA-2063-A serial (manufacturer code LABX, length C,

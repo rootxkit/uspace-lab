@@ -38,8 +38,29 @@ type Targets struct {
 	Requests  map[string]RequestAuth `yaml:"requests"`
 	SITL      *SITLTarget            `yaml:"sitl"`
 	Peer      *PeerTarget            `yaml:"peer"`
-	Extra     map[string]any         `yaml:"extra"`
-	dir       string
+	// Load is the fleet a load run drives in systems mode, as
+	// "loadgen seed" registered it (internal/load).
+	Load  *LoadTarget    `yaml:"load"`
+	Extra map[string]any `yaml:"extra"`
+	dir   string
+}
+
+// LoadTarget is a load tier's fleet as it was registered at the
+// systems: which tier and fleet layout (Fleet, a digest the load
+// harness recomputes and compares before anything starts), the operator
+// clients in client order and the receivers in receiver order.
+type LoadTarget struct {
+	Tier      string         `yaml:"tier"`
+	Fleet     string         `yaml:"fleet"`
+	Clients   []Client       `yaml:"clients"`
+	Receivers []LoadReceiver `yaml:"receivers"`
+}
+
+// LoadReceiver is one registered receiver of a load fleet.
+type LoadReceiver struct {
+	ID            string `yaml:"id"`
+	BearerKeyFile string `yaml:"bearer_key_file"`
+	HMACKeyFile   string `yaml:"hmac_key_file"`
 }
 
 // USSPTarget is a USSP: its base URL and its issuer's operator clients.
@@ -151,6 +172,9 @@ func (t *Targets) path(p string) string {
 	}
 	return filepath.Join(t.dir, p)
 }
+
+// Secret reads a secret file named in the targets file (relative to it).
+func (t *Targets) Secret(p string) (string, error) { return t.secret(p) }
 
 // secret reads a secret file named in the targets file.
 func (t *Targets) secret(p string) (string, error) {
