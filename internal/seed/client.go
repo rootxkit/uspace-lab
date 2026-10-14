@@ -29,6 +29,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -39,6 +40,43 @@ import (
 type Client struct {
 	HTTP *http.Client
 	Port int
+	// Wait waits d or until ctx ends (nil: a timer); the tests replace it.
+	Wait func(ctx context.Context, d time.Duration) error
+}
+
+// Bounds of the wait on a rate-limited request (429): the systems'
+// request budgets (the authority's 20 a second per client, burst 40)
+// refuse a seed of a large fleet part of the way through. A 429 is a
+// request the system did not act on, so it is sent again after the
+// Retry-After it carried, at most MaxRateLimitedWait each time and
+// MaxRateLimitedTries times in all; past that the 429 is the answer.
+const (
+	MaxRateLimitedTries = 20
+	MaxRateLimitedWait  = 30 * time.Second
+)
+
+func (c *Client) wait(ctx context.Context, d time.Duration) error {
+	if c.Wait != nil {
+		return c.Wait(ctx, d)
+	}
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-t.C:
+		return nil
+	}
+}
+
+// retryAfter is a 429's Retry-After in whole seconds, bounded; one
+// second when it is missing or not a number of seconds.
+func retryAfter(h http.Header) time.Duration {
+	n, err := strconv.Atoi(strings.TrimSpace(h.Get("Retry-After")))
+	if err != nil || n < 1 {
+		return time.Second
+	}
+	return min(time.Duration(n)*time.Second, MaxRateLimitedWait)
 }
 
 // NewClient builds the client. hosts are the names dialled at 127.0.0.1.
@@ -106,24 +144,40 @@ func (a Answer) String() string { return fmt.Sprintf("%d %s", a.Status, short(a.
 // Do sends one request. body is JSON-encoded unless it is []byte (sent
 // as application/octet-stream) or url.Values-like string (form).
 func (c *Client) Do(ctx context.Context, method, url string, au Auth, body any) (Answer, error) {
-	var r io.Reader
+	var payload []byte
 	ctype := ""
 	switch b := body.(type) {
 	case nil:
 	case []byte:
-		r, ctype = bytes.NewReader(b), "application/octet-stream"
+		payload, ctype = b, "application/octet-stream"
 	case Form:
-		r, ctype = strings.NewReader(string(b)), "application/x-www-form-urlencoded"
+		payload, ctype = []byte(b), "application/x-www-form-urlencoded"
 	default:
 		j, err := json.Marshal(b)
 		if err != nil {
 			return Answer{}, err
 		}
-		r, ctype = bytes.NewReader(j), "application/json"
+		payload, ctype = j, "application/json"
+	}
+	for try := 1; ; try++ {
+		ans, h, err := c.send(ctx, method, url, au, payload, ctype)
+		if err != nil || ans.Status != http.StatusTooManyRequests || try >= MaxRateLimitedTries {
+			return ans, err
+		}
+		if err := c.wait(ctx, retryAfter(h)); err != nil {
+			return ans, fmt.Errorf("seed: %s %s: rate limited, and the wait ended: %w", method, url, err)
+		}
+	}
+}
+
+func (c *Client) send(ctx context.Context, method, url string, au Auth, payload []byte, ctype string) (Answer, http.Header, error) {
+	var r io.Reader
+	if payload != nil {
+		r = bytes.NewReader(payload)
 	}
 	req, err := http.NewRequestWithContext(ctx, method, url, r)
 	if err != nil {
-		return Answer{}, err
+		return Answer{}, nil, err
 	}
 	if ctype != "" {
 		req.Header.Set("Content-Type", ctype)
@@ -141,14 +195,14 @@ func (c *Client) Do(ctx context.Context, method, url string, au Auth, body any) 
 	}
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
-		return Answer{}, fmt.Errorf("seed: %s %s: %w", method, url, err)
+		return Answer{}, nil, fmt.Errorf("seed: %s %s: %w", method, url, err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 	b, err := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
 	if err != nil {
-		return Answer{}, err
+		return Answer{}, nil, err
 	}
-	return Answer{Status: resp.StatusCode, Body: b}, nil
+	return Answer{Status: resp.StatusCode, Body: b}, resp.Header, nil
 }
 
 // Form is an application/x-www-form-urlencoded body.
