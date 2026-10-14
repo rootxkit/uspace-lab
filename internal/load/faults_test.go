@@ -150,7 +150,7 @@ func TestDuplicateRaises(t *testing.T) {
 func TestPartitionCrossEffects(t *testing.T) {
 	inj := time.Now()
 	res := inj.Add(60 * time.Second)
-	fr := &faultRunner{records: []FaultRecord{{Fault: Fault{Row: FaultPartition, System: "authority"}, InjectedAt: &inj, RestoredAt: &res}}}
+	fr := &faultRunner{records: []FaultRecord{{Fault: Fault{Row: FaultPartition, System: "authority"}, StartedAt: &inj, InjectedAt: &inj, RestoredAt: &res}}}
 	flags := []flagSeen{
 		{system: "authority", flag: "nats", at: inj.Add(time.Second)},     // its own
 		{system: "ussp", flag: "registry", at: inj.Add(10 * time.Second)}, // an effect
@@ -164,5 +164,31 @@ func TestPartitionCrossEffects(t *testing.T) {
 	}
 	if obs["restart_recovery_s"].Measured {
 		t.Fatal("a run without a restart measured the restart row")
+	}
+}
+
+// A fault's window opens when its script starts, not when it returns:
+// the script kills the process and then waits to see it gone, and what
+// fails meanwhile (a probe of the killed process, a poll it does not
+// answer) is inside the fault. The window was opened on the script's
+// return, and the 100-tier run counted the killed processes' probes as
+// errors outside every fault.
+func TestAFaultsWindowOpensWhenItsScriptStarts(t *testing.T) {
+	plan := &FaultPlan{Format: FaultsFormat, Faults: []Fault{{Row: FaultRestart, AtS: 0, HoldS: 0.01, Domain: "hotpath", Args: []string{"ussp-monitor"}, System: "ussp"}}}
+	fr := newFaultRunner(plan, "scripts")
+	var during []bool
+	fr.run = func(_ context.Context, _ string, args ...string) (string, error) {
+		if args[0] == "inject" {
+			// What fails while the script runs.
+			during = append(during, fr.during(time.Now()))
+		}
+		return "", nil
+	}
+	fr.execute(context.Background(), time.Now(), func(string, ...any) {})
+	if len(during) != 1 || !during[0] {
+		t.Fatalf("a failure while the inject script ran was outside the fault: %v", during)
+	}
+	if fr.records[0].InjectedAt == nil || fr.records[0].StartedAt == nil || fr.records[0].StartedAt.After(*fr.records[0].InjectedAt) {
+		t.Fatalf("record %+v", fr.records[0])
 	}
 }

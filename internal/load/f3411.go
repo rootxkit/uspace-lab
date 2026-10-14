@@ -196,9 +196,9 @@ func (p *spPoller) poll(ctx context.Context, v view) {
 			p.failedAt = append(p.failedAt, time.Now())
 		}
 		if err != nil {
-			p.lastErr = err.Error()
+			p.lastErr = time.Now().UTC().Format(time.RFC3339) + " " + err.Error()
 		} else {
-			p.lastErr = fmt.Sprintf("GET /uss/flights answered %d", status)
+			p.lastErr = fmt.Sprintf("%s GET /uss/flights answered %d", time.Now().UTC().Format(time.RFC3339), status)
 		}
 		p.mu.Unlock()
 		return
@@ -241,9 +241,9 @@ func (p *spPoller) poll(ctx context.Context, v view) {
 			p.failedAt = append(p.failedAt, time.Now())
 		}
 		if err != nil {
-			p.lastErr = err.Error()
+			p.lastErr = time.Now().UTC().Format(time.RFC3339) + " " + err.Error()
 		} else {
-			p.lastErr = fmt.Sprintf("GET /uss/flights/{id}/details answered %d", status)
+			p.lastErr = fmt.Sprintf("%s GET /uss/flights/{id}/details answered %d", time.Now().UTC().Format(time.RFC3339), status)
 		}
 		return
 	}

@@ -325,7 +325,7 @@ func (p *probes) observe(obs map[string]Observation, models Models, fleetSamples
 		}
 		sys.ErrorsN++
 		if len(sys.Errors) < probeErrorsKept {
-			sys.Errors = append(sys.Errors, e.msg)
+			sys.Errors = append(sys.Errors, e.at.UTC().Format(time.RFC3339)+" "+e.msg)
 		}
 	}
 	// Memory: per process, judged as the harness's heap is.

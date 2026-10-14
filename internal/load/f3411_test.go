@@ -149,13 +149,13 @@ func TestDPViewsCoverTheFleet(t *testing.T) {
 func TestSPFailuresDuringAFaultAreExcused(t *testing.T) {
 	refused := pollFor(t, &fakeSP{flights: []string{"f1"}, details: http.StatusBadGateway}, 4)
 	inj, res := time.Now().Add(-time.Hour), time.Now().Add(time.Hour)
-	fr := &faultRunner{records: []FaultRecord{{InjectedAt: &inj, RestoredAt: &res}}}
+	fr := &faultRunner{records: []FaultRecord{{StartedAt: &inj, InjectedAt: &inj, RestoredAt: &res}}}
 	st, fail := refused.observe(map[string]Observation{}, 1, fr.during)
 	if fail != "" || st.FailuresDuringFaults == 0 || st.FailuresDuringFaults != st.Failures {
 		t.Fatalf("inside the fault: %q %+v", fail, st)
 	}
 	past := time.Now().Add(-2 * time.Hour)
-	before := &faultRunner{records: []FaultRecord{{InjectedAt: &past, RestoredAt: &past}}}
+	before := &faultRunner{records: []FaultRecord{{StartedAt: &past, InjectedAt: &past, RestoredAt: &past}}}
 	if _, fail := refused.observe(map[string]Observation{}, 1, before.during); !strings.Contains(fail, "outside any fault") {
 		t.Fatalf("outside every fault: %q", fail)
 	}

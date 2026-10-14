@@ -113,6 +113,9 @@ func LoadFaults(path, scripts string, durationS float64) (*FaultPlan, error) {
 // FaultRecord is what a fault did, on the generator's clock.
 type FaultRecord struct {
 	Fault
+	// StartedAt is when the inject script started (the fault's window
+	// opens), InjectedAt when it returned.
+	StartedAt  *time.Time `json:"started_at,omitempty"`
 	InjectedAt *time.Time `json:"injected_at,omitempty"`
 	RestoredAt *time.Time `json:"restored_at,omitempty"`
 	InjectOut  string     `json:"inject_output,omitempty"`
@@ -169,6 +172,12 @@ func (fr *faultRunner) execute(ctx context.Context, t0 time.Time, fail func(stri
 			return
 		case <-at.C:
 		}
+		// The fault's window opens as its script starts: the script acts
+		// first and checks after, and what fails meanwhile is the fault's.
+		started := time.Now()
+		fr.mu.Lock()
+		fr.records[i].StartedAt = &started
+		fr.mu.Unlock()
 		out, err := fr.run(ctx, f.Domain+".sh", append([]string{"inject"}, f.Args...)...)
 		now := time.Now()
 		fr.mu.Lock()
@@ -253,14 +262,14 @@ func (fr *faultRunner) observe(obs map[string]Observation, end time.Time, events
 			worst = max(worst, back(r.PictureBackS), back(r.TrafficBackS))
 		case FaultPartition:
 			partitions++
-			if r.InjectedAt == nil || r.RestoredAt == nil {
+			if r.StartedAt == nil || r.RestoredAt == nil {
 				continue
 			}
 			// Another system's stream that came to say something is
 			// degraded during the partition: an effect where 05 §6 says
 			// there is none.
 			for _, f := range flags {
-				if f.system != r.System && !f.at.Before(*r.InjectedAt) && !f.at.After(r.RestoredAt.Add(faultGapS*time.Second)) {
+				if f.system != r.System && !f.at.Before(*r.StartedAt) && !f.at.After(r.RestoredAt.Add(faultGapS*time.Second)) {
 					cross++
 				}
 			}
@@ -315,7 +324,8 @@ func duplicateRaises(events []observe.Event) int {
 	return n
 }
 
-// during reports whether t falls inside a fault: from its injection to
+// during reports whether t falls inside a fault: from the start of its
+// inject script to
 // faultGapS after its restore (or the run's end when it was never
 // restored).
 func (fr *faultRunner) during(t time.Time) bool {
@@ -323,7 +333,7 @@ func (fr *faultRunner) during(t time.Time) bool {
 	defer fr.mu.Unlock()
 	for i := range fr.records {
 		r := &fr.records[i]
-		if r.InjectedAt == nil || t.Before(*r.InjectedAt) {
+		if r.StartedAt == nil || t.Before(*r.StartedAt) {
 			continue
 		}
 		if r.RestoredAt == nil || !t.After(r.RestoredAt.Add(faultGapS*time.Second)) {

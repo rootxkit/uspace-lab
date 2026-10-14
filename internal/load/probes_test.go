@@ -214,7 +214,7 @@ func TestProbeFailuresDuringAFaultAreExcused(t *testing.T) {
 	p := newProbes(cfg)
 	p.scrape(context.Background())
 	inj, res := time.Now().Add(-time.Hour), time.Now().Add(time.Hour)
-	fr := &faultRunner{records: []FaultRecord{{InjectedAt: &inj, RestoredAt: &res}}}
+	fr := &faultRunner{records: []FaultRecord{{StartedAt: &inj, InjectedAt: &inj, RestoredAt: &res}}}
 	sys := p.observe(map[string]Observation{}, Models{TrackBytes: 600, CPAPairsPerCorePerS: 50000}, 1, 0, fr.during)
 	if sys.ErrorsN != 0 || sys.ErrorsDuringFaults != 2 {
 		t.Fatalf("inside the fault: %d errors, %d during faults", sys.ErrorsN, sys.ErrorsDuringFaults)
