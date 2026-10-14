@@ -198,3 +198,58 @@ func TestOnlyANewSampleIsData(t *testing.T) {
 		t.Fatalf("a repeated or other-source frame counted as data: %v", s.lastData)
 	}
 }
+
+// The authority shows a track before it has heard the aircraft's Basic
+// ID: its frames carry no serial and an opaque track id until then. Such
+// a frame is held, and shown (timed from its own arrival) once a frame
+// of the same track names the serial; a track never identified is
+// untraceable at the end, and frames past the bound are untraceable at
+// once. They used to be untraceable at once, which failed every systems
+// run (picture_untraceable_frames 15, and their samples counted as
+// silent loss).
+func TestAnUnidentifiedTrackIsTiedOnceIdentified(t *testing.T) {
+	a := &Aircraft{Name: "ac-00000", Serial: AircraftSerial(0, 1)}
+	rd := &readers{picture: NewLedger(), traffic: NewReceiptLedger(), bySer: map[string]*Aircraft{a.Serial: a}, byMAC: map[string]*Aircraft{}}
+	s := &stream{name: "console-00", kind: streamPicture, timed: true, ready: make(chan struct{})}
+	t0 := time.Now().Add(-10 * time.Second).UTC()
+	c1, c2 := t0, t0.Add(time.Second)
+	rd.picture.Hand(a.Name, c1)
+	rd.picture.Hand(a.Name, c2)
+	arrived := t0.Add(300 * time.Millisecond)
+	rd.handle(s, trackFrame(t, "u-1", sourceDirectRID, nil, c1), arrived, func([]byte, time.Time) {})
+	if c := rd.picture.Counts(); c.Shown != 0 || c.Untraceable != 0 {
+		t.Fatalf("the unidentified frame: %+v", c)
+	}
+	sn := a.Serial
+	rd.handle(s, trackFrame(t, "u-1", sourceDirectRID, &sn, c2), t0.Add(1300*time.Millisecond), func([]byte, time.Time) {})
+	if c := rd.picture.Counts(); c.Shown != 2 || c.Untraceable != 0 {
+		t.Fatalf("after the serial: %+v", c)
+	}
+	if o := rd.picture.Histogram().Observe(1); o.Max == nil || *o.Max > 0.4 {
+		t.Fatalf("the held frame was not timed from its own arrival: %+v", o)
+	}
+	// A later frame of the identified track without a serial is tied by
+	// its track id.
+	c3 := t0.Add(2 * time.Second)
+	rd.picture.Hand(a.Name, c3)
+	rd.handle(s, trackFrame(t, "u-1", sourceDirectRID, nil, c3), t0.Add(2300*time.Millisecond), func([]byte, time.Time) {})
+	if c := rd.picture.Counts(); c.Shown != 3 {
+		t.Fatalf("by track id: %+v", c)
+	}
+	// Never identified: untraceable at the end.
+	rd.handle(s, trackFrame(t, "u-2", sourceDirectRID, nil, c3), time.Now(), func([]byte, time.Time) {})
+	if c := rd.picture.Counts(); c.Untraceable != 0 {
+		t.Fatalf("held frame counted early: %+v", c)
+	}
+	rd.closeHeld()
+	if c := rd.picture.Counts(); c.Untraceable != 1 {
+		t.Fatalf("at the end: %+v", c)
+	}
+	// Past the bound: untraceable at once.
+	for i := range maxHeldPerTrack + 1 {
+		rd.handle(s, trackFrame(t, "u-3", sourceDirectRID, nil, c3.Add(time.Duration(i)*time.Millisecond)), time.Now(), func([]byte, time.Time) {})
+	}
+	if c := rd.picture.Counts(); c.Untraceable != 2 {
+		t.Fatalf("past the bound: %+v", c)
+	}
+}

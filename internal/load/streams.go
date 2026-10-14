@@ -94,7 +94,28 @@ type readers struct {
 	raised   map[string]time.Time
 	// peers names each scripted pair member's peer.
 	peers map[string]string
+	// byTrack ties a picture track id to its aircraft once a frame of the
+	// track named the serial; held keeps the frames of a track not tied
+	// yet (the authority shows a track before it has heard the Basic
+	// ID). Both bounded (E-10).
+	trackMu sync.Mutex
+	byTrack map[string]*Aircraft
+	held    map[string][]heldFrame
+	nHeld   int
 }
+
+// heldFrame is a picture frame waiting for its track to be identified.
+type heldFrame struct {
+	captured, arrived time.Time
+	s                 *stream
+}
+
+// Bounds of the held frames and the track ids learned.
+const (
+	maxHeldPerTrack = 32
+	maxHeld         = 50_000
+	maxTrackIDs     = 200_000
+)
 
 const maxRaised = 100_000
 
@@ -310,13 +331,58 @@ func (rd *readers) track(s *stream, e wire.Envelope, at time.Time) {
 	if a == nil && len(b.TrackID) >= 17 {
 		a = rd.byMAC[strings.ToUpper(b.TrackID[len(b.TrackID)-17:])]
 	}
+	rd.trackMu.Lock()
 	if a == nil {
-		rd.picture.untraceableFrame()
+		a = rd.byTrack[b.TrackID]
+	}
+	if a == nil {
+		// Not identified yet: hold it for the frame that names the
+		// serial, within the bounds; past them it is untraceable now.
+		if len(rd.held[b.TrackID]) < maxHeldPerTrack && rd.nHeld < maxHeld {
+			if rd.held == nil {
+				rd.held = map[string][]heldFrame{}
+			}
+			rd.held[b.TrackID] = append(rd.held[b.TrackID], heldFrame{captured: captured, arrived: at, s: s})
+			rd.nHeld++
+		} else {
+			rd.picture.untraceableFrame()
+		}
+		rd.trackMu.Unlock()
 		return
+	}
+	var release []heldFrame
+	if b.TrackID != "" && rd.byTrack[b.TrackID] == nil && len(rd.byTrack) < maxTrackIDs {
+		if rd.byTrack == nil {
+			rd.byTrack = map[string]*Aircraft{}
+		}
+		rd.byTrack[b.TrackID] = a
+		release = rd.held[b.TrackID]
+		delete(rd.held, b.TrackID)
+		rd.nHeld -= len(release)
+	}
+	rd.trackMu.Unlock()
+	for _, h := range release {
+		if _, ok := rd.picture.Show(a.Name, h.captured, h.arrived); ok {
+			h.s.noteData(h.arrived)
+		}
 	}
 	if _, ok := rd.picture.Show(a.Name, captured, at); ok {
 		s.noteData(at)
 	}
+}
+
+// closeHeld counts every frame still held, of a track never
+// identified, as untraceable (the end of the run).
+func (rd *readers) closeHeld() {
+	rd.trackMu.Lock()
+	defer rd.trackMu.Unlock()
+	for id, hs := range rd.held {
+		for range hs {
+			rd.picture.untraceableFrame()
+		}
+		delete(rd.held, id)
+	}
+	rd.nHeld = 0
 }
 
 // noteData records that a frame arriving at at showed a sample for the

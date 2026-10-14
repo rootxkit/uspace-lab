@@ -793,6 +793,7 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 	}
 	rep.Loss.Operator, rep.Loss.Receivers = lo, lr
 	rep.Loss.GeneratorShedOperator, rep.Loss.GeneratorShedRID = r.shedOp, r.shedRID
+	r.readers.closeHeld()
 	rep.Loss.Picture, rep.Loss.Traffic = r.picture.Close(), r.traffic.Close()
 	if r.target != nil {
 		rep.Loss.TargetCounters = r.target.Counters()
