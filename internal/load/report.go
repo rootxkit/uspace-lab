@@ -96,14 +96,17 @@ type LabInfo struct {
 
 // Volumes are what the run offered, against what 05 §1 asks at the tier.
 type Volumes struct {
-	Aircraft           int     `json:"aircraft"`
-	Clients            int     `json:"operator_clients"`
-	Heard              int     `json:"heard_aircraft"`
-	Receivers          int     `json:"receivers"`
-	Consoles           int     `json:"consoles"`
-	Watched            int     `json:"watched_aircraft"`
-	IntentsFiled       int     `json:"intents_filed"`
-	IntentErrors       int     `json:"intent_errors"`
+	Aircraft     int `json:"aircraft"`
+	Clients      int `json:"operator_clients"`
+	Heard        int `json:"heard_aircraft"`
+	Receivers    int `json:"receivers"`
+	Consoles     int `json:"consoles"`
+	Watched      int `json:"watched_aircraft"`
+	IntentsFiled int `json:"intents_filed"`
+	IntentErrors int `json:"intent_errors"`
+	// IntentsEnded is how many of the intents filed the run ended when
+	// it ended (an intent left authorised holds its airspace).
+	IntentsEnded       int     `json:"intents_ended"`
 	OperatorMsgsPerS   float64 `json:"operator_msgs_per_s"`
 	OperatorTargetPerS float64 `json:"operator_target_per_s"`
 	RIDLocationsPerS   float64 `json:"rid_locations_per_s"`
@@ -424,7 +427,8 @@ func (r *Report) Markdown() string {
 	w("| Console frames in (frames/s, all consoles) | %.1f | |\n", v.ConsoleFramesPerS)
 	w("| Aircraft / operator clients / heard / receivers / consoles / watched | %d / %d / %d / %d / %d / %d | |\n", v.Aircraft, v.Clients, v.Heard, v.Receivers, v.Consoles, v.Watched)
 	w("| Samples handed out more than a period late | %d | |\n", v.GeneratorLate)
-	w("| Intents filed (errors) | %d (%d) | |\n\n", v.IntentsFiled, v.IntentErrors)
+	w("| Intents filed (errors) | %d (%d) | |\n", v.IntentsFiled, v.IntentErrors)
+	w("| Intents ended after the run | %d | |\n\n", v.IntentsEnded)
 	w("## 05 §7\n\n| Property | Check | Criterion | Observed | n | Result | Figure from |\n|---|---|---|---|---|---|---|\n")
 	for _, row := range r.Rows {
 		for i := range row.Checks {

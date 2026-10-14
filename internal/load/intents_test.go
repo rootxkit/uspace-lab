@@ -1,9 +1,11 @@
 package load
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -96,5 +98,61 @@ func TestAnIntentNotAuthorisedStopsTheRun(t *testing.T) {
 	}
 	if strings.Contains(strings.Join(rep2.Errors, "; "), "not authorised") || fake2.streams.Load() == 0 {
 		t.Fatalf("every intent authorised: errors %v, %d stream requests", rep2.Errors, fake2.streams.Load())
+	}
+}
+
+// Every intent a run activated is ended when the run ends, whether it
+// ran to the end or stopped early: an intent left authorised for its
+// window (the run plus its drain and ten minutes) held the airspace, and
+// the next run's intents were all rejected, intent_filed_first. The
+// report counts the intents ended; an intent the USSP would not end is
+// an error of the run.
+func TestARunEndsItsIntents(t *testing.T) {
+	f := loadSmall(t)
+	f.Paths.Pairs.InnerGapM = 30
+	fake := &fakeUSSP{ended: map[string]bool{}, decide: func(int) string { return "accepted" }}
+	srv := httptest.NewServer(fake)
+	t.Cleanup(srv.Close)
+	rep, err := Run(context.Background(), Options{Files: f, TargetsPath: systemsTargets(t, f, srv.URL, nil), Run: "x", RepoRoot: repo("."), ReadyTimeout: time.Second})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fake.mu.Lock()
+	filed, ended := fake.filed, len(fake.ended)
+	fake.mu.Unlock()
+	if filed != f.Tier.Operators.Aircraft || ended != filed || rep.Volumes.IntentsEnded != filed {
+		t.Fatalf("filed %d, ended %d, report says %d", filed, ended, rep.Volumes.IntentsEnded)
+	}
+	// Against the reference target, after a whole run.
+	f2 := loadSmall(t)
+	f2.Tier.DurationS = 1
+	rep2, err := Run(context.Background(), Options{Files: f2, TargetsPath: repo("targets/reference.yaml"), Run: "e", RepoRoot: repo(".")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep2.Volumes.IntentsFiled == 0 || rep2.Volumes.IntentsEnded != rep2.Volumes.IntentsFiled {
+		t.Fatalf("reference: filed %d, ended %d (%v)", rep2.Volumes.IntentsFiled, rep2.Volumes.IntentsEnded, rep2.Errors)
+	}
+	// A USSP that will not end them: the run says so.
+	stuck := &fakeUSSP{ended: map[string]bool{}, decide: func(int) string { return "accepted" }}
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPatch {
+			body, _ := io.ReadAll(r.Body)
+			r.Body = io.NopCloser(bytes.NewReader(body))
+			if strings.Contains(string(body), `"end"`) {
+				w.WriteHeader(http.StatusConflict)
+				return
+			}
+		}
+		stuck.ServeHTTP(w, r)
+	})
+	srv3 := httptest.NewServer(h)
+	t.Cleanup(srv3.Close)
+	rep3, err := Run(context.Background(), Options{Files: f, TargetsPath: systemsTargets(t, f, srv3.URL, nil), Run: "x", RepoRoot: repo("."), ReadyTimeout: time.Second})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep3.Volumes.IntentsEnded != 0 || !strings.Contains(strings.Join(rep3.Errors, "; "), "not ended") {
+		t.Fatalf("ended %d, errors %v", rep3.Volumes.IntentsEnded, rep3.Errors)
 	}
 }

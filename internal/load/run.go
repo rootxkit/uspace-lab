@@ -225,6 +225,8 @@ func (r *run) execute(ctx context.Context, rep *Report) {
 		return
 	}
 	r.fileIntents(ctx)
+	// Registered after the target's teardown, so it runs before it.
+	defer r.endIntents(ctx, rep)
 	if n := r.intentErrors(); n > 0 {
 		// A flight without an authorised intent is refused by the USSP:
 		// the run would measure a fleet the target is not flying.
@@ -1009,4 +1011,59 @@ func reasonsOf(conflicts []any) string {
 		return "no reason given"
 	}
 	return strings.Join(out, ", ")
+}
+
+// endIntentsTimeout bounds ending the run's intents, which happens
+// whatever ended the run (a signal included).
+const endIntentsTimeout = 2 * time.Minute
+
+// endIntents ends every intent the run activated, eight at a time: an
+// intent left authorised holds its airspace for its whole window, and
+// the next run's intents are rejected (intent_filed_first). An intent
+// the USSP does not end is an error of the run.
+func (r *run) endIntents(ctx context.Context, rep *Report) {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), endIntentsTimeout)
+	defer cancel()
+	type job struct {
+		a  *Aircraft
+		id string
+	}
+	work := make(chan job)
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	ended := 0
+	var errs []string
+	for range 8 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := range work {
+				in := &simop.Intents{BaseURL: r.usspBase, Tokens: r.tokens[j.a.Client]}
+				d, err := in.Change(ctx, j.id, "end")
+				mu.Lock()
+				switch {
+				case err != nil:
+					errs = append(errs, fmt.Sprintf("intent of %s not ended: %v", j.a.Name, err))
+				case d.State != "ended":
+					errs = append(errs, fmt.Sprintf("intent of %s not ended: %s", j.a.Name, d.State))
+				default:
+					ended++
+				}
+				mu.Unlock()
+			}
+		}()
+	}
+	for idx, id := range r.intents {
+		work <- job{a: r.fleet.Aircraft[idx], id: id}
+	}
+	close(work)
+	wg.Wait()
+	rep.Volumes.IntentsEnded = ended
+	if len(errs) > 0 {
+		r.log.Warn("intents not ended", "count", len(errs))
+		if len(errs) > maxListed {
+			errs = append(errs[:maxListed], fmt.Sprintf("and %d more intents not ended", len(errs)-maxListed))
+		}
+		rep.Errors = append(rep.Errors, errs...)
+	}
 }
