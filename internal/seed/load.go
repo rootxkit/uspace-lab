@@ -48,6 +48,14 @@ type LoadFleet struct {
 	// Peer, when set, is what the load harness's peer USSP needs of the
 	// systems (systems mode, docs/RUNBOOKS/load.md).
 	Peer *LoadPeer
+	// Zone, when set, is a zone the seed publishes at the authority for
+	// the load's zone aircraft to fly through (the zone alert row).
+	Zone *LoadZone
+}
+
+// LoadZone is a load fleet's zone, placed by the lab's origin.
+type LoadZone struct {
+	Zone scenario.Zone
 }
 
 // LoadPeer is the peer USSP of a load fleet as the systems must know
@@ -201,6 +209,11 @@ func (f *LoadFleet) Check() error {
 			return fmt.Errorf("seed: the U-space airspace's half side %v m is not in (0, 50000]", p.USpaceHalfSideM)
 		}
 	}
+	if z := f.Zone; z != nil {
+		if !receiverID.MatchString(strings.ToLower(z.Zone.ID)) || z.Zone.Square == nil || !(z.Zone.Square.SideM > 0) {
+			return fmt.Errorf("seed: the load zone needs an id and a square")
+		}
+	}
 	ids := map[string]bool{}
 	for _, r := range f.Receivers {
 		if !receiverID.MatchString(r.ID) || ids[r.ID] {
@@ -297,6 +310,11 @@ func SeedLoad(ctx context.Context, o LoadOptions) error {
 	insp, err := auth.SignIn(ctx, "lab-inspector")
 	if err != nil {
 		return err
+	}
+	if z := o.Fleet.Zone; z != nil {
+		if err := seedLoadZone(ctx, o, sk, auth, ussp, insp, admin, ops[0], z); err != nil {
+			return err
+		}
 	}
 	return writeLoadTargets(o, sk, ops, insp, probes)
 }
@@ -446,15 +464,63 @@ func seedLoadPeer(ctx context.Context, o LoadOptions, sk *stack, auth *Authority
 	c := lab.At(p.USpaceCentre)
 	const d = 0.001 // about 100 m: a box well inside the square
 	box := [4]float64{c.LonDeg - d, c.LatDeg - d, c.LonDeg + d, c.LatDeg + d}
-	if op == nil || op.ClientID == "" || op.ClientSecret == "" {
-		return fmt.Errorf("seed: no USSP machine client to read the USSP's geo-awareness with")
+	tokens, err := geoTokens(ussp, op)
+	if err != nil {
+		return err
 	}
-	tokens := &oauth.ClientCredentials{TokenURL: ussp.url("/oauth/token"), ClientID: op.ClientID, ClientSecret: op.ClientSecret,
-		Audience: ussp.Host, Scopes: []string{"ussp.geo"}, HTTP: ussp.C.HTTP}
-	if err := ussp.WaitUSpaceAt(ctx, tokens.Token, box, LoadUSpaceID, 3*time.Minute); err != nil {
+	if err := ussp.WaitGeoAt(ctx, tokens.Token, box, GeoUSpace, LoadUSpaceID, 3*time.Minute); err != nil {
 		return err
 	}
 	o.Log("authority: %d peer aircraft in the registry, the oversight area %v; the USSP puts U-space airspace %s over the square", len(p.Serials), p.Area, LoadUSpaceID)
+	return nil
+}
+
+// geoTokens are a load operator's tokens for the USSP's geo-awareness.
+func geoTokens(ussp *USSP, op *USSPOperator) (*oauth.ClientCredentials, error) {
+	if op == nil || op.ClientID == "" || op.ClientSecret == "" {
+		return nil, fmt.Errorf("seed: no USSP machine client to read the USSP's geo-awareness with")
+	}
+	return &oauth.ClientCredentials{TokenURL: ussp.url("/oauth/token"), ClientID: op.ClientID, ClientSecret: op.ClientSecret,
+		Audience: ussp.Host, Scopes: []string{"ussp.geo"}, HTTP: ussp.C.HTTP}, nil
+}
+
+// seedLoadZone imports the load's zone at the authority (inspector),
+// approves and publishes it (admin), unless the state says this very
+// zone is published, then waits until the USSP's geo-awareness puts it
+// over its centre: the zone aircraft's alerts are due only then. Its
+// dates are the day's, as the U-space airspace's.
+func seedLoadZone(ctx context.Context, o LoadOptions, sk *stack, auth *Authority, ussp *USSP, insp, admin Session, op *USSPOperator, z *LoadZone) error {
+	lab, err := scenario.LoadLab(o.Lab)
+	if err != nil {
+		return err
+	}
+	s := &scenario.Scenario{ID: "load-" + o.Fleet.Tier, Country: sk.env["DEMO_COUNTRY"], Zones: []scenario.Zone{z.Zone}}
+	doc, err := zonesDoc([]*scenario.Scenario{s}, []string{s.ID}, lab)
+	if err != nil {
+		return err
+	}
+	digest := digestOf(string(doc))
+	if sk.st.Zones[z.Zone.ID] == 0 || sk.st.LoadZoneDigest != digest {
+		from := o.Now().UTC().Truncate(24 * time.Hour).Add(-24 * time.Hour)
+		if _, err := auth.ImportZones(ctx, insp, admin, doc, from, from.AddDate(0, 1, 0)); err != nil {
+			return err
+		}
+		sk.st.LoadZoneDigest = digest
+		if err := sk.st.Save(); err != nil {
+			return err
+		}
+	}
+	tokens, err := geoTokens(ussp, op)
+	if err != nil {
+		return err
+	}
+	c := lab.At(z.Zone.Square.Center)
+	const d = 0.0005 // about 50 m: inside the zone
+	box := [4]float64{c.LonDeg - d, c.LatDeg - d, c.LonDeg + d, c.LatDeg + d}
+	if err := ussp.WaitGeoAt(ctx, tokens.Token, box, GeoZones, z.Zone.ID, 3*time.Minute); err != nil {
+		return err
+	}
+	o.Log("authority: zone %s published; the USSP puts it where the zone aircraft fly", z.Zone.ID)
 	return nil
 }
 

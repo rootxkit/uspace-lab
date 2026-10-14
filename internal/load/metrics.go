@@ -30,8 +30,8 @@ const (
 	niMetrics = "read from the systems' /metrics by name (a systems run with probes); the reference target has none"
 	niChaos   = "faults are injected into the systems' containers (loadgen run --faults with a systems target); the reference target has none"
 	niStorage = "the reference target has no database; storage is measured against the systems' images (a systems run with probes)"
-	niZone    = "the load paths script no zone entry yet; zone alerts are proved by the scenario suite (sc-03)"
-	niArt13   = "Art. 13(2) notices go to peers and the ANSP, neither of which the load harness drives yet"
+	niZone    = "the reference target has no zones; a systems run flies the tier's zone aircraft through the zone its seed publishes"
+	niArt13   = "no aircraft of the load deviates from its authorisation, so no Art. 13(2) notice is due; and the lab's U-space airspace is designated without the conformance monitoring service (services_required NID, GEO, FA, TI; 2021/664 Art. 3(3))"
 	niVectors = "the reference target is no image; a systems run runs the knowledge vectors against the uspace-core every image under test was built with"
 )
 
@@ -68,7 +68,7 @@ var Metrics = map[string]MetricDef{
 	"f3548_conflict_notify_s":     {Kind: KindLatency, Unit: "s", Doc: "conflicting-intent notification to the other USS"},
 	"f3548_details_s":             {Kind: KindLatency, Unit: "s", Doc: "the peer's GET /uss/v1/operational_intents/{id} of a notified intent at the USSP, request to answer (a request not answered with 200 counts at its 10 s bound)"},
 	"f3548_constraint_notify_s":   {Kind: KindLatency, Unit: "s", Doc: "constraint notification"},
-	"zone_alert_ticks":            {Kind: KindValue, Doc: "monitor ticks from zone entry to the zone alert", NotImplemented: niZone},
+	"zone_alert_ticks":            {Kind: KindValue, Doc: "the slowest zone_incursion raise on a zone aircraft's USSP traffic stream, from the hand-out of its first sample inside the zone, in monitor ticks (the largest evaluation_period_s the alerts carried, else 1 s)"},
 	"art13_notice_s":              {Kind: KindLatency, Unit: "s", Doc: "Art. 13(2) notice to peers and the ANSP, acknowledged", NotImplemented: niArt13},
 	"cpa_pair_checks_per_worker":  {Kind: KindValue, Doc: "pair checks per second of the busiest CPA process (its *_pair_checks counters over the run) / the models' budget per core"},
 	"writer_queue_max_s":          {Kind: KindValue, Unit: "s", Doc: "the largest *_tsdb_writer_queue_age_seconds any system process showed (the age of its writer's oldest held row)"},

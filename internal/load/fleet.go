@@ -77,13 +77,16 @@ type Fleet struct {
 	BBox [4]float64
 	// Peer are the peer USSP's own aircraft (the tier's peer; none
 	// without).
-	Peer   []*peerAircraft
-	peer   *PeerCfg
-	origin vehicle.Home
-	paths  *Paths
-	period time.Duration
-	geo    geoid.Undulator
-	digest string
+	Peer []*peerAircraft
+	peer *PeerCfg
+	// ZoneExpected are the zone aircraft's entries (the tier's zone).
+	ZoneExpected []ZoneEntry
+	zone         *ZoneCfg
+	origin       vehicle.Home
+	paths        *Paths
+	period       time.Duration
+	geo          geoid.Undulator
+	digest       string
 }
 
 // NewFleet lays the tier's aircraft on the paths from origin.
@@ -92,6 +95,11 @@ func NewFleet(f *Files, origin vehicle.Home, geo geoid.Undulator) (*Fleet, error
 	n := t.Operators.Aircraft
 	pairs := t.Watch.Pairs
 	walkers := n - 2*pairs
+	zoners := 0
+	if t.Zone != nil {
+		zoners = t.Zone.Aircraft
+		walkers -= zoners
+	}
 	period := time.Duration(float64(time.Second) / t.Operators.TelemetryHz)
 	if p.Walkers.RadiusM <= 2*p.Walkers.SpeedMS*period.Seconds() {
 		return nil, fmt.Errorf("load paths: walkers.radius_m %v is not above two periods of travel", p.Walkers.RadiusM)
@@ -103,7 +111,11 @@ func NewFleet(f *Files, origin vehicle.Home, geo geoid.Undulator) (*Fleet, error
 		a := &Aircraft{Index: i, Name: fmt.Sprintf("ac-%05d", i), Serial: AircraftSerial(i, t.Operators.Clients), MAC: macOfIndex(i),
 			Sysid: i + 1, Client: i % t.Operators.Clients, Receiver: -1}
 		a.OperatorReg = ClientRegistration(a.Client, t.Operators.Clients)
-		if i < 2*pairs {
+		if zi := i - (n - zoners); zi >= 0 {
+			// The last aircraft fly through the tier's zone.
+			a.Role, a.Watched, a.AltRelM = RoleZone, true, t.Zone.AltRelM
+			a.centre = t.Zone.lineCentre(zi)
+		} else if i < 2*pairs {
 			a.Role, a.Pair, a.Watched = RolePair, i/2, true
 			a.Side = 1
 			if i%2 == 1 {
@@ -140,6 +152,10 @@ func NewFleet(f *Files, origin vehicle.Home, geo geoid.Undulator) (*Fleet, error
 			fl.Aircraft[i].Receiver = len(fl.Receivers)
 		}
 		fl.Receivers = append(fl.Receivers, rx)
+	}
+	if t.Zone != nil {
+		fl.zone = t.Zone
+		fl.zoneEntries(t.DurationS)
 	}
 	if t.Peer != nil {
 		fl.peer = t.Peer
@@ -252,6 +268,20 @@ func (fl *Fleet) pairPos(a *Aircraft, t float64) (eastM, veMS float64) {
 // line.
 type pairBox struct{ WestM, EastM float64 }
 
+// intentBox is the east extent of an aircraft's intent box about its
+// line centre: a pair member's with an inner gap (pairBox), a zone
+// aircraft's whole line; false for an aircraft whose intent is a disc.
+func (fl *Fleet) intentBox(a *Aircraft) (pairBox, bool) {
+	switch {
+	case a.Role == RoleZone && fl.zone != nil:
+		far := fl.zone.AmplitudeM + pairIntentMarginM
+		return pairBox{WestM: -far, EastM: far}, true
+	case a.Role == RolePair && fl.paths.Pairs.InnerGapM > 0:
+		return fl.pairBox(a), true
+	}
+	return pairBox{}, false
+}
+
 func (fl *Fleet) pairBox(a *Aircraft) pairBox {
 	pr := &fl.paths.Pairs
 	far := pr.AmplitudeM + pairIntentMarginM
@@ -292,6 +322,9 @@ func (fl *Fleet) Sample(a *Aircraft, k int64, now, start time.Time) vehicle.Samp
 	switch a.Role {
 	case RolePair:
 		east, vE := fl.pairPos(a, float64(k)*fl.period.Seconds())
+		off, ve = scenario.Offset{NorthM: a.centre.NorthM, EastM: a.centre.EastM + east}, vE
+	case RoleZone:
+		east, vE := fl.zone.zoneEast(float64(k) * fl.period.Seconds())
 		off, ve = scenario.Offset{NorthM: a.centre.NorthM, EastM: a.centre.EastM + east}, vE
 	default:
 		if k > 0 {

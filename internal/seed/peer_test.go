@@ -44,21 +44,21 @@ func TestWaitForTheUSSPsGeoAwareness(t *testing.T) {
 				ids = `[{"identifier":"LABUSP1"}]`
 			}
 		}
-		_, _ = fmt.Fprintf(w, `{"cis_version":"zones:0,uspace_airspace:2,restrictions:0","uspace_airspaces":%s}`, ids)
+		_, _ = fmt.Fprintf(w, `{"cis_version":"zones:0,uspace_airspace:2,restrictions:0","uspace_airspaces":%s,"zones":[]}`, ids)
 	}))
 	t.Cleanup(srv.Close)
 	u := &USSP{C: tlsClient(t, srv), Host: "127.0.0.1"}
 	ctx := context.Background()
 	tok := func(context.Context) (string, error) { return "op-token", nil }
 	box := [4]float64{44.8, 41.7, 44.81, 41.71}
-	err := u.WaitUSpaceAt(ctx, tok, box, "LABUSP1", 300*time.Millisecond)
-	if err == nil || !strings.Contains(err.Error(), "does not put U-space airspace LABUSP1") || !strings.Contains(err.Error(), "uspace_airspace:2") {
+	err := u.WaitGeoAt(ctx, tok, box, GeoUSpace, "LABUSP1", 300*time.Millisecond)
+	if err == nil || !strings.Contains(err.Error(), "does not put uspace_airspaces LABUSP1") || !strings.Contains(err.Error(), "uspace_airspace:2") {
 		t.Fatalf("an airspace the USSP does not hold: %v", err)
 	}
 	mu.Lock()
 	moves = true
 	mu.Unlock()
-	if err := u.WaitUSpaceAt(ctx, tok, box, "LABUSP1", 10*time.Second); err != nil {
+	if err := u.WaitGeoAt(ctx, tok, box, GeoUSpace, "LABUSP1", 10*time.Second); err != nil {
 		t.Fatalf("an airspace the USSP took: %v", err)
 	}
 	if auths[0] != "Bearer op-token 44.8000000,41.7000000,44.8100000,41.7100000" {

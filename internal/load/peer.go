@@ -134,12 +134,14 @@ func (fl *Fleet) inUSpace(a *Aircraft) bool {
 	h := sq.HalfSideM
 	// The outline as a box of offsets [s, w, n, e].
 	var s, w, n, e float64
-	switch a.Role {
-	case RolePair:
-		b := fl.pairBox(a)
+	if b, ok := fl.intentBox(a); ok {
 		s, n = a.centre.NorthM-pairIntentMarginM, a.centre.NorthM+pairIntentMarginM
 		w, e = a.centre.EastM+b.WestM, a.centre.EastM+b.EastM
-	default:
+	} else if a.Role == RolePair {
+		// A pair without an inner gap files a disc over its whole line.
+		r := fl.paths.Pairs.AmplitudeM + pairIntentMarginM
+		s, n, w, e = a.centre.NorthM-r, a.centre.NorthM+r, a.centre.EastM-r, a.centre.EastM+r
+	} else {
 		r := fl.paths.Walkers.RadiusM + pairIntentMarginM
 		s, n, w, e = a.centre.NorthM-r, a.centre.NorthM+r, a.centre.EastM-r, a.centre.EastM+r
 	}
@@ -156,8 +158,11 @@ func (fl *Fleet) peerArea() [4]float64 {
 	}
 	for _, a := range fl.Aircraft {
 		r := fl.paths.Walkers.RadiusM
-		if a.Role == RolePair {
+		switch {
+		case a.Role == RolePair:
 			r = fl.paths.Pairs.AmplitudeM
+		case a.Role == RoleZone && fl.zone != nil:
+			r = fl.zone.AmplitudeM
 		}
 		grow(a.centre.NorthM-r, a.centre.EastM-r, a.centre.NorthM+r, a.centre.EastM+r)
 	}

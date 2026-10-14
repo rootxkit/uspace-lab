@@ -232,7 +232,12 @@ type run struct {
 	vectors *VectorsReport
 	// intentsEnded says endIntents ran (it runs once).
 	intentsEnded bool
-	tokens       []*oauth.ClientCredentials
+	// zoneK are the samples of each zone aircraft that enter the zone,
+	// zoneAt when each was handed out (the zone row's start).
+	zoneMu sync.Mutex
+	zoneK  map[string]map[int64]bool
+	zoneAt map[string]map[int64]time.Time
+	tokens []*oauth.ClientCredentials
 	// clientHTTP and clientAddr are each operator client's HTTP client
 	// and own address (nil, "": the defaults; systems mode).
 	clientHTTP []*http.Client
@@ -472,10 +477,10 @@ func (r *run) intentRequest(a *Aircraft, start, end time.Time) (simop.IntentRequ
 	fl := r.fleet
 	c := scenario.Move(fl.originLatLon(), a.centre)
 	var shape simop.Volume3D
-	if a.Role == RolePair && r.files.Paths.Pairs.InnerGapM > 0 {
+	if b, ok := fl.intentBox(a); ok {
 		// A box on the member's own side of the line: the two members'
-		// intents never share airspace (pairBox).
-		b := fl.pairBox(a)
+		// intents never share airspace (pairBox); a zone aircraft's over
+		// its whole line.
 		var poly simop.Polygon
 		for _, o := range []scenario.Offset{{NorthM: -pairIntentMarginM, EastM: b.WestM}, {NorthM: -pairIntentMarginM, EastM: b.EastM},
 			{NorthM: pairIntentMarginM, EastM: b.EastM}, {NorthM: pairIntentMarginM, EastM: b.WestM}} {
@@ -798,6 +803,13 @@ func (r *run) generate(ctx context.Context, t0 time.Time) {
 		next[i] = t0.Add(period * time.Duration(i%50) / 50)
 	}
 	end := t0.Add(time.Duration(r.tier.DurationS * float64(time.Second)))
+	r.zoneK, r.zoneAt = map[string]map[int64]bool{}, map[string]map[int64]time.Time{}
+	for _, x := range fl.ZoneExpected {
+		if r.zoneK[x.Aircraft] == nil {
+			r.zoneK[x.Aircraft], r.zoneAt[x.Aircraft] = map[int64]bool{}, map[int64]time.Time{}
+		}
+		r.zoneK[x.Aircraft][x.K] = true
+	}
 	tk := time.NewTicker(10 * time.Millisecond)
 	defer tk.Stop()
 	for {
@@ -815,6 +827,11 @@ func (r *run) generate(ctx context.Context, t0 time.Time) {
 				continue
 			}
 			s := fl.Sample(a, k[i], now, t0)
+			if a.Role == RoleZone && r.zoneK[a.Name][k[i]] {
+				r.zoneMu.Lock()
+				r.zoneAt[a.Name][k[i]] = now
+				r.zoneMu.Unlock()
+			}
 			k[i]++
 			next[i] = next[i].Add(period)
 			if next[i].Before(now) {
@@ -1240,6 +1257,44 @@ func (r *run) judgeAlerts(rep *Report, obs map[string]Observation, t0 time.Time)
 		obs["cpa_evaluation_period_max_s"] = valueObs(evalMax)
 	} else {
 		obs["cpa_evaluation_period_max_s"] = notMeasured("no proximity alert carried evaluation_period_s")
+	}
+	// The zone: its entries join the expected set, its raises are timed
+	// in monitor ticks.
+	switch z := r.fleet.zone; {
+	case z != nil && r.systems != nil:
+		tick := 1.0
+		if evalMax > 0 {
+			// The monitor's tick as its alerts say it (05 §5: 1 s, widened
+			// to 2 s under load).
+			tick = evalMax
+		}
+		zj := judgeZone(r.fleet.ZoneExpected, r.rec.Events(), t0, tick, z.RaiseMarginS, z.ClearWithinS, func(name string, k int64) (time.Time, bool) {
+			r.zoneMu.Lock()
+			defer r.zoneMu.Unlock()
+			at, ok := r.zoneAt[name][k]
+			return at, ok
+		})
+		rep.Zone = &zj
+		if zj.Raised > 0 {
+			obs["zone_alert_ticks"] = valueObs(round3(zj.Ticks))
+		} else {
+			obs["zone_alert_ticks"] = notMeasured(fmt.Sprintf("%d zone entries due, no zone raise observed (each missed one is a missed alert)", zj.Due))
+		}
+		add := func(m string, n int) {
+			if o := obs[m]; o.Measured && o.Value != nil {
+				obs[m] = valueObs(*o.Value + float64(n))
+			} else if n > 0 || m == "expected_raises" {
+				obs[m] = valueObs(float64(n))
+			}
+		}
+		add("expected_raises", zj.Due)
+		add("missed_raises", zj.Missed)
+		add("missed_clears", zj.MissedClears)
+		add("unexpected_alerts", zj.Unexpected)
+	case r.systems != nil:
+		obs["zone_alert_ticks"] = notMeasured("the tier has no zone (zone): no zone entry is flown")
+	default:
+		obs["zone_alert_ticks"] = notMeasured(niZone)
 	}
 }
 

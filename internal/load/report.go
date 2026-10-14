@@ -66,7 +66,9 @@ type Report struct {
 	// Peer is what the peer USSP saw and was told (a systems run).
 	Peer *PeerReport `json:"peer,omitempty"`
 	// Vectors is the vectors row's evidence (a systems run).
-	Vectors    *VectorsReport `json:"vectors,omitempty"`
+	Vectors *VectorsReport `json:"vectors,omitempty"`
+	// Zone is the zone's entries against its alerts (a systems run).
+	Zone       *ZoneJudgement `json:"zone,omitempty"`
 	Errors     []string       `json:"errors,omitempty"`
 	Measured   int            `json:"checks_measured"`
 	Unmeasured int            `json:"checks_not_measured"`
@@ -489,6 +491,16 @@ func (r *Report) Markdown() string {
 	w("- Generator sheds: operator %d, Remote ID %d.\n\n", l.GeneratorShedOperator, l.GeneratorShedRID)
 	if r.Systems != nil {
 		r.systemsMarkdown(w)
+	}
+	if z := r.Zone; z != nil {
+		w("## Zone %s\n\n%d entries due, %d raised, %d cleared, %d missed, %d clears missed, %d unexpected; the slowest raise %.2f ticks of %.0f s.\n\n",
+			LoadZoneID, z.Due, z.Raised, z.Cleared, z.Missed, z.MissedClears, z.Unexpected, z.Ticks, z.TickS)
+		for _, l := range z.Lines {
+			w("- %s\n", l)
+		}
+		if len(z.Lines) > 0 {
+			w("\n")
+		}
 	}
 	if v := r.Vectors; v != nil {
 		w("## Vectors against the images\n\n%d knowledge/vectors files; %.0f s.\n\n| System | Binaries (uspace-core) | Error |\n|---|---|---|\n", v.LabVectors, v.TookS)
