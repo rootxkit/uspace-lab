@@ -85,6 +85,7 @@ func counting(t *testing.T) (string, *atomic.Int64) {
 // talks to the systems.
 func TestSystemsTargetsFailClosed(t *testing.T) {
 	f := loadSmall(t)
+	f.Paths.Pairs.InnerGapM = 30
 	base, n := counting(t)
 	cases := map[string]struct {
 		edit func(string) string

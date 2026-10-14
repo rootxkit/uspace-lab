@@ -51,6 +51,13 @@ func checkSystemsTargets(tg *runner.Targets, t *Tier) error {
 // refuse the traffic (serials bound to other clients, unknown receivers)
 // or judge another fleet, so the run does not start.
 func systemsCreds(tg *runner.Targets, fl *Fleet, tier string) (*systemsTarget, error) {
+	if fl.paths.Pairs.InnerGapM <= 0 {
+		for _, a := range fl.Aircraft {
+			if a.Role == RolePair {
+				return nil, fmt.Errorf("load: the pairs cross (pairs.inner_gap_m 0): the USSP authorises only one of two intents that share airspace, so a systems run needs an inner gap")
+			}
+		}
+	}
 	lt := tg.Load
 	if lt == nil || lt.Tier != tier {
 		return nil, fmt.Errorf("load: the targets file was not seeded for tier %q", tier)

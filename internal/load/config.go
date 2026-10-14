@@ -170,6 +170,13 @@ type PairPaths struct {
 	SpeedMS        float64         `yaml:"speed_ms" json:"speed_ms"`
 	AmplitudeM     float64         `yaml:"amplitude_m" json:"amplitude_m"`
 	FirstCrossingS float64         `yaml:"first_crossing_s" json:"first_crossing_s"`
+	// InnerGapM, when above 0, turns each member back short of the
+	// line's centre: the members stay on their own sides, InnerGapM
+	// apart at every crossing time, and each one's intent is a box on its
+	// own side. Two intents that share airspace cannot both be
+	// authorised (strategic deconfliction, Art. 10(8)), so a systems run
+	// needs it; 0 is the crossing of the reference runs before it.
+	InnerGapM float64 `yaml:"inner_gap_m" json:"inner_gap_m"`
 	// RaiseMarginS widens the raise window around crossing - t_cpa_max_s.
 	RaiseMarginS float64 `yaml:"raise_margin_s" json:"raise_margin_s"`
 	// ClearWithinS is how long after a crossing its clear is due.
@@ -469,6 +476,11 @@ func (p *Paths) validate(pol *scenario.Policy, t *Tier) error {
 	// leaves its line by more than the amplitude.
 	if pairGap := pr.SpacingM - 2*pr.AmplitudeM - 2*pr.SpeedMS*tCPA; t.Watch.Pairs > 1 && pairGap < dH+w.MarginM {
 		return fmt.Errorf("pairs: two pairs can come within %.0f m: widen pairs.spacing_m", pairGap)
+	}
+	// The closest approach must still be inside the horizontal minimum,
+	// with the margin, or no alert would be due at all.
+	if !(pr.InnerGapM >= 0 && pr.InnerGapM < dH-w.MarginM) || pr.InnerGapM >= pr.AmplitudeM {
+		return fmt.Errorf("pairs: inner_gap_m %v is not in [0, %.0f) m (the policy's horizontal minimum %.0f m less the margin) and below the amplitude", pr.InnerGapM, dH-w.MarginM, dH)
 	}
 	if pr.FirstCrossingS < 0 || pr.FirstCrossingS*pr.SpeedMS > pr.AmplitudeM {
 		return fmt.Errorf("pairs: first_crossing_s %v puts the members beyond the amplitude (at most %.0f s)", pr.FirstCrossingS, pr.AmplitudeM/pr.SpeedMS)

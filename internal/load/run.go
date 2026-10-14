@@ -331,24 +331,41 @@ func (r *run) startReference(ctx context.Context, wg *sync.WaitGroup) error {
 	return nil
 }
 
-// intentRequest is one aircraft's intent: a circle over its path, its
-// altitude +-30 m as WGS84 heights, for the run's span.
+// intentRequest is one aircraft's intent: a circle over its path (a box
+// on its own side for a pair member with an inner gap), its altitude
+// +-30 m as WGS84 heights, for the run's span.
 func (r *run) intentRequest(a *Aircraft, start, end time.Time) (simop.IntentRequest, error) {
 	fl := r.fleet
-	radius := r.files.Paths.Walkers.RadiusM + 100
-	if a.Role == RolePair {
-		radius = r.files.Paths.Pairs.AmplitudeM + 100
-	}
 	c := scenario.Move(fl.originLatLon(), a.centre)
+	var shape simop.Volume3D
+	if a.Role == RolePair && r.files.Paths.Pairs.InnerGapM > 0 {
+		// A box on the member's own side of the line: the two members'
+		// intents never share airspace (pairBox).
+		b := fl.pairBox(a)
+		var poly simop.Polygon
+		for _, o := range []scenario.Offset{{NorthM: -pairIntentMarginM, EastM: b.WestM}, {NorthM: -pairIntentMarginM, EastM: b.EastM},
+			{NorthM: pairIntentMarginM, EastM: b.EastM}, {NorthM: pairIntentMarginM, EastM: b.WestM}} {
+			p := scenario.Move(fl.originLatLon(), scenario.Offset{NorthM: a.centre.NorthM + o.NorthM, EastM: a.centre.EastM + o.EastM})
+			poly.Vertices = append(poly.Vertices, simop.Point{Lat: p.LatDeg, Lng: p.LonDeg})
+		}
+		c = scenario.Move(fl.originLatLon(), scenario.Offset{NorthM: a.centre.NorthM, EastM: a.centre.EastM + (b.WestM+b.EastM)/2})
+		shape.OutlinePolygon = &poly
+	} else {
+		radius := r.files.Paths.Walkers.RadiusM + pairIntentMarginM
+		if a.Role == RolePair {
+			radius = r.files.Paths.Pairs.AmplitudeM + pairIntentMarginM
+		}
+		shape.OutlineCircle = &simop.Circle{Center: simop.Point{Lat: c.LatDeg, Lng: c.LonDeg}, Radius: simop.Radius{Value: radius, Units: "M"}}
+	}
 	n, err := r.geo.UndulationM(c)
 	if err != nil {
 		return simop.IntentRequest{}, fmt.Errorf("geoid at %s: %w", a.Name, err)
 	}
 	amsl := fl.origin.AltAMSLM + a.AltRelM
+	shape.AltitudeLower = simop.IntentAltitude{Value: geoid.HAEFromAMSL(amsl-30, n), Reference: "W84", Units: "M"}
+	shape.AltitudeUpper = simop.IntentAltitude{Value: geoid.HAEFromAMSL(amsl+30, n), Reference: "W84", Units: "M"}
 	vol := simop.Volume4D{
-		Volume: simop.Volume3D{OutlineCircle: &simop.Circle{Center: simop.Point{Lat: c.LatDeg, Lng: c.LonDeg}, Radius: simop.Radius{Value: radius, Units: "M"}},
-			AltitudeLower: simop.IntentAltitude{Value: geoid.HAEFromAMSL(amsl-30, n), Reference: "W84", Units: "M"},
-			AltitudeUpper: simop.IntentAltitude{Value: geoid.HAEFromAMSL(amsl+30, n), Reference: "W84", Units: "M"}},
+		Volume:    shape,
 		TimeStart: simop.IntentTime{Value: start.Format(time.RFC3339), Format: "RFC3339"},
 		TimeEnd:   simop.IntentTime{Value: end.Format(time.RFC3339), Format: "RFC3339"},
 	}

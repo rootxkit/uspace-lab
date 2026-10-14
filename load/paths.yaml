@@ -38,6 +38,11 @@ walkers:
 # uses. Each crossing is one expected proximity raise on each member,
 # due between crossing - t_cpa_max_s - raise_margin_s and crossing +
 # raise_margin_s, and its clear within clear_within_s of the crossing.
+# With inner_gap_m the members turn back that far apart instead of
+# passing through each other (30 m, inside the policy's 60 m horizontal
+# minimum): each stays on its own side of the centre and files its
+# intent as a box there, because the USSP authorises only one of two
+# intents that share airspace (strategic deconfliction).
 pairs:
   origin: {north_m: -3000, east_m: 1000}
   spacing_m: 3500
@@ -45,5 +50,6 @@ pairs:
   speed_ms: 10
   amplitude_m: 900
   first_crossing_s: 75
+  inner_gap_m: 30
   raise_margin_s: 5
   clear_within_s: 30

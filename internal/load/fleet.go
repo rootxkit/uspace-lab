@@ -205,8 +205,13 @@ func (fl *Fleet) bbox() {
 }
 
 // pairPos is a pair member's east offset from its line centre and its
-// east velocity at t seconds after the start: a triangle wave between
-// -A and +A, the members mirrored, crossing at FirstCrossingS + k * 2A/v.
+// east velocity at t seconds after the start: a triangle wave x between
+// -A and +A, the members mirrored, at the centre together at
+// FirstCrossingS + k * 2A/v. Without an inner gap the members cross
+// there. With one (InnerGapM, g) each member stays on its own side:
+// its offset is -(g/2 + (A - g/2) |x| / A) for the member of side +1, so
+// it turns back at g/2 from the centre when x is 0 and is at -A when x
+// is; the members are then g apart at each crossing time.
 func (fl *Fleet) pairPos(a *Aircraft, t float64) (eastM, veMS float64) {
 	pr := &fl.paths.Pairs
 	amp, v := pr.AmplitudeM, pr.SpeedMS
@@ -218,8 +223,40 @@ func (fl *Fleet) pairPos(a *Aircraft, t float64) (eastM, veMS float64) {
 	if u > 2*amp {
 		x, dir = 3*amp-u, -1
 	}
+	if g := pr.InnerGapM; g > 0 {
+		half := g / 2
+		k := (amp - half) / amp
+		sign := 1.0
+		if x < 0 {
+			sign = -1
+		}
+		return -a.Side * (half + k*math.Abs(x)), -a.Side * k * sign * dir * v
+	}
 	return a.Side * x, a.Side * dir * v
 }
+
+// pairBox is the east extent of a pair member's intent about its line
+// centre: with an inner gap, from the far end of its side (100 m past
+// the amplitude) to a quarter of the gap short of the centre, so the
+// two members' boxes are half the gap apart; without one, the whole
+// line.
+type pairBox struct{ WestM, EastM float64 }
+
+func (fl *Fleet) pairBox(a *Aircraft) pairBox {
+	pr := &fl.paths.Pairs
+	far := pr.AmplitudeM + pairIntentMarginM
+	if pr.InnerGapM <= 0 {
+		return pairBox{WestM: -far, EastM: far}
+	}
+	if -a.Side < 0 {
+		return pairBox{WestM: -far, EastM: -pr.InnerGapM / 4}
+	}
+	return pairBox{WestM: pr.InnerGapM / 4, EastM: far}
+}
+
+// pairIntentMarginM is how far a pair member's intent reaches past its
+// path, along and across the line.
+const pairIntentMarginM = 100
 
 // step advances a walker one period: a bounded random turn, and a turn
 // back towards the centre when the step would leave its disc.
