@@ -233,7 +233,7 @@ func TestSystemsTrustTheLabCaddyOnly(t *testing.T) {
 			t.Errorf("systems/compose.yaml sets no %s", k)
 		}
 	}
-	if m := trusted.FindStringSubmatch(`  USSP_TRUSTED_PROXIES: ""`); m == nil || strings.TrimSpace(m[2]) == want {
+	if m := trusted.FindStringSubmatch(`  USSP_TRUSTED_PROXIES: ""`); len(m) < 3 || strings.TrimSpace(m[2]) == want {
 		t.Fatal("the check accepts an empty value")
 	}
 }
