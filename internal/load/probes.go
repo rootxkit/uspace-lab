@@ -40,10 +40,15 @@ var lossCounter = regexp.MustCompile(`(^|_)(dropped|gaps?|degraded|lost|refused|
 // command runs argv with extra appended, bounded in time and output; an
 // error carries the command's own words (its stderr, bounded).
 func command(ctx context.Context, argv []string, extra ...string) ([]byte, error) {
+	return commandWithin(ctx, probeTimeout, argv, extra...)
+}
+
+// commandWithin is command bounded by timeout instead of a probe's.
+func commandWithin(ctx context.Context, timeout time.Duration, argv []string, extra ...string) ([]byte, error) {
 	if len(argv) == 0 {
 		return nil, fmt.Errorf("load: probe: no command")
 	}
-	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	args := append(append([]string{}, argv[1:]...), extra...)
 	cmd := exec.CommandContext(ctx, argv[0], args...) //nolint:gosec // the operator's targets file names the probe command

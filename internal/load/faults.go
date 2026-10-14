@@ -208,7 +208,9 @@ func (fr *faultRunner) bash(ctx context.Context, script string, args ...string) 
 	ctx, cancel := context.WithTimeout(ctx, faultScriptTime)
 	defer cancel()
 	argv := append([]string{"bash", filepath.ToSlash(filepath.Join(fr.scripts, script))}, args...)
-	b, err := command(ctx, argv)
+	// A whole system's restore starts a dozen containers: the script's
+	// own bound, never a probe's 20 s.
+	b, err := commandWithin(ctx, faultScriptTime, argv)
 	out := string(b)
 	if len(out) > faultOutputMax {
 		out = out[:faultOutputMax]
