@@ -66,6 +66,7 @@ func TestZoneAircraftAndEntries(t *testing.T) {
 	for name, block := range map[string]string{
 		"on the walkers": strings.Replace(zoneBlock, "north_m: -1500, east_m: 6000", "north_m: 2000, east_m: 2000", 1),
 		"never left":     strings.Replace(zoneBlock, "amplitude_m: 600", "amplitude_m: 100", 1),
+		"intents shared": strings.Replace(zoneBlock, "aircraft: 1,", "aircraft: 2,", 1),
 	} {
 		tp, pp := writeFiles(t, long+block, smallPaths(repo("scenarios/policy/demo.yaml")))
 		if _, err := LoadFiles(tp, pp, repo("load/criteria.yaml")); err == nil {

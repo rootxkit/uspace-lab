@@ -54,8 +54,12 @@ func (z *ZoneCfg) validate(t *Tier) error {
 		return fmt.Errorf("zone.aircraft %d is not in [1, 10]", z.Aircraft)
 	case !(z.SideM >= 50 && z.SideM <= 5000):
 		return fmt.Errorf("zone.side_m %v is not in [50, 5000]", z.SideM)
-	case float64(z.Aircraft-1)*z.SpacingM >= z.SideM || (z.Aircraft > 1 && !(z.SpacingM > 0)):
+	case float64(z.Aircraft-1)*z.SpacingM >= z.SideM:
 		return fmt.Errorf("zone: %d lines %v m apart do not fit in a zone of %v m", z.Aircraft, z.SpacingM, z.SideM)
+	case z.Aircraft > 1 && z.SpacingM <= 2*pairIntentMarginM:
+		// Each line's intent reaches pairIntentMarginM to either side: two
+		// that share airspace cannot both be authorised.
+		return fmt.Errorf("zone.spacing_m %v: the lines' intents (%d m either side) would share airspace", z.SpacingM, pairIntentMarginM)
 	case !(z.AmplitudeM > z.SideM/2+2*z.SpeedMS && z.AmplitudeM <= 5000):
 		return fmt.Errorf("zone.amplitude_m %v must take the aircraft out of the zone (half side %v m) and be at most 5000", z.AmplitudeM, z.SideM/2)
 	case !(z.SpeedMS > 0 && z.SpeedMS <= 30):

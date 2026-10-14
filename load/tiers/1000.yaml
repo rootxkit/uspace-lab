@@ -36,11 +36,11 @@ peer:
   # their changes are DSS-backed and notified to the peer (F3548)
   uspace: {centre: {north_m: 3050, east_m: 3050}, half_side_m: 1400}
 zone:
-  aircraft: 2 # lab: two lines through the zone, 100 m apart, east-west
+  aircraft: 2 # lab: two lines through the zone, 250 m apart, east-west (their intents 50 m apart)
   centre: {north_m: -1500, east_m: 6000} # lab: clear of the walkers, the pairs and the peer by more than 1 km
-  side_m: 300
-  spacing_m: 100
-  amplitude_m: 600 # lab: an entry every 60 s per aircraft, inside for 30 s
+  side_m: 400
+  spacing_m: 250
+  amplitude_m: 600 # lab: an entry every 60 s per aircraft, inside for 40 s
   speed_ms: 10
   alt_rel_m: 170 # lab: 25 m above the peer's 145 m
   type: CONDITIONAL # the intent is authorised with the zone's condition and is still an incursion (scripts/chaos/background.yaml)
