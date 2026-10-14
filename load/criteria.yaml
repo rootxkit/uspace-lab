@@ -53,6 +53,7 @@ rows:
     criterion: "peer notification of an intent change <= 5 s; conflicting-intent notification <= 1 s; details answered <= 1 s; constraint notification <= 5 s"
     checks:
       - {id: intent_change_notify, metric: f3548_intent_change_s, stat: max, op: "<=", value: 5.0, unit: s, status: standard, basis: "F3548-21 (05 §7)"}
+      - {id: notifications_complete, metric: f3548_notifications_missing, stat: value, op: "==", value: 0, status: standard, basis: "F3548-21: a USS notifies every subscriber the DSS names of each change of its operational intent; a change not notified has no latency to judge"}
       - {id: conflict_notify, metric: f3548_conflict_notify_s, stat: max, op: "<=", value: 1.0, unit: s, status: standard, basis: "F3548-21 (05 §7)"}
       - {id: details_answered, metric: f3548_details_s, stat: max, op: "<=", value: 1.0, unit: s, status: standard, basis: "F3548-21 (05 §7)"}
       - {id: constraint_notify, metric: f3548_constraint_notify_s, stat: max, op: "<=", value: 5.0, unit: s, status: standard, basis: "F3548-21 (05 §7)"}

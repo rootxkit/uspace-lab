@@ -74,7 +74,11 @@ type Fleet struct {
 	Expected  []Expected
 	// BBox is [west, south, east, north] around every path (the
 	// consoles' subscription).
-	BBox   [4]float64
+	BBox [4]float64
+	// Peer are the peer USSP's own aircraft (the tier's peer; none
+	// without).
+	Peer   []*peerAircraft
+	peer   *PeerCfg
 	origin vehicle.Home
 	paths  *Paths
 	period time.Duration
@@ -136,6 +140,12 @@ func NewFleet(f *Files, origin vehicle.Home, geo geoid.Undulator) (*Fleet, error
 			fl.Aircraft[i].Receiver = len(fl.Receivers)
 		}
 		fl.Receivers = append(fl.Receivers, rx)
+	}
+	if t.Peer != nil {
+		fl.peer = t.Peer
+		for i := range t.Peer.Aircraft {
+			fl.Peer = append(fl.Peer, &peerAircraft{Index: i, Serial: PeerSerial(i, t.Operators.Clients), Sysid: peerSysidBase + i})
+		}
 	}
 	fl.expect(f.Policy, t.DurationS)
 	fl.bbox()

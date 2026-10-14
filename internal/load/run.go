@@ -148,6 +148,11 @@ func Run(ctx context.Context, opt Options) (*Report, error) {
 		if tg.Load.Probes != nil {
 			r.probes = newProbes(tg.Load.Probes)
 		}
+		if tier.Peer != nil {
+			if r.peer, err = newPeerRun(tg, fl, r.systems.usspBase); err != nil {
+				return nil, err
+			}
+		}
 		evidence = "The systems' images as the targets file names them, seeded for this fleet (loadgen seed); evidence for the images and digests listed, on the host named, when the run passes (docs/PLAN.md L-D4)."
 	}
 	if opt.FaultsPath != "" {
@@ -218,7 +223,11 @@ type run struct {
 	probes           *probes
 	sp               *spPoller
 	faults           *faultRunner
-	tokens           []*oauth.ClientCredentials
+	// peer is the embedded peer USSP (systems mode with a tier peer).
+	peer *peerRun
+	// intentsEnded says endIntents ran (it runs once).
+	intentsEnded bool
+	tokens       []*oauth.ClientCredentials
 	// clientHTTP and clientAddr are each operator client's HTTP client
 	// and own address (nil, "": the defaults; systems mode).
 	clientHTTP []*http.Client
@@ -278,6 +287,18 @@ func (r *run) execute(ctx context.Context, rep *Report) {
 		r.fail("%s: %v", what, err)
 		r.finish(rep)
 		return
+	}
+	if r.peer != nil {
+		// The peer first: its subscription must stand before the intents
+		// whose changes it is owed are filed, and its ISA before the
+		// display provider is to poll it.
+		peerCtx, peerCancel := context.WithCancel(ctx)
+		defer func() { peerCancel(); r.peer.stop(); r.peer.wg.Wait() }()
+		ramp := float64(r.tier.Operators.Aircraft) / max(r.tier.Operators.RampPerS, 1)
+		until := time.Now().Add(seconds(ramp+r.tier.DurationS+r.tier.DrainS) + 20*time.Minute)
+		if err := r.peer.start(peerCtx, until, r.fleet.period); err != nil {
+			r.fail("%v", err)
+		}
 	}
 	r.fileIntents(ctx)
 	// Registered after the target's teardown, so it runs before it.
@@ -353,6 +374,12 @@ func (r *run) execute(ctx context.Context, rep *Report) {
 	memCancel()
 	memWG.Wait()
 	r.drain(ctx)
+	if r.peer != nil {
+		// Ended here, not when the run is torn down: the deletions owed to
+		// the peer are timed too.
+		r.endIntents(ctx, rep)
+		r.peer.awaitNotifications(ctx)
+	}
 	if r.probes != nil {
 		// After the drain: the counters' last values and the sizes.
 		r.probes.scrape(ctx)
@@ -504,10 +531,8 @@ func (r *run) fileIntents(ctx context.Context) {
 				var id string
 				if err == nil {
 					in := &simop.Intents{BaseURL: r.usspBase, Tokens: r.tokens[a.Client], HTTP: r.httpOf(a.Client)}
-					var d simop.Decision
-					if d, err = in.File(ctx, req); err == nil && d.State == "accepted" {
-						d, err = in.Change(ctx, d.IntentID, "activate")
-					}
+					d, ferr := r.fileOne(ctx, in, a, req)
+					err = ferr
 					// Only an activated intent flies: anything else
 					// (rejected, held pending) is the USSP's refusal,
 					// said with its reasons.
@@ -549,6 +574,60 @@ send:
 	}
 	close(work)
 	wg.Wait()
+}
+
+// intentDSSWait bounds the wait for a decision the USSP holds
+// pending_dss (an intent in U-space airspace waits for its DSS write).
+const intentDSSWait = 3 * time.Minute
+
+// fileOne files a's intent and activates it, waiting for each decision
+// the USSP holds pending_dss to move on; the peer is told when each
+// request was sent.
+func (r *run) fileOne(ctx context.Context, in *simop.Intents, a *Aircraft, req simop.IntentRequest) (simop.Decision, error) {
+	filed := time.Now()
+	d, err := in.File(ctx, req)
+	if err != nil {
+		return d, err
+	}
+	if r.peer != nil && d.IntentID != "" {
+		r.peer.noteOp(d.IntentID, a, "Accepted", filed)
+	}
+	if d, err = awaitDSS(ctx, in, d); err != nil || d.State != "accepted" {
+		return d, err
+	}
+	activated := time.Now()
+	if r.peer != nil {
+		r.peer.noteOp(d.IntentID, a, "Activated", activated)
+	}
+	if d, err = in.Change(ctx, d.IntentID, "activate"); err != nil {
+		return d, err
+	}
+	return awaitDSS(ctx, in, d)
+}
+
+// awaitDSS reads an intent until its decision is no longer pending_dss,
+// bounded by intentDSSWait; any other decision is returned as it is.
+func awaitDSS(ctx context.Context, in *simop.Intents, d simop.Decision) (simop.Decision, error) {
+	if d.State != "pending_dss" {
+		return d, nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, intentDSSWait)
+	defer cancel()
+	tk := time.NewTicker(time.Second)
+	defer tk.Stop()
+	for d.State == "pending_dss" {
+		select {
+		case <-ctx.Done():
+			return d, fmt.Errorf("still pending_dss after %s (%s)", intentDSSWait, reasonsOf(d.Conflicts))
+		case <-tk.C:
+		}
+		next, err := in.Get(ctx, d.IntentID)
+		if err != nil {
+			continue
+		}
+		d = next
+	}
+	return d, nil
 }
 
 // startClients starts one operator client per aircraft and one receiver
@@ -614,6 +693,9 @@ func wsURL(base string) string {
 // stream of every watched aircraft with an intent.
 func (r *run) startStreams(ctx context.Context, wg *sync.WaitGroup) {
 	rd := &readers{rec: r.rec, picture: r.picture, traffic: r.traffic, bySer: map[string]*Aircraft{}, byMAC: map[string]*Aircraft{}, raised: map[string]time.Time{}, peers: map[string]string{}}
+	if r.peer != nil {
+		rd.network = r.peer.network
+	}
 	r.readers = rd
 	for _, a := range r.fleet.Aircraft {
 		rd.bySer[a.Serial], rd.byMAC[a.MAC] = a, a
@@ -1031,6 +1113,24 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 	default:
 		obs["f3411_sp_flights_s"], obs["f3411_details_s"] = notMeasured(niF3411), notMeasured(niF3411)
 	}
+	// The peer USSP: the authority's DP display and the F3548 rows.
+	switch {
+	case r.peer != nil:
+		rep.Peer = r.peer.observe(obs, t.MinSamples)
+		for _, e := range rep.Peer.Errors {
+			r.fail("%s", e)
+		}
+	case r.systems != nil:
+		why := notMeasured("the tier has no peer USSP (peer): the authority's DP display and the F3548 rows are timed at it")
+		for _, m := range peerMetrics {
+			obs[m] = why
+		}
+	default:
+		obs["f3411_dp_display_s"] = notMeasured(niDP)
+		for _, m := range peerMetrics[1:] {
+			obs[m] = notMeasured(niF3548)
+		}
+	}
 	// What the probes read of the systems. In a systems run the memory
 	// row is the systems' processes, never the harness's own heap.
 	probed := []string{"cpa_pair_checks_per_worker", "writer_queue_max_s", "compression_lag_chunks", "disk_growth_vs_model"}
@@ -1186,6 +1286,10 @@ const endIntentsTimeout = 2 * time.Minute
 // the next run's intents are rejected (intent_filed_first). An intent
 // the USSP does not end is an error of the run.
 func (r *run) endIntents(ctx context.Context, rep *Report) {
+	if r.intentsEnded {
+		return
+	}
+	r.intentsEnded = true
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), endIntentsTimeout)
 	defer cancel()
 	type job struct {
@@ -1203,6 +1307,9 @@ func (r *run) endIntents(ctx context.Context, rep *Report) {
 			defer wg.Done()
 			for j := range work {
 				in := &simop.Intents{BaseURL: r.usspBase, Tokens: r.tokens[j.a.Client], HTTP: r.httpOf(j.a.Client)}
+				if r.peer != nil {
+					r.peer.noteOp(j.id, j.a, "", time.Now())
+				}
 				d, err := in.Change(ctx, j.id, "end")
 				mu.Lock()
 				switch {

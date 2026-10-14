@@ -86,7 +86,10 @@ type Tier struct {
 	Consoles int `yaml:"consoles" json:"consoles"`
 	// DP are the F3411 display-provider polls of the USSP the harness
 	// makes in a systems run (nil: none).
-	DP    *DPPolls `yaml:"dp" json:"dp,omitempty"`
+	DP *DPPolls `yaml:"dp" json:"dp,omitempty"`
+	// Peer is the peer USSP a systems run embeds (peer.go; nil: none):
+	// the authority's DP display and the F3548 rows.
+	Peer  *PeerCfg `yaml:"peer" json:"peer,omitempty"`
 	Watch struct {
 		// Pairs is the number of scripted conflict pairs (every one is
 		// watched: its expected alerts are the missed-alert count's set).
@@ -394,6 +397,11 @@ func (t *Tier) validate() error {
 			return err
 		}
 	}
+	if t.Peer != nil {
+		if err := t.Peer.validate(); err != nil {
+			return err
+		}
+	}
 	for _, tr := range t.Receivers.Transports {
 		if !slices.Contains(transports, tr) {
 			return fmt.Errorf("receivers.transports: %q is not one of %v", tr, transports)
@@ -491,10 +499,15 @@ func (p *Paths) validate(pol *scenario.Policy, t *Tier) error {
 		return fmt.Errorf("walkers: radius_m %v overlaps the next cell (spacing_m %v)", w.RadiusM, w.SpacingM)
 	}
 	layers := append(slices.Clone(w.LayersRelM), pr.AltRelM)
+	if t.Peer != nil {
+		// The peer's aircraft fly at an altitude of their own too: no
+		// alert is due between them and the fleet.
+		layers = append(layers, t.Peer.AltRelM)
+	}
 	for i := range layers {
 		for j := i + 1; j < len(layers); j++ {
 			if math.Abs(layers[i]-layers[j]) < dV+w.MarginM {
-				return fmt.Errorf("walkers/pairs: altitudes %v and %v m are closer than the vertical minimum %.0f m (+%.0f m margin)", layers[i], layers[j], dV, w.MarginM)
+				return fmt.Errorf("walkers/pairs/peer: altitudes %v and %v m are closer than the vertical minimum %.0f m (+%.0f m margin)", layers[i], layers[j], dV, w.MarginM)
 			}
 		}
 	}

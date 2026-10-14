@@ -30,6 +30,14 @@ func (fl *Fleet) layoutDigest() string {
 		}
 		b.WriteByte('\n')
 	}
+	// The peer's aircraft are registered and its U-space square
+	// designated by the seed: another peer is another seed.
+	for _, a := range fl.Peer {
+		fmt.Fprintf(&b, "p %d %s\n", a.Index, a.Serial)
+	}
+	if p := fl.peer; p != nil {
+		fmt.Fprintf(&b, "u %g %g %g\n", p.USpace.Centre.NorthM, p.USpace.Centre.EastM, p.USpace.HalfSideM)
+	}
 	sum := sha256.Sum256([]byte(b.String()))
 	return "sha256:" + hex.EncodeToString(sum[:])
 }
@@ -65,6 +73,13 @@ func (fl *Fleet) SeedFleet(tier string) *seed.LoadFleet {
 		k := float64(max(1, len(rx)))
 		p := scenario.Move(fl.originLatLon(), scenario.Offset{NorthM: n / k, EastM: e / k})
 		out.Receivers = append(out.Receivers, seed.LoadReceiver{ID: fl.ReceiverID(i), LatDeg: p.LatDeg, LonDeg: p.LonDeg})
+	}
+	if fl.peer != nil {
+		lp := &seed.LoadPeer{Area: fl.peerArea(), USpaceCentre: fl.peer.USpace.Centre, USpaceHalfSideM: fl.peer.USpace.HalfSideM}
+		for _, a := range fl.Peer {
+			lp.Serials = append(lp.Serials, a.Serial)
+		}
+		out.Peer = lp
 	}
 	return out
 }

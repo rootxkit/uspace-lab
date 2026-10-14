@@ -61,7 +61,9 @@ type Report struct {
 	// Faults are the faults the run injected and what they did.
 	Faults []FaultRecord `json:"faults,omitempty"`
 	// F3411 is what the lab's DP polls of the USSP saw (a systems run).
-	F3411      *F3411Polls `json:"f3411,omitempty"`
+	F3411 *F3411Polls `json:"f3411,omitempty"`
+	// Peer is what the peer USSP saw and was told (a systems run).
+	Peer       *PeerReport `json:"peer,omitempty"`
 	Errors     []string    `json:"errors,omitempty"`
 	Measured   int         `json:"checks_measured"`
 	Unmeasured int         `json:"checks_not_measured"`
@@ -480,6 +482,21 @@ func (r *Report) Markdown() string {
 	if r.Systems != nil {
 		r.systemsMarkdown(w)
 	}
+	if p := r.Peer; p != nil {
+		w("## Peer USSP\n\n%s (aircraft %s). The display provider (%s) polled it %d times (others %d); the timed console showed %d frames of its flights, %d displays timed, %d frames untied; %d of the fleet's tracks from the USSP's SP were on it.\n\n",
+			p.BaseURL, strings.Join(p.Aircraft, ", "), p.DisplayProvider, p.DPPolls, p.OtherPolls, p.PeerFrames, p.Displayed, p.Untied, p.FleetTracks)
+		w("F3548: %d intents inside the U-space square, %d changes owed to the peer; %d notifications received (%v), %d naming no intent of the run; details %d answered, %d failed%s.\n\n",
+			p.IntentsInUSpace, p.ChangesOwed, p.Notifications, p.ByState, p.Unmatched, p.DetailsAnswered, p.DetailsFailed, lastErr(p.DetailsLast))
+		for _, m := range p.Missing {
+			w("- %s\n", m)
+		}
+		for _, e := range p.Errors {
+			w("- error: %s\n", e)
+		}
+		if len(p.Missing) > 0 || len(p.Errors) > 0 {
+			w("\n")
+		}
+	}
 	if len(r.Faults) > 0 {
 		r.faultsMarkdown(w)
 	}
@@ -564,6 +581,13 @@ func (r *Report) systemsMarkdown(w func(format string, a ...any)) {
 		w("\nProbes that failed inside a fault the run injected: %d.\n", sys.ErrorsDuringFaults)
 	}
 	w("\n")
+}
+
+func lastErr(s string) string {
+	if s == "" {
+		return ""
+	}
+	return " (last: " + s + ")"
 }
 
 // faultsMarkdown renders the faults the run injected.

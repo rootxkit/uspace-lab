@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
+	"github.com/rootxkit/uspace-core/core"
 
 	"github.com/rootxkit/uspace-lab/internal/observe"
 	"github.com/rootxkit/uspace-lab/internal/scenario"
@@ -158,6 +159,9 @@ type readers struct {
 	nHeld   int
 	// onShown is told every sample newly shown (the faults' recovery).
 	onShown func(kind string, at time.Time)
+	// network is told every network_rid track on the timed console (the
+	// peer's display; nil: no peer).
+	network func(instance, trackID string, pos core.LatLon, captured, arrived time.Time)
 	// flags are the degraded states the streams showed for the first
 	// time, with when (bounded).
 	flagMu sync.Mutex
@@ -375,6 +379,10 @@ const closeSignInAgain websocket.StatusCode = 4401
 // (schemas/common/envelope/v1 $defs.source).
 const sourceDirectRID = "direct_rid"
 
+// sourceNetworkRID is the track source of what a display provider read
+// from a Service Provider.
+const sourceNetworkRID = "network_rid"
+
 func (rd *readers) status(s *stream, e wire.Envelope, at time.Time) {
 	var b struct {
 		DroppedFrames uint64   `json:"dropped_frames"`
@@ -415,6 +423,11 @@ func (rd *readers) track(s *stream, e wire.Envelope, at time.Time) {
 	var b struct {
 		TrackID        string `json:"track_id"`
 		Source         string `json:"source"`
+		SourceInstance string `json:"source_instance"`
+		Position       struct {
+			Lat float64 `json:"lat"`
+			Lng float64 `json:"lng"`
+		} `json:"position"`
 		Identification struct {
 			Serial *string `json:"serial"`
 		} `json:"identification"`
@@ -422,6 +435,10 @@ func (rd *readers) track(s *stream, e wire.Envelope, at time.Time) {
 	captured, err := wire.ParseTime(e.CapturedAt)
 	if json.Unmarshal(e.Body, &b) != nil || err != nil {
 		rd.picture.untraceableFrame()
+		return
+	}
+	if b.Source == sourceNetworkRID && rd.network != nil {
+		rd.network(b.SourceInstance, b.TrackID, core.LatLon{LatDeg: b.Position.Lat, LonDeg: b.Position.Lng}, captured, at)
 		return
 	}
 	if b.Source != sourceDirectRID {
