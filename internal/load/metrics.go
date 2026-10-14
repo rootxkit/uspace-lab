@@ -26,7 +26,7 @@ const (
 	niF3411   = "the reference target has no F3411 SP; a systems run polls the USSP's as a display provider (the tier's dp and the targets file's f3411_dp client)"
 	niDP      = "the authority's DP display of the fleet needs the USSP certified and an oversight area at the authority, which loadgen seed does not register: the lab stack's DP poller has no view to poll"
 	niDPCache = "the DP cache's 24 h bound needs a run of more than 24 h with the authority's DP polling"
-	niF3548   = "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+	niF3548   = "F3548 timings need the fleet's intents inside U-space airspace (DSS-backed) and sim-ussp subscribed as the peer USSP, which the load harness does not drive; the conformance suite runs F3548 against the USSP (WP-L7)"
 	niMetrics = "read from the systems' /metrics by name (a systems run with probes); the reference target has none"
 	niChaos   = "faults are injected into the systems' containers (loadgen run --faults with a systems target); the reference target has none"
 	niOutage  = "a cross-system outage's degraded behaviours are judged per system, with each one's readiness and console status, by the WP-L9 chaos matrix (scripts/chaos, docs/RUNBOOKS/chaos.md); the load harness reads only the authority picture and the USSP traffic streams"

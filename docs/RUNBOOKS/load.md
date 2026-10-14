@@ -77,16 +77,19 @@ at all. A check the harness cannot measure yet is written "not
 measured" with the reason; it fails the run only when the tier
 requires it.
 
-What the harness does not measure yet, in every report:
+What the harness does not measure, and why, in every report (each row
+is "not measured" with its reason, never a blank):
 
-| Row | Why |
-|---|---|
-| F3411, F3548 timing | needs the systems mode: the authority's DP poller and a peer USSP against the lab DSS |
-| Zone alert tick, Art. 13(2) notices | no zone entry scripted in the load paths yet; no peer or ANSP driven |
-| CPA pair checks per worker | read from a system's `/metrics`; the reference target has none |
-| Storage | the reference target has no database |
-| Restart, partition, cross-system outage | the kill and outage scripts are WP-L9's |
-| Vectors | run in uspace-core's CI and per image by the conformance suite |
+| Row | Against the reference target | In a systems run |
+|---|---|---|
+| F3411 SP `GET /uss/flights`, details | the reference target has no SP | measured: the lab polls the USSP's SP as a display provider (the tier's `dp`, the targets file's `f3411_dp`) |
+| F3411 DP display, DP cache 24 h | no DP | not measured: the authority's DP poller needs the USSP certified and an oversight area at the authority, which `loadgen seed` does not register; the cache bound needs a run of more than a day |
+| F3548 timing | no DSS or peer | not measured: needs the fleet's intents inside U-space airspace (DSS-backed) and `sim-ussp` as the subscribed peer, which the load harness does not drive |
+| Zone alert tick, Art. 13(2) notices | no zone entry scripted | the same: no zone entry in the load paths; no peer or ANSP driven |
+| CPA pair checks, storage, the systems' memory | no `/metrics`, no database | measured with probes (the targets file's `probes`, from `deploy/systems/probes.yaml`) |
+| Restart, partition | no containers | measured with a fault plan (`--faults load/faults/<plan>.yaml`) |
+| Cross-system outage | no containers | not measured: judged per system, with every system's readiness, by the WP-L9 chaos matrix (`scripts/chaos`, docs/RUNBOOKS/chaos.md) |
+| Vectors | run in uspace-core's CI and per image by the conformance suite | the same |
 
 ## Running it
 
@@ -121,7 +124,8 @@ overwrites an earlier record. Exit status: 0 pass, 1 fail, 2 nothing ran
 
 Disk: a report is well under 1 MB (the memory samples are one number
 per 10 s). Against the reference target nothing else is written. Run
-only locally or in CI; never against the staging droplet.
+only locally or in CI; never against the staging droplet. A run
+against the systems is in "Systems mode" below.
 
 ## Scale factors
 
@@ -154,21 +158,80 @@ of at most 200 tracks. The report repeats all of it.
    matched raise with its latency) and every stream's frame counts and
    `dropped_frames`.
 
-## Systems mode (not built yet)
+## Systems mode
 
-A run against the systems' images needs, before the generator starts:
-the tier's serials registered and bound to the operator clients at the
-USSP, its receivers registered at the authority with their keys, and a
-console session for the picture. `cmd/demo-seed` does this for the
-scenario fleet; the load fleet is 100 to 5000 aircraft. Until it is
-built, `loadgen run` refuses a targets file in systems mode rather than
-load a system with traffic it would refuse. The systems' `/metrics`
-names (`dropped_*`, `gap_*`, `degraded_*`, `evaluation_period_s`,
-writer queue depth) and the F3411 / F3548 timings come with it.
+A systems run loads the four systems' images in the lab stack
+(`deploy/demo-up.sh`, docs/RUNBOOKS/demo.md) instead of the reference
+target. It is run locally, never against the staging droplet.
 
-Storage for a systems run (`05 §1`, `05 §4`): at 1000 drones each system
-with a telemetry hypertable writes about 52 GB a day uncompressed, about
-2.2 GB per hour; a 60-minute run of the authority and the USSP needs
-about 5 GB free beside the images, the 2-hour soak about 10 GB, and
-5000 drones five times that. It is not to be run on the staging
-droplet; the owner adds storage to the host that runs it.
+1. `deploy/demo-up.sh`. `deploy/demo.env` must hold the variables of the
+   current `demo.env.example` (`DEMO_CADDY_IP`, `DEMO_LAB_SUBNET`,
+   `DEMO_LAB_IP_RANGE`, `DEMO_EGRESS_SUBNET`, `DEMO_HOST_GATEWAY`,
+   `DEMO_LOAD_RECEIVER_ADDRESSES`). The lab Caddy has a fixed address
+   that every system trusts for `X-Forwarded-For`, as the droplet's
+   systems trust their edge Caddy. The lab Caddy and the authority also
+   trust the host's address on the egress network, so each simulated
+   receiver is judged under its own address. Without this, the
+   authority's request budget per address (20 a second) refuses part of
+   what the fleet's receivers send.
+2. `go run ./cmd/loadgen seed --tier load/tiers/<tier>.yaml --lab sim/sitl.env --geoid <egm2008-2_5.pgm>`.
+   It registers the tier's fleet through the public APIs: one operator
+   per client (registered at the authority, active at the USSP, with one
+   machine client and its aircraft bound, open A2 / C2), every aircraft
+   in the registry, and every receiver at the authority. Then it writes
+   `targets/local-load-<tier>.yaml` and `secrets/load-<tier>/` (both
+   git-ignored). Everything the systems issue is kept in the seed's
+   state, so a second seed registers nothing again. Seed again before a
+   run, because a console session ends after 30 minutes idle.
+3. The first time receivers are registered, restart the authority's
+   rid-ingest (`docker restart uspace-demo-authority-rid-ingest-1`). With
+   no receiver keys it listens on loopback only (R-06), and every batch
+   is answered 502 until it is restarted.
+4. `go run ./cmd/loadgen run --tier load/tiers/<tier>.yaml --targets targets/local-load-<tier>.yaml --lab-env deploy/demo.env --host "<name, size>" [--faults load/faults/<plan>.yaml]`.
+   `--lab-env` dials every lab host at 127.0.0.1 with the lab CA. Wait
+   130 s between two runs: the USSP ends a flight after 120 s of silence.
+
+The run refuses a targets file before it sends anything when:
+
+- the file was seeded for another tier or fleet layout;
+- a secret file is missing;
+- a probe could not run;
+- a fault plan does not fit the run;
+- the pairs cross. The USSP authorises only one of two intents that share
+  airspace, so pairs need `pairs.inner_gap_m`.
+
+Every intent must be activated, or the run stops before any stream
+starts, naming the USSP's reasons. Intents are filed at the tier's
+`intents_per_s`, and every one is ended when the run ends.
+
+What a systems run measures beyond the reference target:
+
+- **Probes** (`deploy/systems/probes.yaml`). Every process's `/metrics`
+  is read from inside the stack (`docker exec` into the lab Caddy and
+  busybox `wget`) every `memory_sample_s`. Each telemetry database's size
+  and compression lag are read with `psql` in its own container. From
+  these come:
+  - the memory row, which judges the systems' resident memory, never
+    the harness's own heap;
+  - the writer queue;
+  - the CPA pair checks of the busiest process against 05 §1's budget;
+  - disk growth against 05 §1's model (the fleet's samples × 600 B per
+    system);
+  - the systems' loss counters that moved, listed in the report.
+- **F3411 SP**. The lab is the display provider of 05 §1. It tiles the
+  fleet's area in 4 km views, polls the most populated `dp.views` of
+  them once a second, and asks for the details of one flight per answer.
+- **Faults** (`load/faults/ci.yaml`, `load/faults/60min.yaml`). The
+  WP-L9 scripts kill each hot-path process in turn and stop each
+  system's NATS for 60 s. The run measures:
+  - recovery: from the restore to the first sample newly shown;
+  - alerts raised twice;
+  - backlog lost;
+  - other systems' streams that turned degraded during a partition.
+
+Disk for a systems run (05 §1, 05 §4): at 1000 drones each system with
+a telemetry hypertable writes about 52 GB a day uncompressed, which is
+about 2.2 GB per hour. A 60-minute run of the authority and the USSP
+needs about 5 GB free beside the images, the 2-hour soak about 10 GB,
+and 5000 drones five times that. Never run it on the staging droplet;
+the owner adds storage to the host that runs it.
