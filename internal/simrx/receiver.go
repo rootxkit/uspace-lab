@@ -10,6 +10,7 @@ import (
 	"io"
 	mrand "math/rand/v2"
 	"net/http"
+	"net/netip"
 	"strings"
 	"sync"
 	"time"
@@ -75,6 +76,11 @@ type Config struct {
 	// unreachable (E-10); past it the oldest are shed and counted.
 	BacklogMax   int
 	Transmitters []Transmitter
+	// ForwardedFor, when set, is the receiver's own address, named in
+	// X-Forwarded-For on every batch: the load harness's receivers all
+	// run on one host, and the lab stack judges each under its own
+	// address (its Caddy trusts the header from the host only).
+	ForwardedFor string
 	HTTP         *http.Client
 	Now          func() time.Time
 }
@@ -130,6 +136,11 @@ func New(cfg Config) (*Receiver, error) {
 	}
 	if len(cfg.HMACKey) < auth.MinReceiverKeyBytes {
 		return nil, core.Fieldf("hmac_key", "at least %d bytes", auth.MinReceiverKeyBytes)
+	}
+	if cfg.ForwardedFor != "" {
+		if _, err := netip.ParseAddr(cfg.ForwardedFor); err != nil {
+			return nil, core.Fieldf("forwarded_for", "%q is not an address", cfg.ForwardedFor)
+		}
 	}
 	if cfg.Transport == "" {
 		cfg.Transport = TransportPack
@@ -401,6 +412,9 @@ func (r *Receiver) post(ctx context.Context, os []obs, backlog bool) (retry bool
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+r.cfg.BearerKey)
 	req.Header.Set("X-Report-Signature", auth.SignReport(r.cfg.HMACKey, body))
+	if r.cfg.ForwardedFor != "" {
+		req.Header.Set("X-Forwarded-For", r.cfg.ForwardedFor)
+	}
 	r.counters.Inc(CounterBatches)
 	if backlog {
 		r.counters.Inc(CounterBacklogBatches)

@@ -89,7 +89,7 @@ func TestLoadTargetsWrittenLoad(t *testing.T) {
 	dir := t.TempDir()
 	st := emptyState(t)
 	st.Receivers["load-ab-0000"] = &ReceiverCreds{BearerKey: "bearer-secret", HMACHex: strings.Repeat("ab", 32)}
-	sk := &stack{env: map[string]string{"DEMO_HTTPS_PORT": "8443", "AUTHORITY_IMAGE": "a@sha256:1"},
+	sk := &stack{env: map[string]string{"DEMO_HTTPS_PORT": "8443", "AUTHORITY_IMAGE": "a@sha256:1", "DEMO_LOAD_RECEIVER_ADDRESSES": "10.77.0.0/16"},
 		hosts: map[string]string{"AUTHORITY_HOST": "authority.test", "USSP_HOST": "ussp.test"}, st: st}
 	ops := []*USSPOperator{{ClientID: "op-a", ClientSecret: "client-secret-a"}, {ClientID: "op-b", ClientSecret: "client-secret-b"}}
 	o := LoadOptions{Fleet: goodFleet(), TargetsOut: filepath.Join(dir, "targets", "load.yaml"), SecretsDir: filepath.Join(dir, "secrets"),
@@ -105,6 +105,9 @@ func TestLoadTargetsWrittenLoad(t *testing.T) {
 	if tg.Mode != runner.ModeSystems || lt == nil || lt.Tier != "t" || lt.Fleet != "sha256:ab" || len(lt.Clients) != 2 || lt.Clients[1].ClientID != "op-b" ||
 		len(lt.Receivers) != 1 || lt.Receivers[0].ID != "load-ab-0000" {
 		t.Fatalf("targets %+v load %+v", tg, lt)
+	}
+	if lt.ReceiversForwardedFor != "10.77.0.0/16" {
+		t.Fatalf("receivers_forwarded_for %q", lt.ReceiversForwardedFor)
 	}
 	if tg.USSP.BaseURL != "https://ussp.test:8443" || tg.Authority.PictureURL != "wss://authority.test:8443/v1/picture/ws" {
 		t.Fatalf("endpoints %+v %+v", tg.USSP, tg.Authority)

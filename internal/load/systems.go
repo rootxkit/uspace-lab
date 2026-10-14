@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"net/netip"
 	"strings"
 	"sync"
 
@@ -23,6 +24,8 @@ type systemsTarget struct {
 	clients                      []runner.Client
 	secrets                      []string
 	rx                           []rxCred
+	// addresses says how the receivers reach the authority (the report).
+	addresses string
 }
 
 // checkSystemsTargets refuses a systems targets file that cannot drive
@@ -94,6 +97,14 @@ func systemsCreds(tg *runner.Targets, fl *Fleet, tier string) (*systemsTarget, e
 		}
 		st.secrets = append(st.secrets, sec)
 	}
+	addrs, err := receiverAddresses(lt.ReceiversForwardedFor, len(lt.Receivers))
+	if err != nil {
+		return nil, err
+	}
+	st.addresses = "every receiver from the host's one address (no receivers_forwarded_for): the authority's per-address request budget applies to all of them together"
+	if addrs != nil {
+		st.addresses = "each receiver under its own address of " + lt.ReceiversForwardedFor + ", named in X-Forwarded-For, which the lab Caddy and the authority trust from the host only (deploy/systems)"
+	}
 	for i, r := range lt.Receivers {
 		if want := fl.ReceiverID(i); r.ID != want {
 			return nil, fmt.Errorf("load: receiver %d is %q in the targets file, %q in the fleet", i, r.ID, want)
@@ -113,7 +124,11 @@ func systemsCreds(tg *runner.Targets, fl *Fleet, tier string) (*systemsTarget, e
 		if err != nil || len(key) != 32 {
 			return nil, fmt.Errorf("load: receiver %s: the HMAC key file does not hold 32 bytes in hex", r.ID)
 		}
-		st.rx = append(st.rx, rxCred{id: r.ID, bearer: bearer, key: key})
+		c := rxCred{id: r.ID, bearer: bearer, key: key}
+		if addrs != nil {
+			c.addr = addrs[i]
+		}
+		st.rx = append(st.rx, c)
 	}
 	return st, nil
 }
@@ -134,4 +149,27 @@ func (r *run) startSystems(_ context.Context, _ *sync.WaitGroup) error {
 			Audience: s.audience, Scopes: scopes})
 	}
 	return nil
+}
+
+// receiverAddresses is the address i+1 of prefix for each of n
+// receivers, nil when prefix is empty. Only an IPv4 prefix with room
+// for n hosts is taken.
+func receiverAddresses(prefix string, n int) ([]string, error) {
+	if prefix == "" {
+		return nil, nil
+	}
+	p, err := netip.ParsePrefix(prefix)
+	if err != nil || !p.Addr().Is4() {
+		return nil, fmt.Errorf("load: receivers_forwarded_for %q is not an IPv4 prefix", prefix)
+	}
+	if hosts := 1<<(32-p.Bits()) - 2; n > hosts {
+		return nil, fmt.Errorf("load: receivers_forwarded_for %s has room for %d receivers, the fleet has %d", prefix, hosts, n)
+	}
+	out := make([]string, n)
+	a := p.Masked().Addr()
+	for i := range n {
+		a = a.Next()
+		out[i] = a.String()
+	}
+	return out, nil
 }

@@ -141,8 +141,12 @@ func Run(ctx context.Context, opt Options) (*Report, error) {
 		}
 		evidence = "The systems' images as the targets file names them, seeded for this fleet (loadgen seed); evidence for the images and digests listed, on the host named, when the run passes (docs/PLAN.md L-D4)."
 	}
+	receivers := ""
+	if r.systems != nil {
+		receivers = r.systems.addresses
+	}
 	rep := &Report{Format: ReportFormat, Run: opt.Run, StartedAt: time.Now().UTC(), Tier: &tier, Scaled: len(tier.Scale) > 0,
-		Target: TargetInfo{Mode: tg.Mode, Name: tg.Name, Images: tg.Images, Evidence: evidence},
+		Target: TargetInfo{Mode: tg.Mode, Name: tg.Name, Images: tg.Images, Evidence: evidence, Receivers: receivers},
 		Host:   hostInfo(opt.HostName), Commits: report.LabCommits(opt.RepoRoot), Files: files.Digests, Policy: files.Policy,
 		Lab: LabInfo{File: lab.Path, OriginLat: lab.Origin.LatDeg, OriginLon: lab.Origin.LonDeg, OriginAMSL: lab.Origin.AltAMSLM, Geoid: geoDesc}}
 	r.execute(ctx, rep)
@@ -191,6 +195,9 @@ type run struct {
 type rxCred struct {
 	id, bearer string
 	key        []byte
+	// addr is the address the receiver names in X-Forwarded-For ("" for
+	// none).
+	addr string
 }
 
 func (r *run) fail(format string, a ...any) {
@@ -500,7 +507,7 @@ func (r *run) startClients(ctx context.Context, wg *sync.WaitGroup) error {
 		}
 		c := r.rxCreds[i]
 		rx, err := simrx.New(simrx.Config{BaseURL: r.authBase, ReceiverID: c.id, BearerKey: c.bearer, HMACKey: c.key,
-			Transport: t.Receivers.Transports[i%len(t.Receivers.Transports)], Geoid: r.geo, Seed: uint64(i) + 1,
+			Transport: t.Receivers.Transports[i%len(t.Receivers.Transports)], Geoid: r.geo, Seed: uint64(i) + 1, ForwardedFor: c.addr,
 			// Every sample is a Location (the generator's period is the
 			// broadcast rate); statics every 3 s as F3411 asks.
 			LocationPeriod: time.Millisecond, BatchPeriod: time.Duration(t.Receivers.BatchMS) * time.Millisecond, Transmitters: txs})

@@ -71,6 +71,9 @@ type TargetInfo struct {
 	Name     string            `json:"name"`
 	Evidence string            `json:"evidence"`
 	Images   map[string]string `json:"images,omitempty"`
+	// Receivers says from which addresses the receivers reached the
+	// target (systems mode).
+	Receivers string `json:"receivers,omitempty"`
 }
 
 // Host is the machine the run used (L-Q1: numbers are comparable only
@@ -391,6 +394,9 @@ func (r *Report) Markdown() string {
 		w(" (05 §7 is not fully observed by this run).\n\n")
 	}
 	w("- Target: %s (%s). %s\n", r.Target.Name, r.Target.Mode, r.Target.Evidence)
+	if r.Target.Receivers != "" {
+		w("- Receivers: %s.\n", r.Target.Receivers)
+	}
 	for _, k := range sortedKeys(r.Target.Images) {
 		w("- Image %s: `%s`\n", k, r.Target.Images[k])
 	}

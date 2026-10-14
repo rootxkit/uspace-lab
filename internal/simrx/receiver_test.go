@@ -137,9 +137,16 @@ type capture struct {
 	mu      sync.Mutex
 	batches []Batch
 	status  int
+	xff     map[string]int // X-Forwarded-For values seen ("" for none)
 }
 
 func (c *capture) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	c.mu.Lock()
+	if c.xff == nil {
+		c.xff = map[string]int{}
+	}
+	c.xff[r.Header.Get("X-Forwarded-For")]++
+	c.mu.Unlock()
 	body, _ := io.ReadAll(r.Body)
 	m := hmac.New(sha256.New, hmacKey)
 	m.Write(body)
@@ -338,5 +345,36 @@ func TestDropKnobAndSerialChange(t *testing.T) {
 	defer r.mu.Unlock()
 	if r.tx[1][0].Serial != "LABSER0002" {
 		t.Fatal("serial not changed")
+	}
+}
+
+// A receiver given an address names it in X-Forwarded-For on every
+// batch: the load harness's receivers all run on one host, and the lab
+// stack judges each under its own address (deploy/systems: the lab
+// Caddy trusts the header from the host only). Without one, no header
+// is sent (the absence half).
+func TestForwardedForNamesTheReceiversAddress(t *testing.T) {
+	for _, addr := range []string{"10.77.0.5", ""} {
+		c := &capture{}
+		srv := httptest.NewServer(c)
+		r := newRx(t, srv.URL, TransportPack, func(cfg *Config) { cfg.ForwardedFor = addr })
+		ctx, cancel := context.WithCancel(context.Background())
+		ch := make(chan vehicle.Sample)
+		go func() { _ = r.Run(ctx, ch) }()
+		feed(ctx, ch, 8)
+		dctx, dcancel := context.WithTimeout(ctx, 5*time.Second)
+		l := r.Drain(dctx)
+		dcancel()
+		cancel()
+		srv.Close()
+		c.mu.Lock()
+		if !l.Balanced || l.Accepted == 0 || len(c.xff) != 1 || c.xff[addr] == 0 {
+			t.Errorf("address %q: ledger %+v, headers %v", addr, l, c.xff)
+		}
+		c.mu.Unlock()
+	}
+	if _, err := New(Config{BaseURL: "http://x", ReceiverID: "r", BearerKey: "k", HMACKey: hmacKey, Transport: TransportPack,
+		Geoid: geoidx.Constant(15.9), ForwardedFor: "not-an-address", Transmitters: []Transmitter{{Sysid: 1, MAC: "02:00:00:00:00:01", Serial: "S"}}}); err == nil {
+		t.Error("a forwarded-for that is not an address was taken")
 	}
 }

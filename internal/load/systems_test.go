@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/rootxkit/uspace-lab/internal/geoidx"
+	"github.com/rootxkit/uspace-lab/internal/runner"
 	"github.com/rootxkit/uspace-lab/internal/scenario"
 	"github.com/rootxkit/uspace-lab/internal/wire"
 )
@@ -252,4 +253,69 @@ func TestAnUnidentifiedTrackIsTiedOnceIdentified(t *testing.T) {
 	if c := rd.picture.Counts(); c.Untraceable != 2 {
 		t.Fatalf("past the bound: %+v", c)
 	}
+}
+
+// receivers_forwarded_for gives receiver i the address i+1 of the
+// prefix, which it names in X-Forwarded-For, and the report says so; a
+// prefix that is not an IPv4 one, or too small for the receivers, is
+// refused before anything is sent. Without it the receivers share the
+// host's address, and the report says that instead.
+func TestReceiversGetTheirOwnAddresses(t *testing.T) {
+	f := loadSmall(t)
+	f.Paths.Pairs.InnerGapM = 30
+	lab, err := scenario.LoadLab(repo("sim/sitl.env.example"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	fl, err := NewFleet(f, lab.Origin, geoidx.Constant(15.9))
+	if err != nil {
+		t.Fatal(err)
+	}
+	base, n := counting(t)
+	with := func(prefix string) func(string) string {
+		return func(s string) string {
+			return strings.Replace(s, "  receivers:\n", "  receivers_forwarded_for: "+prefix+"\n  receivers:\n", 1)
+		}
+	}
+	p := systemsTargets(t, f, base, with("10.77.0.0/16"))
+	tg, err := runner.LoadTargets(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st, err := systemsCreds(tg, fl, f.Tier.Tier)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := map[string]bool{}
+	for i, c := range st.rx {
+		if want := fmt.Sprintf("10.77.0.%d", i+1); c.addr != want {
+			t.Fatalf("receiver %d at %q, want %s", i, c.addr, want)
+		}
+		seen[c.addr] = true
+	}
+	if len(seen) != len(fl.Receivers) || !strings.Contains(st.addresses, "10.77.0.0/16") {
+		t.Fatalf("addresses %v, note %q", seen, st.addresses)
+	}
+	none, err := systemsCreds(mustTargets(t, systemsTargets(t, f, base, nil)), fl, f.Tier.Tier)
+	if err != nil || none.rx[0].addr != "" || !strings.Contains(none.addresses, "one address") {
+		t.Fatalf("without a prefix: %v %+v %q", err, none.rx, none.addresses)
+	}
+	for _, bad := range []string{"10.77.0.0/31", "fd00::/64", "not-a-prefix"} {
+		_, err := Run(context.Background(), Options{Files: f, TargetsPath: systemsTargets(t, f, base, with(bad)), Run: "x", RepoRoot: repo(".")})
+		if err == nil || !strings.Contains(err.Error(), "receivers_forwarded_for") {
+			t.Errorf("prefix %s: %v", bad, err)
+		}
+	}
+	if n.Load() != 0 {
+		t.Fatalf("%d requests", n.Load())
+	}
+}
+
+func mustTargets(t *testing.T, p string) *runner.Targets {
+	t.Helper()
+	tg, err := runner.LoadTargets(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return tg
 }

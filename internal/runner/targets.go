@@ -50,10 +50,15 @@ type Targets struct {
 // harness recomputes and compares before anything starts), the operator
 // clients in client order and the receivers in receiver order.
 type LoadTarget struct {
-	Tier      string         `yaml:"tier"`
-	Fleet     string         `yaml:"fleet"`
-	Clients   []Client       `yaml:"clients"`
-	Receivers []LoadReceiver `yaml:"receivers"`
+	Tier    string   `yaml:"tier"`
+	Fleet   string   `yaml:"fleet"`
+	Clients []Client `yaml:"clients"`
+	// ReceiversForwardedFor, when set, is an IPv4 prefix: receiver i
+	// names the address i+1 of it in X-Forwarded-For, which the lab
+	// stack trusts from the host only (deploy/systems), so each receiver
+	// is judged under its own address as a real one is.
+	ReceiversForwardedFor string         `yaml:"receivers_forwarded_for"`
+	Receivers             []LoadReceiver `yaml:"receivers"`
 }
 
 // LoadReceiver is one registered receiver of a load fleet.
