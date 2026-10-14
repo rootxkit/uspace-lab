@@ -25,7 +25,7 @@ type MetricDef struct {
 const (
 	niF3411   = "the reference target has no F3411 SP; a systems run polls the USSP's as a display provider (the tier's dp and the targets file's f3411_dp client)"
 	niDP      = "the reference target has no display provider; a systems run times the authority's with the peer USSP (the tier's peer)"
-	niDPCache = "the DP cache's 24 h bound needs a run of more than 24 h with the authority's DP polling"
+	niDPCache = "the reference target has no display provider cache; a systems run reads the authority's (probes, dp_cache)"
 	niF3548   = "the reference target has no DSS and no peer; a systems run times F3548 notifications and details at the peer USSP (the tier's peer)"
 	niMetrics = "read from the systems' /metrics by name (a systems run with probes); the reference target has none"
 	niChaos   = "faults are injected into the systems' containers (loadgen run --faults with a systems target); the reference target has none"
@@ -62,7 +62,7 @@ var Metrics = map[string]MetricDef{
 	"f3411_sp_flights_s":          {Kind: KindLatency, Unit: "s", Doc: "the USSP's SP answering GET /uss/flights for a DP view (the lab as the display provider, one poll per view per dp.poll_ms), request to the answer read; only answers that returned flights make it measured"},
 	"f3411_dp_display_s":          {Kind: KindLatency, Unit: "s", Doc: "the peer USSP's first answer to the authority's display provider holding a position (the SP response) -> the authority picture's frame that first shows it on the timed console (network_rid, tied by time and place)"},
 	"f3411_details_s":             {Kind: KindLatency, Unit: "s", Doc: "the USSP's SP answering GET /uss/flights/{id}/details for a flight a view returned (one per poll, round robin)"},
-	"f3411_dp_cache_over_24h":     {Kind: KindValue, Doc: "DP cache entries older than 24 h", NotImplemented: niDPCache},
+	"f3411_dp_cache_over_24h":     {Kind: KindValue, Doc: "the authority's display provider cache entries (ussp_flights) older than 24 h after the run, judged once it has cached for 25 h (its first network track)"},
 	"f3548_intent_change_s":       {Kind: KindLatency, Unit: "s", Doc: "the lab's request that filed, activated or ended an intent inside the U-space square -> the USSP's notification of that change arriving at the peer (its subscription)"},
 	"f3548_notifications_missing": {Kind: KindValue, Doc: "changes of the fleet's intents inside the U-space square (filed, activated, ended) of which the peer was not notified within 15 s of the run's end"},
 	"f3548_conflict_notify_s":     {Kind: KindLatency, Unit: "s", Doc: "conflicting-intent notification to the other USS"},

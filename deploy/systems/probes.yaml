@@ -31,6 +31,9 @@ metrics:
   ansp-manned-feed: http://ansp-manned-feed:8080/metrics
 # The telemetry databases, read with psql in their own container (the
 # postgres superuser over the local socket; no password leaves it).
+# dp_cache: the authority's display provider caches what it polled in
+# ussp_flights there, disposed of within 24 h (F3411
+# NetDpMaxDataRetentionPeriodSeconds; 05 §4).
 databases:
   - {system: ussp, service: ussp-timescaledb, database: ussp_timeseries}
-  - {system: authority, service: authority-postgres, database: authority_ts}
+  - {system: authority, service: authority-postgres, database: authority_ts, dp_cache: true}

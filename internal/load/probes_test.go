@@ -62,6 +62,16 @@ func probeHelper(args []string) int {
 			fmt.Println("0")
 			return 0
 		}
+		// The display provider's cache: how long it has cached, and what
+		// is older than 24 h, as the test sets them.
+		if strings.Contains(stmt, "network_rid") {
+			fmt.Println(os.Getenv("LOAD_PROBE_DP_SINCE"))
+			return 0
+		}
+		if strings.Contains(stmt, "ussp_flights") {
+			fmt.Println(os.Getenv("LOAD_PROBE_DP_OVER"))
+			return 0
+		}
 		f := filepath.Join(dir, "size-"+system)
 		n := 0
 		if b, err := os.ReadFile(f); err == nil {
@@ -244,5 +254,48 @@ func TestCountersSurviveARestart(t *testing.T) {
 	}
 	if len(sys.Counters) != 1 || sys.Counters[0].Delta != 95 {
 		t.Fatalf("counters %+v", sys.Counters)
+	}
+}
+
+// The display provider's 24 h bound is judged only on a cache older than
+// the bound and the hour its disposal is checked in: a younger one cannot
+// hold anything older than 24 h, so its 0 is not measured. On an old
+// enough cache an entry past 24 h is counted (and fails the check), none
+// passes; a run whose probes name no cache does not measure the row.
+func TestDPCacheIsJudgedOnlyWhenOldEnough(t *testing.T) {
+	ctx := context.Background()
+	for _, c := range []struct {
+		name, since, over string
+		measured          bool
+		value             float64
+	}{
+		{"young", "3600", "0", false, 0},
+		{"old, one entry past 24 h", "95000", "1", true, 1},
+		{"old, none past", "95000", "0", true, 0},
+	} {
+		cfg := helperProbes(t)
+		cfg.Databases[0].DPCache = true
+		t.Setenv("LOAD_PROBE_DP_SINCE", c.since)
+		t.Setenv("LOAD_PROBE_DP_OVER", c.over)
+		p := newProbes(cfg)
+		p.sizes(ctx, false)
+		p.sizes(ctx, true)
+		obs := map[string]Observation{}
+		sys := p.observe(obs, Models{TrackBytes: 600, CPAPairsPerCorePerS: 50000}, 1000, 0, nil)
+		o := obs["f3411_dp_cache_over_24h"]
+		if o.Measured != c.measured || (c.measured && *o.Value != c.value) || sys.DPCache == nil {
+			t.Errorf("%s: %+v (cache %+v)", c.name, o, sys.DPCache)
+		}
+		if !c.measured && !strings.Contains(o.Reason, "has cached for 1.0 h") {
+			t.Errorf("%s: reason %q", c.name, o.Reason)
+		}
+	}
+	p := newProbes(helperProbes(t))
+	p.sizes(ctx, false)
+	p.sizes(ctx, true)
+	obs := map[string]Observation{}
+	p.observe(obs, Models{TrackBytes: 600, CPAPairsPerCorePerS: 50000}, 1000, 0, nil)
+	if obs["f3411_dp_cache_over_24h"].Measured || !strings.Contains(obs["f3411_dp_cache_over_24h"].Reason, "dp_cache") {
+		t.Errorf("no cache named: %+v", obs["f3411_dp_cache_over_24h"])
 	}
 }

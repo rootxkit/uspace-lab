@@ -1133,7 +1133,7 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 	}
 	// What the probes read of the systems. In a systems run the memory
 	// row is the systems' processes, never the harness's own heap.
-	probed := []string{"cpa_pair_checks_per_worker", "writer_queue_max_s", "compression_lag_chunks", "disk_growth_vs_model"}
+	probed := []string{"cpa_pair_checks_per_worker", "writer_queue_max_s", "compression_lag_chunks", "disk_growth_vs_model", "f3411_dp_cache_over_24h"}
 	switch {
 	case r.probes != nil:
 		fleetSamples := uint64(0)
@@ -1154,6 +1154,7 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 			obs[m] = notMeasured(niMetrics)
 		}
 		obs["writer_queue_max_s"], obs["compression_lag_chunks"], obs["disk_growth_vs_model"] = notMeasured(niStorage), notMeasured(niStorage), notMeasured(niStorage)
+		obs["f3411_dp_cache_over_24h"] = notMeasured(niDPCache)
 	}
 	// A sample handed out more than a period after its slot: the host
 	// stalled or the generator is saturated, and the offered load was

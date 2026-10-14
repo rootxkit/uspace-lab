@@ -144,7 +144,8 @@ func TestLoadTargetsWrittenLoad(t *testing.T) {
 		t.Fatalf("targets %+v load %+v", tg, lt)
 	}
 	if p := lt.Probes; p == nil || strings.Join(p.Fetch, " ") != "docker exec lab-x-caddy-1 wget -qO-" || p.Metrics["ussp-monitor"] != "http://ussp-monitor:8083/metrics" ||
-		len(p.Databases) != 2 || strings.Join(p.Databases[0].Query, " ") != "docker exec lab-x-ussp-timescaledb-1 psql -U postgres -d ussp_timeseries -tAc" || p.Databases[1].System != "authority" {
+		len(p.Databases) != 2 || strings.Join(p.Databases[0].Query, " ") != "docker exec lab-x-ussp-timescaledb-1 psql -U postgres -d ussp_timeseries -tAc" || p.Databases[1].System != "authority" ||
+		!p.Databases[1].DPCache || p.Databases[0].DPCache {
 		t.Fatalf("probes %+v", lt.Probes)
 	}
 	if d := lt.F3411DP; d == nil || d.TokenURL != "https://lab.test:8443/oauth/token" || d.ClientID != "lab-01" || d.Audience != "ussp.test" || d.Scopes[0] != "rid.display_provider" {

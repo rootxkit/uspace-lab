@@ -116,6 +116,9 @@ type LoadProbes struct {
 type LoadDatabase struct {
 	System string   `yaml:"system"`
 	Query  []string `yaml:"query"`
+	// DPCache says the database holds the display provider's cache
+	// (ussp_flights) and its network tracks: the 24 h bound is read there.
+	DPCache bool `yaml:"dp_cache,omitempty"`
 }
 
 // LoadReceiver is one registered receiver of a load fleet.

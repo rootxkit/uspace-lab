@@ -577,6 +577,9 @@ func (r *Report) systemsMarkdown(w func(format string, a ...any)) {
 	if sys.ErrorsN > 0 {
 		w("\nProbe errors: %d (the first %d are among the run's errors).\n", sys.ErrorsN, len(sys.Errors))
 	}
+	if d := sys.DPCache; d != nil {
+		w("\nThe display provider's cache (%s): caching for %.1f h, %s entries older than 24 h.\n", d.System, d.SinceS/3600, fmtNum(d.Over))
+	}
 	if sys.ErrorsDuringFaults > 0 {
 		w("\nProbes that failed inside a fault the run injected: %d.\n", sys.ErrorsDuringFaults)
 	}

@@ -130,7 +130,30 @@ type probes struct {
 	sizes0  map[string]float64
 	sizes1  map[string]float64
 	lag     map[string]float64
+	// dp is the display provider's cache as read after the run (nil:
+	// not read).
+	dp *DPCache
 }
+
+// DPCache is the display provider's cache as read after a run: how long
+// the display provider has been caching (its first network track) and
+// how many cached entries are older than F3411's 24 h.
+type DPCache struct {
+	System string  `json:"system"`
+	SinceS float64 `json:"caching_for_s"`
+	Over   float64 `json:"entries_over_24h"`
+}
+
+// Queries of the display provider's cache (uspace-authority's
+// ussp_flights and tracks hypertables at the image under test).
+const (
+	sqlDPOver  = "SELECT count(*) FROM ussp_flights WHERE rx_ts < now() - interval '24 hours'"
+	sqlDPSince = "SELECT coalesce(extract(epoch FROM now() - min(rx_ts)), 0) FROM tracks WHERE source = 'network_rid'"
+	// dpCacheJudgedAfterS is how long the display provider must have
+	// cached before the 24 h bound can be judged: a day, and the hour
+	// the authority checks its disposal in.
+	dpCacheJudgedAfterS = 25 * 3600
+)
 
 func newProbes(cfg *runner.LoadProbes) *probes {
 	return &probes{cfg: cfg, rss: map[string][]uint64{}, prev: map[string]map[string]float64{}, rise: map[string]map[string]float64{},
@@ -274,7 +297,27 @@ func (p *probes) sizes(ctx context.Context, after bool) {
 		p.mu.Lock()
 		p.lag[db.System] = lag
 		p.mu.Unlock()
+		if db.DPCache {
+			p.dpCache(ctx, db)
+		}
 	}
+}
+
+// dpCache reads the display provider's cache of db.
+func (p *probes) dpCache(ctx context.Context, db runner.LoadDatabase) {
+	since, err := p.query(ctx, db, sqlDPSince)
+	if err != nil {
+		p.fail("display provider cache age in %s: %v", db.System, err)
+		return
+	}
+	over, err := p.query(ctx, db, sqlDPOver)
+	if err != nil {
+		p.fail("display provider cache in %s: %v", db.System, err)
+		return
+	}
+	p.mu.Lock()
+	p.dp = &DPCache{System: db.System, SinceS: math.Round(since), Over: over}
+	p.mu.Unlock()
 }
 
 // SystemCounter is one loss counter of a system that moved in the run.
@@ -321,6 +364,8 @@ type Systems struct {
 	// ErrorsDuringFaults are the probes that failed inside a fault the
 	// run injected.
 	ErrorsDuringFaults int `json:"errors_during_faults,omitempty"`
+	// DPCache is the display provider's cache after the run.
+	DPCache *DPCache `json:"dp_cache,omitempty"`
 }
 
 // observe turns what the probes read into observations: memory, the
@@ -456,6 +501,26 @@ func (p *probes) observe(obs map[string]Observation, models Models, fleetSamples
 		obs["compression_lag_chunks"] = valueObs(lag)
 	} else {
 		obs["compression_lag_chunks"] = notMeasured(fmt.Sprintf("the compression lag of %d of %d databases was read", lagMeasured, len(p.cfg.Databases)))
+	}
+	// The display provider's cache: judged only once it has cached for
+	// longer than the bound (and the hour disposal is checked in); a
+	// younger cache cannot hold anything older than 24 h, so a 0 there
+	// would prove nothing.
+	sys.DPCache = p.dp
+	named := false
+	for _, db := range p.cfg.Databases {
+		named = named || db.DPCache
+	}
+	switch {
+	case !named:
+		obs["f3411_dp_cache_over_24h"] = notMeasured("no probed database holds the display provider's cache (deploy/systems/probes.yaml dp_cache)")
+	case p.dp == nil:
+		obs["f3411_dp_cache_over_24h"] = notMeasured("the display provider's cache could not be read (the probes' errors say why)")
+	case p.dp.SinceS < dpCacheJudgedAfterS:
+		obs["f3411_dp_cache_over_24h"] = notMeasured(fmt.Sprintf("the authority's display provider has cached for %.1f h (its first network track); the 24 h bound is judged once it has cached for %d h (a day, and the hour disposal is checked in)",
+			p.dp.SinceS/3600, dpCacheJudgedAfterS/3600))
+	default:
+		obs["f3411_dp_cache_over_24h"] = valueObs(p.dp.Over)
 	}
 	return sys
 }
