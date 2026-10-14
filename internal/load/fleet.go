@@ -28,13 +28,18 @@ type Aircraft struct {
 	// Sysid is the in-process vehicle number the bridges key on (it is
 	// never written as a sim/vehicle/v1 line, so 05 §1's 5000 aircraft
 	// are not held to MAVLink's 1..254).
-	Sysid    int     `json:"-"`
-	Pair     int     `json:"pair,omitempty"`
-	Side     float64 `json:"-"`
-	AltRelM  float64 `json:"alt_rel_m"`
-	Client   int     `json:"client"`
-	Receiver int     `json:"receiver"` // -1: not heard
-	Watched  bool    `json:"watched"`
+	Sysid   int     `json:"-"`
+	Pair    int     `json:"pair,omitempty"`
+	Side    float64 `json:"-"`
+	AltRelM float64 `json:"alt_rel_m"`
+	Client  int     `json:"client"`
+	// OperatorReg is the registration number of the aircraft's client
+	// (ClientRegistration): the operator a systems run registers and
+	// binds the aircraft under, and the one its intent and its Remote ID
+	// Operator ID name.
+	OperatorReg string `json:"operator_reg"`
+	Receiver    int    `json:"receiver"` // -1: not heard
+	Watched     bool   `json:"watched"`
 
 	centre scenario.Offset
 	// walker state, advanced one nominal period per sample
@@ -90,8 +95,9 @@ func NewFleet(f *Files, origin vehicle.Home, geo geoid.Undulator) (*Fleet, error
 	cols, _ := gridOf(walkers)
 	tile := p.Walkers.LayerTile
 	for i := range n {
-		a := &Aircraft{Index: i, Name: fmt.Sprintf("ac-%05d", i), Serial: fmt.Sprintf("LAB-LOAD-%05d", i), MAC: macOfIndex(i),
+		a := &Aircraft{Index: i, Name: fmt.Sprintf("ac-%05d", i), Serial: AircraftSerial(i, t.Operators.Clients), MAC: macOfIndex(i),
 			Sysid: i + 1, Client: i % t.Operators.Clients, Receiver: -1}
+		a.OperatorReg = ClientRegistration(a.Client, t.Operators.Clients)
 		if i < 2*pairs {
 			a.Role, a.Pair, a.Watched = RolePair, i/2, true
 			a.Side = 1
@@ -134,6 +140,24 @@ func NewFleet(f *Files, origin vehicle.Home, geo geoid.Undulator) (*Fleet, error
 	fl.bbox()
 	return fl, nil
 }
+
+// AircraftSerial is aircraft i's serial in a fleet of clients operator
+// clients: an ANSI/CTA-2063-A serial (manufacturer code LABX, length C,
+// then L, the client count, N and the aircraft's number), because the
+// systems register and bind only such serials (uspace-core serial).
+// The client count is in it because aircraft i flies for client
+// i mod clients: a fleet with another client count binds its aircraft
+// to other clients, and the USSP refuses a serial bound to another
+// client, so the two fleets must not share serials. Distinct for every
+// i below a million and clients up to 9999, above maxAircraft and
+// maxClients.
+func AircraftSerial(i, clients int) string { return fmt.Sprintf("LABXCL%04dN%06d", clients, i) }
+
+// ClientRegistration is operator client c's registration number in a
+// fleet of clients clients: the default EU shape uspace-core regnum
+// validates (three letters, then 8 to 16 letters and digits), distinct
+// per client and per client count (AircraftSerial says why).
+func ClientRegistration(c, clients int) string { return fmt.Sprintf("GEOLOAD%04d%04d", clients, c+1) }
 
 // macOfIndex is a locally administered unicast address per aircraft.
 func macOfIndex(i int) string {

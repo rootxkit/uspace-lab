@@ -24,6 +24,7 @@ import (
 
 	"github.com/rootxkit/uspace-core/core"
 	"github.com/rootxkit/uspace-core/geoid"
+	"github.com/rootxkit/uspace-core/regnum"
 
 	"github.com/rootxkit/uspace-lab/conformance/report"
 	"github.com/rootxkit/uspace-lab/internal/geoidx"
@@ -339,7 +340,7 @@ func (r *run) intentRequest(a *Aircraft, start, end time.Time) (simop.IntentRequ
 	return simop.IntentRequest{
 		ClientRef: ref, UASSerial: a.Serial, Mode: "VLOS", FlightType: "normal", Category: "open", Volumes: []simop.Volume4D{vol},
 		IdentificationTechnology: "network", ConnectivityMethods: []string{"lte"}, EnduranceS: int(end.Sub(start).Seconds()) + 600,
-		LossOfC2Procedure: "return to the take-off point and land", OperatorReg: "LAB-LOAD-OPERATOR",
+		LossOfC2Procedure: "return to the take-off point and land", OperatorReg: a.OperatorReg,
 		Takeoff:     &simop.Point{Lat: c.LatDeg, Lng: c.LonDeg},
 		Contingency: simop.IntentContingency{Procedure: "land at the take-off point"}, EmergencyContactRef: "lab-load",
 	}, nil
@@ -430,7 +431,7 @@ func (r *run) startClients(ctx context.Context, wg *sync.WaitGroup) error {
 		var txs []simrx.Transmitter
 		for _, ai := range idx {
 			a := r.fleet.Aircraft[ai]
-			txs = append(txs, simrx.Transmitter{Sysid: a.Sysid, MAC: a.MAC, Serial: a.Serial, OperatorID: "LAB-LOAD-OPERATOR"})
+			txs = append(txs, simrx.Transmitter{Sysid: a.Sysid, MAC: a.MAC, Serial: a.Serial, OperatorID: regnum.PublicPart(a.OperatorReg)})
 		}
 		c := r.rxCreds[i]
 		rx, err := simrx.New(simrx.Config{BaseURL: r.base, ReceiverID: c.id, BearerKey: c.bearer, HMACKey: c.key,
