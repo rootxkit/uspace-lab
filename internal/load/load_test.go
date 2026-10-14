@@ -324,16 +324,6 @@ func TestRunThatMeasuresNothingFails(t *testing.T) {
 	}
 }
 
-// Only the reference target is driven: a systems targets file is
-// refused before anything starts.
-func TestSystemsModeRefused(t *testing.T) {
-	f := loadSmall(t)
-	_, err := Run(context.Background(), Options{Files: f, TargetsPath: repo("targets/systems.example.yaml"), Run: "x"})
-	if err == nil || !strings.Contains(err.Error(), "only the reference target") {
-		t.Fatalf("%v", err)
-	}
-}
-
 // The judgement both ways: a due raise and its clear seen pass; a due
 // raise not seen is missed and a due clear not seen is missed; a raise
 // for a crossing the run ended inside is taken, not a false alarm, and

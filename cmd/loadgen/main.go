@@ -31,6 +31,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -104,8 +105,19 @@ func runTier(args []string) int {
 	duration := fs.Float64("duration-s", 0, "override the tier's duration (recorded as a scale factor)")
 	host := fs.String("host", "", "name the host and its size, recorded in the report (L-Q1)")
 	heap := fs.String("heap-profile", "", "write a heap profile at the end of the drain (pprof)")
+	labEnv := fs.String("lab-env", "", "a systems run of the demo stack: deploy/demo.env, whose hosts are dialled at 127.0.0.1 with its lab CA")
 	if err := fs.Parse(args); err != nil {
 		return 2
+	}
+	if *labEnv != "" {
+		// The simulators and the stream readers use the default client,
+		// as the scenario runner's do under the chaos harness.
+		tr, err := seed.LabTransport(*labEnv, 256)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "loadgen:", err)
+			return 2
+		}
+		http.DefaultTransport = tr
 	}
 	if *tier == "" || fs.NArg() > 0 {
 		fmt.Fprintln(os.Stderr, "loadgen run: --tier is required and takes no other argument")

@@ -251,6 +251,10 @@ func (rd *readers) handle(s *stream, b []byte, at time.Time, alert func([]byte, 
 
 const trafficProduct = "traffic/product/v1"
 
+// sourceDirectRID is the track source of what a receiver heard
+// (schemas/common/envelope/v1 $defs.source).
+const sourceDirectRID = "direct_rid"
+
 func (rd *readers) status(s *stream, e wire.Envelope, at time.Time) {
 	var b struct {
 		DroppedFrames uint64   `json:"dropped_frames"`
@@ -282,6 +286,7 @@ func (rd *readers) status(s *stream, e wire.Envelope, at time.Time) {
 func (rd *readers) track(e wire.Envelope, at time.Time) {
 	var b struct {
 		TrackID        string `json:"track_id"`
+		Source         string `json:"source"`
 		Identification struct {
 			Serial *string `json:"serial"`
 		} `json:"identification"`
@@ -289,6 +294,12 @@ func (rd *readers) track(e wire.Envelope, at time.Time) {
 	captured, err := wire.ParseTime(e.CapturedAt)
 	if json.Unmarshal(e.Body, &b) != nil || err != nil {
 		rd.picture.untraceableFrame()
+		return
+	}
+	if b.Source != sourceDirectRID {
+		// The authority's picture also shows what its DP poller reads
+		// from the USSPs (network_rid) and the manned feeds; only what
+		// a receiver heard is on this ledger.
 		return
 	}
 	var a *Aircraft

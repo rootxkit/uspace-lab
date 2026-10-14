@@ -12,6 +12,7 @@ import (
 	"math"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -77,12 +78,12 @@ func Prepare(opt *Options) (*runner.Targets, *scenario.Lab, geoid.Undulator, str
 	if err != nil {
 		return nil, nil, nil, "", err
 	}
-	if tg.Mode != runner.ModeReference {
+	if tg.Mode == runner.ModeSystems {
 		// Fail closed rather than load a system with a fleet it has not
-		// registered: the systems mode needs the tier's serials bound at
-		// the USSP and its receivers registered at the authority first.
-		return nil, nil, nil, "", fmt.Errorf("load: targets mode %q: only the reference target is driven yet; a systems run needs the tier's %d serials bound at the USSP and its receivers registered at the authority first (docs/RUNBOOKS/load.md)",
-			tg.Mode, opt.Files.Tier.Operators.Aircraft)
+		// registered: the fleet itself is compared in Run, once laid out.
+		if err := checkSystemsTargets(tg, opt.Files.Tier); err != nil {
+			return nil, nil, nil, "", err
+		}
 	}
 	labPath := tg.Lab
 	if labPath != "" && !filepath.IsAbs(labPath) {
@@ -131,10 +132,18 @@ func Run(ctx context.Context, opt Options) (*Report, error) {
 	}
 	r := &run{opt: opt, files: &runFiles, tier: &tier, fleet: fl, geo: geo, log: opt.Log,
 		picture: NewLedger(), traffic: NewReceiptLedger(), rec: observe.NewRecorder(nil)}
+	evidence := "The lab's in-process reference target (internal/reftarget): it proves the harness and is never evidence for a system (docs/PLAN.md L-D4); generator and target share this host's CPUs."
+	if tg.Mode == runner.ModeSystems {
+		// Every credential is read and the fleet compared with the one
+		// the systems were seeded for before anything is sent.
+		if r.systems, err = systemsCreds(tg, fl, files.Tier.Tier); err != nil {
+			return nil, err
+		}
+		evidence = "The systems' images as the targets file names them, seeded for this fleet (loadgen seed); evidence for the images and digests listed, on the host named, when the run passes (docs/PLAN.md L-D4)."
+	}
 	rep := &Report{Format: ReportFormat, Run: opt.Run, StartedAt: time.Now().UTC(), Tier: &tier, Scaled: len(tier.Scale) > 0,
-		Target: TargetInfo{Mode: tg.Mode, Name: tg.Name, Images: tg.Images,
-			Evidence: "The lab's in-process reference target (internal/reftarget): it proves the harness and is never evidence for a system (docs/PLAN.md L-D4); generator and target share this host's CPUs."},
-		Host: hostInfo(opt.HostName), Commits: report.LabCommits(opt.RepoRoot), Files: files.Digests, Policy: files.Policy,
+		Target: TargetInfo{Mode: tg.Mode, Name: tg.Name, Images: tg.Images, Evidence: evidence},
+		Host:   hostInfo(opt.HostName), Commits: report.LabCommits(opt.RepoRoot), Files: files.Digests, Policy: files.Policy,
 		Lab: LabInfo{File: lab.Path, OriginLat: lab.Origin.LatDeg, OriginLon: lab.Origin.LonDeg, OriginAMSL: lab.Origin.AltAMSLM, Geoid: geoDesc}}
 	r.execute(ctx, rep)
 	rep.EndedAt = time.Now().UTC()
@@ -153,25 +162,30 @@ type run struct {
 	traffic *Ledger
 	rec     *observe.Recorder
 
-	base      string
-	target    *reftarget.Target
-	tokens    []*oauth.ClientCredentials
-	console   string
-	rxCreds   []rxCred
-	intents   map[int]string
-	operators []*simop.Client
-	opIn      []chan vehicle.Sample
-	receivers []*simrx.Receiver
-	rxIn      []chan vehicle.Sample
-	streams   []*stream
-	readers   *readers
-	errs      []string
-	errMu     sync.Mutex
-	shedOp    uint64
-	shedRID   uint64
-	late      uint64
-	handedK   []int64
-	memory    []uint64
+	// usspBase and authBase are where the operators and the receivers
+	// send; pictureURL and pictureHeader open a console.
+	usspBase      string
+	authBase      string
+	pictureURL    string
+	pictureHeader http.Header
+	target        *reftarget.Target
+	systems       *systemsTarget
+	tokens        []*oauth.ClientCredentials
+	rxCreds       []rxCred
+	intents       map[int]string
+	operators     []*simop.Client
+	opIn          []chan vehicle.Sample
+	receivers     []*simrx.Receiver
+	rxIn          []chan vehicle.Sample
+	streams       []*stream
+	readers       *readers
+	errs          []string
+	errMu         sync.Mutex
+	shedOp        uint64
+	shedRID       uint64
+	late          uint64
+	handedK       []int64
+	memory        []uint64
 }
 
 type rxCred struct {
@@ -201,8 +215,12 @@ func (r *run) execute(ctx context.Context, rep *Report) {
 	var wg sync.WaitGroup
 	defer wg.Wait()
 	defer cancel()
-	if err := r.startReference(ctx, &wg); err != nil {
-		r.fail("reference target: %v", err)
+	start, what := r.startReference, "reference target"
+	if r.systems != nil {
+		start, what = r.startSystems, "systems"
+	}
+	if err := start(ctx, &wg); err != nil {
+		r.fail("%s: %v", what, err)
 		r.finish(rep)
 		return
 	}
@@ -288,9 +306,9 @@ func (r *run) startReference(ctx context.Context, wg *sync.WaitGroup) error {
 		r.rxCreds = append(r.rxCreds, c)
 		receivers[i] = reftarget.Receiver{ID: c.id, BearerKey: c.bearer, HMACKey: c.key}
 	}
-	r.console = randomHex(16)
+	console := randomHex(16)
 	tgt, err := reftarget.New(ctx, reftarget.Config{Policy: r.files.Policy, Geoid: r.geo, Audience: referenceAudience,
-		Clients: clients, Receivers: receivers, ConsoleToken: r.console})
+		Clients: clients, Receivers: receivers, ConsoleToken: console})
 	if err != nil {
 		return err
 	}
@@ -299,13 +317,15 @@ func (r *run) startReference(ctx context.Context, wg *sync.WaitGroup) error {
 		return err
 	}
 	srv := &http.Server{Handler: tgt.Handler(), ReadHeaderTimeout: 5 * time.Second}
-	r.target, r.base = tgt, "http://"+ln.Addr().String()
+	base := "http://" + ln.Addr().String()
+	r.target, r.usspBase, r.authBase = tgt, base, base
+	r.pictureURL, r.pictureHeader = wsURL(base)+"/v1/picture/ws", http.Header{"Authorization": {"Bearer " + console}}
 	wg.Add(3)
 	go func() { defer wg.Done(); tgt.Run(ctx) }()
 	go func() { defer wg.Done(); _ = srv.Serve(ln) }()
 	go func() { defer wg.Done(); <-ctx.Done(); _ = srv.Close() }()
 	for i := range clients {
-		r.tokens = append(r.tokens, &oauth.ClientCredentials{TokenURL: r.base + "/oauth/token", ClientID: clients[i].ID,
+		r.tokens = append(r.tokens, &oauth.ClientCredentials{TokenURL: base + "/oauth/token", ClientID: clients[i].ID,
 			ClientSecret: secrets[i], Audience: referenceAudience, Scopes: clients[i].Scopes})
 	}
 	return nil
@@ -338,7 +358,7 @@ func (r *run) intentRequest(a *Aircraft, start, end time.Time) (simop.IntentRequ
 		ref = "load-" + hex.EncodeToString(sum[:12])
 	}
 	return simop.IntentRequest{
-		ClientRef: ref, UASSerial: a.Serial, Mode: "VLOS", FlightType: "normal", Category: "open", Volumes: []simop.Volume4D{vol},
+		ClientRef: ref, UASSerial: a.Serial, Mode: "VLOS", FlightType: "normal", Category: "open", Subcategory: LoadSubcategory, ClassLabel: LoadClassLabel, Volumes: []simop.Volume4D{vol},
 		IdentificationTechnology: "network", ConnectivityMethods: []string{"lte"}, EnduranceS: int(end.Sub(start).Seconds()) + 600,
 		LossOfC2Procedure: "return to the take-off point and land", OperatorReg: a.OperatorReg,
 		Takeoff:     &simop.Point{Lat: c.LatDeg, Lng: c.LonDeg},
@@ -370,7 +390,7 @@ func (r *run) fileIntents(ctx context.Context) {
 				req, err := r.intentRequest(a, start, end)
 				var id string
 				if err == nil {
-					in := &simop.Intents{BaseURL: r.base, Tokens: r.tokens[a.Client]}
+					in := &simop.Intents{BaseURL: r.usspBase, Tokens: r.tokens[a.Client]}
 					var d simop.Decision
 					if d, err = in.File(ctx, req); err == nil {
 						id = d.IntentID
@@ -416,7 +436,7 @@ func (r *run) startClients(ctx context.Context, wg *sync.WaitGroup) error {
 			case <-tk.C:
 			}
 		}
-		c, err := simop.New(simop.Config{BaseURL: r.base, Tokens: r.tokens[a.Client], Serial: a.Serial, Transport: simop.TransportWS,
+		c, err := simop.New(simop.Config{BaseURL: r.usspBase, Tokens: r.tokens[a.Client], Serial: a.Serial, Transport: simop.TransportWS,
 			Period: poll, Geoid: r.geo, IntentID: r.intents[a.Index], Seed: uint64(a.Index) + 1, Epoch: "load-" + r.opt.Run})
 		if err != nil {
 			return err
@@ -434,7 +454,7 @@ func (r *run) startClients(ctx context.Context, wg *sync.WaitGroup) error {
 			txs = append(txs, simrx.Transmitter{Sysid: a.Sysid, MAC: a.MAC, Serial: a.Serial, OperatorID: regnum.PublicPart(a.OperatorReg)})
 		}
 		c := r.rxCreds[i]
-		rx, err := simrx.New(simrx.Config{BaseURL: r.base, ReceiverID: c.id, BearerKey: c.bearer, HMACKey: c.key,
+		rx, err := simrx.New(simrx.Config{BaseURL: r.authBase, ReceiverID: c.id, BearerKey: c.bearer, HMACKey: c.key,
 			Transport: t.Receivers.Transports[i%len(t.Receivers.Transports)], Geoid: r.geo, Seed: uint64(i) + 1,
 			// Every sample is a Location (the generator's period is the
 			// broadcast rate); statics every 3 s as F3411 asks.
@@ -472,8 +492,8 @@ func (r *run) startStreams(ctx context.Context, wg *sync.WaitGroup) {
 	bb := r.fleet.BBox
 	sub, _ := json.Marshal(map[string]any{"schema": "console/subscribe/v1", "body": map[string]any{"bbox": bb[:], "layers": []string{"tracks", "alerts"}}})
 	for i := range r.tier.Consoles {
-		r.streams = append(r.streams, &stream{name: fmt.Sprintf("console-%02d", i), kind: streamPicture, url: wsURL(r.base) + "/v1/picture/ws",
-			header: http.Header{"Authorization": {"Bearer " + r.console}}, onOpen: sub, timed: i == 0, needSnap: true, ready: make(chan struct{})})
+		r.streams = append(r.streams, &stream{name: fmt.Sprintf("console-%02d", i), kind: streamPicture, url: r.pictureURL,
+			header: r.pictureHeader.Clone(), onOpen: sub, timed: i == 0, needSnap: true, ready: make(chan struct{})})
 	}
 	for _, a := range r.fleet.Aircraft {
 		id, ok := r.intents[a.Index]
@@ -485,7 +505,7 @@ func (r *run) startStreams(ctx context.Context, wg *sync.WaitGroup) {
 			r.fail("token for the traffic of %s: %v", a.Name, err)
 			continue
 		}
-		r.streams = append(r.streams, &stream{name: "traffic-" + a.Name, kind: streamTraffic, url: wsURL(r.base) + "/v1/traffic?intent_id=" + id,
+		r.streams = append(r.streams, &stream{name: "traffic-" + a.Name, kind: streamTraffic, url: wsURL(r.usspBase) + "/v1/traffic?intent_id=" + url.QueryEscape(id),
 			header: http.Header{"Authorization": {"Bearer " + tok}}, aircraft: a, timed: true, ready: make(chan struct{})})
 	}
 	for _, s := range r.streams {
@@ -729,7 +749,9 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 	rep.Loss.Operator, rep.Loss.Receivers = lo, lr
 	rep.Loss.GeneratorShedOperator, rep.Loss.GeneratorShedRID = r.shedOp, r.shedRID
 	rep.Loss.Picture, rep.Loss.Traffic = r.picture.Close(), r.traffic.Close()
-	rep.Loss.TargetCounters = r.target.Counters()
+	if r.target != nil {
+		rep.Loss.TargetCounters = r.target.Counters()
+	}
 	var timed *stream
 	consoleFrames := uint64(0)
 	for _, s := range r.streams {

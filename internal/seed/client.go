@@ -29,6 +29,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -105,6 +106,44 @@ func NewClient(caFile string, port int, hosts []string) (*Client, error) {
 		},
 	}
 	return &Client{HTTP: &http.Client{Transport: tr, Timeout: 30 * time.Second}, Port: port}, nil
+}
+
+// LabTransport is the transport of NewClient for the stack deploy/
+// demo.env describes (its hosts, its published port, its lab CA), for a
+// process whose simulators use the default client: the load harness
+// installs it as http.DefaultTransport, as the chaos harness does.
+// perHost bounds the idle connections kept per host (a load run's
+// receivers post every 100 ms each).
+func LabTransport(envPath string, perHost int) (*http.Transport, error) {
+	env, err := Env(envPath)
+	if err != nil {
+		return nil, fmt.Errorf("seed: %w", err)
+	}
+	stateDir := def(env["DEMO_STATE_DIR"], "./local-demo")
+	if !filepath.IsAbs(stateDir) {
+		stateDir = filepath.Join(filepath.Dir(envPath), stateDir)
+	}
+	port, err := strconv.Atoi(def(env["DEMO_HTTPS_PORT"], "443"))
+	if err != nil || port <= 0 || port > 65535 {
+		return nil, fmt.Errorf("seed: DEMO_HTTPS_PORT %q in %s is not a port", env["DEMO_HTTPS_PORT"], envPath)
+	}
+	var hosts []string
+	for _, k := range []string{"AUTHORITY_HOST", "CISP_HOST", "USSP_HOST", "ANSP_HOST", "LAB_HOST"} {
+		if env[k] == "" {
+			return nil, fmt.Errorf("seed: %s is not set in %s", k, envPath)
+		}
+		hosts = append(hosts, env[k])
+	}
+	c, err := NewClient(filepath.Join(stateDir, "ca", "ca.pem"), port, hosts)
+	if err != nil {
+		return nil, err
+	}
+	tr, ok := c.HTTP.Transport.(*http.Transport)
+	if !ok {
+		return nil, fmt.Errorf("seed: the lab client has no *http.Transport")
+	}
+	tr.MaxIdleConnsPerHost = max(perHost, 2)
+	return tr, nil
 }
 
 // URL is https://host[:port]path.
