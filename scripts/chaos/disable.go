@@ -104,8 +104,10 @@ func (a *adminAPI) reason(source, action string) string {
 // switchRun switches source off (inject) or on (restore), as a script
 // run: exit 0 only when the authority answered 200 and says it changed
 // the switch.
-func (a *adminAPI) switchRun(ctx context.Context, action string, args []string) ScriptRun {
-	sr := ScriptRun{Start: time.Now().UTC(), ExitCode: 1}
+// The hold is counted from End, so it is set on every return (a named
+// result: a deferred write to a local is lost once it is returned).
+func (a *adminAPI) switchRun(ctx context.Context, action string, args []string) (sr ScriptRun) {
+	sr = ScriptRun{Start: time.Now().UTC(), ExitCode: 1}
 	defer func() { sr.End = time.Now().UTC() }()
 	if len(args) != 1 || (action != "inject" && action != "restore") {
 		sr.Output = []string{"disable takes inject|restore SOURCE_TYPE"}

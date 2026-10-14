@@ -90,6 +90,10 @@ func TestDisableRowSwitchesAndAudits(t *testing.T) {
 		t0 := time.Now()
 		if sr := a.switchRun(ctx, "inject", []string{"direct_rid"}); sr.ExitCode != 0 || !strings.Contains(sr.Output[0], "changed true, enabled false") {
 			t.Fatalf("%s: inject %+v", c.name, sr)
+		} else if sr.End.Before(sr.Start) || sr.Start.Before(t0.Add(-time.Second)) {
+			// The hold runs from End: a zero End ended it at once (the
+			// first matrix run, "no sample was taken during the hold").
+			t.Fatalf("%s: the switch's times %v..%v", c.name, sr.Start, sr.End)
 		}
 		if held, note := spec.heldNow(ctx, nil, nil); !held {
 			t.Fatalf("%s: not held after the switch: %s", c.name, note)
@@ -116,7 +120,7 @@ func TestDisableRowSwitchesAndAudits(t *testing.T) {
 	srv := httptest.NewServer(fa)
 	defer srv.Close()
 	a := adminOf(srv)
-	if sr := a.switchRun(ctx, "inject", []string{"direct_rid"}); sr.ExitCode != 1 || !strings.Contains(strings.Join(sr.Output, " "), "answered 503") {
+	if sr := a.switchRun(ctx, "inject", []string{"direct_rid"}); sr.ExitCode != 1 || !strings.Contains(strings.Join(sr.Output, " "), "answered 503") || sr.End.IsZero() {
 		t.Fatalf("a refused switch: %+v", sr)
 	}
 	spec := FaultSpec{Kind: kindDisabled, Source: "direct_rid", enabled: func(ctx context.Context) (bool, error) { return a.enabled(ctx, "direct_rid") }}
