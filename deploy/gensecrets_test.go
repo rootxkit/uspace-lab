@@ -110,3 +110,49 @@ func TestGenSecretsWritesEverything(t *testing.T) {
 		t.Errorf("a second run: %v\n%s", err, again)
 	}
 }
+
+// A state directory whose certificate names other hosts than demo.env
+// (made before LOAD_PEER_HOST existed) gets a new certificate naming
+// every host, and only that; with the hosts unchanged nothing is made
+// again (TestGenSecretsWritesEverything's second run is the pair).
+func TestGenSecretsMakesTheCertificateForNewHosts(t *testing.T) {
+	if _, err := exec.LookPath("openssl"); err != nil {
+		t.Skipf("openssl: %v", err)
+	}
+	state, out, err := genSecrets(t, "", "MSYS_NO_PATHCONV=0")
+	if err != nil {
+		t.Fatalf("gen-secrets.sh: %v\n%s", err, out)
+	}
+	envFile := filepath.ToSlash(filepath.Join(filepath.Dir(state), "demo.env"))
+	env := read(t, envFile)
+	if !strings.Contains(env, "\nLOAD_PEER_HOST=peer.uspace.test") {
+		t.Fatal("demo.env.example names no LOAD_PEER_HOST=peer.uspace.test")
+	}
+	env = strings.Replace(env, "\nLOAD_PEER_HOST=peer.uspace.test", "\nLOAD_PEER_HOST=other-peer.uspace.test", 1)
+	if err := os.WriteFile(envFile, []byte(env), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	ca := read(t, filepath.Join(state, "ca", "ca.pem"))
+	b, err := exec.Command("bash", "systems/gen-secrets.sh", envFile).CombinedOutput()
+	if err != nil {
+		t.Fatalf("gen-secrets.sh: %v\n%s", err, b)
+	}
+	if !strings.Contains(string(b), "making it again") || !strings.Contains(string(b), "done, 1 file(s) written") {
+		t.Errorf("a changed host: %s", b)
+	}
+	if read(t, filepath.Join(state, "ca", "ca.pem")) != ca {
+		t.Error("the CA was made again with the certificate")
+	}
+	text, err := exec.Command("openssl", "x509", "-noout", "-text", "-in", filepath.Join(state, "tls", "cert.pem")).CombinedOutput()
+	if err != nil {
+		t.Fatalf("openssl x509: %v\n%s", err, text)
+	}
+	for _, h := range []string{"DNS:other-peer.uspace.test", "DNS:authority.uspace.test", "DNS:lab.uspace.test"} {
+		if !strings.Contains(string(text), h) {
+			t.Errorf("the new certificate does not name %s", h)
+		}
+	}
+	if strings.Contains(string(text), "DNS:peer.uspace.test") {
+		t.Error("the new certificate still names the old peer host")
+	}
+}

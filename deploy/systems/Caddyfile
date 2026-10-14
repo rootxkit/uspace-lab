@@ -102,6 +102,18 @@
 	}
 }
 
+# The load harness's peer USSP (loadgen run, systems mode): served by
+# the harness on the host and reached through host.docker.internal, so
+# the systems call it as any USS (F3411 SP, F3548 notifications). Between
+# runs nothing answers (502).
+{$LOAD_PEER_HOST} {
+	import lab_tls
+	import no_metrics
+	handle {
+		reverse_proxy host.docker.internal:{$LOAD_PEER_PORT}
+	}
+}
+
 {$LAB_HOST} {
 	import lab_tls
 	import no_metrics
