@@ -24,10 +24,15 @@ const (
 
 // stream is one WebSocket a run reads, with what it saw.
 type stream struct {
-	name     string
-	kind     string
-	url      string
-	header   http.Header
+	name   string
+	kind   string
+	url    string
+	header http.Header
+	// headerFn, when set, gives the header of each connection instead;
+	// renew asks for fresh credentials (the last connection was refused
+	// as unauthorised: an upgrade answered 401, or a close 4401).
+	headerFn func(ctx context.Context, renew bool) (http.Header, error)
+	renew    bool
 	onOpen   []byte
 	aircraft *Aircraft // traffic: whose flight
 	timed    bool      // its frames feed a ledger
@@ -212,14 +217,23 @@ func (rd *readers) run(ctx context.Context, s *stream) {
 }
 
 func (rd *readers) read(ctx context.Context, s *stream) error {
+	header := s.header
+	if s.headerFn != nil {
+		h, err := s.headerFn(ctx, s.renew)
+		if err != nil {
+			return fmt.Errorf("%s: credentials: %w", s.name, err)
+		}
+		header, s.renew = h, false
+	}
 	dctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	conn, resp, err := websocket.Dial(dctx, s.url, &websocket.DialOptions{HTTPHeader: s.header})
+	conn, resp, err := websocket.Dial(dctx, s.url, &websocket.DialOptions{HTTPHeader: header})
 	cancel()
 	if resp != nil && resp.Body != nil {
 		_ = resp.Body.Close()
 	}
 	if err != nil {
 		if resp != nil {
+			s.renew = resp.StatusCode == http.StatusUnauthorized
 			return fmt.Errorf("%s: upgrade answered %d", s.name, resp.StatusCode)
 		}
 		return fmt.Errorf("%s: %w", s.name, err)
@@ -245,6 +259,9 @@ func (rd *readers) read(ctx context.Context, s *stream) error {
 			if ctx.Err() != nil {
 				return nil
 			}
+			// The authority closes a console whose session ended with
+			// 4401 ("sign in again").
+			s.renew = websocket.CloseStatus(err) == closeSignInAgain
 			return fmt.Errorf("%s: %w", s.name, err)
 		}
 		rd.handle(s, b, time.Now(), func(b []byte, at time.Time) { rd.rec.Handle(os, st, b, at) })
@@ -295,6 +312,10 @@ func (rd *readers) handle(s *stream, b []byte, at time.Time, alert func([]byte, 
 }
 
 const trafficProduct = "traffic/product/v1"
+
+// closeSignInAgain is the close code the authority's picture ends a
+// console with when its session is no longer valid.
+const closeSignInAgain websocket.StatusCode = 4401
 
 // sourceDirectRID is the track source of what a receiver heard
 // (schemas/common/envelope/v1 $defs.source).

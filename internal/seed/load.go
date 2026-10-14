@@ -384,3 +384,20 @@ func loadProbes(path, project string) (*runner.LoadProbes, error) {
 	}
 	return p, nil
 }
+
+// ConsoleSession signs user in at the authority of the stack envPath
+// describes (password, then TOTP, from the seed's state) and returns the
+// session: how a long load run gets a console session again when the
+// authority ends the one it started with. Nothing is logged.
+func ConsoleSession(ctx context.Context, envPath, user string) (string, error) {
+	sk, err := openStack(envPath)
+	if err != nil {
+		return "", err
+	}
+	auth := &Authority{C: sk.c, Host: sk.hosts["AUTHORITY_HOST"], St: sk.st, Now: time.Now}
+	s, err := auth.SignIn(ctx, user)
+	if err != nil {
+		return "", err
+	}
+	return s.Token, nil
+}

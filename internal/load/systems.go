@@ -157,6 +157,23 @@ func (r *run) startSystems(_ context.Context, _ *sync.WaitGroup) error {
 	r.usspBase, r.authBase = s.usspBase, s.authBase
 	r.pictureURL = s.pictureURL
 	r.pictureHeader = http.Header{"Cookie": {"uspace_session=" + s.session}, "Origin": {s.origin}}
+	var mu sync.Mutex
+	session := s.session
+	r.pictureHeaderFn = func(ctx context.Context, renew bool) (http.Header, error) {
+		mu.Lock()
+		defer mu.Unlock()
+		if renew {
+			if r.opt.RenewSession == nil {
+				return nil, fmt.Errorf("the console session ended and the run cannot sign in again (loadgen run --lab-env)")
+			}
+			fresh, err := r.opt.RenewSession(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("signing the console in again: %w", err)
+			}
+			session = fresh
+		}
+		return http.Header{"Cookie": {"uspace_session=" + session}, "Origin": {s.origin}}, nil
+	}
 	r.rxCreds = s.rx
 	scopes := []string{"ussp.telemetry", "ussp.intents", "ussp.traffic"}
 	for i, c := range s.clients {

@@ -142,7 +142,13 @@ func runTier(args []string) int {
 	log := cli.Logger("loadgen")
 	ctx, stop := cli.SignalContext()
 	defer stop()
-	rep, err := load.Run(ctx, load.Options{Files: files, TargetsPath: *targets, Run: id, DurationS: *duration,
+	var renew func(context.Context) (string, error)
+	if *labEnv != "" {
+		// The authority ends a console session during a long run: sign
+		// the inspector in again from the seed's state.
+		renew = func(ctx context.Context) (string, error) { return seed.ConsoleSession(ctx, *labEnv, "lab-inspector") }
+	}
+	rep, err := load.Run(ctx, load.Options{RenewSession: renew, Files: files, TargetsPath: *targets, Run: id, DurationS: *duration,
 		RepoRoot: runner.RepoRoot("."), HostName: *host, HeapProfile: *heap, Log: log, FaultsPath: *faults})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "loadgen:", err)

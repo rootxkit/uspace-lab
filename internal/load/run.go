@@ -62,6 +62,9 @@ type Options struct {
 	// FaultsPath is a fault plan (load/faults/*.yaml) run during a
 	// systems run; empty: none.
 	FaultsPath string
+	// RenewSession signs a console in again when the authority ends the
+	// picture's session (nil: the session of the targets file only).
+	RenewSession func(ctx context.Context) (string, error)
 }
 
 // referenceAudience is the reference target's host (never resolved).
@@ -190,27 +193,30 @@ type run struct {
 	authBase      string
 	pictureURL    string
 	pictureHeader http.Header
-	target        *reftarget.Target
-	systems       *systemsTarget
-	probes        *probes
-	sp            *spPoller
-	faults        *faultRunner
-	tokens        []*oauth.ClientCredentials
-	rxCreds       []rxCred
-	intents       map[int]string
-	operators     []*simop.Client
-	opIn          []chan vehicle.Sample
-	receivers     []*simrx.Receiver
-	rxIn          []chan vehicle.Sample
-	streams       []*stream
-	readers       *readers
-	errs          []string
-	errMu         sync.Mutex
-	shedOp        uint64
-	shedRID       uint64
-	late          uint64
-	handedK       []int64
-	memory        []uint64
+	// pictureHeaderFn, when set, gives each console connection's header
+	// (systems mode: the session, signed in again when it ended).
+	pictureHeaderFn func(ctx context.Context, renew bool) (http.Header, error)
+	target          *reftarget.Target
+	systems         *systemsTarget
+	probes          *probes
+	sp              *spPoller
+	faults          *faultRunner
+	tokens          []*oauth.ClientCredentials
+	rxCreds         []rxCred
+	intents         map[int]string
+	operators       []*simop.Client
+	opIn            []chan vehicle.Sample
+	receivers       []*simrx.Receiver
+	rxIn            []chan vehicle.Sample
+	streams         []*stream
+	readers         *readers
+	errs            []string
+	errMu           sync.Mutex
+	shedOp          uint64
+	shedRID         uint64
+	late            uint64
+	handedK         []int64
+	memory          []uint64
 }
 
 type rxCred struct {
@@ -598,20 +604,27 @@ func (r *run) startStreams(ctx context.Context, wg *sync.WaitGroup) {
 	sub, _ := json.Marshal(map[string]any{"schema": "console/subscribe/v1", "body": map[string]any{"bbox": bb[:], "layers": []string{"tracks", "alerts"}}})
 	for i := range r.tier.Consoles {
 		r.streams = append(r.streams, &stream{name: fmt.Sprintf("console-%02d", i), kind: streamPicture, url: r.pictureURL,
-			header: r.pictureHeader.Clone(), onOpen: sub, timed: i == 0, needSnap: true, ready: make(chan struct{})})
+			header: r.pictureHeader.Clone(), headerFn: r.pictureHeaderFn, onOpen: sub, timed: i == 0, needSnap: true, ready: make(chan struct{})})
 	}
 	for _, a := range r.fleet.Aircraft {
 		id, ok := r.intents[a.Index]
 		if !a.Watched || !ok {
 			continue
 		}
-		tok, err := r.tokens[a.Client].Token(ctx)
-		if err != nil {
-			r.fail("token for the traffic of %s: %v", a.Name, err)
-			continue
-		}
+		// The token of each connection: the client's, renewed by it as it
+		// expires (a 60-minute run outlives the first).
+		tokens := r.tokens[a.Client]
 		r.streams = append(r.streams, &stream{name: "traffic-" + a.Name, kind: streamTraffic, url: wsURL(r.usspBase) + "/v1/traffic?intent_id=" + url.QueryEscape(id),
-			header: http.Header{"Authorization": {"Bearer " + tok}}, aircraft: a, timed: true, ready: make(chan struct{})})
+			headerFn: func(ctx context.Context, renew bool) (http.Header, error) {
+				if renew {
+					tokens.Invalidate()
+				}
+				tok, err := tokens.Token(ctx)
+				if err != nil {
+					return nil, err
+				}
+				return http.Header{"Authorization": {"Bearer " + tok}}, nil
+			}, aircraft: a, timed: true, ready: make(chan struct{})})
 	}
 	for _, s := range r.streams {
 		wg.Add(1)
