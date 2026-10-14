@@ -1,0 +1,4821 @@
+{
+  "format": "load-report/v1",
+  "run": "20261014-951fda2-100-systems",
+  "started_at": "2026-10-14T15:01:39.2422074Z",
+  "ended_at": "2026-10-14T16:02:50.6757018Z",
+  "generator_s": 3600,
+  "tier": {
+    "tier": "100",
+    "title": "100 drones for 60 minutes",
+    "column": 100,
+    "duration_s": 3600,
+    "drain_s": 30,
+    "operators": {
+      "aircraft": 100,
+      "clients": 10,
+      "telemetry_hz": 1,
+      "telemetry_hz_status": "pending GCAA",
+      "poll_ms": 50,
+      "ramp_per_s": 250,
+      "intents": "all",
+      "intents_per_s": 8
+    },
+    "receivers": {
+      "heard_fraction": 0.4,
+      "aircraft_per_receiver": 10,
+      "transports": [
+        "pack",
+        "single"
+      ],
+      "batch_ms": 100
+    },
+    "consoles": 10,
+    "dp": {
+      "views": 10,
+      "view_side_m": 4000,
+      "poll_ms": 1000
+    },
+    "peer": {
+      "aircraft": 4,
+      "centre": {
+        "north_m": 1000,
+        "east_m": 1000
+      },
+      "radius_m": 150,
+      "speed_ms": 5,
+      "alt_rel_m": 145,
+      "uspace": {
+        "centre": {
+          "north_m": 3050,
+          "east_m": 3050
+        },
+        "half_side_m": 1400
+      }
+    },
+    "zone": {
+      "aircraft": 2,
+      "centre": {
+        "north_m": -1500,
+        "east_m": 6000
+      },
+      "side_m": 400,
+      "spacing_m": 250,
+      "amplitude_m": 600,
+      "speed_ms": 10,
+      "alt_rel_m": 170,
+      "type": "CONDITIONAL",
+      "raise_margin_s": 3,
+      "clear_within_s": 30
+    },
+    "watch": {
+      "pairs": 8,
+      "walkers": 8
+    },
+    "min_samples": 1000,
+    "memory_sample_s": 10,
+    "memory_warmup_s": 900,
+    "required": [
+      "operator_rate",
+      "rid_rate",
+      "generator_on_time",
+      "operator_to_console_p99",
+      "receiver_to_picture_p99",
+      "proximity_raise_p99",
+      "expected_set",
+      "missed_raises",
+      "missed_clears",
+      "no_false_alarm",
+      "alerts_traceable",
+      "operator_identity",
+      "receiver_identity",
+      "picture_identity",
+      "picture_traceable",
+      "traffic_traceable",
+      "evaluation_period",
+      "memory_monotonic"
+    ],
+    "required_systems": [
+      "sp_flights_p95",
+      "sp_flights_p99",
+      "details_p95",
+      "details_p99",
+      "dp_display_p95",
+      "dp_display_p99",
+      "intent_change_notify",
+      "notifications_complete",
+      "details_answered",
+      "pair_checks",
+      "writer_queue",
+      "compression",
+      "disk_model",
+      "vectors_pass",
+      "zone_alert_tick",
+      "restart_recovery",
+      "restart_duplicates",
+      "restart_backlog",
+      "partition_replay",
+      "partition_isolation",
+      "outage_flagged"
+    ],
+    "scale": [
+      {
+        "quantity": "console viewports",
+        "spec": "10 consoles each viewing \u003c= 200 tracks (05 §1)",
+        "here": "the same count, each subscribed to the whole area",
+        "factor": 1,
+        "why": "the reference picture has no viewport throttle; whole-area subscriptions are the worst case"
+      }
+    ],
+    "not_generated": [
+      {
+        "source": "ANSP manned feed (tens of aircraft)",
+        "why": "the reference target has no manned intake; in a systems run the ANSP adapter polls a sim-adsb the load harness does not serve, so the USSP shows manned traffic unavailable (its degraded state, in the report)"
+      },
+      {
+        "source": "the second USSP's own intents",
+        "why": "in a systems run the harness's peer USSP (peer) is the second USSP on the lab DSS: it serves its own flights and is notified of the fleet's intents in the U-space square, but files no intent of its own, so no conflict between the two USSPs is made (the reference target has no DSS or peer)"
+      },
+      {
+        "source": "authority DP polls of the USSPs (05 §1: one view per 1 Hz), against the reference target",
+        "why": "the reference target has no SP; in a systems run the authority's display provider polls the USSP's and the peer's SPs over the oversight area the seed adds, and the lab polls the USSP's SP as a display provider too (dp)"
+      },
+      {
+        "source": "optional national push USSP -\u003e authority",
+        "why": "disabled by default (02 F6) and not in the reference target"
+      }
+    ]
+  },
+  "scaled": true,
+  "target": {
+    "mode": "systems",
+    "name": "lab-load-100",
+    "evidence": "The systems' images as the targets file names them, seeded for this fleet (loadgen seed); evidence for the images and digests listed, on the host named, when the run passes (docs/PLAN.md L-D4).",
+    "images": {
+      "ansp": "ghcr.io/rootxkit/uspace-ansp@sha256:1fcfb3c9762189f737250c65ad24166c025c12576abb7babffcf07d705a6921a",
+      "authority": "ghcr.io/rootxkit/uspace-authority@sha256:53d6f97cd745677da893a62669f45477d1eaa403b369bc174b6ccc8c11ee11cc",
+      "cisp": "ghcr.io/rootxkit/uspace-cisp@sha256:2e7861488e178de967829e7ebb623a3c5b480f0dcca8e5ee1acab4e45028f42a",
+      "ussp": "ghcr.io/rootxkit/uspace-ussp@sha256:854cca7146277e6dc767cd7efce279f350994c9f152344a8af457c917db5935d"
+    },
+    "receivers": "each receiver under its own address of 10.77.0.0/16, named in X-Forwarded-For, which the lab Caddy and the authority trust from the host only (deploy/systems)"
+  },
+  "host": {
+    "name": "dev workstation (Windows 11, 16 logical CPUs, 16 GB); the systems stack on the same host in Docker Desktop 28.5.1 (16 CPUs, 7.7 GB), other projects' containers beside it",
+    "os": "windows",
+    "arch": "amd64",
+    "cpus": 16,
+    "mem_total_bytes": null,
+    "go": "go1.27.1",
+    "note": "the host the generator ran on (L-Q1); where the systems ran is the --host name's to say"
+  },
+  "commits": {
+    "lab": "951fda2a15bcf06cb42aa26e441187bf2642b256",
+    "lab_dirty": false,
+    "core": "v1.6.0",
+    "go": "go1.27.1"
+  },
+  "files": {
+    "criteria": "sha256:e71056638dd19f4627f5276018e4cbf81ffc8f617b59bb97adac78151fef9515",
+    "paths": "sha256:e020b22b17a1807faaf7960ed6cfa8f19fddda897e055e83ee0fe65eea1bf4fa",
+    "policy": "sha256:19124b6573ade992e321dbb2f18313bf01ec7ac262db03d75216da38f94db8df",
+    "tier": "sha256:5a93a7d91af65207f7a83fd3ac74895ebf039011a640b460e2b25d7600fadde4"
+  },
+  "policy": {
+    "policy_version": 1,
+    "source": "docs/PLAN.md §7.1 L-Q4 (owner-only, open; GCAA answers); knowledge/scenarios.md conventions",
+    "deviation": {
+      "h_m": 50,
+      "v_m": 15,
+      "t_s": 60
+    },
+    "telemetry_lost_s": 5,
+    "lost_link_s": 15,
+    "nonconformance_nearby_radius_m": 2000,
+    "cpa": {
+      "t_cpa_max_s": 60,
+      "d_horizontal_min_m": 60,
+      "d_vertical_min_m": 20,
+      "neighbour_radius_m": 800,
+      "neighbour_max_age_s": 10
+    },
+    "height_limit_agl_m": 120,
+    "monitor": {
+      "clear_after_s": 3,
+      "stale_after_s": 15,
+      "live_max_age_s": 10,
+      "pressure_uncertainty_m": 250,
+      "conditional_severity": "warning"
+    }
+  },
+  "lab": {
+    "file": "sim\\sitl.env.example",
+    "origin_lat_deg": 41.7151,
+    "origin_lon_deg": 44.8271,
+    "origin_alt_amsl_m": 605,
+    "geoid": "WGS84 EGM2008, 2.5-minute grid"
+  },
+  "volumes": {
+    "aircraft": 100,
+    "operator_clients": 10,
+    "heard_aircraft": 40,
+    "receivers": 4,
+    "consoles": 10,
+    "watched_aircraft": 26,
+    "intents_filed": 100,
+    "intent_errors": 0,
+    "intents_ended": 100,
+    "operator_msgs_per_s": 100.018,
+    "operator_target_per_s": 100,
+    "rid_locations_per_s": 40,
+    "rid_target_per_s": 40,
+    "console_frames_per_s": 1253.902,
+    "generator_late": 0
+  },
+  "rows": [
+    {
+      "id": "offered_load",
+      "property": "Offered load",
+      "criterion": "the tier's 05 §1 rates were reached (a latency measured at a lower load proves nothing about the tier)",
+      "result": "pass",
+      "checks": [
+        {
+          "id": "operator_rate",
+          "metric": "operator_rate_ratio",
+          "stat": "value",
+          "op": "\u003e=",
+          "value": 0.95,
+          "unit": "",
+          "status": "lab",
+          "basis": "05 §1 operator telemetry row at the tier",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 1
+          },
+          "result": "pass"
+        },
+        {
+          "id": "rid_rate",
+          "metric": "rid_rate_ratio",
+          "stat": "value",
+          "op": "\u003e=",
+          "value": 0.95,
+          "unit": "",
+          "status": "lab",
+          "basis": "05 §1 direct RID row at the tier",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 1
+          },
+          "result": "pass"
+        },
+        {
+          "id": "generator_on_time",
+          "metric": "generator_late_ratio",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 0.001,
+          "unit": "",
+          "status": "lab",
+          "basis": "the rate held moment by moment, not only on average: at most one sample in a thousand more than a period late",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "ingest_to_picture",
+      "property": "Ingest-to-picture latency",
+      "criterion": "p99 \u003c 1 s (operator telemetry to USSP console frame; receiver frame to authority picture)",
+      "result": "fail",
+      "checks": [
+        {
+          "id": "operator_to_console_p99",
+          "metric": "operator_to_ussp_console_s",
+          "stat": "p99",
+          "op": "\u003c",
+          "value": 1,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (Art. 11 traffic information without delay; the figure is the spec's)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 91404,
+            "p50": 0.414,
+            "p95": 0.976,
+            "p99": 1.023,
+            "max": 1.052,
+            "mean": 0.472
+          },
+          "result": "fail",
+          "reason": "operator_to_ussp_console_s p99 is 1.023, the criterion is \u003c 1"
+        },
+        {
+          "id": "receiver_to_picture_p99",
+          "metric": "receiver_to_authority_picture_s",
+          "stat": "p99",
+          "op": "\u003c",
+          "value": 1,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (the figure is the spec's)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 128306,
+            "p50": 0.087,
+            "p95": 0.09,
+            "p99": 4.95,
+            "max": 37.141,
+            "mean": 0.281
+          },
+          "result": "fail",
+          "reason": "receiver_to_authority_picture_s p99 is 4.95, the criterion is \u003c 1"
+        }
+      ]
+    },
+    {
+      "id": "f3411_timing",
+      "property": "F3411 timing",
+      "criterion": "SP GET /uss/flights p95 \u003c= 1 s, p99 \u003c= 3 s; DP display p95 \u003c= 1 s, p99 \u003c= 3 s; details p95 \u003c= 2 s, p99 \u003c= 6 s; DP cache empty of anything older than 24 h",
+      "result": "partial",
+      "checks": [
+        {
+          "id": "sp_flights_p95",
+          "metric": "f3411_sp_flights_s",
+          "stat": "p95",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 35928,
+            "p50": 0.002,
+            "p95": 0.005,
+            "p99": 0.007,
+            "max": 0.058,
+            "mean": 0.002
+          },
+          "result": "pass"
+        },
+        {
+          "id": "sp_flights_p99",
+          "metric": "f3411_sp_flights_s",
+          "stat": "p99",
+          "op": "\u003c=",
+          "value": 3,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 35928,
+            "p50": 0.002,
+            "p95": 0.005,
+            "p99": 0.007,
+            "max": 0.058,
+            "mean": 0.002
+          },
+          "result": "pass"
+        },
+        {
+          "id": "dp_display_p95",
+          "metric": "f3411_dp_display_s",
+          "stat": "p95",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 12920,
+            "p50": 0.005,
+            "p95": 0.011,
+            "p99": 0.015,
+            "max": 0.026,
+            "mean": 0.005
+          },
+          "result": "pass"
+        },
+        {
+          "id": "dp_display_p99",
+          "metric": "f3411_dp_display_s",
+          "stat": "p99",
+          "op": "\u003c=",
+          "value": 3,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 12920,
+            "p50": 0.005,
+            "p95": 0.011,
+            "p99": 0.015,
+            "max": 0.026,
+            "mean": 0.005
+          },
+          "result": "pass"
+        },
+        {
+          "id": "details_p95",
+          "metric": "f3411_details_s",
+          "stat": "p95",
+          "op": "\u003c=",
+          "value": 2,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 35886,
+            "p50": 0.002,
+            "p95": 0.003,
+            "p99": 0.004,
+            "max": 0.021,
+            "mean": 0.001
+          },
+          "result": "pass"
+        },
+        {
+          "id": "details_p99",
+          "metric": "f3411_details_s",
+          "stat": "p99",
+          "op": "\u003c=",
+          "value": 6,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 35886,
+            "p50": 0.002,
+            "p95": 0.003,
+            "p99": 0.004,
+            "max": 0.021,
+            "mean": 0.001
+          },
+          "result": "pass"
+        },
+        {
+          "id": "dp_cache_24h",
+          "metric": "f3411_dp_cache_over_24h",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "standard",
+          "basis": "F3411 v22a NetDpMaxDataRetentionPeriodSeconds 86400",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the authority's display provider has cached for 1.0 h (its first network track); the 24 h bound is judged once it has cached for 25 h (a day, and the hour disposal is checked in)"
+          },
+          "result": "not measured",
+          "reason": "the authority's display provider has cached for 1.0 h (its first network track); the 24 h bound is judged once it has cached for 25 h (a day, and the hour disposal is checked in)"
+        }
+      ]
+    },
+    {
+      "id": "f3548_timing",
+      "property": "F3548 timing",
+      "criterion": "peer notification of an intent change \u003c= 5 s; conflicting-intent notification \u003c= 1 s; details answered \u003c= 1 s; constraint notification \u003c= 5 s",
+      "result": "partial",
+      "checks": [
+        {
+          "id": "intent_change_notify",
+          "metric": "f3548_intent_change_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 5,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 48,
+            "p50": 0.297,
+            "p95": 0.926,
+            "p99": 1.008,
+            "max": 1.008,
+            "mean": 0.355
+          },
+          "result": "pass"
+        },
+        {
+          "id": "notifications_complete",
+          "metric": "f3548_notifications_missing",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "standard",
+          "basis": "F3548-21: a USS notifies every subscriber the DSS names of each change of its operational intent; a change not notified has no latency to judge",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "conflict_notify",
+          "metric": "f3548_conflict_notify_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "no intent of the run conflicts with another USS's: the peer files none, so no conflicting-intent notification is due"
+          },
+          "result": "not measured",
+          "reason": "no intent of the run conflicts with another USS's: the peer files none, so no conflicting-intent notification is due"
+        },
+        {
+          "id": "details_answered",
+          "metric": "f3548_details_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 48,
+            "p50": 0.002,
+            "p95": 0.005,
+            "p99": 0.006,
+            "max": 0.006,
+            "mean": 0.002
+          },
+          "result": "pass"
+        },
+        {
+          "id": "constraint_notify",
+          "metric": "f3548_constraint_notify_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 5,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "no constraint is created during the run: no system of the lab stack publishes F3548 constraints (uss_qualifier has no constraint management at the pinned commit, WP-L7)"
+          },
+          "result": "not measured",
+          "reason": "no constraint is created during the run: no system of the lab stack publishes F3548 constraints (uss_qualifier has no constraint management at the pinned commit, WP-L7)"
+        }
+      ]
+    },
+    {
+      "id": "alert_latency",
+      "property": "Alert latency",
+      "criterion": "proximity / nonconformance raised p99 \u003c 2 s after the triggering sample's captured_at; zone alert within one tick of entry; Art. 13(2) notices to peers and ANSP within 5 s and acknowledged",
+      "result": "fail",
+      "checks": [
+        {
+          "id": "proximity_raise_p99",
+          "metric": "alert_raise_s",
+          "stat": "p99",
+          "op": "\u003c",
+          "value": 2,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (Art. 13 without delay; the figure is the spec's)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 320,
+            "p50": 0.02,
+            "p95": 0.049,
+            "p99": 0.051,
+            "max": 0.054,
+            "mean": 0.025
+          },
+          "result": "pass"
+        },
+        {
+          "id": "zone_alert_tick",
+          "metric": "zone_alert_ticks",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 1.051
+          },
+          "result": "fail",
+          "reason": "zone_alert_ticks value is 1.051, the criterion is \u003c= 1"
+        },
+        {
+          "id": "art13_notice",
+          "metric": "art13_notice_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 5,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (Art. 13(2); the figure is the spec's)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "no aircraft of the load deviates from its authorisation, so no Art. 13(2) notice is due; and the lab's U-space airspace is designated without the conformance monitoring service (services_required NID, GEO, FA, TI; 2021/664 Art. 3(3))"
+          },
+          "result": "not measured",
+          "reason": "no aircraft of the load deviates from its authorisation, so no Art. 13(2) notice is due; and the lab's U-space airspace is designated without the conformance monitoring service (services_required NID, GEO, FA, TI; 2021/664 Art. 3(3))"
+        }
+      ]
+    },
+    {
+      "id": "missed_alerts",
+      "property": "Missed alerts",
+      "criterion": "zero against the scenario's expected set; every expected clear observed",
+      "result": "fail",
+      "checks": [
+        {
+          "id": "expected_set",
+          "metric": "expected_raises",
+          "stat": "value",
+          "op": "\u003e=",
+          "value": 1,
+          "unit": "",
+          "status": "lab",
+          "basis": "a run with no alert due cannot count a miss",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 380
+          },
+          "result": "pass"
+        },
+        {
+          "id": "missed_raises",
+          "metric": "missed_raises",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "missed_clears",
+          "metric": "missed_clears",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 2
+          },
+          "result": "fail",
+          "reason": "missed_clears value is 2, the criterion is == 0"
+        },
+        {
+          "id": "no_false_alarm",
+          "metric": "unexpected_alerts",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "lab",
+          "basis": "the paths keep every walker outside the CPA minima (load/paths.yaml, checked at load); an alert there is a false alarm or a broken expected set",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "alerts_traceable",
+          "metric": "alert_untraceable",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "lab",
+          "basis": "every raise names a captured_at the generator sent",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "no_silent_loss",
+      "property": "No silent loss",
+      "criterion": "every dropped_*, gap, degraded counter accounted for in the report; sum of accepted + dropped = sent",
+      "result": "fail",
+      "checks": [
+        {
+          "id": "operator_identity",
+          "metric": "operator_ledgers_unbalanced",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7, 05 §5 (operator WS: accepted + refused + dropped + duplicate = sent, per client)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 100
+          },
+          "result": "fail",
+          "reason": "operator_ledgers_unbalanced value is 100, the criterion is == 0"
+        },
+        {
+          "id": "receiver_identity",
+          "metric": "receiver_ledgers_unbalanced",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7, 05 §5 (receiver -\u003e authority: accepted + duplicates + refused = sent)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "picture_identity",
+          "metric": "picture_silent_loss",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7: every heard sample is on the picture or in a counted loss",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "picture_traceable",
+          "metric": "picture_untraceable_frames",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "lab",
+          "basis": "every track frame names a sample the generator sent",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "traffic_traceable",
+          "metric": "traffic_untraceable_frames",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "lab",
+          "basis": "every own track in a traffic product names a sample the generator sent",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "cpa_budget",
+      "property": "CPA budget",
+      "criterion": "pair checks per worker per second within budget; evaluation_period_s never above 2 s",
+      "result": "pass",
+      "checks": [
+        {
+          "id": "pair_checks",
+          "metric": "cpa_pair_checks_per_worker",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §1 (~50 000 pair checks per second per core, models.cpa_pairs_per_core_per_s): the busiest CPA process's pair checks per second over the run / that budget",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0.018
+          },
+          "result": "pass"
+        },
+        {
+          "id": "evaluation_period",
+          "metric": "cpa_evaluation_period_max_s",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 2,
+          "unit": "s",
+          "status": "spec",
+          "basis": "05 §5 CPA workers",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 1
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "property": "Storage",
+      "criterion": "write rate sustained with writer queue \u003c 10 s; compression job keeps up; disk growth matches the model within 20 %",
+      "result": "fail",
+      "checks": [
+        {
+          "id": "writer_queue",
+          "metric": "writer_queue_max_s",
+          "stat": "value",
+          "op": "\u003c",
+          "value": 10,
+          "unit": "s",
+          "status": "spec",
+          "basis": "05 §5 TimescaleDB writer",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 1.179277435
+          },
+          "result": "pass"
+        },
+        {
+          "id": "compression",
+          "metric": "compression_lag_chunks",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §4",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "disk_model",
+          "metric": "disk_growth_vs_model",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1.2,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §4 (within 20 %)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 2.719
+          },
+          "result": "fail",
+          "reason": "disk_growth_vs_model value is 2.719, the criterion is \u003c= 1.2"
+        }
+      ]
+    },
+    {
+      "id": "restart",
+      "property": "Restart",
+      "criterion": "kill each component in turn mid-run: picture recovers within 10 s, no duplicate alerts, no lost backlog",
+      "result": "fail",
+      "checks": [
+        {
+          "id": "restart_recovery",
+          "metric": "restart_recovery_s",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 10,
+          "unit": "s",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 1.758
+          },
+          "result": "pass"
+        },
+        {
+          "id": "restart_duplicates",
+          "metric": "restart_duplicate_alerts",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 36
+          },
+          "result": "fail",
+          "reason": "restart_duplicate_alerts value is 36, the criterion is == 0"
+        },
+        {
+          "id": "restart_backlog",
+          "metric": "restart_lost_backlog",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 216062
+          },
+          "result": "fail",
+          "reason": "restart_lost_backlog value is 216062, the criterion is == 0"
+        }
+      ]
+    },
+    {
+      "id": "partition",
+      "property": "Partition",
+      "criterion": "kill NATS of one system for 60 s: ingest spills and replays; other systems show nothing",
+      "result": "pass",
+      "checks": [
+        {
+          "id": "partition_replay",
+          "metric": "partition_unreplayed",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §6 NATS row",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "partition_isolation",
+          "metric": "partition_cross_effects",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §6",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "cross_system_outage",
+      "property": "Cross-system outage",
+      "criterion": "CISP, authority, DSS, ANSP each taken down for 5 min: the degraded behaviours of 02 observed, nothing hidden, everything flagged with age",
+      "result": "fail",
+      "checks": [
+        {
+          "id": "outage_flagged",
+          "metric": "outage_unflagged",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §6, 02 failure columns",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 3
+          },
+          "result": "fail",
+          "reason": "outage_unflagged value is 3, the criterion is == 0"
+        }
+      ]
+    },
+    {
+      "id": "memory",
+      "property": "Memory",
+      "criterion": "no monotonic growth over the soak",
+      "result": "fail",
+      "checks": [
+        {
+          "id": "memory_monotonic",
+          "metric": "memory_monotonic",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "min_duration_s": 1800,
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 1
+          },
+          "result": "fail",
+          "reason": "memory_monotonic value is 1, the criterion is == 0"
+        },
+        {
+          "id": "memory_growth",
+          "metric": "memory_growth_ratio",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1.5,
+          "unit": "",
+          "status": "lab",
+          "basis": "the live heap at the end against the start of the soak after the warm-up (generator and reference target together)",
+          "min_duration_s": 1800,
+          "required": false,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 1.239
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "vectors",
+      "property": "Vectors",
+      "criterion": "all knowledge/vectors behaviour vectors pass against the packages in every image under test; schema examples pass everywhere",
+      "result": "pass",
+      "checks": [
+        {
+          "id": "vectors_pass",
+          "metric": "vectors_failed",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        }
+      ]
+    }
+  ],
+  "metrics": {
+    "alert_raise_s": {
+      "measured": true,
+      "n": 320,
+      "p50": 0.02,
+      "p95": 0.049,
+      "p99": 0.051,
+      "max": 0.054,
+      "mean": 0.025
+    },
+    "alert_untraceable": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "art13_notice_s": {
+      "measured": false,
+      "reason": "no aircraft of the load deviates from its authorisation, so no Art. 13(2) notice is due; and the lab's U-space airspace is designated without the conformance monitoring service (services_required NID, GEO, FA, TI; 2021/664 Art. 3(3))"
+    },
+    "compression_lag_chunks": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "cpa_evaluation_period_max_s": {
+      "measured": true,
+      "n": 1,
+      "value": 1
+    },
+    "cpa_pair_checks_per_worker": {
+      "measured": true,
+      "n": 1,
+      "value": 0.018
+    },
+    "disk_growth_vs_model": {
+      "measured": true,
+      "n": 1,
+      "value": 2.719
+    },
+    "expected_raises": {
+      "measured": true,
+      "n": 1,
+      "value": 380
+    },
+    "f3411_details_s": {
+      "measured": true,
+      "n": 35886,
+      "p50": 0.002,
+      "p95": 0.003,
+      "p99": 0.004,
+      "max": 0.021,
+      "mean": 0.001
+    },
+    "f3411_dp_cache_over_24h": {
+      "measured": false,
+      "reason": "the authority's display provider has cached for 1.0 h (its first network track); the 24 h bound is judged once it has cached for 25 h (a day, and the hour disposal is checked in)"
+    },
+    "f3411_dp_display_s": {
+      "measured": true,
+      "n": 12920,
+      "p50": 0.005,
+      "p95": 0.011,
+      "p99": 0.015,
+      "max": 0.026,
+      "mean": 0.005
+    },
+    "f3411_sp_flights_s": {
+      "measured": true,
+      "n": 35928,
+      "p50": 0.002,
+      "p95": 0.005,
+      "p99": 0.007,
+      "max": 0.058,
+      "mean": 0.002
+    },
+    "f3548_conflict_notify_s": {
+      "measured": false,
+      "reason": "no intent of the run conflicts with another USS's: the peer files none, so no conflicting-intent notification is due"
+    },
+    "f3548_constraint_notify_s": {
+      "measured": false,
+      "reason": "no constraint is created during the run: no system of the lab stack publishes F3548 constraints (uss_qualifier has no constraint management at the pinned commit, WP-L7)"
+    },
+    "f3548_details_s": {
+      "measured": true,
+      "n": 48,
+      "p50": 0.002,
+      "p95": 0.005,
+      "p99": 0.006,
+      "max": 0.006,
+      "mean": 0.002
+    },
+    "f3548_intent_change_s": {
+      "measured": true,
+      "n": 48,
+      "p50": 0.297,
+      "p95": 0.926,
+      "p99": 1.008,
+      "max": 1.008,
+      "mean": 0.355
+    },
+    "f3548_notifications_missing": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "generator_late_ratio": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "memory_growth_ratio": {
+      "measured": true,
+      "n": 1,
+      "value": 1.239
+    },
+    "memory_monotonic": {
+      "measured": true,
+      "n": 1,
+      "value": 1
+    },
+    "missed_clears": {
+      "measured": true,
+      "n": 1,
+      "value": 2
+    },
+    "missed_raises": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "operator_ledgers_unbalanced": {
+      "measured": true,
+      "n": 1,
+      "value": 100
+    },
+    "operator_rate_ratio": {
+      "measured": true,
+      "n": 1,
+      "value": 1
+    },
+    "operator_to_ussp_console_s": {
+      "measured": true,
+      "n": 91404,
+      "p50": 0.414,
+      "p95": 0.976,
+      "p99": 1.023,
+      "max": 1.052,
+      "mean": 0.472
+    },
+    "outage_unflagged": {
+      "measured": true,
+      "n": 1,
+      "value": 3
+    },
+    "partition_cross_effects": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "partition_unreplayed": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "picture_silent_loss": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "picture_untraceable_frames": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "receiver_ledgers_unbalanced": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "receiver_to_authority_picture_s": {
+      "measured": true,
+      "n": 128306,
+      "p50": 0.087,
+      "p95": 0.09,
+      "p99": 4.95,
+      "max": 37.141,
+      "mean": 0.281
+    },
+    "restart_duplicate_alerts": {
+      "measured": true,
+      "n": 1,
+      "value": 36
+    },
+    "restart_lost_backlog": {
+      "measured": true,
+      "n": 1,
+      "value": 216062
+    },
+    "restart_recovery_s": {
+      "measured": true,
+      "n": 1,
+      "value": 1.758
+    },
+    "rid_rate_ratio": {
+      "measured": true,
+      "n": 1,
+      "value": 1
+    },
+    "traffic_untraceable_frames": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "unexpected_alerts": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "vectors_failed": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "writer_queue_max_s": {
+      "measured": true,
+      "n": 1,
+      "value": 1.179277435
+    },
+    "zone_alert_ticks": {
+      "measured": true,
+      "n": 1,
+      "value": 1.051
+    }
+  },
+  "loss": {
+    "operator": {
+      "sent": 360064,
+      "accepted": 359936,
+      "refused": 0,
+      "dropped": 0,
+      "duplicate": 64,
+      "queue_shed": 0,
+      "pending": 216062,
+      "unbalanced": 100,
+      "outcomes": {
+        "accepted": 359936,
+        "duplicate": 64
+      },
+      "unbalance": [
+        "ac-00000: sent 3600, accepted 3600, refused 0, dropped 0, duplicate 0, pending 2160, acked 1439 of 3599",
+        "ac-00001: sent 3600, accepted 3600, refused 0, dropped 0, duplicate 0, pending 2160, acked 1439 of 3599",
+        "ac-00002: sent 3600, accepted 3600, refused 0, dropped 0, duplicate 0, pending 2160, acked 1439 of 3599",
+        "ac-00003: sent 3600, accepted 3600, refused 0, dropped 0, duplicate 0, pending 2160, acked 1439 of 3599",
+        "ac-00004: sent 3600, accepted 3600, refused 0, dropped 0, duplicate 0, pending 2160, acked 1439 of 3599",
+        "ac-00005: sent 3600, accepted 3600, refused 0, dropped 0, duplicate 0, pending 2160, acked 1439 of 3599",
+        "ac-00006: sent 3600, accepted 3600, refused 0, dropped 0, duplicate 0, pending 2160, acked 1439 of 3599",
+        "ac-00007: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2160, acked 1439 of 3599",
+        "ac-00008: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2160, acked 1439 of 3599",
+        "ac-00009: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2160, acked 1439 of 3599",
+        "ac-00010: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2160, acked 1439 of 3599",
+        "ac-00011: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2160, acked 1439 of 3599",
+        "ac-00012: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2160, acked 1439 of 3599",
+        "ac-00013: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2160, acked 1439 of 3599",
+        "ac-00014: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2160, acked 1439 of 3599",
+        "ac-00015: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2160, acked 1439 of 3599",
+        "ac-00016: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2160, acked 1439 of 3599",
+        "ac-00017: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2160, acked 1439 of 3599",
+        "ac-00018: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2160, acked 1439 of 3599",
+        "ac-00019: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00020: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00021: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00022: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00023: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00024: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00025: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00026: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00027: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00028: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00029: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00030: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00031: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00032: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00033: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00034: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00035: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00036: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00037: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00038: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00039: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00040: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00041: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00042: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00043: sent 3601, accepted 3599, refused 0, dropped 0, duplicate 1, pending 2161, acked 1438 of 3599",
+        "ac-00044: sent 3600, accepted 3600, refused 0, dropped 0, duplicate 0, pending 2161, acked 1438 of 3599",
+        "ac-00045: sent 3600, accepted 3600, refused 0, dropped 0, duplicate 0, pending 2161, acked 1438 of 3599",
+        "ac-00046: sent 3600, accepted 3600, refused 0, dropped 0, duplicate 0, pending 2161, acked 1438 of 3599",
+        "ac-00047: sent 3600, accepted 3600, refused 0, dropped 0, duplicate 0, pending 2161, acked 1438 of 3599",
+        "ac-00048: sent 3600, accepted 3600, refused 0, dropped 0, duplicate 0, pending 2161, acked 1438 of 3599",
+        "ac-00049: sent 3600, accepted 3600, refused 0, dropped 0, duplicate 0, pending 2161, acked 1438 of 3599"
+      ]
+    },
+    "receivers": {
+      "observed": 184162,
+      "sent": 184162,
+      "accepted": 179376,
+      "duplicates": 0,
+      "refused": 4786,
+      "backlog_shed": 0,
+      "backlog_locations_accepted": 11867,
+      "dropped_by_knob": 0,
+      "pending": 0,
+      "unbalanced": 0
+    },
+    "generator_shed_operator": 0,
+    "generator_shed_rid": 0,
+    "picture": {
+      "handed": 144000,
+      "shown": 128306,
+      "unshown": 15694,
+      "repeats": 0,
+      "untraceable": 0,
+      "negative_latencies": 0
+    },
+    "traffic": {
+      "handed": 93600,
+      "shown": 91404,
+      "unshown": 2196,
+      "repeats": 230,
+      "untraceable": 0,
+      "negative_latencies": 0
+    },
+    "picture_dropped_frames": 0,
+    "picture_accounted": 16653,
+    "picture_silent": 0
+  },
+  "alerts": {
+    "expected": 320,
+    "raised": 320,
+    "cleared": 320,
+    "untraceable": 0,
+    "raises": [
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "c37a8762-8205-4ca3-a1d8-eceb861314f0",
+        "observed_s": 36.029,
+        "captured_s": 35.999,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "eb6cfaa0-df2c-41a7-9182-595cbec99696",
+        "observed_s": 216.029,
+        "captured_s": 216.002,
+        "latency_s": 0.008
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "7eeb8fd6-f002-4a79-a695-f26fcb515ec0",
+        "observed_s": 396.031,
+        "captured_s": 396.005,
+        "latency_s": 0.011
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "24c397dd-4f3f-4b06-ac87-c502bbcb9c77",
+        "observed_s": 576.031,
+        "captured_s": 576.027,
+        "latency_s": 0.011
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "17720e70-b104-417a-b4f3-5c2c2c52b702",
+        "observed_s": 756.03,
+        "captured_s": 756.008,
+        "latency_s": 0.01
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "d4e5e954-b6a5-426c-bd05-1be1624ebacb",
+        "observed_s": 936.031,
+        "captured_s": 936.011,
+        "latency_s": 0.011
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "f380f6e7-b768-41bc-bad3-e6b6352bfc09",
+        "observed_s": 1116.036,
+        "captured_s": 1116.012,
+        "latency_s": 0.015
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "b0f51298-56bd-4c11-99fa-b757f7865eda",
+        "observed_s": 1296.034,
+        "captured_s": 1296.015,
+        "latency_s": 0.014
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "977b209a-e815-42b8-a2f5-7e793c8ae843",
+        "observed_s": 1476.036,
+        "captured_s": 1476.018,
+        "latency_s": 0.016
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "8779191f-b6a7-4e71-9825-88bcac2636af",
+        "observed_s": 1656.029,
+        "captured_s": 1656.019,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "22b3f3ac-936e-4169-a0d3-63b43b9e8539",
+        "observed_s": 1836.028,
+        "captured_s": 1836.021,
+        "latency_s": 0.008
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "01e93611-58fc-4866-80de-4402f918f7f8",
+        "observed_s": 2016.038,
+        "captured_s": 2016.044,
+        "latency_s": 0.017
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "479cd5e8-6c2a-4fd6-9996-22bae14710a8",
+        "observed_s": 2196.033,
+        "captured_s": 2196.045,
+        "latency_s": 0.013
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "c21e6a96-4cc6-48ae-b23a-c3661fb8295b",
+        "observed_s": 2376.032,
+        "captured_s": 2376.028,
+        "latency_s": 0.012
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "827edb66-18a7-4ed2-b42a-42df63ca0109",
+        "observed_s": 2556.033,
+        "captured_s": 2556.05,
+        "latency_s": 0.013
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "5f535079-a737-4d89-9115-2a5a74c88c87",
+        "observed_s": 2736.032,
+        "captured_s": 2736.051,
+        "latency_s": 0.011
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "9fa50317-e59f-4aa5-b8e8-0ebdb287a4b2",
+        "observed_s": 2916.029,
+        "captured_s": 2916.034,
+        "latency_s": 0.008
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "3b9cef37-b7cc-4ba7-bd7e-f3370d7aaae1",
+        "observed_s": 3096.03,
+        "captured_s": 3096.055,
+        "latency_s": 0.01
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "f3a12ba5-09e6-404c-9185-f73b8c3aaa77",
+        "observed_s": 3276.032,
+        "captured_s": 3276.037,
+        "latency_s": 0.012
+      },
+      {
+        "aircraft": "ac-00000",
+        "alert_id": "ab70988f-5fe4-46bc-be97-cb426a6978a4",
+        "observed_s": 3456.031,
+        "captured_s": 3456.06,
+        "latency_s": 0.01
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "c7bf6aec-d532-4bf1-bd08-fe8975f3c305",
+        "observed_s": 36.029,
+        "captured_s": 35.999,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "ae83808f-94f5-40d7-b321-0db30612fa89",
+        "observed_s": 216.029,
+        "captured_s": 216.002,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "8c8d5457-ee19-4c8b-bb58-587d654cf1f6",
+        "observed_s": 396.031,
+        "captured_s": 396.005,
+        "latency_s": 0.011
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "0c1dbe27-2b67-4dca-9626-a9aa18a19cdb",
+        "observed_s": 576.031,
+        "captured_s": 576.027,
+        "latency_s": 0.011
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "27ff40f5-d47a-4027-b8ce-31d8f517e1d4",
+        "observed_s": 756.03,
+        "captured_s": 756.008,
+        "latency_s": 0.01
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "2debe4f0-f213-491b-9900-e4ad3a0eb59a",
+        "observed_s": 936.031,
+        "captured_s": 936.011,
+        "latency_s": 0.011
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "f5c9e417-5615-4a3c-8a42-d959d09f0672",
+        "observed_s": 1116.036,
+        "captured_s": 1116.012,
+        "latency_s": 0.015
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "68fa3b79-922c-4978-90e0-7da6adb9659d",
+        "observed_s": 1296.035,
+        "captured_s": 1296.015,
+        "latency_s": 0.014
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "c8112a32-b4bb-4fd4-8aa9-7943677dc87a",
+        "observed_s": 1476.036,
+        "captured_s": 1476.018,
+        "latency_s": 0.016
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "bebb858b-d0c4-4e7f-b736-34e8fe308fbb",
+        "observed_s": 1656.029,
+        "captured_s": 1656.019,
+        "latency_s": 0.009
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "4cc4b4c3-8d30-4c3a-bc34-564bbb9ff11c",
+        "observed_s": 1836.028,
+        "captured_s": 1836.021,
+        "latency_s": 0.008
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "a40fed9f-56f9-4887-8d14-75e9c2c03cfb",
+        "observed_s": 2016.038,
+        "captured_s": 2016.044,
+        "latency_s": 0.017
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "15e5bac2-5f98-4fda-a54c-0e7faf406e18",
+        "observed_s": 2196.033,
+        "captured_s": 2196.045,
+        "latency_s": 0.013
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "5edd03e3-d940-4679-964a-6a6723cf4084",
+        "observed_s": 2376.032,
+        "captured_s": 2376.028,
+        "latency_s": 0.012
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "ba8c4e1c-a1f1-4f3c-822b-a2ae380426e9",
+        "observed_s": 2556.033,
+        "captured_s": 2556.05,
+        "latency_s": 0.013
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "88dd0193-020a-4b27-8a7d-64432aa60415",
+        "observed_s": 2736.032,
+        "captured_s": 2736.051,
+        "latency_s": 0.012
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "934ea2ef-dcdb-45f0-b04b-a5d1d0a0dce2",
+        "observed_s": 2916.029,
+        "captured_s": 2916.034,
+        "latency_s": 0.008
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "f22f90f2-45c5-4460-81e5-120320888bcc",
+        "observed_s": 3096.03,
+        "captured_s": 3096.055,
+        "latency_s": 0.01
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "63695b9d-bddd-4647-a009-405d44a43c96",
+        "observed_s": 3276.032,
+        "captured_s": 3276.037,
+        "latency_s": 0.012
+      },
+      {
+        "aircraft": "ac-00001",
+        "alert_id": "28701335-d7e6-40fc-b530-c12dba121a56",
+        "observed_s": 3456.031,
+        "captured_s": 3456.06,
+        "latency_s": 0.01
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "7744a860-e981-4403-9c3c-c1e62ed52dbc",
+        "observed_s": 36.079,
+        "captured_s": 36.06,
+        "latency_s": 0.019
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "3328adbe-2fca-49d5-8b12-31627f343dba",
+        "observed_s": 216.078,
+        "captured_s": 216.042,
+        "latency_s": 0.017
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "f9fc3616-04d9-4c97-a9a7-7cdf40aba352",
+        "observed_s": 396.078,
+        "captured_s": 396.064,
+        "latency_s": 0.018
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "09d9b593-5432-40b8-8e53-35bde76518f4",
+        "observed_s": 576.079,
+        "captured_s": 576.047,
+        "latency_s": 0.018
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "d08e5321-2ced-4554-b8d1-3150ad588666",
+        "observed_s": 756.078,
+        "captured_s": 756.048,
+        "latency_s": 0.017
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "893eae8e-f11d-48e9-9168-97c71deac20c",
+        "observed_s": 936.078,
+        "captured_s": 936.051,
+        "latency_s": 0.018
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "c396f931-c3b2-4e2a-bafb-78960515497c",
+        "observed_s": 1116.078,
+        "captured_s": 1116.072,
+        "latency_s": 0.017
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "74759c30-1fe9-42bf-8bec-557bad3a454a",
+        "observed_s": 1296.078,
+        "captured_s": 1296.054,
+        "latency_s": 0.018
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "2e01de98-d994-4925-b59c-08225c62ae01",
+        "observed_s": 1476.078,
+        "captured_s": 1476.077,
+        "latency_s": 0.018
+      },
+      {
+        "aircraft": "ac-00002",
+        "alert_id": "5b6ea26e-5c63-4921-8b37-b18feefa711b",
+        "observed_s": 1656.077,
+        "captured_s": 1656.08,
+        "latency_s": 0.017
+      }
+    ]
+  },
+  "streams": [
+    {
+      "name": "console-00",
+      "kind": "picture",
+      "timed": true,
+      "connects": 32,
+      "breaks": 121,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 6,
+        "console/status/v1": 1658,
+        "source/status/v1": 48,
+        "track/telemetry/v1": 449527,
+        "violation/v1": 169
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "alerts_replaying",
+        "no_subscription",
+        "cis_stale",
+        "alerts_unconfirmed",
+        "dp_unavailable",
+        "manned_unavailable",
+        "nats_unavailable"
+      ],
+      "last_error": "console-00: failed to get reader: received close frame: status = StatusTryAgainLater and reason = \"the session could not be checked; reconnect later\""
+    },
+    {
+      "name": "console-01",
+      "kind": "picture",
+      "timed": false,
+      "connects": 32,
+      "breaks": 121,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 6,
+        "console/status/v1": 1658,
+        "source/status/v1": 48,
+        "track/telemetry/v1": 449523,
+        "violation/v1": 169
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "no_subscription",
+        "cis_stale",
+        "alerts_unconfirmed",
+        "alerts_replaying",
+        "dp_unavailable",
+        "manned_unavailable",
+        "nats_unavailable"
+      ],
+      "last_error": "console-01: failed to get reader: received close frame: status = StatusTryAgainLater and reason = \"the session could not be checked; reconnect later\""
+    },
+    {
+      "name": "console-02",
+      "kind": "picture",
+      "timed": false,
+      "connects": 32,
+      "breaks": 121,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 6,
+        "console/status/v1": 1658,
+        "source/status/v1": 48,
+        "track/telemetry/v1": 449527,
+        "violation/v1": 169
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "alerts_unconfirmed",
+        "alerts_replaying",
+        "dp_unavailable",
+        "manned_unavailable",
+        "nats_unavailable",
+        "no_subscription",
+        "cis_stale"
+      ],
+      "last_error": "console-02: failed to get reader: received close frame: status = StatusTryAgainLater and reason = \"the session could not be checked; reconnect later\""
+    },
+    {
+      "name": "console-03",
+      "kind": "picture",
+      "timed": false,
+      "connects": 32,
+      "breaks": 121,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 6,
+        "console/status/v1": 1658,
+        "source/status/v1": 48,
+        "track/telemetry/v1": 449523,
+        "violation/v1": 169
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "alerts_replaying",
+        "no_subscription",
+        "cis_stale",
+        "alerts_unconfirmed",
+        "dp_unavailable",
+        "manned_unavailable",
+        "nats_unavailable"
+      ],
+      "last_error": "console-03: failed to get reader: received close frame: status = StatusTryAgainLater and reason = \"the session could not be checked; reconnect later\""
+    },
+    {
+      "name": "console-04",
+      "kind": "picture",
+      "timed": false,
+      "connects": 32,
+      "breaks": 121,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 6,
+        "console/status/v1": 1658,
+        "source/status/v1": 48,
+        "track/telemetry/v1": 449523,
+        "violation/v1": 169
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "no_subscription",
+        "cis_stale",
+        "alerts_unconfirmed",
+        "alerts_replaying",
+        "dp_unavailable",
+        "manned_unavailable",
+        "nats_unavailable"
+      ],
+      "last_error": "console-04: failed to get reader: received close frame: status = StatusTryAgainLater and reason = \"the session could not be checked; reconnect later\""
+    },
+    {
+      "name": "console-05",
+      "kind": "picture",
+      "timed": false,
+      "connects": 32,
+      "breaks": 121,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 6,
+        "console/status/v1": 1658,
+        "source/status/v1": 48,
+        "track/telemetry/v1": 449523,
+        "violation/v1": 169
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "alerts_unconfirmed",
+        "dp_unavailable",
+        "manned_unavailable",
+        "nats_unavailable",
+        "alerts_replaying",
+        "no_subscription",
+        "cis_stale"
+      ],
+      "last_error": "console-05: failed to get reader: received close frame: status = StatusTryAgainLater and reason = \"the session could not be checked; reconnect later\""
+    },
+    {
+      "name": "console-06",
+      "kind": "picture",
+      "timed": false,
+      "connects": 32,
+      "breaks": 121,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 6,
+        "console/status/v1": 1658,
+        "source/status/v1": 48,
+        "track/telemetry/v1": 449523,
+        "violation/v1": 169
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "dp_unavailable",
+        "manned_unavailable",
+        "nats_unavailable",
+        "no_subscription",
+        "cis_stale",
+        "alerts_unconfirmed",
+        "alerts_replaying"
+      ],
+      "last_error": "console-06: failed to get reader: received close frame: status = StatusTryAgainLater and reason = \"the session could not be checked; reconnect later\""
+    },
+    {
+      "name": "console-07",
+      "kind": "picture",
+      "timed": false,
+      "connects": 32,
+      "breaks": 121,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 6,
+        "console/status/v1": 1658,
+        "source/status/v1": 48,
+        "track/telemetry/v1": 449523,
+        "violation/v1": 169
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "dp_unavailable",
+        "manned_unavailable",
+        "nats_unavailable",
+        "alerts_replaying",
+        "no_subscription",
+        "cis_stale",
+        "alerts_unconfirmed"
+      ],
+      "last_error": "console-07: failed to get reader: received close frame: status = StatusTryAgainLater and reason = \"the session could not be checked; reconnect later\""
+    },
+    {
+      "name": "console-08",
+      "kind": "picture",
+      "timed": false,
+      "connects": 32,
+      "breaks": 121,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 6,
+        "console/status/v1": 1658,
+        "source/status/v1": 48,
+        "track/telemetry/v1": 449523,
+        "violation/v1": 169
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "cis_stale",
+        "alerts_unconfirmed",
+        "alerts_replaying",
+        "dp_unavailable",
+        "manned_unavailable",
+        "nats_unavailable",
+        "no_subscription"
+      ],
+      "last_error": "console-08: failed to get reader: received close frame: status = StatusTryAgainLater and reason = \"the session could not be checked; reconnect later\""
+    },
+    {
+      "name": "console-09",
+      "kind": "picture",
+      "timed": false,
+      "connects": 32,
+      "breaks": 121,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 6,
+        "console/status/v1": 1658,
+        "source/status/v1": 48,
+        "track/telemetry/v1": 449523,
+        "violation/v1": 169
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "dp_unavailable",
+        "manned_unavailable",
+        "nats_unavailable",
+        "no_subscription",
+        "cis_stale",
+        "alerts_unconfirmed",
+        "alerts_replaying"
+      ],
+      "last_error": "console-09: failed to get reader: received close frame: status = StatusTryAgainLater and reason = \"the session could not be checked; reconnect later\""
+    },
+    {
+      "name": "traffic-ac-00000",
+      "kind": "traffic",
+      "aircraft": "ac-00000",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 61,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1795,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "peers",
+        "intent_active",
+        "sessions_live",
+        "source_control",
+        "nats",
+        "cis",
+        "manned",
+        "policy",
+        "monitor",
+        "jwks"
+      ],
+      "last_error": "traffic-ac-00000: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00001",
+      "kind": "traffic",
+      "aircraft": "ac-00001",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 61,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1795,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "sessions_live",
+        "source_control",
+        "nats",
+        "cis",
+        "econspicuity",
+        "policy",
+        "peers",
+        "manned",
+        "monitor",
+        "intent_active",
+        "jwks"
+      ],
+      "last_error": "traffic-ac-00001: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00002",
+      "kind": "traffic",
+      "aircraft": "ac-00002",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 61,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1795,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "sessions_live",
+        "source_control",
+        "econspicuity",
+        "policy",
+        "intent_active",
+        "nats",
+        "cis",
+        "manned",
+        "monitor",
+        "peers",
+        "jwks"
+      ],
+      "last_error": "traffic-ac-00002: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00003",
+      "kind": "traffic",
+      "aircraft": "ac-00003",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 62,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1795,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "peers",
+        "sessions_live",
+        "source_control",
+        "nats",
+        "cis",
+        "policy",
+        "monitor",
+        "intent_active",
+        "jwks"
+      ],
+      "last_error": "traffic-ac-00003: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00004",
+      "kind": "traffic",
+      "aircraft": "ac-00004",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 61,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1795,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "jwks",
+        "sessions_live",
+        "source_control",
+        "cis",
+        "policy",
+        "monitor",
+        "peers",
+        "intent_active",
+        "nats"
+      ],
+      "last_error": "traffic-ac-00004: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00005",
+      "kind": "traffic",
+      "aircraft": "ac-00005",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 61,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1794,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "monitor",
+        "peers",
+        "intent_active",
+        "jwks",
+        "sessions_live",
+        "source_control",
+        "econspicuity",
+        "nats",
+        "cis",
+        "manned",
+        "policy"
+      ],
+      "last_error": "traffic-ac-00005: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00006",
+      "kind": "traffic",
+      "aircraft": "ac-00006",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 61,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1794,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "monitor",
+        "peers",
+        "intent_active",
+        "sessions_live",
+        "nats",
+        "manned",
+        "policy",
+        "jwks",
+        "source_control",
+        "cis"
+      ],
+      "last_error": "traffic-ac-00006: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00007",
+      "kind": "traffic",
+      "aircraft": "ac-00007",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 61,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1794,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "manned",
+        "policy",
+        "jwks",
+        "source_control",
+        "nats",
+        "cis",
+        "econspicuity",
+        "monitor",
+        "peers",
+        "intent_active",
+        "sessions_live"
+      ],
+      "last_error": "traffic-ac-00007: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00008",
+      "kind": "traffic",
+      "aircraft": "ac-00008",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 61,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1794,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "nats",
+        "econspicuity",
+        "monitor",
+        "intent_active",
+        "jwks",
+        "sessions_live",
+        "source_control",
+        "cis",
+        "manned",
+        "policy",
+        "peers"
+      ],
+      "last_error": "traffic-ac-00008: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00009",
+      "kind": "traffic",
+      "aircraft": "ac-00009",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 61,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1794,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "manned",
+        "peers",
+        "sessions_live",
+        "nats",
+        "econspicuity",
+        "policy",
+        "monitor",
+        "intent_active",
+        "jwks",
+        "source_control",
+        "cis"
+      ],
+      "last_error": "traffic-ac-00009: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00010",
+      "kind": "traffic",
+      "aircraft": "ac-00010",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 61,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1795,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "nats",
+        "cis",
+        "monitor",
+        "peers",
+        "intent_active",
+        "sessions_live",
+        "source_control",
+        "econspicuity",
+        "manned",
+        "policy",
+        "jwks"
+      ],
+      "last_error": "traffic-ac-00010: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00011",
+      "kind": "traffic",
+      "aircraft": "ac-00011",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 61,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1795,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "policy",
+        "monitor",
+        "peers",
+        "intent_active",
+        "jwks",
+        "nats",
+        "cis",
+        "manned",
+        "sessions_live",
+        "source_control"
+      ],
+      "last_error": "traffic-ac-00011: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00012",
+      "kind": "traffic",
+      "aircraft": "ac-00012",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 61,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1795,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "policy",
+        "peers",
+        "intent_active",
+        "sessions_live",
+        "manned",
+        "monitor",
+        "jwks",
+        "source_control",
+        "nats",
+        "cis"
+      ],
+      "last_error": "traffic-ac-00012: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00013",
+      "kind": "traffic",
+      "aircraft": "ac-00013",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 61,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1795,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "monitor",
+        "jwks",
+        "sessions_live",
+        "source_control",
+        "cis",
+        "econspicuity",
+        "policy",
+        "peers",
+        "intent_active",
+        "nats",
+        "manned"
+      ],
+      "last_error": "traffic-ac-00013: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00014",
+      "kind": "traffic",
+      "aircraft": "ac-00014",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 61,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1795,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor",
+        "peers",
+        "intent_active",
+        "jwks",
+        "nats",
+        "sessions_live",
+        "source_control",
+        "cis"
+      ],
+      "last_error": "traffic-ac-00014: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00015",
+      "kind": "traffic",
+      "aircraft": "ac-00015",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 61,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1794,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "source_control",
+        "policy",
+        "peers",
+        "nats",
+        "cis",
+        "econspicuity",
+        "manned",
+        "monitor",
+        "intent_active",
+        "jwks",
+        "sessions_live"
+      ],
+      "last_error": "traffic-ac-00015: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00016",
+      "kind": "traffic",
+      "aircraft": "ac-00016",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 1,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1794,
+        "traffic/product/v1": 3584
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "peers",
+        "intent_active",
+        "jwks",
+        "nats",
+        "cis",
+        "monitor",
+        "sessions_live",
+        "source_control",
+        "econspicuity",
+        "manned",
+        "policy"
+      ],
+      "last_error": "traffic-ac-00016: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00017",
+      "kind": "traffic",
+      "aircraft": "ac-00017",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 1,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1794,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "policy",
+        "intent_active",
+        "jwks",
+        "sessions_live",
+        "nats",
+        "monitor",
+        "peers",
+        "source_control",
+        "cis",
+        "econspicuity",
+        "manned"
+      ],
+      "last_error": "traffic-ac-00017: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00018",
+      "kind": "traffic",
+      "aircraft": "ac-00018",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 1,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1794,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "source_control",
+        "nats",
+        "cis",
+        "econspicuity",
+        "manned",
+        "policy",
+        "peers",
+        "intent_active",
+        "sessions_live",
+        "monitor",
+        "jwks"
+      ],
+      "last_error": "traffic-ac-00018: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00019",
+      "kind": "traffic",
+      "aircraft": "ac-00019",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 1,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1794,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "sessions_live",
+        "source_control",
+        "nats",
+        "cis",
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor",
+        "peers",
+        "intent_active",
+        "jwks"
+      ],
+      "last_error": "traffic-ac-00019: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00020",
+      "kind": "traffic",
+      "aircraft": "ac-00020",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 1,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1795,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "nats",
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor",
+        "peers",
+        "sessions_live",
+        "cis",
+        "intent_active",
+        "jwks",
+        "source_control"
+      ],
+      "last_error": "traffic-ac-00020: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00021",
+      "kind": "traffic",
+      "aircraft": "ac-00021",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 1,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1795,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "cis",
+        "econspicuity",
+        "policy",
+        "peers",
+        "intent_active",
+        "jwks",
+        "sessions_live",
+        "nats",
+        "manned",
+        "monitor",
+        "source_control"
+      ],
+      "last_error": "traffic-ac-00021: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00022",
+      "kind": "traffic",
+      "aircraft": "ac-00022",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 1,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1795,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "monitor",
+        "peers",
+        "intent_active",
+        "nats",
+        "cis",
+        "manned",
+        "policy",
+        "jwks",
+        "sessions_live",
+        "source_control"
+      ],
+      "last_error": "traffic-ac-00022: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00023",
+      "kind": "traffic",
+      "aircraft": "ac-00023",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 1,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1795,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "jwks",
+        "sessions_live",
+        "cis",
+        "econspicuity",
+        "policy",
+        "peers",
+        "intent_active",
+        "source_control",
+        "nats",
+        "manned",
+        "monitor"
+      ],
+      "last_error": "traffic-ac-00023: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00098",
+      "kind": "traffic",
+      "aircraft": "ac-00098",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 61,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1794,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "peers",
+        "jwks",
+        "nats",
+        "manned",
+        "policy",
+        "monitor",
+        "intent_active",
+        "sessions_live",
+        "source_control",
+        "cis"
+      ],
+      "last_error": "traffic-ac-00098: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    },
+    {
+      "name": "traffic-ac-00099",
+      "kind": "traffic",
+      "aircraft": "ac-00099",
+      "timed": true,
+      "connects": 65,
+      "breaks": 66,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 61,
+        "console/snapshot/v1": 4,
+        "console/status/v1": 1794,
+        "traffic/product/v1": 3583
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "nats",
+        "manned",
+        "policy",
+        "monitor",
+        "peers",
+        "jwks",
+        "sessions_live",
+        "source_control",
+        "cis",
+        "econspicuity",
+        "intent_active"
+      ],
+      "last_error": "traffic-ac-00099: failed to get reader: received close frame: status = StatusCode(4401) and reason = \"the credential expired: sign in again\""
+    }
+  ],
+  "memory_live_heap_bytes": [
+    83589136,
+    83350408,
+    83602376,
+    84767552,
+    83741728,
+    84723176,
+    83785744,
+    83975064,
+    84652040,
+    84077392,
+    83971520,
+    85518072,
+    84795664,
+    84336168,
+    84448640,
+    83849512,
+    85379720,
+    84003872,
+    84250976,
+    83776704,
+    84351616,
+    83992048,
+    85171440,
+    84333120,
+    84215472,
+    85608304,
+    84130312,
+    85016704,
+    84008920,
+    84117192,
+    84117192,
+    85962992,
+    85512272,
+    85508544,
+    85741672,
+    85407648,
+    86758808,
+    85685728,
+    85425712,
+    85416584,
+    85286944,
+    85491408,
+    85447552,
+    85551216,
+    85389272,
+    85460680,
+    85352408,
+    85357880,
+    85444776,
+    85716256,
+    85425960,
+    85396280,
+    86134072,
+    86328192,
+    86232560,
+    85555176,
+    86226536,
+    86055728,
+    85529424,
+    85378552,
+    85910240,
+    85521280,
+    85649592,
+    85588072,
+    87148048,
+    87665432,
+    85719440,
+    85719440,
+    85743792,
+    86252152,
+    85759408,
+    85765920,
+    86971640,
+    85705952,
+    85831672,
+    85711352,
+    86230168,
+    85941072,
+    87439032,
+    89008096,
+    86150128,
+    85984424,
+    87154960,
+    85748072,
+    87127304,
+    87825048,
+    88057624,
+    86583944,
+    85960728,
+    85827848,
+    86655928,
+    85739664,
+    85768496,
+    85760264,
+    85941168,
+    85850480,
+    85861048,
+    87426352,
+    86050400,
+    85943600,
+    86360496,
+    85980760,
+    86962264,
+    87787952,
+    86683720,
+    86377904,
+    86576288,
+    85887720,
+    87098928,
+    86009328,
+    86078448,
+    87580456,
+    86328336,
+    86024672,
+    86024672,
+    86239552,
+    86911216,
+    86937576,
+    86637424,
+    87972880,
+    87065920,
+    86485792,
+    86050640,
+    88151232,
+    86253040,
+    86317920,
+    86405024,
+    86149944,
+    86150776,
+    86293496,
+    86212160,
+    86332888,
+    86181600,
+    86455504,
+    86508936,
+    86249080,
+    88700840,
+    87343400,
+    86921688,
+    85977336,
+    86226640,
+    86092104,
+    86621776,
+    86718224,
+    87374288,
+    86743616,
+    88206312,
+    88113128,
+    88490680,
+    88400288,
+    88400288,
+    89440424,
+    89440424,
+    89440424,
+    91362080,
+    91362080,
+    92305432,
+    91710096,
+    94198120,
+    94583272,
+    95236008,
+    94921576,
+    95548256,
+    96033720,
+    95447192,
+    95437104,
+    95698176,
+    95931912,
+    96955352,
+    96858520,
+    96858520,
+    97169880,
+    97544024,
+    98151888,
+    98149520,
+    103268960,
+    104510360,
+    103815440,
+    103948296,
+    104301792,
+    104301792,
+    104234776,
+    104522752,
+    105832200,
+    104724760,
+    104985640,
+    105023520,
+    105023520,
+    106150704,
+    106604400,
+    106125416,
+    108632000,
+    105961608,
+    105961608,
+    106651072,
+    106226872,
+    108253248,
+    106616176,
+    107116864,
+    107116864,
+    106923680,
+    107076920,
+    107448240,
+    107462976,
+    115825800,
+    115825800,
+    115825800,
+    115825800,
+    115825800,
+    115825800,
+    117456152,
+    117456152,
+    117456152,
+    117456152,
+    117456152,
+    117456152,
+    118155256,
+    118155256,
+    118155256,
+    118155256,
+    118155256,
+    119609344,
+    119609344,
+    119609344,
+    119609344,
+    119609344,
+    119609344,
+    121091312,
+    121091312,
+    121091312,
+    121091312,
+    121091312,
+    121091312,
+    122345368,
+    122345368,
+    122345368,
+    122345368,
+    122345368,
+    120235832,
+    120235832,
+    121401352,
+    121696776,
+    130764304,
+    130764304,
+    132411432,
+    131631632,
+    131631632,
+    131927616,
+    132095288,
+    132095288,
+    132455464,
+    132512472,
+    132512472,
+    135938312,
+    133813984,
+    133813984,
+    134449792,
+    134361360,
+    134361360,
+    133650448,
+    135947728,
+    135947728,
+    136285480,
+    134976008,
+    134976008,
+    134522536,
+    135568448,
+    135568448,
+    135025856,
+    135757672,
+    135757672,
+    135495480,
+    137203736,
+    137203736,
+    135832504,
+    135832504,
+    135943424,
+    139103584,
+    139103584,
+    137641016,
+    137530592,
+    137530592,
+    137124168,
+    139686864,
+    139686864,
+    138374984,
+    137670000,
+    137670000,
+    149160360,
+    151073112,
+    151073112,
+    150597272,
+    150597272,
+    150902416,
+    153234792,
+    153234792,
+    151385800,
+    151385800,
+    152463104,
+    152463104,
+    152795672,
+    152178216,
+    152178216,
+    153220336,
+    153220336,
+    152489200,
+    152489200,
+    152718528,
+    153537984,
+    153537984,
+    153331112,
+    153331112,
+    154323744,
+    154323744,
+    154929096,
+    154929096,
+    154448472,
+    154550016,
+    154550016,
+    155722768,
+    155722768,
+    154888824,
+    154888824,
+    154933640,
+    154933640,
+    157303080,
+    155558176,
+    155558176,
+    157713848,
+    157713848,
+    157591520,
+    157591520,
+    158285376,
+    158285376,
+    157557224,
+    156697384,
+    156697384,
+    157002496,
+    157002496,
+    157152808,
+    157152808,
+    158703832,
+    158703832,
+    157576784,
+    160904160,
+    160904160,
+    173477944,
+    173715592,
+    173715592,
+    176431552,
+    176431552,
+    174636760,
+    174636760,
+    174501480,
+    174501480,
+    174521136,
+    174521136,
+    177125480,
+    177125480,
+    175133896
+  ],
+  "systems": {
+    "memory": [
+      {
+        "process": "ansp-api",
+        "samples": 311,
+        "first_bytes": 166961152,
+        "last_bytes": 39444480,
+        "max_bytes": 167284736,
+        "growth_ratio": 1.005,
+        "monotonic": false
+      },
+      {
+        "process": "ansp-manned-feed",
+        "samples": 312,
+        "first_bytes": 30568448,
+        "last_bytes": 30736384,
+        "max_bytes": 32395264,
+        "growth_ratio": 0.984,
+        "monotonic": false
+      },
+      {
+        "process": "authority-api",
+        "samples": 324,
+        "first_bytes": 90603520,
+        "last_bytes": 47058944,
+        "max_bytes": 98861056,
+        "growth_ratio": 0.972,
+        "monotonic": false
+      },
+      {
+        "process": "authority-detect",
+        "samples": 323,
+        "first_bytes": 29962240,
+        "last_bytes": 34107392,
+        "max_bytes": 36069376,
+        "growth_ratio": 0.985,
+        "monotonic": false
+      },
+      {
+        "process": "authority-dp-poller",
+        "samples": 325,
+        "first_bytes": 31178752,
+        "last_bytes": 35295232,
+        "max_bytes": 74010624,
+        "growth_ratio": 1.004,
+        "monotonic": false
+      },
+      {
+        "process": "authority-manned-ingest",
+        "samples": 325,
+        "first_bytes": 28725248,
+        "last_bytes": 28196864,
+        "max_bytes": 30613504,
+        "growth_ratio": 0.931,
+        "monotonic": false
+      },
+      {
+        "process": "authority-picture-ws",
+        "samples": 324,
+        "first_bytes": 31215616,
+        "last_bytes": 35221504,
+        "max_bytes": 37089280,
+        "growth_ratio": 0.985,
+        "monotonic": false
+      },
+      {
+        "process": "authority-rid-ingest",
+        "samples": 324,
+        "first_bytes": 28618752,
+        "last_bytes": 32845824,
+        "max_bytes": 112467968,
+        "growth_ratio": 0.942,
+        "monotonic": false
+      },
+      {
+        "process": "authority-tsdb-writer",
+        "samples": 325,
+        "first_bytes": 28127232,
+        "last_bytes": 28971008,
+        "max_bytes": 53641216,
+        "growth_ratio": 0.968,
+        "monotonic": false
+      },
+      {
+        "process": "cisp-api",
+        "samples": 306,
+        "first_bytes": 104370176,
+        "last_bytes": 35373056,
+        "max_bytes": 106860544,
+        "growth_ratio": 0.984,
+        "monotonic": false
+      },
+      {
+        "process": "ussp-api",
+        "samples": 338,
+        "first_bytes": 43577344,
+        "last_bytes": 45109248,
+        "max_bytes": 167591936,
+        "growth_ratio": 0.924,
+        "monotonic": false
+      },
+      {
+        "process": "ussp-dss-sync",
+        "samples": 338,
+        "first_bytes": 22196224,
+        "last_bytes": 23371776,
+        "max_bytes": 25444352,
+        "growth_ratio": 0.918,
+        "monotonic": false
+      },
+      {
+        "process": "ussp-monitor",
+        "samples": 338,
+        "first_bytes": 32948224,
+        "last_bytes": 36823040,
+        "max_bytes": 42725376,
+        "growth_ratio": 0.889,
+        "monotonic": false
+      },
+      {
+        "process": "ussp-rid-sp",
+        "samples": 338,
+        "first_bytes": 29433856,
+        "last_bytes": 36208640,
+        "max_bytes": 47538176,
+        "growth_ratio": 0.854,
+        "monotonic": false
+      },
+      {
+        "process": "ussp-telemetry-ingest",
+        "samples": 338,
+        "first_bytes": 39411712,
+        "last_bytes": 87715840,
+        "max_bytes": 97042432,
+        "growth_ratio": 1.239,
+        "monotonic": true
+      },
+      {
+        "process": "ussp-traffic-ws",
+        "samples": 338,
+        "first_bytes": 32825344,
+        "last_bytes": 34226176,
+        "max_bytes": 39419904,
+        "growth_ratio": 0.912,
+        "monotonic": false
+      },
+      {
+        "process": "ussp-tsdb-writer",
+        "samples": 338,
+        "first_bytes": 29921280,
+        "last_bytes": 28577792,
+        "max_bytes": 45305856,
+        "growth_ratio": 0.851,
+        "monotonic": false
+      }
+    ],
+    "storage": [
+      {
+        "system": "ussp",
+        "before_bytes": 19250199,
+        "after_bytes": 222034967,
+        "fleet_samples": 360000,
+        "model_bytes": 216000000,
+        "growth_vs_model": 0.939,
+        "compression_lag_chunks": 0
+      },
+      {
+        "system": "authority",
+        "before_bytes": 12082199,
+        "after_bytes": 983997463,
+        "fleet_samples": 360000,
+        "model_bytes": 216000000,
+        "growth_vs_model": 4.5,
+        "compression_lag_chunks": 0
+      }
+    ],
+    "loss_counters": [
+      {
+        "process": "authority-api",
+        "series": "uspace_authority_occurrences_refused_key_unavailable{component=\"occurrences\"}",
+        "delta": 1384
+      },
+      {
+        "process": "authority-dp-poller",
+        "series": "uspace_authority_gap_records_lost{component=\"dp_rows\"}",
+        "delta": 4
+      },
+      {
+        "process": "authority-dp-poller",
+        "series": "uspace_authority_rows_lost_handover_failed{component=\"dp_rows\"}",
+        "delta": 53
+      },
+      {
+        "process": "authority-rid-ingest",
+        "series": "uspace_authority_batches_refused{component=\"rid_ingest\"}",
+        "delta": 116
+      },
+      {
+        "process": "authority-rid-ingest",
+        "series": "uspace_authority_refused_queue_unavailable{component=\"rid_ingest\"}",
+        "delta": 116
+      },
+      {
+        "process": "authority-tsdb-writer",
+        "series": "uspace_authority_gaps{component=\"tsdb_writer\"}",
+        "delta": 9891
+      },
+      {
+        "process": "ussp-monitor",
+        "series": "ussp_monitor_publish_dropped{component=\"conformance\"}",
+        "delta": 7
+      },
+      {
+        "process": "ussp-traffic-ws",
+        "series": "ussp_picture_dropped_after_silence{component=\"traffic_ws\"}",
+        "delta": 108
+      }
+    ],
+    "pair_checks_per_s": {
+      "ussp-monitor": 890.75
+    },
+    "cpu_cores": {
+      "ansp-api": 0.004,
+      "ansp-manned-feed": 0.003,
+      "authority-api": 0.006,
+      "authority-detect": 0.019,
+      "authority-dp-poller": 0.032,
+      "authority-manned-ingest": 0.001,
+      "authority-picture-ws": 0.07,
+      "authority-rid-ingest": 0.033,
+      "authority-tsdb-writer": 0.065,
+      "cisp-api": 0.003,
+      "ussp-api": 0.014,
+      "ussp-dss-sync": 0.001,
+      "ussp-monitor": 0.046,
+      "ussp-rid-sp": 0.075,
+      "ussp-telemetry-ingest": 0.08,
+      "ussp-traffic-ws": 0.039,
+      "ussp-tsdb-writer": 0.031
+    },
+    "container_cpu": [
+      {
+        "container": "uspace-demo-ansp-api-1",
+        "samples": 328,
+        "mean_pct": 0.483,
+        "max_pct": 30.87
+      },
+      {
+        "container": "uspace-demo-ansp-manned-adapter-1",
+        "samples": 329,
+        "mean_pct": 0.02,
+        "max_pct": 0.24
+      },
+      {
+        "container": "uspace-demo-ansp-manned-feed-1",
+        "samples": 329,
+        "mean_pct": 0.369,
+        "max_pct": 1.72
+      },
+      {
+        "container": "uspace-demo-ansp-nats-1",
+        "samples": 329,
+        "mean_pct": 1.009,
+        "max_pct": 4.57
+      },
+      {
+        "container": "uspace-demo-ansp-timescaledb-1",
+        "samples": 329,
+        "mean_pct": 1.914,
+        "max_pct": 7.18
+      },
+      {
+        "container": "uspace-demo-authority-api-1",
+        "samples": 326,
+        "mean_pct": 0.674,
+        "max_pct": 3.13
+      },
+      {
+        "container": "uspace-demo-authority-detect-1",
+        "samples": 326,
+        "mean_pct": 2.079,
+        "max_pct": 4.09
+      },
+      {
+        "container": "uspace-demo-authority-dp-poller-1",
+        "samples": 327,
+        "mean_pct": 3.508,
+        "max_pct": 8.75
+      },
+      {
+        "container": "uspace-demo-authority-manned-ingest-1",
+        "samples": 328,
+        "mean_pct": 0.107,
+        "max_pct": 2.45
+      },
+      {
+        "container": "uspace-demo-authority-nats-1",
+        "samples": 323,
+        "mean_pct": 11.293,
+        "max_pct": 16.82
+      },
+      {
+        "container": "uspace-demo-authority-picture-ws-1",
+        "samples": 327,
+        "mean_pct": 7.87,
+        "max_pct": 15.29
+      },
+      {
+        "container": "uspace-demo-authority-postgres-1",
+        "samples": 330,
+        "mean_pct": 7.329,
+        "max_pct": 42.94
+      },
+      {
+        "container": "uspace-demo-authority-rid-ingest-1",
+        "samples": 327,
+        "mean_pct": 3.77,
+        "max_pct": 5.29
+      },
+      {
+        "container": "uspace-demo-authority-tsdb-writer-1",
+        "samples": 328,
+        "mean_pct": 7.359,
+        "max_pct": 13.13
+      },
+      {
+        "container": "uspace-demo-caddy-1",
+        "samples": 360,
+        "mean_pct": 12.542,
+        "max_pct": 75.32
+      },
+      {
+        "container": "uspace-demo-cisp-api-1",
+        "samples": 328,
+        "mean_pct": 0.795,
+        "max_pct": 5.43
+      },
+      {
+        "container": "uspace-demo-cisp-deliver-1",
+        "samples": 329,
+        "mean_pct": 1.099,
+        "max_pct": 5.68
+      },
+      {
+        "container": "uspace-demo-cisp-nats-1",
+        "samples": 329,
+        "mean_pct": 0.956,
+        "max_pct": 4.7
+      },
+      {
+        "container": "uspace-demo-cisp-postgres-1",
+        "samples": 330,
+        "mean_pct": 2.167,
+        "max_pct": 7.27
+      },
+      {
+        "container": "uspace-demo-dss-1",
+        "samples": 329,
+        "mean_pct": 0.581,
+        "max_pct": 3.96
+      },
+      {
+        "container": "uspace-demo-dss-crdb-1",
+        "samples": 360,
+        "mean_pct": 3.393,
+        "max_pct": 80.61
+      },
+      {
+        "container": "uspace-demo-lab-issuer-1",
+        "samples": 360,
+        "mean_pct": 1.228,
+        "max_pct": 4.36
+      },
+      {
+        "container": "uspace-demo-ussp-api-1",
+        "samples": 360,
+        "mean_pct": 1.939,
+        "max_pct": 11.36
+      },
+      {
+        "container": "uspace-demo-ussp-dss-sync-1",
+        "samples": 360,
+        "mean_pct": 0.797,
+        "max_pct": 4.55
+      },
+      {
+        "container": "uspace-demo-ussp-monitor-1",
+        "samples": 359,
+        "mean_pct": 5.37,
+        "max_pct": 10.85
+      },
+      {
+        "container": "uspace-demo-ussp-nats-1",
+        "samples": 353,
+        "mean_pct": 11.401,
+        "max_pct": 17.5
+      },
+      {
+        "container": "uspace-demo-ussp-rid-sp-1",
+        "samples": 359,
+        "mean_pct": 8.172,
+        "max_pct": 17.12
+      },
+      {
+        "container": "uspace-demo-ussp-telemetry-ingest-1",
+        "samples": 359,
+        "mean_pct": 8.783,
+        "max_pct": 15.42
+      },
+      {
+        "container": "uspace-demo-ussp-timescaledb-1",
+        "samples": 360,
+        "mean_pct": 3.909,
+        "max_pct": 40.12
+      },
+      {
+        "container": "uspace-demo-ussp-traffic-ws-1",
+        "samples": 359,
+        "mean_pct": 4.562,
+        "max_pct": 12.81
+      },
+      {
+        "container": "uspace-demo-ussp-tsdb-writer-1",
+        "samples": 359,
+        "mean_pct": 3.827,
+        "max_pct": 9.69
+      }
+    ],
+    "errors_during_faults": 181,
+    "dp_cache": {
+      "system": "authority",
+      "caching_for_s": 3649,
+      "entries_over_24h": 0
+    }
+  },
+  "faults": [
+    {
+      "row": "restart",
+      "at_s": 300,
+      "hold_s": 5,
+      "domain": "adapter",
+      "args": [
+        "ussp-telemetry-ingest"
+      ],
+      "system": "ussp",
+      "started_at": "2026-10-14T19:06:52.7521515+04:00",
+      "injected_at": "2026-10-14T19:07:02.7769979+04:00",
+      "restoring_at": "2026-10-14T19:07:00.3968723+04:00",
+      "restored_at": "2026-10-14T19:07:02.7769979+04:00",
+      "inject_output": "chaos: 2026-10-14T15:06:55.392Z adapter killed ussp-telemetry-ingest (SIGKILL; it had run since 2026-10-14T15:00:30.979709539Z)",
+      "restore_output": "chaos: 2026-10-14T15:07:02.773Z adapter started ussp-telemetry-ingest (running since 2026-10-14T15:07:01.724612899Z)",
+      "picture_back_s": 0.003,
+      "traffic_back_s": 1.033
+    },
+    {
+      "row": "restart",
+      "at_s": 420,
+      "hold_s": 5,
+      "domain": "hotpath",
+      "args": [
+        "ussp-monitor"
+      ],
+      "system": "ussp",
+      "started_at": "2026-10-14T19:08:52.7532412+04:00",
+      "injected_at": "2026-10-14T19:09:02.9404858+04:00",
+      "restoring_at": "2026-10-14T19:09:00.4206616+04:00",
+      "restored_at": "2026-10-14T19:09:02.9404858+04:00",
+      "inject_output": "chaos: 2026-10-14T15:08:55.418Z hotpath killed ussp-monitor (SIGKILL; it had run since 2026-10-14T15:00:30.994872085Z)",
+      "restore_output": "chaos: 2026-10-14T15:09:02.935Z hotpath started ussp-monitor (running since 2026-10-14T15:09:01.848246856Z)",
+      "picture_back_s": 0.04,
+      "traffic_back_s": 0.865
+    },
+    {
+      "row": "restart",
+      "at_s": 540,
+      "hold_s": 5,
+      "domain": "hotpath",
+      "args": [
+        "ussp-traffic-ws"
+      ],
+      "system": "ussp",
+      "started_at": "2026-10-14T19:10:52.7549658+04:00",
+      "injected_at": "2026-10-14T19:11:02.878181+04:00",
+      "restoring_at": "2026-10-14T19:11:00.3635732+04:00",
+      "restored_at": "2026-10-14T19:11:02.878181+04:00",
+      "inject_output": "chaos: 2026-10-14T15:10:55.359Z hotpath killed ussp-traffic-ws (SIGKILL; it had run since 2026-10-14T15:00:30.949536222Z)",
+      "restore_output": "chaos: 2026-10-14T15:11:02.869Z hotpath started ussp-traffic-ws (running since 2026-10-14T15:11:01.783194794Z)",
+      "picture_back_s": 0.011,
+      "traffic_back_s": 1.758
+    },
+    {
+      "row": "restart",
+      "at_s": 660,
+      "hold_s": 5,
+      "domain": "hotpath",
+      "args": [
+        "ussp-rid-sp"
+      ],
+      "system": "ussp",
+      "started_at": "2026-10-14T19:12:52.7564281+04:00",
+      "injected_at": "2026-10-14T19:13:02.6988381+04:00",
+      "restoring_at": "2026-10-14T19:13:00.292632+04:00",
+      "restored_at": "2026-10-14T19:13:02.6988381+04:00",
+      "inject_output": "chaos: 2026-10-14T15:12:55.289Z hotpath killed ussp-rid-sp (SIGKILL; it had run since 2026-10-14T15:00:30.964070293Z)",
+      "restore_output": "chaos: 2026-10-14T15:13:02.694Z hotpath started ussp-rid-sp (running since 2026-10-14T15:13:01.623017588Z)",
+      "picture_back_s": 0.086,
+      "traffic_back_s": 0.934
+    },
+    {
+      "row": "restart",
+      "at_s": 780,
+      "hold_s": 5,
+      "domain": "hotpath",
+      "args": [
+        "ussp-tsdb-writer"
+      ],
+      "system": "ussp",
+      "started_at": "2026-10-14T19:14:52.7578308+04:00",
+      "injected_at": "2026-10-14T19:15:02.7868064+04:00",
+      "restoring_at": "2026-10-14T19:15:00.3291003+04:00",
+      "restored_at": "2026-10-14T19:15:02.7868064+04:00",
+      "inject_output": "chaos: 2026-10-14T15:14:55.325Z hotpath killed ussp-tsdb-writer (SIGKILL; it had run since 2026-10-14T15:00:30.959772436Z)",
+      "restore_output": "chaos: 2026-10-14T15:15:02.780Z hotpath started ussp-tsdb-writer (running since 2026-10-14T15:15:01.72307443Z)",
+      "picture_back_s": 0,
+      "traffic_back_s": 0.842
+    },
+    {
+      "row": "restart",
+      "at_s": 900,
+      "hold_s": 5,
+      "domain": "adapter",
+      "args": [
+        "authority-rid-ingest"
+      ],
+      "system": "authority",
+      "started_at": "2026-10-14T19:16:52.7592773+04:00",
+      "injected_at": "2026-10-14T19:17:02.7398472+04:00",
+      "restoring_at": "2026-10-14T19:17:00.3307674+04:00",
+      "restored_at": "2026-10-14T19:17:02.7398472+04:00",
+      "inject_output": "chaos: 2026-10-14T15:16:55.327Z adapter killed authority-rid-ingest (SIGKILL; it had run since 2026-10-14T15:01:38.806602413Z)",
+      "restore_output": "chaos: 2026-10-14T15:17:02.735Z adapter started authority-rid-ingest (running since 2026-10-14T15:17:01.647031753Z)",
+      "picture_back_s": 0.345,
+      "traffic_back_s": 0.884
+    },
+    {
+      "row": "restart",
+      "at_s": 1020,
+      "hold_s": 5,
+      "domain": "hotpath",
+      "args": [
+        "authority-detect"
+      ],
+      "system": "authority",
+      "started_at": "2026-10-14T19:18:52.7608223+04:00",
+      "injected_at": "2026-10-14T19:19:02.8194292+04:00",
+      "restoring_at": "2026-10-14T19:19:00.3940919+04:00",
+      "restored_at": "2026-10-14T19:19:02.8194292+04:00",
+      "inject_output": "chaos: 2026-10-14T15:18:55.390Z hotpath killed authority-detect (SIGKILL; it had run since 2026-10-14T15:00:10.231358013Z)",
+      "restore_output": "chaos: 2026-10-14T15:19:02.815Z hotpath started authority-detect (running since 2026-10-14T15:19:01.741688353Z)",
+      "picture_back_s": 0.069,
+      "traffic_back_s": 0.8
+    },
+    {
+      "row": "restart",
+      "at_s": 1140,
+      "hold_s": 5,
+      "domain": "hotpath",
+      "args": [
+        "authority-picture-ws"
+      ],
+      "system": "authority",
+      "started_at": "2026-10-14T19:20:52.7617737+04:00",
+      "injected_at": "2026-10-14T19:21:02.9135484+04:00",
+      "restoring_at": "2026-10-14T19:21:00.3698794+04:00",
+      "restored_at": "2026-10-14T19:21:02.9135484+04:00",
+      "inject_output": "chaos: 2026-10-14T15:20:55.365Z hotpath killed authority-picture-ws (SIGKILL; it had run since 2026-10-14T15:00:10.218373173Z)",
+      "restore_output": "chaos: 2026-10-14T15:21:02.907Z hotpath started authority-picture-ws (running since 2026-10-14T15:21:01.803710044Z)",
+      "picture_back_s": 0.179,
+      "traffic_back_s": 0.699
+    },
+    {
+      "row": "restart",
+      "at_s": 1260,
+      "hold_s": 5,
+      "domain": "hotpath",
+      "args": [
+        "authority-tsdb-writer"
+      ],
+      "system": "authority",
+      "started_at": "2026-10-14T19:22:52.7632301+04:00",
+      "injected_at": "2026-10-14T19:23:02.9113101+04:00",
+      "restoring_at": "2026-10-14T19:23:00.4297919+04:00",
+      "restored_at": "2026-10-14T19:23:02.9113101+04:00",
+      "inject_output": "chaos: 2026-10-14T15:22:55.425Z hotpath killed authority-tsdb-writer (SIGKILL; it had run since 2026-10-14T15:00:10.234336646Z)",
+      "restore_output": "chaos: 2026-10-14T15:23:02.905Z hotpath started authority-tsdb-writer (running since 2026-10-14T15:23:01.788667089Z)",
+      "picture_back_s": 0.08,
+      "traffic_back_s": 0.697
+    },
+    {
+      "row": "partition",
+      "at_s": 1380,
+      "hold_s": 60,
+      "domain": "nats",
+      "args": [
+        "ussp"
+      ],
+      "system": "ussp",
+      "started_at": "2026-10-14T19:24:52.7648946+04:00",
+      "injected_at": "2026-10-14T19:25:57.5782764+04:00",
+      "restoring_at": "2026-10-14T19:25:55.097794+04:00",
+      "restored_at": "2026-10-14T19:25:57.5782764+04:00",
+      "inject_output": "chaos: 2026-10-14T15:24:55.091Z nats stopped ussp-nats",
+      "restore_output": "chaos: 2026-10-14T15:25:57.574Z nats started ussp-nats (running since 2026-10-14T15:25:56.517844981Z)",
+      "picture_back_s": 0.014,
+      "traffic_back_s": 1.614
+    },
+    {
+      "row": "partition",
+      "at_s": 1500,
+      "hold_s": 60,
+      "domain": "nats",
+      "args": [
+        "authority"
+      ],
+      "system": "authority",
+      "started_at": "2026-10-14T19:26:52.7664876+04:00",
+      "injected_at": "2026-10-14T19:27:57.5094408+04:00",
+      "restoring_at": "2026-10-14T19:27:55.0584283+04:00",
+      "restored_at": "2026-10-14T19:27:57.5094408+04:00",
+      "inject_output": "chaos: 2026-10-14T15:26:55.053Z nats stopped authority-nats",
+      "restore_output": "chaos: 2026-10-14T15:27:57.505Z nats started authority-nats (running since 2026-10-14T15:27:56.441567695Z)",
+      "picture_back_s": 0.058,
+      "traffic_back_s": 0.679
+    },
+    {
+      "row": "outage",
+      "at_s": 1620,
+      "hold_s": 300,
+      "domain": "system",
+      "args": [
+        "cisp"
+      ],
+      "system": "cisp",
+      "expect": [
+        {
+          "system": "cisp",
+          "ready": "lost",
+          "within_s": 15,
+          "why": "the CISP is down (the fault, seen in place)"
+        },
+        {
+          "system": "others",
+          "ready": "always",
+          "why": "05 §6 CISP: subscribers run on cache; 02 F3: they keep serving"
+        },
+        {
+          "system": "ansp",
+          "check": "cisp",
+          "in": [
+            "degraded",
+            "down",
+            "stale",
+            "unknown"
+          ],
+          "within_s": 90,
+          "why": "02 F2: the ANSP raises an alarm and takes its degraded path (lab bound 90 s: its CISP check polls)"
+        },
+        {
+          "system": "ussp",
+          "check": "cis",
+          "age_grows": true,
+          "why": "05 §6 CISP: subscribers run on cache with cis_age_s (05 §7: everything flagged with age)"
+        }
+      ],
+      "recover_within_s": 90,
+      "started_at": "2026-10-14T19:28:52.7675769+04:00",
+      "injected_at": "2026-10-14T19:34:12.5248603+04:00",
+      "restoring_at": "2026-10-14T19:34:03.1086438+04:00",
+      "restored_at": "2026-10-14T19:34:12.5248603+04:00",
+      "inject_output": "chaos: 2026-10-14T15:28:55.867Z system stopped cisp-api\nchaos: 2026-10-14T15:28:58.777Z system stopped cisp-deliver\nchaos: 2026-10-14T15:29:00.828Z system stopped cisp-nats\nchaos: 2026-10-14T15:29:02.970Z system stopped cisp-postgres\nchaos: 2026-10-14T15:29:03.100Z system system cisp down: cisp-api cisp-deliver cisp-nats cisp-postgres",
+      "restore_output": "chaos: 2026-10-14T15:34:05.591Z system started cisp-postgres (running since 2026-10-14T15:34:04.539034917Z)\nchaos: 2026-10-14T15:34:07.810Z system started cisp-nats (running since 2026-10-14T15:34:06.770117073Z)\nchaos: 2026-10-14T15:34:10.059Z system started cisp-deliver (running since 2026-10-14T15:34:09.028631191Z)\nchaos: 2026-10-14T15:34:12.411Z system started cisp-api (running since 2026-10-14T15:34:11.32519615Z)\nchaos: 2026-10-14T15:34:12.518Z system system cisp started",
+      "picture_back_s": 0.074,
+      "traffic_back_s": 0.648,
+      "outage": [
+        {
+          "expect": {
+            "system": "cisp",
+            "ready": "lost",
+            "within_s": 15,
+            "why": "the CISP is down (the fault, seen in place)"
+          },
+          "met": true,
+          "observed": "cisp not ready from 4s after the injection to the restore (114 samples)"
+        },
+        {
+          "expect": {
+            "system": "others",
+            "ready": "always",
+            "why": "05 §6 CISP: subscribers run on cache; 02 F3: they keep serving"
+          },
+          "met": true,
+          "observed": "authority, ussp, ansp, issuer, dss ready in all 114 samples"
+        },
+        {
+          "expect": {
+            "system": "ansp",
+            "check": "cisp",
+            "in": [
+              "degraded",
+              "down",
+              "stale",
+              "unknown"
+            ],
+            "within_s": 90,
+            "why": "02 F2: the ANSP raises an alarm and takes its degraded path (lab bound 90 s: its CISP check polls)"
+          },
+          "met": true,
+          "observed": "ansp cisp down 38s after the injection (down since 2026-10-14T15:29:28Z (serving age 65 s); uspace_airspace: the CISP answered 502; ussp_list: no version published yet; ussp_list: the CISP answered 502; restrictions: no version published ye...)"
+        },
+        {
+          "expect": {
+            "system": "ussp",
+            "check": "cis",
+            "age_grows": true,
+            "why": "05 §6 CISP: subscribers run on cache with cis_age_s (05 §7: everything flagged with age)"
+          },
+          "met": true,
+          "observed": "ussp cis age from 21 s to 330 s over the hold (114 samples)"
+        },
+        {
+          "expect": {
+            "system": "all",
+            "ready": "always",
+            "why": "the stack recovers after the restore"
+          },
+          "met": true,
+          "observed": "every system ready 0s after the restore"
+        }
+      ],
+      "outage_samples": 163
+    },
+    {
+      "row": "outage",
+      "at_s": 2040,
+      "hold_s": 300,
+      "domain": "system",
+      "args": [
+        "authority"
+      ],
+      "system": "authority",
+      "expect": [
+        {
+          "system": "authority",
+          "ready": "lost",
+          "within_s": 15,
+          "why": "the authority is down (the fault, seen in place)"
+        },
+        {
+          "system": "others",
+          "ready": "always",
+          "why": "05 §6 Authority: no real-time service depends on the authority; the CISP keeps serving"
+        },
+        {
+          "system": "ussp",
+          "check": "registry",
+          "age_grows": true,
+          "why": "05 §6 Authority, 02 F8: USSPs use the validity cache (05 §7: flagged with age)"
+        }
+      ],
+      "recover_within_s": 120,
+      "started_at": "2026-10-14T19:35:52.7724786+04:00",
+      "injected_at": "2026-10-14T19:41:31.3165514+04:00",
+      "restoring_at": "2026-10-14T19:41:11.3689628+04:00",
+      "restored_at": "2026-10-14T19:41:31.3165514+04:00",
+      "inject_output": "chaos: 2026-10-14T15:35:55.882Z system stopped authority-api\nchaos: 2026-10-14T15:35:57.776Z system stopped authority-detect\nchaos: 2026-10-14T15:35:59.814Z system stopped authority-dp-poller\nchaos: 2026-10-14T15:36:01.658Z system stopped authority-manned-ingest\nchaos: 2026-10-14T15:36:03.637Z system stopped authority-picture-ws\nchaos: 2026-10-14T15:36:05.578Z system stopped authority-rid-ingest\nchaos: 2026-10-14T15:36:07.547Z system stopped authority-tsdb-writer\nchaos: 2026-10-14T15:36:09.352Z system stopped authority-nats\nchaos: 2026-10-14T15:36:11.260Z system stopped authority-postgres\nchaos: 2026-10-14T15:36:11.362Z system system authority down: authority-api authority-detect authority-dp-poller authority-manned-ingest authority-picture-ws authority-rid-ingest authority-tsdb-writer authority-nats authority-postgres",
+      "restore_output": "chaos: 2026-10-14T15:41:13.619Z system started authority-postgres (running since 2026-10-14T15:41:12.624204616Z)\nchaos: 2026-10-14T15:41:15.631Z system started authority-nats (running since 2026-10-14T15:41:14.648547509Z)\nchaos: 2026-10-14T15:41:17.742Z system started authority-tsdb-writer (running since 2026-10-14T15:41:16.718431445Z)\nchaos: 2026-10-14T15:41:19.881Z system started authority-rid-ingest (running since 2026-10-14T15:41:18.86124766Z)\nchaos: 2026-10-14T15:41:22.205Z system started authority-picture-ws (running since 2026-10-14T15:41:21.009608305Z)\nchaos: 2026-10-14T15:41:24.391Z system started authority-manned-ingest (running since 2026-10-14T15:41:23.357917182Z)\nchaos: 2026-10-14T15:41:26.647Z system started authority-dp-poller (running since 2026-10-14T15:41:25.569075428Z)\nchaos: 2026-10-14T15:41:28.835Z system started authority-detect (running since 2026-10-14T15:41:27.746074526Z)\nchaos: 2026-10-14T15:41:31.189Z system started authority-api (running since 2026-10-14T15:41:30.058170721Z)\nchaos: 2026-10-14T15:41:31.311Z system system authority started",
+      "picture_back_s": 22.189,
+      "traffic_back_s": 0.831,
+      "outage": [
+        {
+          "expect": {
+            "system": "authority",
+            "ready": "lost",
+            "within_s": 15,
+            "why": "the authority is down (the fault, seen in place)"
+          },
+          "met": true,
+          "observed": "authority not ready from 4s after the injection to the restore (120 samples)"
+        },
+        {
+          "expect": {
+            "system": "others",
+            "ready": "always",
+            "why": "05 §6 Authority: no real-time service depends on the authority; the CISP keeps serving"
+          },
+          "met": false,
+          "observed": "ansp not ready in 117 of 120 samples (last: 503  jwks=down)"
+        },
+        {
+          "expect": {
+            "system": "ussp",
+            "check": "registry",
+            "age_grows": true,
+            "why": "05 §6 Authority, 02 F8: USSPs use the validity cache (05 §7: flagged with age)"
+          },
+          "met": true,
+          "observed": "ussp registry age from 21 s to 338 s over the hold (120 samples)"
+        },
+        {
+          "expect": {
+            "system": "all",
+            "ready": "always",
+            "why": "the stack recovers after the restore"
+          },
+          "met": true,
+          "observed": "every system ready 2s after the restore"
+        }
+      ],
+      "outage_samples": 186
+    },
+    {
+      "row": "outage",
+      "at_s": 2490,
+      "hold_s": 300,
+      "domain": "dss",
+      "args": [
+        "dss"
+      ],
+      "system": "dss",
+      "expect": [
+        {
+          "system": "dss",
+          "ready": "lost",
+          "within_s": 15,
+          "why": "the DSS is down (the fault, seen in place)"
+        },
+        {
+          "system": "ussp",
+          "check": "dss",
+          "in": [
+            "down",
+            "degraded"
+          ],
+          "within_s": 90,
+          "why": "02 F6: the USSP shows DSS state (lab bound 90 s: its DSS check polls)"
+        },
+        {
+          "system": "others",
+          "ready": "always",
+          "why": "05 §6 DSS: local intents and all in-flight services continue"
+        }
+      ],
+      "recover_within_s": 120,
+      "started_at": "2026-10-14T19:43:22.7778601+04:00",
+      "injected_at": "2026-10-14T19:48:27.4031789+04:00",
+      "restoring_at": "2026-10-14T19:48:24.9442801+04:00",
+      "restored_at": "2026-10-14T19:48:27.4031789+04:00",
+      "inject_output": "chaos: 2026-10-14T15:43:24.937Z dss stopped dss",
+      "restore_output": "chaos: 2026-10-14T15:48:27.400Z dss started dss (running since 2026-10-14T15:48:26.359303448Z)",
+      "picture_back_s": 0.006,
+      "traffic_back_s": 0.719,
+      "outage": [
+        {
+          "expect": {
+            "system": "dss",
+            "ready": "lost",
+            "within_s": 15,
+            "why": "the DSS is down (the fault, seen in place)"
+          },
+          "met": true,
+          "observed": "dss not ready from 2s after the injection to the restore (114 samples)"
+        },
+        {
+          "expect": {
+            "system": "ussp",
+            "check": "dss",
+            "in": [
+              "down",
+              "degraded"
+            ],
+            "within_s": 90,
+            "why": "02 F6: the USSP shows DSS state (lab bound 90 s: its DSS check polls)"
+          },
+          "met": true,
+          "observed": "ussp dss down 10s after the injection (f3411: down since 2026-10-14T15:43:32Z: answers 502 | f3548: uss_availability Unknown)"
+        },
+        {
+          "expect": {
+            "system": "others",
+            "ready": "always",
+            "why": "05 §6 DSS: local intents and all in-flight services continue"
+          },
+          "met": false,
+          "observed": "cisp not ready in 3 of 114 samples (last: 503  migrations=unknown: migrate relational status: failed to initialize: context deadline exceeded)"
+        },
+        {
+          "expect": {
+            "system": "all",
+            "ready": "always",
+            "why": "the stack recovers after the restore"
+          },
+          "met": true,
+          "observed": "every system ready 2s after the restore"
+        }
+      ],
+      "outage_samples": 175
+    },
+    {
+      "row": "outage",
+      "at_s": 2940,
+      "hold_s": 300,
+      "domain": "system",
+      "args": [
+        "ansp"
+      ],
+      "system": "ansp",
+      "expect": [
+        {
+          "system": "ansp",
+          "ready": "lost",
+          "within_s": 15,
+          "why": "the ANSP is down (the fault, seen in place)"
+        },
+        {
+          "system": "others",
+          "ready": "always",
+          "why": "05 §6 ANSP feed: no other system stops with it"
+        },
+        {
+          "stream": "traffic",
+          "flag": "manned",
+          "within_s": 60,
+          "why": "05 §6 ANSP feed: USSP traffic information marks manned traffic unavailable"
+        }
+      ],
+      "recover_within_s": 90,
+      "started_at": "2026-10-14T19:50:52.7828138+04:00",
+      "injected_at": "2026-10-14T19:56:15.5288099+04:00",
+      "restoring_at": "2026-10-14T19:56:03.8201519+04:00",
+      "restored_at": "2026-10-14T19:56:15.5288099+04:00",
+      "inject_output": "chaos: 2026-10-14T15:50:55.870Z system stopped ansp-api\nchaos: 2026-10-14T15:50:57.858Z system stopped ansp-manned-adapter\nchaos: 2026-10-14T15:50:59.738Z system stopped ansp-manned-feed\nchaos: 2026-10-14T15:51:01.651Z system stopped ansp-nats\nchaos: 2026-10-14T15:51:03.691Z system stopped ansp-timescaledb\nchaos: 2026-10-14T15:51:03.808Z system system ansp down: ansp-api ansp-manned-adapter ansp-manned-feed ansp-nats ansp-timescaledb",
+      "restore_output": "chaos: 2026-10-14T15:56:06.349Z system started ansp-timescaledb (running since 2026-10-14T15:56:05.250378133Z)\nchaos: 2026-10-14T15:56:08.508Z system started ansp-nats (running since 2026-10-14T15:56:07.477153449Z)\nchaos: 2026-10-14T15:56:10.712Z system started ansp-manned-feed (running since 2026-10-14T15:56:09.650486592Z)\nchaos: 2026-10-14T15:56:13.098Z system started ansp-manned-adapter (running since 2026-10-14T15:56:11.939002162Z)\nchaos: 2026-10-14T15:56:15.426Z system started ansp-api (running since 2026-10-14T15:56:14.294312972Z)\nchaos: 2026-10-14T15:56:15.525Z system system ansp started",
+      "picture_back_s": 0.086,
+      "traffic_back_s": 0.554,
+      "outage": [
+        {
+          "expect": {
+            "system": "ansp",
+            "ready": "lost",
+            "within_s": 15,
+            "why": "the ANSP is down (the fault, seen in place)"
+          },
+          "met": true,
+          "observed": "ansp not ready from 4s after the injection to the restore (111 samples)"
+        },
+        {
+          "expect": {
+            "system": "others",
+            "ready": "always",
+            "why": "05 §6 ANSP feed: no other system stops with it"
+          },
+          "met": false,
+          "observed": "cisp not ready in 1 of 111 samples (last: 503  migrations=unknown: migrate relational status: failed to initialize: context deadline exceeded)"
+        },
+        {
+          "expect": {
+            "stream": "traffic",
+            "flag": "manned",
+            "within_s": 60,
+            "why": "05 §6 ANSP feed: USSP traffic information marks manned traffic unavailable"
+          },
+          "met": true,
+          "observed": "the traffic stream showed manned 0s after the injection"
+        },
+        {
+          "expect": {
+            "system": "all",
+            "ready": "always",
+            "why": "the stack recovers after the restore"
+          },
+          "met": true,
+          "observed": "every system ready 1s after the restore"
+        }
+      ],
+      "outage_samples": 161
+    }
+  ],
+  "f3411": {
+    "views": 10,
+    "polls": 35958,
+    "flights_returned": 342184,
+    "details_answered": 35886,
+    "failures": 30,
+    "failures_during_faults": 30,
+    "statuses": {
+      "200": 71814,
+      "502": 30
+    },
+    "last_error": "2026-10-14T15:13:02Z GET /uss/flights answered 502"
+  },
+  "peer": {
+    "base_url": "https://peer.uspace.test",
+    "aircraft": [
+      "LABXCP0010N000000",
+      "LABXCP0010N000001",
+      "LABXCP0010N000002",
+      "LABXCP0010N000003"
+    ],
+    "display_provider": "authority-01",
+    "display_provider_polls": 3339,
+    "other_polls": 3539,
+    "peer_frames": 12920,
+    "displays_timed": 12920,
+    "frames_untied": 0,
+    "fleet_network_tracks": 100,
+    "intents_in_uspace": 16,
+    "changes_owed": 48,
+    "notifications": 64,
+    "notifications_by_state": {
+      "Accepted": 16,
+      "Activated": 16,
+      "Nonconforming": 16,
+      "deleted": 16
+    },
+    "notifications_unmatched": 0,
+    "details_answered": 48,
+    "details_failed": 0,
+    "counters": {
+      "flights_requests": 6878,
+      "isa_notifications": 1,
+      "isa_writes": 1,
+      "notifications": 64,
+      "subscription_writes": 1
+    }
+  },
+  "vectors": {
+    "images": [
+      {
+        "system": "ansp",
+        "image": "ghcr.io/rootxkit/uspace-ansp@sha256:1fcfb3c9762189f737250c65ad24166c025c12576abb7babffcf07d705a6921a",
+        "binaries": [
+          {
+            "path": "/api",
+            "main": "github.com/rootxkit/uspace-ansp",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/manned-adapter",
+            "main": "github.com/rootxkit/uspace-ansp",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/manned-feed",
+            "main": "github.com/rootxkit/uspace-ansp",
+            "core": "v1.4.0"
+          }
+        ],
+        "core_versions": [
+          "v1.4.0"
+        ]
+      },
+      {
+        "system": "authority",
+        "image": "ghcr.io/rootxkit/uspace-authority@sha256:53d6f97cd745677da893a62669f45477d1eaa403b369bc174b6ccc8c11ee11cc",
+        "binaries": [
+          {
+            "path": "/uspace-authority",
+            "main": "github.com/rootxkit/uspace-authority",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/libexec/uspace-authority/api",
+            "main": "github.com/rootxkit/uspace-authority",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/libexec/uspace-authority/detect",
+            "main": "github.com/rootxkit/uspace-authority",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/libexec/uspace-authority/dp-poller",
+            "main": "github.com/rootxkit/uspace-authority",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/libexec/uspace-authority/manned-ingest",
+            "main": "github.com/rootxkit/uspace-authority",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/libexec/uspace-authority/picture-ws",
+            "main": "github.com/rootxkit/uspace-authority",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/libexec/uspace-authority/rid-ingest",
+            "main": "github.com/rootxkit/uspace-authority",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/libexec/uspace-authority/tsdb-writer",
+            "main": "github.com/rootxkit/uspace-authority",
+            "core": "v1.4.0"
+          }
+        ],
+        "core_versions": [
+          "v1.4.0"
+        ]
+      },
+      {
+        "system": "cisp",
+        "image": "ghcr.io/rootxkit/uspace-cisp@sha256:2e7861488e178de967829e7ebb623a3c5b480f0dcca8e5ee1acab4e45028f42a",
+        "binaries": [
+          {
+            "path": "/usr/local/bin/api",
+            "main": "github.com/rootxkit/uspace-cisp",
+            "core": "v1.3.0"
+          },
+          {
+            "path": "/usr/local/bin/cispctl",
+            "main": "github.com/rootxkit/uspace-cisp",
+            "core": "v1.3.0"
+          },
+          {
+            "path": "/usr/local/bin/deliver",
+            "main": "github.com/rootxkit/uspace-cisp",
+            "core": "v1.3.0"
+          }
+        ],
+        "core_versions": [
+          "v1.3.0"
+        ]
+      },
+      {
+        "system": "ussp",
+        "image": "ghcr.io/rootxkit/uspace-ussp@sha256:854cca7146277e6dc767cd7efce279f350994c9f152344a8af457c917db5935d",
+        "binaries": [
+          {
+            "path": "/usr/bin/ussp-api",
+            "main": "github.com/rootxkit/uspace-ussp",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/bin/ussp-dss-sync",
+            "main": "github.com/rootxkit/uspace-ussp",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/bin/ussp-monitor",
+            "main": "github.com/rootxkit/uspace-ussp",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/bin/ussp-rid-sp",
+            "main": "github.com/rootxkit/uspace-ussp",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/bin/ussp-telemetry-ingest",
+            "main": "github.com/rootxkit/uspace-ussp",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/bin/ussp-traffic-ws",
+            "main": "github.com/rootxkit/uspace-ussp",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/bin/ussp-tsdb-writer",
+            "main": "github.com/rootxkit/uspace-ussp",
+            "core": "v1.4.0"
+          }
+        ],
+        "core_versions": [
+          "v1.4.0"
+        ]
+      }
+    ],
+    "cores": [
+      {
+        "version": "v1.3.0",
+        "passed": 711,
+        "failed": 0,
+        "skipped": 30,
+        "vectors_metadata_only": [
+          "alert_lifecycle.json"
+        ]
+      },
+      {
+        "version": "v1.4.0",
+        "passed": 711,
+        "failed": 0,
+        "skipped": 30,
+        "vectors_metadata_only": [
+          "alert_lifecycle.json"
+        ]
+      }
+    ],
+    "lab_vectors": 18,
+    "took_s": 21.741
+  },
+  "zone": {
+    "Due": 60,
+    "Raised": 60,
+    "Cleared": 58,
+    "Missed": 0,
+    "MissedClears": 2,
+    "Unexpected": 0,
+    "tick_s": 1,
+    "ticks": 1.0511969,
+    "lines": [
+      "ac-00098: the raise for the entry at 1360 s was not cleared within 30 s of the exit at 1401 s",
+      "ac-00099: the raise for the entry at 1360 s was not cleared within 30 s of the exit at 1401 s"
+    ],
+    "raises": [
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 40,
+        "raise_s": 41.981,
+        "latency_s": 1.021
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 160,
+        "raise_s": 160.978,
+        "latency_s": 0.018
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 280,
+        "raise_s": 281.979,
+        "latency_s": 1.018
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 400,
+        "raise_s": 400.981,
+        "latency_s": 0.02
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 520,
+        "raise_s": 521.991,
+        "latency_s": 1.03
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 640,
+        "raise_s": 640.978,
+        "latency_s": 0.018
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 760,
+        "raise_s": 761.978,
+        "latency_s": 1.017
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 880,
+        "raise_s": 880.981,
+        "latency_s": 0.021
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 1000,
+        "raise_s": 1001.984,
+        "latency_s": 1.024
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 1120,
+        "raise_s": 1120.978,
+        "latency_s": 0.018
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 1240,
+        "raise_s": 1241.982,
+        "latency_s": 1.022
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 1360,
+        "raise_s": 1360.981,
+        "latency_s": 0.015
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 1480,
+        "raise_s": 1481.977,
+        "latency_s": 1.017
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 1600,
+        "raise_s": 1600.978,
+        "latency_s": 0.018
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 1720,
+        "raise_s": 1721.979,
+        "latency_s": 1.019
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 1840,
+        "raise_s": 1840.979,
+        "latency_s": 0.018
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 1960,
+        "raise_s": 1961.979,
+        "latency_s": 1.019
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 2080,
+        "raise_s": 2080.978,
+        "latency_s": 0.018
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 2200,
+        "raise_s": 2201.978,
+        "latency_s": 1.018
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 2320,
+        "raise_s": 2320.981,
+        "latency_s": 0.021
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 2440,
+        "raise_s": 2441.98,
+        "latency_s": 1.02
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 2560,
+        "raise_s": 2560.978,
+        "latency_s": 0.018
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 2680,
+        "raise_s": 2681.984,
+        "latency_s": 1.024
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 2800,
+        "raise_s": 2800.981,
+        "latency_s": 0.021
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 2920,
+        "raise_s": 2921.979,
+        "latency_s": 1.018
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 3040,
+        "raise_s": 3040.978,
+        "latency_s": 0.018
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 3160,
+        "raise_s": 3161.978,
+        "latency_s": 1.017
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 3280,
+        "raise_s": 3280.979,
+        "latency_s": 0.018
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 3400,
+        "raise_s": 3401.981,
+        "latency_s": 1.02
+      },
+      {
+        "aircraft": "ac-00098",
+        "entry_s": 3520,
+        "raise_s": 3520.981,
+        "latency_s": 0.021
+      },
+      {
+        "aircraft": "ac-00099",
+        "entry_s": 40,
+        "raise_s": 42.031,
+        "latency_s": 1.05
+      },
+      {
+        "aircraft": "ac-00099",
+        "entry_s": 160,
+        "raise_s": 161.029,
+        "latency_s": 0.048
+      },
+      {
+        "aircraft": "ac-00099",
+        "entry_s": 280,
+        "raise_s": 282.028,
+        "latency_s": 1.048
+      },
+      {
+        "aircraft": "ac-00099",
+        "entry_s": 400,
+        "raise_s": 401.028,
+        "latency_s": 0.048
+      },
+      {
+        "aircraft": "ac-00099",
+        "entry_s": 520,
+        "raise_s": 522.029,
+        "latency_s": 1.049
+      },
+      {
+        "aircraft": "ac-00099",
+        "entry_s": 640,
+        "raise_s": 641.03,
+        "latency_s": 0.05
+      },
+      {
+        "aircraft": "ac-00099",
+        "entry_s": 760,
+        "raise_s": 762.029,
+        "latency_s": 1.049
+      },
+      {
+        "aircraft": "ac-00099",
+        "entry_s": 880,
+        "raise_s": 881.029,
+        "latency_s": 0.048
+      },
+      {
+        "aircraft": "ac-00099",
+        "entry_s": 1000,
+        "raise_s": 1002.028,
+        "latency_s": 1.048
+      },
+      {
+        "aircraft": "ac-00099",
+        "entry_s": 1120,
+        "raise_s": 1121.029,
+        "latency_s": 0.049
+      },
+      {
+        "aircraft": "ac-00099",
+        "entry_s": 1240,
+        "raise_s": 1242.029,
+        "latency_s": 1.049
+      },
+      {
+        "aircraft": "ac-00099",
+        "entry_s": 1360,
+        "raise_s": 1361.029,
+        "latency_s": 0.049
+      },
+      {
+        "aircraft": "ac-00099",
+        "entry_s": 1480,
+        "raise_s": 1482.029,
+        "latency_s": 1.049
+      },
+      {
+        "aircraft": "ac-00099",
+        "entry_s": 1600,
+        "raise_s": 1601.029,
+        "latency_s": 0.048
+      },
+      {
+        "aircraft": "ac-00099",
+        "entry_s": 1720,
+        "raise_s": 1722.028,
+        "latency_s": 1.048
+      },
+      {
+        "aircraft": "ac-00099",
+        "entry_s": 1840,
+        "raise_s": 1841.028,
+        "latency_s": 0.048
+      },
+      {
+        "aircraft": "ac-00099",
+        "entry_s": 1960,
+        "raise_s": 1962.031,
+        "latency_s": 1.051
+      },
+      {
+        "aircraft": "ac-00099",
+        "entry_s": 2080,
+        "raise_s": 2081.027,
+        "latency_s": 0.046
+      },
+      {
+        "aircraft": "ac-00099",
+        "entry_s": 2200,
+        "raise_s": 2202.032,
+        "latency_s": 1.051
+      },
+      {
+        "aircraft": "ac-00099",
+        "entry_s": 2320,
+        "raise_s": 2321.027,
+        "latency_s": 0.047
+      }
+    ]
+  },
+  "protobuf": {
+    "frame_bytes": 1010,
+    "json_per_message_us": 9.07,
+    "processes": [
+      {
+        "process": "authority-picture-ws",
+        "messages_series": "uspace_authority_frames_sent{component=\"picture\"}",
+        "cpu_s": 254.08,
+        "messages": 4480020,
+        "cpu_per_message_us": 56.714,
+        "json_per_message_us": 9.07,
+        "json_share": 0.16
+      },
+      {
+        "process": "ussp-telemetry-ingest",
+        "messages_series": "ussp_accepted{component=\"telemetry\"}",
+        "cpu_s": 289.97,
+        "messages": 357660,
+        "cpu_per_message_us": 810.742,
+        "json_per_message_us": 9.07,
+        "json_share": 0.011
+      },
+      {
+        "process": "ussp-traffic-ws",
+        "messages_series": "ussp_traffic_ws_frames_sent{component=\"traffic_ws\"}",
+        "cpu_s": 142.86,
+        "messages": 139448,
+        "cpu_per_message_us": 1024.468,
+        "json_per_message_us": 9.07,
+        "json_share": 0.009
+      }
+    ],
+    "note": "an estimate: one encoding/json decode and encode of a 1010-byte track frame on this host against each process's CPU per message over the run; the systems expose no profile"
+  },
+  "errors": [
+    "drain: not settled within drain_s 30 s"
+  ],
+  "checks_measured": 40,
+  "checks_not_measured": 4,
+  "complete": false,
+  "verdict": "fail",
+  "failures": [
+    "operator_to_console_p99: operator_to_ussp_console_s p99 is 1.023, the criterion is \u003c 1",
+    "receiver_to_picture_p99: receiver_to_authority_picture_s p99 is 4.95, the criterion is \u003c 1",
+    "zone_alert_tick: zone_alert_ticks value is 1.051, the criterion is \u003c= 1",
+    "missed_clears: missed_clears value is 2, the criterion is == 0",
+    "operator_identity: operator_ledgers_unbalanced value is 100, the criterion is == 0",
+    "disk_model: disk_growth_vs_model value is 2.719, the criterion is \u003c= 1.2",
+    "restart_duplicates: restart_duplicate_alerts value is 36, the criterion is == 0",
+    "restart_backlog: restart_lost_backlog value is 216062, the criterion is == 0",
+    "outage_flagged: outage_unflagged value is 3, the criterion is == 0",
+    "memory_monotonic: memory_monotonic value is 1, the criterion is == 0",
+    "run error: drain: not settled within drain_s 30 s"
+  ]
+}
