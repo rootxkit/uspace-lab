@@ -271,11 +271,14 @@ func Run(ctx context.Context, o Options) error {
 // state directory, its hosts, a client that dials them and the seed's
 // state with the bootstrap admins' passwords.
 type stack struct {
-	env      map[string]string
-	stateDir string
-	hosts    map[string]string
-	c        *Client
-	st       *State
+	env map[string]string
+	// deployDir is the demo env's directory (deploy/): the state
+	// directories in it are relative to it.
+	deployDir string
+	stateDir  string
+	hosts     map[string]string
+	c         *Client
+	st        *State
 }
 
 func openStack(envPath string) (*stack, error) {
@@ -313,7 +316,7 @@ func openStack(envPath string) (*stack, error) {
 		}
 		st.Account(sys, "admin").Password = strings.TrimSpace(string(b))
 	}
-	return &stack{env: env, stateDir: stateDir, hosts: hosts, c: c, st: st}, nil
+	return &stack{env: env, deployDir: deployDir, stateDir: stateDir, hosts: hosts, c: c, st: st}, nil
 }
 
 func def(v, d string) string {

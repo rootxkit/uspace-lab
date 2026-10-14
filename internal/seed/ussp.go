@@ -6,11 +6,62 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 )
 
 func jsonRaw(b []byte) json.RawMessage { return json.RawMessage(b) }
+
+// cisUSpace reads the U-space airspace version of the USSP's CIS cache
+// from its readiness ("uspace_airspace:N" in the cis dependency's
+// detail).
+var cisUSpace = regexp.MustCompile(`uspace_airspace:(\d+)`)
+
+// CISUSpace is the version of the U-space airspace dataset the USSP's
+// CIS cache holds, as its /readyz says ("0": none).
+func (u *USSP) CISUSpace(ctx context.Context) (string, error) {
+	ans, err := u.C.Do(ctx, http.MethodGet, u.url("/readyz"), Auth{}, nil)
+	if err != nil {
+		return "", err
+	}
+	var r struct {
+		Dependencies map[string]struct {
+			Detail string `json:"detail"`
+		} `json:"dependencies"`
+	}
+	if err := ans.JSON(&r); err != nil {
+		return "", err
+	}
+	m := cisUSpace.FindStringSubmatch(r.Dependencies["cis"].Detail)
+	if m == nil {
+		return "", fmt.Errorf("seed: the USSP's readiness names no uspace_airspace version in its cis dependency (%q)", r.Dependencies["cis"].Detail)
+	}
+	return m[1], nil
+}
+
+// WaitCISUSpace waits until the USSP's CIS cache holds a U-space
+// airspace version other than before (and not none), bounded.
+func (u *USSP) WaitCISUSpace(ctx context.Context, before string, bound time.Duration) error {
+	ctx, cancel := context.WithTimeout(ctx, bound)
+	defer cancel()
+	last := before
+	tk := time.NewTicker(2 * time.Second)
+	defer tk.Stop()
+	for {
+		if v, err := u.CISUSpace(ctx); err == nil {
+			last = v
+			if v != before && v != "0" {
+				return nil
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("seed: the USSP's CIS cache still holds U-space airspace version %s after %s (before the seed: %s)", last, bound, before)
+		case <-tk.C:
+		}
+	}
+}
 
 // USSP drives the USSP's account API (uspace-ussp api/openapi.yaml at
 // the image's commit): operator self-registration, the portal session,

@@ -70,6 +70,35 @@ type LoadTarget struct {
 	// Readiness is each system's readiness URL (authority, cisp, ussp,
 	// ansp, issuer, dss): what an outage fault is judged on.
 	Readiness map[string]string `yaml:"readiness,omitempty"`
+	// Peer is the load harness's own peer USSP (nil: none seeded).
+	Peer *LoadPeer `yaml:"peer,omitempty"`
+}
+
+// LoadPeer is the peer USSP a load run embeds (internal/simussp): where
+// it listens and the URL the systems reach it at (the lab Caddy's
+// LOAD_PEER_HOST), the DSS it writes its ISA and its subscription to,
+// its client at the lab issuer for the DSS and for the USSP's F3548
+// details, the issuer whose tokens it accepts, the display provider
+// whose polls it times, and what the seed registered for it.
+type LoadPeer struct {
+	Listen     string   `yaml:"listen"`
+	BaseURL    string   `yaml:"base_url"`
+	Audience   string   `yaml:"audience"`
+	DSSRIDBase string   `yaml:"dss_rid_base"`
+	DSSUTMBase string   `yaml:"dss_utm_base"`
+	DSS        TokenCfg `yaml:"dss"`
+	USSP       TokenCfg `yaml:"ussp"`
+	Issuer     string   `yaml:"issuer"`
+	JWKSFile   string   `yaml:"jwks_file"`
+	// DisplayProvider is the authority's DP client id: the subject of
+	// the polls the run times.
+	DisplayProvider string `yaml:"display_provider"`
+	// Area is the authority's oversight area [west, south, east, north];
+	// USpaceID the U-space airspace the seed designated.
+	Area     [4]float64 `yaml:"area"`
+	USpaceID string     `yaml:"uspace_id"`
+	// Serials are the peer's aircraft as registered.
+	Serials []string `yaml:"serials"`
 }
 
 // LoadProbes are the operator's commands that read the systems of a load
@@ -208,6 +237,9 @@ func (t *Targets) path(p string) string {
 
 // Secret reads a secret file named in the targets file (relative to it).
 func (t *Targets) Secret(p string) (string, error) { return t.secret(p) }
+
+// File is a file the targets file names, relative to it.
+func (t *Targets) File(p string) string { return t.path(p) }
 
 // secret reads a secret file named in the targets file.
 func (t *Targets) secret(p string) (string, error) {

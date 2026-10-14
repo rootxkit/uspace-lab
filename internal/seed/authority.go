@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"net/url"
 	"time"
@@ -330,6 +331,43 @@ func (a *Authority) USpace(ctx context.Context, admin Session, id string, featur
 	}
 	a.St.USpace, a.St.USpaceVersion, a.St.USpaceDigest = id, version, digest
 	return a.St.Save()
+}
+
+// EnsureDPView adds an oversight area to the authority's display
+// provider (admin, POST /v1/dp/views) unless one with the label and the
+// box is there already: the display provider shows what has an ISA in
+// it, whether or not a console looks.
+func (a *Authority) EnsureDPView(ctx context.Context, admin Session, label string, bbox [4]float64) error {
+	ans, err := a.C.Expect(ctx, http.MethodGet, a.url("/v1/dp/views"), admin.cookie(), nil, "DP views", http.StatusOK)
+	if err != nil {
+		return err
+	}
+	var list struct {
+		Views []struct {
+			Label string    `json:"label"`
+			BBox  []float64 `json:"bbox"`
+		} `json:"views"`
+	}
+	if err := ans.JSON(&list); err != nil {
+		return err
+	}
+	for _, v := range list.Views {
+		if v.Label == label && len(v.BBox) == 4 && sameBox(v.BBox, bbox) {
+			return nil
+		}
+	}
+	_, err = a.C.Expect(ctx, http.MethodPost, a.url("/v1/dp/views"), admin.cookie(),
+		map[string]any{"label": label, "bbox": bbox[:]}, "DP view "+label, http.StatusCreated)
+	return err
+}
+
+func sameBox(a []float64, b [4]float64) bool {
+	for i := range b {
+		if math.Abs(a[i]-b[i]) > 1e-9 {
+			return false
+		}
+	}
+	return true
 }
 
 // digestOf is the SHA-256 of v's JSON (what the seed last published).

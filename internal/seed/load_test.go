@@ -19,6 +19,10 @@ func goodFleet() *LoadFleet {
 		Receivers: []LoadReceiver{{ID: "load-ab-0000", LatDeg: 41.7, LonDeg: 44.8}}}
 }
 
+func goodPeer() *LoadPeer {
+	return &LoadPeer{Serials: []string{"LABXCP0002N000000"}, Area: [4]float64{44.8, 41.7, 44.9, 41.8}, USpaceHalfSideM: 1400}
+}
+
 // A fleet the systems would refuse, or that the seed would register
 // twice, is refused by Check; the good fleet passes (the presence half).
 func TestLoadFleetCheckFailsClosed(t *testing.T) {
@@ -40,6 +44,16 @@ func TestLoadFleetCheckFailsClosed(t *testing.T) {
 		"receiver id":             {func(f *LoadFleet) { f.Receivers[0].ID = "Load RX" }, "receiver id"},
 		"receiver twice":          {func(f *LoadFleet) { f.Receivers = append(f.Receivers, f.Receivers[0]) }, "receiver id"},
 		"receiver position":       {func(f *LoadFleet) { f.Receivers[0].LatDeg = 91 }, "not a position"},
+		"peer without aircraft":   {func(f *LoadFleet) { f.Peer = goodPeer(); f.Peer.Serials = nil }, "peer aircraft"},
+		"peer serial not CTA":     {func(f *LoadFleet) { f.Peer = goodPeer(); f.Peer.Serials[0] = "LAB-PEER-1" }, "peer serial"},
+		"peer serial a fleet one": {func(f *LoadFleet) { f.Peer = goodPeer(); f.Peer.Serials[0] = f.Clients[0].Serials[0] }, "held twice"},
+		"peer area inverted":      {func(f *LoadFleet) { f.Peer = goodPeer(); f.Peer.Area = [4]float64{44.9, 41.7, 44.8, 41.8} }, "oversight area"},
+		"peer U-space empty":      {func(f *LoadFleet) { f.Peer = goodPeer(); f.Peer.USpaceHalfSideM = 0 }, "half side"},
+	}
+	withPeer := goodFleet()
+	withPeer.Peer = goodPeer()
+	if err := withPeer.Check(); err != nil {
+		t.Fatalf("the good fleet with a peer: %v", err)
 	}
 	for name, c := range cases {
 		f := goodFleet()
@@ -95,10 +109,23 @@ func TestLoadTargetsWrittenLoad(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "state", "clients", "lab-01.secret"), []byte("lab-01-secret\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	sk := &stack{stateDir: filepath.Join(dir, "state"), env: map[string]string{"DEMO_HTTPS_PORT": "8443", "AUTHORITY_IMAGE": "a@sha256:1", "DEMO_LOAD_RECEIVER_ADDRESSES": "10.77.0.0/16", "DEMO_LOAD_OPERATOR_ADDRESSES": "10.78.0.0/16"},
+	if err := os.WriteFile(filepath.Join(dir, "state", "clients", "sim-ussp-01.secret"), []byte("peer-secret\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "issuer", "public"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "issuer", "public", "jwks.json"), []byte(`{"keys":[]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	sk := &stack{deployDir: dir, stateDir: filepath.Join(dir, "state"), env: map[string]string{"DEMO_HTTPS_PORT": "8443", "AUTHORITY_IMAGE": "a@sha256:1",
+		"DEMO_LOAD_RECEIVER_ADDRESSES": "10.77.0.0/16", "DEMO_LOAD_OPERATOR_ADDRESSES": "10.78.0.0/16",
+		"LOAD_PEER_HOST": "peer.test", "DEMO_LOAD_PEER_PORT": "18093", "LAB_ISSUER_URL": "https://lab.test", "LAB_STATE_DIR": "./issuer"},
 		hosts: map[string]string{"AUTHORITY_HOST": "authority.test", "USSP_HOST": "ussp.test", "LAB_HOST": "lab.test", "CISP_HOST": "cisp.test", "ANSP_HOST": "ansp.test"}, st: st}
 	ops := []*USSPOperator{{ClientID: "op-a", ClientSecret: "client-secret-a"}, {ClientID: "op-b", ClientSecret: "client-secret-b"}}
-	o := LoadOptions{Fleet: goodFleet(), TargetsOut: filepath.Join(dir, "targets", "load.yaml"), SecretsDir: filepath.Join(dir, "secrets"),
+	fleet := goodFleet()
+	fleet.Peer = goodPeer()
+	o := LoadOptions{Fleet: fleet, TargetsOut: filepath.Join(dir, "targets", "load.yaml"), SecretsDir: filepath.Join(dir, "secrets"),
 		Geoid: "constant:15.9", Lab: filepath.Join(dir, "sitl.env")}
 	probes, err := loadProbes("../../deploy/systems/probes.yaml", "lab-x")
 	if err != nil {
@@ -125,6 +152,20 @@ func TestLoadTargetsWrittenLoad(t *testing.T) {
 	}
 	if s, err := tg.Secret(lt.F3411DP.SecretFile); err != nil || s != "lab-01-secret" {
 		t.Fatalf("lab-01 secret %q %v", s, err)
+	}
+	// The peer: where it listens and is reached, its clients (the secret
+	// copied), the issuer's JWKS relative to the targets file.
+	pe := lt.Peer
+	if pe == nil || pe.Listen != "127.0.0.1:18093" || pe.BaseURL != "https://peer.test:8443" || pe.Audience != "peer.test" ||
+		pe.DSSRIDBase != "https://lab.test:8443/rid/v2" || pe.DSS.Audience != "lab.test" || pe.USSP.Audience != "ussp.test" ||
+		pe.DisplayProvider != "authority-01" || pe.USpaceID != "LABUSP1" || len(pe.Serials) != 1 || pe.Area != goodPeer().Area {
+		t.Fatalf("peer %+v", pe)
+	}
+	if s, err := tg.Secret(pe.DSS.SecretFile); err != nil || s != "peer-secret" {
+		t.Fatalf("peer secret %q %v", s, err)
+	}
+	if b, err := os.ReadFile(tg.File(pe.JWKSFile)); err != nil || string(b) != `{"keys":[]}` {
+		t.Fatalf("peer JWKS %q: %v", pe.JWKSFile, err)
 	}
 	// Every system's readiness, for the outage faults.
 	want := map[string]string{"authority": "https://authority.test:8443/readyz", "cisp": "https://cisp.test:8443/readyz",

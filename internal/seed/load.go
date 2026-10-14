@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/rootxkit/uspace-core/serial"
 
 	"github.com/rootxkit/uspace-lab/internal/runner"
+	"github.com/rootxkit/uspace-lab/internal/scenario"
 )
 
 // Bounds of a load fleet the seed registers (E-10): the load harness's
@@ -42,7 +44,46 @@ type LoadFleet struct {
 	ClassLabel string
 	Clients    []LoadClient
 	Receivers  []LoadReceiver
+	// Peer, when set, is what the load harness's peer USSP needs of the
+	// systems (systems mode, docs/RUNBOOKS/load.md).
+	Peer *LoadPeer
 }
+
+// LoadPeer is the peer USSP of a load fleet as the systems must know
+// it: its aircraft in the authority's registry under the first client's
+// operator (the display provider identifies what it shows; they are
+// never bound at the USSP, the peer serves them), an oversight area at
+// the authority over the fleet and the peer (its display provider polls
+// whatever has an ISA there), and a U-space airspace square (an intent
+// inside it is DSS-backed, so its changes are notified to the peer).
+type LoadPeer struct {
+	Serials []string
+	// Area is [west, south, east, north], WGS84 degrees.
+	Area [4]float64
+	// USpaceCentre is the square's centre (offsets from the lab origin)
+	// and USpaceHalfSideM its half side.
+	USpaceCentre    scenario.Offset
+	USpaceHalfSideM float64
+}
+
+// LoadUSpaceID is the U-space airspace a load seed designates: the
+// demo's own identifier, so the stack holds one U-space airspace,
+// wherever the last seed put it.
+const LoadUSpaceID = "LABUSP1"
+
+// loadUSpaceCeilingM is the U-space airspace's ceiling above the
+// origin (demo-seed's default).
+const loadUSpaceCeilingM = 1500
+
+// LoadDisplayProvider is the authority's DP client at the lab issuer
+// (deploy/systems/compose.yaml, authority-dp-poller DP_CLIENT_ID).
+const LoadDisplayProvider = "authority-01"
+
+// loadPeerClient is the peer's client at the lab issuer.
+const loadPeerClient = "sim-ussp-01"
+
+// MaxLoadPeerAircraft bounds the peer's aircraft (E-10).
+const MaxLoadPeerAircraft = 100
 
 // LoadClient is one operator client and the serials it streams.
 type LoadClient struct {
@@ -134,6 +175,31 @@ func (f *LoadFleet) Check() error {
 			}
 		}
 	}
+	if p := f.Peer; p != nil {
+		if len(p.Serials) == 0 || len(p.Serials) > MaxLoadPeerAircraft {
+			return fmt.Errorf("seed: %d peer aircraft, want 1 to %d", len(p.Serials), MaxLoadPeerAircraft)
+		}
+		for _, sn := range p.Serials {
+			if err := serial.ValidateCTA2063A(sn); err != nil {
+				return fmt.Errorf("seed: peer serial %q: %w", sn, err)
+			}
+			if err := serial.ValidateForClass(sn, f.ClassLabel); err != nil {
+				return fmt.Errorf("seed: peer serial %q: %w", sn, err)
+			}
+			k := serial.FoldKey(sn)
+			if serials[k] {
+				return fmt.Errorf("seed: peer serial %s held twice in the load fleet", sn)
+			}
+			serials[k] = true
+		}
+		a := p.Area
+		if !(a[0] >= -180 && a[0] < a[2] && a[2] <= 180 && a[1] >= -90 && a[1] < a[3] && a[3] <= 90) {
+			return fmt.Errorf("seed: the oversight area %v is not [west, south, east, north] with west < east, south < north", a)
+		}
+		if !(p.USpaceHalfSideM > 0 && p.USpaceHalfSideM <= 50000) {
+			return fmt.Errorf("seed: the U-space airspace's half side %v m is not in (0, 50000]", p.USpaceHalfSideM)
+		}
+	}
 	ids := map[string]bool{}
 	for _, r := range f.Receivers {
 		if !receiverID.MatchString(r.ID) || ids[r.ID] {
@@ -188,11 +254,15 @@ func SeedLoad(ctx context.Context, o LoadOptions) error {
 	if err != nil {
 		return err
 	}
+	firstOperator := ""
 	for _, c := range o.Fleet.Clients {
 		opID, err := auth.EnsureOperator(ctx, reg, RegistryOperator{Number: c.Registration, Name: "uspace-lab load operator " + c.Registration,
 			Email: strings.ToLower(c.Registration) + "@lab.uspace.test", Phone: "+995000" + c.Registration[len(c.Registration)-6:]}, o.Now().AddDate(1, 0, 0))
 		if err != nil {
 			return err
+		}
+		if firstOperator == "" {
+			firstOperator = opID
 		}
 		for _, sn := range c.Serials {
 			if err := auth.EnsureUAS(ctx, reg, RegistryUAS{Serial: sn, OperatorID: opID, ClassLabel: o.Fleet.ClassLabel}); err != nil {
@@ -207,6 +277,11 @@ func SeedLoad(ctx context.Context, o LoadOptions) error {
 		}
 	}
 	o.Log("authority: %d load receivers registered, keys kept", len(o.Fleet.Receivers))
+	if p := o.Fleet.Peer; p != nil {
+		if err := seedLoadPeer(ctx, o, sk, auth, ussp, admin, reg, firstOperator, p); err != nil {
+			return err
+		}
+	}
 	ops := make([]*USSPOperator, len(o.Fleet.Clients))
 	for i, c := range o.Fleet.Clients {
 		bind := make(map[string]string, len(c.Serials))
@@ -297,6 +372,11 @@ func writeLoadTargets(o LoadOptions, sk *stack, ops []*USSPOperator, insp Sessio
 	}
 	lt.F3411DP = &runner.TokenCfg{TokenURL: u(h["LAB_HOST"]) + "/oauth/token", ClientID: "lab-01", SecretFile: dpSecret,
 		Audience: h["USSP_HOST"], Scopes: []string{"rid.display_provider"}}
+	if p := o.Fleet.Peer; p != nil {
+		if lt.Peer, err = loadPeerTarget(o, sk, p, put); err != nil {
+			return err
+		}
+	}
 	// Every system's readiness, as the chaos matrix reads it: what a
 	// load run's outage faults are judged on.
 	lt.Readiness = map[string]string{
@@ -333,6 +413,90 @@ func writeLoadTargets(o LoadOptions, sk *stack, ops []*USSPOperator, insp Sessio
 	}
 	o.Log("wrote %s: %d clients, %d receivers", o.TargetsOut, len(lt.Clients), len(lt.Receivers))
 	return nil
+}
+
+// seedLoadPeer registers what the peer needs: its aircraft under the
+// first client's operator, the oversight area, and the U-space airspace
+// square, waiting until the USSP's CIS cache holds the airspace when it
+// was published now (an intent filed before that is not DSS-backed).
+func seedLoadPeer(ctx context.Context, o LoadOptions, sk *stack, auth *Authority, ussp *USSP, admin, reg Session, operatorID string, p *LoadPeer) error {
+	for _, sn := range p.Serials {
+		if err := auth.EnsureUAS(ctx, reg, RegistryUAS{Serial: sn, OperatorID: operatorID, ClassLabel: o.Fleet.ClassLabel}); err != nil {
+			return err
+		}
+	}
+	if err := auth.EnsureDPView(ctx, admin, "uspace-lab load "+o.Fleet.Tier, p.Area); err != nil {
+		return err
+	}
+	lab, err := scenario.LoadLab(o.Lab)
+	if err != nil {
+		return err
+	}
+	feature, err := uspaceFeature(lab, LoadUSpaceID, sk.env["DEMO_COUNTRY"], p.USpaceHalfSideM, p.USpaceCentre, loadUSpaceCeilingM)
+	if err != nil {
+		return err
+	}
+	before, err := ussp.CISUSpace(ctx)
+	if err != nil {
+		return err
+	}
+	version, digest := sk.st.USpaceVersion, sk.st.USpaceDigest
+	if err := auth.USpace(ctx, admin, LoadUSpaceID, feature, o.Now().Add(-time.Hour), o.Now().AddDate(0, 1, 0), "uspace-lab load U-space"); err != nil {
+		return err
+	}
+	if sk.st.USpaceVersion != version || sk.st.USpaceDigest != digest || before == "0" {
+		if err := ussp.WaitCISUSpace(ctx, before, 3*time.Minute); err != nil {
+			return err
+		}
+	}
+	o.Log("authority: %d peer aircraft in the registry, the oversight area %v, U-space airspace %s held by the USSP's CIS", len(p.Serials), p.Area, LoadUSpaceID)
+	return nil
+}
+
+// loadPeerTarget is the targets file's peer block: the peer's client
+// secret copied into the secrets directory, the issuer's public JWKS
+// named where the issuer wrote it.
+func loadPeerTarget(o LoadOptions, sk *stack, p *LoadPeer, put func(name, v string) (string, error)) (*runner.LoadPeer, error) {
+	h := sk.hosts
+	host, port := sk.env["LOAD_PEER_HOST"], sk.env["DEMO_LOAD_PEER_PORT"]
+	if host == "" || port == "" {
+		return nil, fmt.Errorf("seed: a load peer needs LOAD_PEER_HOST and DEMO_LOAD_PEER_PORT in the demo env (deploy/demo.env.example)")
+	}
+	if n, err := strconv.Atoi(port); err != nil || n <= 0 || n > 65535 {
+		return nil, fmt.Errorf("seed: DEMO_LOAD_PEER_PORT %q is not a port", port)
+	}
+	issuer := sk.env["LAB_ISSUER_URL"]
+	if issuer == "" {
+		return nil, fmt.Errorf("seed: LAB_ISSUER_URL is not set in the demo env")
+	}
+	b, err := os.ReadFile(filepath.Join(sk.stateDir, "clients", loadPeerClient+".secret"))
+	if err != nil {
+		return nil, fmt.Errorf("seed: the lab issuer's %s secret: %w", loadPeerClient, err)
+	}
+	secret, err := put(loadPeerClient+".secret", strings.TrimSpace(string(b)))
+	if err != nil {
+		return nil, err
+	}
+	// LAB_STATE_DIR is relative to deploy/, as DEMO_STATE_DIR is.
+	issuerState := def(sk.env["LAB_STATE_DIR"], "./local-demo/issuer")
+	if !filepath.IsAbs(issuerState) {
+		issuerState = filepath.Join(sk.deployDir, issuerState)
+	}
+	jwks := filepath.Join(issuerState, "public", "jwks.json")
+	if _, err := os.Stat(jwks); err != nil {
+		return nil, fmt.Errorf("seed: the lab issuer's public JWKS: %w", err)
+	}
+	u := func(host string) string { return fmtURL("https", host, sk.env["DEMO_HTTPS_PORT"]) }
+	return &runner.LoadPeer{
+		Listen: "127.0.0.1:" + port, BaseURL: u(host), Audience: host,
+		DSSRIDBase: u(h["LAB_HOST"]) + "/rid/v2", DSSUTMBase: u(h["LAB_HOST"]),
+		DSS: runner.TokenCfg{TokenURL: u(h["LAB_HOST"]) + "/oauth/token", ClientID: loadPeerClient, SecretFile: secret,
+			Audience: h["LAB_HOST"], Scopes: []string{"rid.service_provider", "utm.strategic_coordination"}},
+		USSP: runner.TokenCfg{TokenURL: u(h["LAB_HOST"]) + "/oauth/token", ClientID: loadPeerClient, SecretFile: secret,
+			Audience: h["USSP_HOST"], Scopes: []string{"utm.strategic_coordination"}},
+		Issuer: issuer, JWKSFile: relTo(o.TargetsOut, jwks), DisplayProvider: LoadDisplayProvider,
+		Area: p.Area, USpaceID: LoadUSpaceID, Serials: append([]string(nil), p.Serials...),
+	}, nil
 }
 
 // ProbesFormat names deploy/systems/probes.yaml.
