@@ -59,6 +59,9 @@ type Options struct {
 	// ReadyTimeout bounds the wait for every client and stream to come
 	// up before the generator starts (0: a minute plus the tier's ramp).
 	ReadyTimeout time.Duration
+	// FaultsPath is a fault plan (load/faults/*.yaml) run during a
+	// systems run; empty: none.
+	FaultsPath string
 }
 
 // referenceAudience is the reference target's host (never resolved).
@@ -144,6 +147,18 @@ func Run(ctx context.Context, opt Options) (*Report, error) {
 		}
 		evidence = "The systems' images as the targets file names them, seeded for this fleet (loadgen seed); evidence for the images and digests listed, on the host named, when the run passes (docs/PLAN.md L-D4)."
 	}
+	if opt.FaultsPath != "" {
+		// Faults act on the systems' containers: checked, like the rest,
+		// before anything starts.
+		if r.systems == nil {
+			return nil, fmt.Errorf("load: --faults needs a systems target: the reference target has no containers")
+		}
+		plan, err := LoadFaults(opt.FaultsPath, filepath.Join(opt.RepoRoot, "scripts", "chaos"), tier.DurationS)
+		if err != nil {
+			return nil, err
+		}
+		r.faults = newFaultRunner(plan, filepath.Join(opt.RepoRoot, "scripts", "chaos"))
+	}
 	receivers := ""
 	if r.systems != nil {
 		receivers = r.systems.addresses
@@ -179,6 +194,7 @@ type run struct {
 	systems       *systemsTarget
 	probes        *probes
 	sp            *spPoller
+	faults        *faultRunner
 	tokens        []*oauth.ClientCredentials
 	rxCreds       []rxCred
 	intents       map[int]string
@@ -256,6 +272,9 @@ func (r *run) execute(ctx context.Context, rep *Report) {
 	deadline := time.NewTimer(r.opt.ReadyTimeout)
 	defer deadline.Stop()
 	r.startStreams(obsCtx, &wg)
+	if r.faults != nil {
+		r.readers.onShown = r.faults.shown
+	}
 	if err := r.waitStreams(ctx, deadline.C); err != nil {
 		r.fail("not ready: %v", err)
 		r.finish(rep)
@@ -292,9 +311,17 @@ func (r *run) execute(ctx context.Context, rep *Report) {
 		go func() { defer memWG.Done(); r.sp.run(memCtx) }()
 	}
 	t0 := time.Now()
+	var faultWG sync.WaitGroup
+	if r.faults != nil {
+		faultWG.Add(1)
+		go func() { defer faultWG.Done(); r.faults.execute(ctx, t0, r.fail) }()
+	}
 	r.log.Info("generator started", "tier", r.tier.Tier, "aircraft", len(r.fleet.Aircraft), "duration_s", r.tier.DurationS)
 	r.generate(ctx, t0)
 	genS := time.Since(t0).Seconds()
+	// Every fault is restored before the run's end (LoadFaults): a
+	// cancelled run waits for its restore.
+	faultWG.Wait()
 	r.log.Info("generator stopped; draining", "after_s", math.Round(genS))
 	memCancel()
 	memWG.Wait()
@@ -927,6 +954,22 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 	} else {
 		obs["memory_growth_ratio"] = notMeasured(fmt.Sprintf("%d memory samples after the %.0f s warm-up, at least 6 are needed", len(judged), t.MemoryWarmupS))
 		obs["memory_monotonic"] = obs["memory_growth_ratio"]
+	}
+	// The faults: restart and partition rows.
+	if r.faults != nil {
+		lost := lo.QueueShed + lo.Pending + lr.BacklogShed + lr.Pending
+		r.readers.flagMu.Lock()
+		flags := append([]flagSeen(nil), r.readers.flags...)
+		r.readers.flagMu.Unlock()
+		rep.Faults = r.faults.observe(obs, t0.Add(seconds(genS)), r.rec.Events(), lost, rep.Loss.PictureSilent, flags)
+	} else {
+		why := notMeasured(niChaos)
+		if r.systems != nil {
+			why = notMeasured("no fault plan in the run (loadgen run --faults load/faults/<plan>.yaml)")
+		}
+		for _, m := range []string{"restart_recovery_s", "restart_duplicate_alerts", "restart_lost_backlog", "partition_unreplayed", "partition_cross_effects"} {
+			obs[m] = why
+		}
 	}
 	// The F3411 SP, as the lab polled it.
 	switch {

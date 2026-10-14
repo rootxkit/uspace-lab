@@ -1,0 +1,11 @@
+# Faults for a ci-tier systems run (120 s; WP-L8, docs/RUNBOOKS/load.md):
+# two hot-path processes killed in turn mid-run and started again by the
+# WP-L9 scripts (scripts/chaos/<domain>.sh inject|restore ARGS). Each
+# fault is restored 30 s before the next one and before the run ends
+# (internal/load LoadFaults checks it). The restart row judges: the
+# picture and the traffic streams back within 10 s of the restore, no
+# alert raised twice, no backlog lost.
+format: lab-load-faults/v1
+faults:
+  - {row: restart, at_s: 20, hold_s: 5, domain: hotpath, args: [ussp-monitor], system: ussp}
+  - {row: restart, at_s: 55, hold_s: 5, domain: adapter, args: [authority-rid-ingest], system: authority}

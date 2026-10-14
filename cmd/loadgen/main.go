@@ -105,6 +105,7 @@ func runTier(args []string) int {
 	duration := fs.Float64("duration-s", 0, "override the tier's duration (recorded as a scale factor)")
 	host := fs.String("host", "", "name the host and its size, recorded in the report (L-Q1)")
 	heap := fs.String("heap-profile", "", "write a heap profile at the end of the drain (pprof)")
+	faults := fs.String("faults", "", "a fault plan (load/faults/*.yaml) injected into the systems during the run")
 	labEnv := fs.String("lab-env", "", "a systems run of the demo stack: deploy/demo.env, whose hosts are dialled at 127.0.0.1 with its lab CA")
 	if err := fs.Parse(args); err != nil {
 		return 2
@@ -142,7 +143,7 @@ func runTier(args []string) int {
 	ctx, stop := cli.SignalContext()
 	defer stop()
 	rep, err := load.Run(ctx, load.Options{Files: files, TargetsPath: *targets, Run: id, DurationS: *duration,
-		RepoRoot: runner.RepoRoot("."), HostName: *host, HeapProfile: *heap, Log: log})
+		RepoRoot: runner.RepoRoot("."), HostName: *host, HeapProfile: *heap, Log: log, FaultsPath: *faults})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "loadgen:", err)
 		return 2

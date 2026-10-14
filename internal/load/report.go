@@ -58,6 +58,8 @@ type Report struct {
 	Memory []uint64 `json:"memory_live_heap_bytes,omitempty"`
 	// Systems is what the probes read of the systems (a systems run).
 	Systems *Systems `json:"systems,omitempty"`
+	// Faults are the faults the run injected and what they did.
+	Faults []FaultRecord `json:"faults,omitempty"`
 	// F3411 is what the lab's DP polls of the USSP saw (a systems run).
 	F3411      *F3411Polls `json:"f3411,omitempty"`
 	Errors     []string    `json:"errors,omitempty"`
@@ -475,6 +477,9 @@ func (r *Report) Markdown() string {
 	if r.Systems != nil {
 		r.systemsMarkdown(w)
 	}
+	if len(r.Faults) > 0 {
+		r.faultsMarkdown(w)
+	}
 	if f := r.F3411; f != nil {
 		w("## F3411 display-provider polls of the USSP\n\n%d views, %d polls, %d flights returned, %d details answered, %d failures (statuses %v).\n\n", f.Views, f.Polls, f.Flights, f.DetailsOK, f.Failures, f.Statuses)
 	}
@@ -551,6 +556,22 @@ func (r *Report) systemsMarkdown(w func(format string, a ...any)) {
 	}
 	if sys.ErrorsN > 0 {
 		w("\nProbe errors: %d (the first %d are among the run's errors).\n", sys.ErrorsN, len(sys.Errors))
+	}
+	w("\n")
+}
+
+// faultsMarkdown renders the faults the run injected.
+func (r *Report) faultsMarkdown(w func(format string, a ...any)) {
+	w("## Faults\n\n| Row | Script | At (s) | Hold (s) | Picture back after restore (s) | Traffic back (s) | Error |\n|---|---|---|---|---|---|---|\n")
+	opt := func(p *float64) string {
+		if p == nil {
+			return "never"
+		}
+		return fmtNum(*p)
+	}
+	for i := range r.Faults {
+		f := &r.Faults[i]
+		w("| %s | `%s.sh %s` | %s | %s | %s | %s | %s |\n", f.Row, f.Domain, strings.Join(f.Args, " "), fmtNum(f.AtS), fmtNum(f.HoldS), opt(f.PictureBackS), opt(f.TrafficBackS), f.Error)
 	}
 	w("\n")
 }

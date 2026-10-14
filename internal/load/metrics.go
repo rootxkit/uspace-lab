@@ -28,7 +28,8 @@ const (
 	niDPCache = "the DP cache's 24 h bound needs a run of more than 24 h with the authority's DP polling"
 	niF3548   = "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
 	niMetrics = "read from the systems' /metrics by name (a systems run with probes); the reference target has none"
-	niChaos   = "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
+	niChaos   = "faults are injected into the systems' containers (loadgen run --faults with a systems target); the reference target has none"
+	niOutage  = "a cross-system outage's degraded behaviours are judged per system, with each one's readiness and console status, by the WP-L9 chaos matrix (scripts/chaos, docs/RUNBOOKS/chaos.md); the load harness reads only the authority picture and the USSP traffic streams"
 	niStorage = "the reference target has no database; storage is measured against the systems' images (a systems run with probes)"
 	niZone    = "the load paths script no zone entry yet; zone alerts are proved by the scenario suite (sc-03)"
 	niArt13   = "Art. 13(2) notices go to peers and the ANSP, neither of which the load harness drives yet"
@@ -73,12 +74,12 @@ var Metrics = map[string]MetricDef{
 	"writer_queue_max_s":          {Kind: KindValue, Unit: "s", Doc: "the largest *_tsdb_writer_queue_age_seconds any system process showed (the age of its writer's oldest held row)"},
 	"compression_lag_chunks":      {Kind: KindValue, Doc: "uncompressed chunks past their compression policy's compress_after, in every telemetry database"},
 	"disk_growth_vs_model":        {Kind: KindValue, Doc: "growth of the telemetry databases over the run / the samples they stored x the models' track_bytes"},
-	"restart_recovery_s":          {Kind: KindValue, Unit: "s", Doc: "picture back after a component is killed", NotImplemented: niChaos},
-	"restart_duplicate_alerts":    {Kind: KindValue, Doc: "alerts raised twice across a restart", NotImplemented: niChaos},
-	"restart_lost_backlog":        {Kind: KindValue, Doc: "backlog samples lost across a restart", NotImplemented: niChaos},
-	"partition_unreplayed":        {Kind: KindValue, Doc: "samples not replayed after NATS of one system is killed for 60 s", NotImplemented: niChaos},
-	"partition_cross_effects":     {Kind: KindValue, Doc: "effects on the other systems during that partition", NotImplemented: niChaos},
-	"outage_unflagged":            {Kind: KindValue, Doc: "degraded behaviours not flagged with age during a 5 min outage", NotImplemented: niChaos},
+	"restart_recovery_s":          {Kind: KindValue, Unit: "s", Doc: "the longest, over the restart faults, from a fault's restore to the first sample newly shown on the picture and on a traffic stream (until the generator stops when never)"},
+	"restart_duplicate_alerts":    {Kind: KindValue, Doc: "alerts raised for an aircraft while another of the same kind was open for it, over the run"},
+	"restart_lost_backlog":        {Kind: KindValue, Doc: "samples the clients shed or still held after the drain (operator queue shed and pending, receiver backlog shed and pending)"},
+	"partition_unreplayed":        {Kind: KindValue, Doc: "heard samples never shown nor in a counted loss (the picture's silent loss) in a run with a partition fault"},
+	"partition_cross_effects":     {Kind: KindValue, Doc: "degraded states a stream of another system came to show between a partition's injection and 30 s after its restore"},
+	"outage_unflagged":            {Kind: KindValue, Doc: "degraded behaviours not flagged with age during a 5 min outage", NotImplemented: niOutage},
 	"vectors_failed":              {Kind: KindValue, Doc: "knowledge/vectors cases failing in an image under test", NotImplemented: niVectors},
 }
 

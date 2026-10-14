@@ -102,6 +102,32 @@ type readers struct {
 	byTrack map[string]*Aircraft
 	held    map[string][]heldFrame
 	nHeld   int
+	// onShown is told every sample newly shown (the faults' recovery).
+	onShown func(kind string, at time.Time)
+	// flags are the degraded states the streams showed for the first
+	// time, with when (bounded).
+	flagMu sync.Mutex
+	flags  []flagSeen
+}
+
+const maxFlags = 10_000
+
+func (rd *readers) shown(kind string, at time.Time) {
+	if rd.onShown != nil {
+		rd.onShown(kind, at)
+	}
+}
+
+func (rd *readers) flagSeen(s *stream, flag string, at time.Time) {
+	system := scenario.SystemAuthority
+	if s.kind == streamTraffic {
+		system = scenario.SystemUSSP
+	}
+	rd.flagMu.Lock()
+	if len(rd.flags) < maxFlags {
+		rd.flags = append(rd.flags, flagSeen{system: system, flag: flag, at: at})
+	}
+	rd.flagMu.Unlock()
 }
 
 // heldFrame is a picture frame waiting for its track to be identified.
@@ -289,11 +315,18 @@ func (rd *readers) status(s *stream, e wire.Envelope, at time.Time) {
 	if s.degraded == nil {
 		s.degraded = map[string]bool{}
 	}
+	var fresh []string
 	for _, d := range b.Degraded {
+		if !s.degraded[d] {
+			fresh = append(fresh, d)
+		}
 		s.degraded[d] = true
 	}
 	ready := !s.needSnap
 	s.mu.Unlock()
+	for _, d := range fresh {
+		rd.flagSeen(s, d, at)
+	}
 	if ready {
 		s.readyOnce.Do(func() { close(s.ready) })
 	}
@@ -364,10 +397,12 @@ func (rd *readers) track(s *stream, e wire.Envelope, at time.Time) {
 	for _, h := range release {
 		if _, ok := rd.picture.Show(a.Name, h.captured, h.arrived); ok {
 			h.s.noteData(h.arrived)
+			rd.shown(streamPicture, h.arrived)
 		}
 	}
 	if _, ok := rd.picture.Show(a.Name, captured, at); ok {
 		s.noteData(at)
+		rd.shown(streamPicture, at)
 	}
 }
 
@@ -421,6 +456,7 @@ func (rd *readers) product(s *stream, e wire.Envelope, at time.Time) {
 		}
 		if _, ok := rd.traffic.Show(s.aircraft.Name, tor, at); ok {
 			s.noteData(at)
+			rd.shown(streamTraffic, at)
 		}
 	}
 }

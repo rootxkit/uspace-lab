@@ -1,0 +1,22 @@
+# Faults for a 60-minute systems run (tiers 100 and 1000; WP-L8,
+# docs/RUNBOOKS/load.md): 05 §7's restart row (each component of the hot
+# path killed once, in turn, and started again) and its partition row
+# (NATS of one system stopped for 60 s, then of the other), by the WP-L9
+# scripts (scripts/chaos/<domain>.sh inject|restore ARGS), after the
+# first 10 minutes. Each fault is restored 30 s before the next one.
+# The cross-system outages (05 §7's last row) are judged by the chaos
+# matrix (scripts/chaos), which reads every system's readiness; they are
+# not in this plan.
+format: lab-load-faults/v1
+faults:
+  - {row: restart, at_s: 600, hold_s: 5, domain: adapter, args: [ussp-telemetry-ingest], system: ussp}
+  - {row: restart, at_s: 720, hold_s: 5, domain: hotpath, args: [ussp-monitor], system: ussp}
+  - {row: restart, at_s: 840, hold_s: 5, domain: hotpath, args: [ussp-traffic-ws], system: ussp}
+  - {row: restart, at_s: 960, hold_s: 5, domain: hotpath, args: [ussp-rid-sp], system: ussp}
+  - {row: restart, at_s: 1080, hold_s: 5, domain: hotpath, args: [ussp-tsdb-writer], system: ussp}
+  - {row: restart, at_s: 1200, hold_s: 5, domain: adapter, args: [authority-rid-ingest], system: authority}
+  - {row: restart, at_s: 1320, hold_s: 5, domain: hotpath, args: [authority-detect], system: authority}
+  - {row: restart, at_s: 1440, hold_s: 5, domain: hotpath, args: [authority-picture-ws], system: authority}
+  - {row: restart, at_s: 1560, hold_s: 5, domain: hotpath, args: [authority-tsdb-writer], system: authority}
+  - {row: partition, at_s: 1800, hold_s: 60, domain: nats, args: [ussp], system: ussp}
+  - {row: partition, at_s: 2100, hold_s: 60, domain: nats, args: [authority], system: authority}
