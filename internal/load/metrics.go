@@ -32,7 +32,7 @@ const (
 	niStorage = "the reference target has no database; storage is measured against the systems' images (a systems run with probes)"
 	niZone    = "the load paths script no zone entry yet; zone alerts are proved by the scenario suite (sc-03)"
 	niArt13   = "Art. 13(2) notices go to peers and the ANSP, neither of which the load harness drives yet"
-	niVectors = "the vectors run in uspace-core's CI and per image in the conformance suite, not in a load run"
+	niVectors = "the reference target is no image; a systems run runs the knowledge vectors against the uspace-core every image under test was built with"
 )
 
 // Metrics is every metric a criteria check may name.
@@ -80,7 +80,7 @@ var Metrics = map[string]MetricDef{
 	"partition_unreplayed":        {Kind: KindValue, Doc: "heard samples never shown nor in a counted loss (the picture's silent loss) in a run with a partition fault"},
 	"partition_cross_effects":     {Kind: KindValue, Doc: "degraded states a stream of another system came to show between a partition's injection and 30 s after its restore"},
 	"outage_unflagged":            {Kind: KindValue, Doc: "the outage faults' claims (load/faults: the system down, the others ready, the consumers' checks degraded and their ages growing, the streams' flags) not observed, the stack's recovery after each restore included"},
-	"vectors_failed":              {Kind: KindValue, Doc: "knowledge/vectors cases failing in an image under test", NotImplemented: niVectors},
+	"vectors_failed":              {Kind: KindValue, Doc: "uspace-core vector tests failing at the versions the images' Go binaries were built with, vector files those versions vendor that differ from knowledge/vectors, and images with no binary built with uspace-core"},
 }
 
 // peerMetrics are the metrics the peer USSP measures (the DP display

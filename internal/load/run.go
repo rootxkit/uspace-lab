@@ -153,6 +153,7 @@ func Run(ctx context.Context, opt Options) (*Report, error) {
 				return nil, err
 			}
 		}
+		r.images = tg.Images
 		evidence = "The systems' images as the targets file names them, seeded for this fleet (loadgen seed); evidence for the images and digests listed, on the host named, when the run passes (docs/PLAN.md L-D4)."
 	}
 	if opt.FaultsPath != "" {
@@ -225,6 +226,10 @@ type run struct {
 	faults           *faultRunner
 	// peer is the embedded peer USSP (systems mode with a tier peer).
 	peer *peerRun
+	// images are the systems' images (systems mode); vectors what the
+	// vectors step found of them.
+	images  map[string]string
+	vectors *VectorsReport
 	// intentsEnded says endIntents ran (it runs once).
 	intentsEnded bool
 	tokens       []*oauth.ClientCredentials
@@ -384,6 +389,12 @@ func (r *run) execute(ctx context.Context, rep *Report) {
 		// After the drain: the counters' last values and the sizes.
 		r.probes.scrape(ctx)
 		r.probes.sizes(ctx, true)
+	}
+	if r.systems != nil && len(r.images) > 0 {
+		// After the load: the vectors against the packages in every
+		// image (05 §7), read from the images themselves.
+		r.log.Info("running the knowledge vectors against the images' uspace-core")
+		r.vectors = newVectorsRunner(filepath.Join(r.opt.RepoRoot, "knowledge", "vectors")).run(ctx, r.images)
 	}
 	if r.opt.HeapProfile != "" {
 		if err := writeHeapProfile(r.opt.HeapProfile); err != nil {
@@ -1112,6 +1123,16 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 		obs["f3411_sp_flights_s"], obs["f3411_details_s"] = why, why
 	default:
 		obs["f3411_sp_flights_s"], obs["f3411_details_s"] = notMeasured(niF3411), notMeasured(niF3411)
+	}
+	// The vectors against every image's uspace-core.
+	switch {
+	case r.vectors != nil:
+		rep.Vectors = r.vectors
+		r.vectors.observe(obs)
+	case r.systems != nil:
+		obs["vectors_failed"] = notMeasured("the targets file names no image")
+	default:
+		obs["vectors_failed"] = notMeasured(niVectors)
 	}
 	// The peer USSP: the authority's DP display and the F3548 rows.
 	switch {

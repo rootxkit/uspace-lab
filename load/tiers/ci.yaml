@@ -75,6 +75,7 @@ required_systems:
   - writer_queue
   - compression
   - disk_model
+  - vectors_pass
   - restart_recovery
   - restart_duplicates
   - restart_backlog

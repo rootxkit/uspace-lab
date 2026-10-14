@@ -64,10 +64,12 @@ type Report struct {
 	// F3411 is what the lab's DP polls of the USSP saw (a systems run).
 	F3411 *F3411Polls `json:"f3411,omitempty"`
 	// Peer is what the peer USSP saw and was told (a systems run).
-	Peer       *PeerReport `json:"peer,omitempty"`
-	Errors     []string    `json:"errors,omitempty"`
-	Measured   int         `json:"checks_measured"`
-	Unmeasured int         `json:"checks_not_measured"`
+	Peer *PeerReport `json:"peer,omitempty"`
+	// Vectors is the vectors row's evidence (a systems run).
+	Vectors    *VectorsReport `json:"vectors,omitempty"`
+	Errors     []string       `json:"errors,omitempty"`
+	Measured   int            `json:"checks_measured"`
+	Unmeasured int            `json:"checks_not_measured"`
 	// Complete is true only when every check of every row was measured.
 	Complete bool     `json:"complete"`
 	Verdict  string   `json:"verdict"`
@@ -487,6 +489,28 @@ func (r *Report) Markdown() string {
 	w("- Generator sheds: operator %d, Remote ID %d.\n\n", l.GeneratorShedOperator, l.GeneratorShedRID)
 	if r.Systems != nil {
 		r.systemsMarkdown(w)
+	}
+	if v := r.Vectors; v != nil {
+		w("## Vectors against the images\n\n%d knowledge/vectors files; %.0f s.\n\n| System | Binaries (uspace-core) | Error |\n|---|---|---|\n", v.LabVectors, v.TookS)
+		for _, iv := range v.Images {
+			var bs []string
+			for _, b := range iv.Binaries {
+				bs = append(bs, fmt.Sprintf("%#q (%s)", b.Path, b.Core))
+			}
+			w("| %s | %s | %s |\n", iv.System, strings.Join(bs, ", "), iv.Error)
+		}
+		w("\n| uspace-core | Passed | Failed | Skipped | Vectors differing | Error |\n|---|---|---|---|---|---|\n")
+		for i := range v.Cores {
+			c := &v.Cores[i]
+			w("| %s | %d | %d | %d | %s | %s |\n", c.Version, c.Passed, c.Failed, c.Skipped, strings.Join(c.Mismatched, ", "), c.Error)
+		}
+		for i := range v.Cores {
+			c := &v.Cores[i]
+			for _, t := range c.Tests {
+				w("- %s failed: %s\n", c.Version, t)
+			}
+		}
+		w("\n")
 	}
 	if p := r.Peer; p != nil {
 		w("## Peer USSP\n\n%s (aircraft %s). The display provider (%s) polled it %d times (others %d); the timed console showed %d frames of its flights, %d displays timed, %d frames untied; %d of the fleet's tracks from the USSP's SP were on it.\n\n",
