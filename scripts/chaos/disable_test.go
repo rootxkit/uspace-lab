@@ -45,7 +45,12 @@ func (f *fakeAuthority) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		changed := f.enabled[typ] != in.Enabled
 		f.enabled[typ] = in.Enabled
 		if changed && f.actor != "" {
-			f.events = append(f.events, map[string]any{"actor_type": "user", "actor_id": f.actor, "entity_id": typ, "event_type": "source_disabled",
+			// As the authority types them: off and on apart.
+			et := "source_disabled"
+			if in.Enabled {
+				et = "source_enabled"
+			}
+			f.events = append(f.events, map[string]any{"actor_type": "user", "actor_id": f.actor, "entity_id": typ, "event_type": et,
 				"payload": map[string]any{"enabled": in.Enabled, "reason": in.Reason}})
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{"changed": changed, "control": map[string]any{"enabled": in.Enabled, "actor": f.actor}})
@@ -56,11 +61,13 @@ func (f *fakeAuthority) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{"default_deny": false, "controls": cs})
 	case r.Method == http.MethodGet && r.URL.Path == "/v1/audit/events":
-		if r.URL.Query().Get("event_type") != "source_disabled" {
-			_ = json.NewEncoder(w).Encode(map[string]any{"events": []any{}})
-			return
+		var out []map[string]any
+		for _, e := range f.events {
+			if e["event_type"] == r.URL.Query().Get("event_type") {
+				out = append(out, e)
+			}
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"events": f.events})
+		_ = json.NewEncoder(w).Encode(map[string]any{"events": out})
 	default:
 		w.WriteHeader(http.StatusNotFound)
 	}

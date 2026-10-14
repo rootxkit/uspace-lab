@@ -176,33 +176,45 @@ type AuditResult struct {
 	Note   string   `json:"note"`
 }
 
+// auditTypes are the audit event types of a switch: the authority
+// records the switch off as source_disabled and on as source_enabled
+// (its events table, seen in the second matrix run of 2026-10-14; the
+// first audit check read source_disabled only and found no switch on).
+var auditTypes = []string{"source_disabled", "source_enabled"}
+
+type auditEvent struct {
+	ActorType string          `json:"actor_type"`
+	ActorID   string          `json:"actor_id"`
+	EntityID  string          `json:"entity_id"`
+	Payload   json.RawMessage `json:"payload"`
+}
+
 // audited reads the audit log for the row's two switches (off, then on)
-// as acts of a person: event source_disabled, entity the source type,
-// actor a user, the payload naming this run's reason.
+// as acts of a person: events of auditTypes, actor a user, the payload
+// naming this run's reason.
 func (a *adminAPI) audited(ctx context.Context, source string, from, to time.Time) AuditResult {
-	q := url.Values{"event_type": {"source_disabled"}, "from": {from.Add(-5 * time.Second).UTC().Format(time.RFC3339)},
-		"to": {to.Add(5 * time.Second).UTC().Format(time.RFC3339)}, "limit": {"100"}, "purpose": {"uspace-lab chaos: the disable row's audit check"}}
-	code, b, err := a.do(ctx, http.MethodGet, "/v1/audit/events?"+q.Encode(), nil)
-	if err != nil {
-		return AuditResult{Note: "the audit log could not be read: " + shortErr(err)}
-	}
-	if code != http.StatusOK {
-		return AuditResult{Note: fmt.Sprintf("GET /v1/audit/events answered %d: %s", code, bounded(string(b)))}
-	}
-	var page struct {
-		Events []struct {
-			ActorType string          `json:"actor_type"`
-			ActorID   string          `json:"actor_id"`
-			EntityID  string          `json:"entity_id"`
-			Payload   json.RawMessage `json:"payload"`
-		} `json:"events"`
-	}
-	if err := json.Unmarshal(b, &page); err != nil {
-		return AuditResult{Note: "the audit log answered no page: " + err.Error()}
+	var events []auditEvent
+	for _, typ := range auditTypes {
+		q := url.Values{"event_type": {typ}, "from": {from.Add(-5 * time.Second).UTC().Format(time.RFC3339)},
+			"to": {to.Add(5 * time.Second).UTC().Format(time.RFC3339)}, "limit": {"100"}, "purpose": {"uspace-lab chaos: the disable row's audit check"}}
+		code, b, err := a.do(ctx, http.MethodGet, "/v1/audit/events?"+q.Encode(), nil)
+		if err != nil {
+			return AuditResult{Note: "the audit log could not be read: " + shortErr(err)}
+		}
+		if code != http.StatusOK {
+			return AuditResult{Note: fmt.Sprintf("GET /v1/audit/events answered %d: %s", code, bounded(string(b)))}
+		}
+		var page struct {
+			Events []auditEvent `json:"events"`
+		}
+		if err := json.Unmarshal(b, &page); err != nil {
+			return AuditResult{Note: "the audit log answered no page: " + err.Error()}
+		}
+		events = append(events, page.Events...)
 	}
 	res := AuditResult{}
 	offOn := map[string]bool{}
-	for _, e := range page.Events {
+	for _, e := range events {
 		p := string(e.Payload)
 		for _, action := range []string{"inject", "restore"} {
 			if !strings.Contains(p, a.reason(source, action)) {
@@ -217,9 +229,9 @@ func (a *adminAPI) audited(ctx context.Context, source string, from, to time.Tim
 	}
 	switch {
 	case !offOn["inject"]:
-		res.Note = fmt.Sprintf("no audit event of a person switching %s off with this run's reason (%d source_disabled events in the window)", source, len(page.Events))
+		res.Note = fmt.Sprintf("no audit event of a person switching %s off with this run's reason (%d source switch events in the window)", source, len(events))
 	case !offOn["restore"]:
-		res.Note = fmt.Sprintf("no audit event of a person switching %s on again (%d source_disabled events in the window)", source, len(page.Events))
+		res.Note = fmt.Sprintf("no audit event of a person switching %s on again (%d source switch events in the window)", source, len(events))
 	default:
 		res.Pass = true
 		res.Note = fmt.Sprintf("both switches audited as acts of %s", strings.Join(res.Actors, ", "))
