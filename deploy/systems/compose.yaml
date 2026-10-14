@@ -38,9 +38,10 @@
 #     Caddy is, so each client keeps its own rate-limit budget and audit
 #     address instead of all of them being the Caddy. The lab Caddy in
 #     turn trusts X-Forwarded-For from the host's address on the egress
-#     network (DEMO_HOST_GATEWAY), and the authority trusts that address
-#     too: the load harness's simulated receivers, which all run on the
-#     host, each name an address of their own, as real receivers have.
+#     network (DEMO_HOST_GATEWAY), and the authority and the USSP trust
+#     that address too: the load harness's simulated receivers and
+#     operators, which all run on the host, each name an address of their
+#     own, as real ones have.
 #   - No web images (the consoles are not needed to judge a scenario).
 #   - The ANSP's manned-adapter polls the lab's sim-adsb (dump1090_json)
 #     on the host instead of replaying its own file; it is the one
@@ -430,7 +431,7 @@ services:
       USSP_WS_ALLOWED_ORIGINS: https://${USSP_HOST}
       USSP_MTLS_MODE: "off"
       USSP_GEOID_FILE: /srv/ground/egm2008-2_5.pgm
-      USSP_TRUSTED_PROXIES: "${DEMO_CADDY_IP}/32"
+      USSP_TRUSTED_PROXIES: "${DEMO_CADDY_IP}/32,${DEMO_HOST_GATEWAY}/32"
     depends_on:
       ussp-timescaledb: {condition: service_healthy}
 

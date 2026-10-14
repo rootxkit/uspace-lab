@@ -213,10 +213,11 @@ func TestSystemsTrustTheLabCaddyOnly(t *testing.T) {
 	}
 	trusted := regexp.MustCompile(`(?m)^\s*(\w+_TRUSTED_PROX\w*):\s*(.*)$`)
 	want := `"${DEMO_CADDY_IP}/32"`
-	// The authority trusts the host's address on the egress network too:
-	// the load harness gives each simulated receiver its own address
-	// through it (TestReceiversHaveTheirOwnAddress).
-	wantFor := map[string]string{"AUTHORITY_TRUSTED_PROXIES": `"${DEMO_CADDY_IP}/32,${DEMO_HOST_GATEWAY}/32"`}
+	// The authority and the USSP trust the host's address on the egress
+	// network too: the load harness gives each simulated receiver and
+	// operator its own address through it (TestReceiversHaveTheirOwnAddress).
+	wantFor := map[string]string{"AUTHORITY_TRUSTED_PROXIES": `"${DEMO_CADDY_IP}/32,${DEMO_HOST_GATEWAY}/32"`,
+		"USSP_TRUSTED_PROXIES": `"${DEMO_CADDY_IP}/32,${DEMO_HOST_GATEWAY}/32"`}
 	seen := map[string]bool{}
 	for _, m := range trusted.FindAllStringSubmatch(compose, -1) {
 		seen[m[1]] = true
