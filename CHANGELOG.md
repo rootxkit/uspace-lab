@@ -7,6 +7,20 @@ request (docs/PLAN.md §5).
 
 ### Changed
 
+- C3: uspace-core is pinned at the release v1.6.0 instead of commit
+  `770379d` (the same Go source; the release adds only core's CI).
+  Every lab client now gets a string `aud`: each token `cmd/lab-issuer`
+  writes, for every client of `deploy/issuer/clients.yaml` and every
+  scope it holds, carries `"aud":"<host>"` instead of a one-element
+  array (core's `auth.Issuer.WithStringAudience`), which the InterUSS
+  mock USS beside uss_qualifier requires. Contract: RFC 7519 §4.1.3
+  allows both forms and every system verifying with uspace-core, and
+  the DSS, accepts both, so no verifier changes. `cisp-01` holds no
+  scope and is issued no token. The conformance reference target's own
+  token endpoint (`internal/reftarget`) is not the lab issuer and still
+  writes an array. C3 stays open in
+  `docs/decisions/2026-10-05-conformance-findings.md` until a
+  uss_qualifier run shows the mock USS accepting the tokens.
 - Audit M-2: the lab USSP's code is `DEV01` and its client
   `ussp-DEV01-01` (`deploy/issuer/clients.yaml`, `deploy/demo.env.example`,
   the USSP conformance target), not `USSP-DEV`, which the authority's
