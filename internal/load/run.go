@@ -225,6 +225,13 @@ func (r *run) execute(ctx context.Context, rep *Report) {
 		return
 	}
 	r.fileIntents(ctx)
+	if n := r.intentErrors(); n > 0 {
+		// A flight without an authorised intent is refused by the USSP:
+		// the run would measure a fleet the target is not flying.
+		r.fail("not ready: %d of the fleet's intents not authorised (each is listed above); nothing else was started", n)
+		r.finish(rep)
+		return
+	}
 	simCtx, simCancel := context.WithCancel(ctx)
 	defer simCancel()
 	// The consoles first, then the clients at the tier's ramp: five
@@ -409,11 +416,18 @@ func (r *run) fileIntents(ctx context.Context) {
 				if err == nil {
 					in := &simop.Intents{BaseURL: r.usspBase, Tokens: r.tokens[a.Client]}
 					var d simop.Decision
-					if d, err = in.File(ctx, req); err == nil {
+					if d, err = in.File(ctx, req); err == nil && d.State == "accepted" {
+						d, err = in.Change(ctx, d.IntentID, "activate")
+					}
+					// Only an activated intent flies: anything else
+					// (rejected, held pending) is the USSP's refusal,
+					// said with its reasons.
+					switch {
+					case err != nil:
+					case d.State != "activated":
+						err = fmt.Errorf("%s (%s)", d.State, reasonsOf(d.Conflicts))
+					default:
 						id = d.IntentID
-						if d.State == "accepted" {
-							_, err = in.Change(ctx, d.IntentID, "activate")
-						}
 					}
 				}
 				mu.Lock()
@@ -979,4 +993,20 @@ func hostInfo(name string) Host {
 		}
 	}
 	return h
+}
+
+// reasonsOf is the reasons of a decision's conflicts, at most three.
+func reasonsOf(conflicts []any) string {
+	var out []string
+	for _, c := range conflicts {
+		if m, ok := c.(map[string]any); ok {
+			if s, ok := m["reason"].(string); ok && len(out) < 3 {
+				out = append(out, s)
+			}
+		}
+	}
+	if len(out) == 0 {
+		return "no reason given"
+	}
+	return strings.Join(out, ", ")
 }
