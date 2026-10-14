@@ -13,7 +13,8 @@ procedure and the observed matrix are in `docs/RUNBOOKS/chaos.md`.
 | `matrix.yaml` | The rows: domain, arguments, the spec's claim and citation, hold, recovery bound, the expectations, and what the row promises the standing alert. The figures pending GCAA are listed under `pending`. |
 | `background.yaml` | The background scenario: one aircraft holding inside a zone, so the USSP and the authority each hold one open zone alert through every row. |
 | `prepare.sh` | Seeds a stack started by `deploy/demo-up.sh` for the background (`--fresh` on new volumes). |
-| `*.go` | The harness: `go run ./scripts/chaos check|run|watch|skew`. |
+| `disable.go` | The domain the harness runs itself, like the clock: a source type switched off and on through the authority's console API (the targets file's admin session), seen in place from the authority's own list of switches, and found in its audit log as a person's act. |
+| `*.go` | The harness: `go run ./scripts/chaos check|run|watch|skew`. Each row also lists the systems' loss counters that rose across it, read from every process's `/metrics` with `deploy/systems/probes.yaml` (`--probes`). |
 
 ## What a row is judged on
 

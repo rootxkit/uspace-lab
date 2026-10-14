@@ -158,6 +158,19 @@ go run ./scripts/chaos skew --skew-s 45     # one skewed receiver batch
    console stream is heard. A silence over `max_silence_s` (6 s) in a
    row fails it, unless the row's fault takes that stream down
    (`streams_down`) and it comes back re-sending the open alerts.
+5. The disable row (`authority-rid-disabled`, domain `disable`): the
+   harness switches the source type off and on through the authority's
+   console API with the targets file's admin session; the switch counts
+   as in place only when the authority's own list of switches
+   (`GET /v1/sources`) says so, and after the row the audit log
+   (`GET /v1/audit/events`, `source_disabled`) must hold both switches,
+   with the run's reason, as acts of a user.
+6. Every row lists the systems' loss counters (`dropped_*`, `gap_*`,
+   `refused`, `shed`, ...) that rose from before its injection to the
+   end of its recovery, read from every process's `/metrics` inside the
+   stack (`--probes deploy/systems/probes.yaml`, the load harness's
+   reader). They are recorded and listed, not judged: 05 §6 says what is
+   counted, not how much.
 
 "Ready" is the system's readiness endpoint answering 200. A system may
 answer 200 with a check degraded; the rows judge the checks separately.
@@ -206,22 +219,15 @@ identity lost to a NATS outage (F7).
 
 ## Not covered, and why
 
-- **A source disabled through a console API** (05 §6 "disabled", SC-08:
-  an audited act by a person): not scripted. The dead case is the
-  `authority-dp-poller` row (the authority's network RID source killed
-  while its direct RID receiver keeps hearing the aircraft) and the ANSP
-  feed row. The disable needs an admin session and the receiver's
-  disable call per system; it is left for WP-L9's next pass with SC-08's
-  scenario, which already exercises the authority's disable.
+- **A disable at another system's console**: the disable row switches the
+  authority's direct Remote ID, the source SC-08 names; the USSP's and
+  the ANSP's source switches are not driven.
 - **The CIS 300 s bound** (02 F3): the CISP row holds 300 s and judges
   the cache, but files no intent in U-space airspace, so the refusal of
   new authorisations after the bound is not exercised (pending GCAA).
 - **The 5 min disk spill of ingest** (05 §6 NATS): the NATS rows hold
   60 s, the brief's figure; the spill limit itself is not reached.
-- **Counters** (`dropped_*`, `gap_*`, backlog replayed): the harness
-  records the console status and readiness as the systems publish them;
-  the systems' counters are in their own status logs, not on a public
-  contract the lab reads, so they are not judged here. The receiver
-  clock row reads the authority's answer per batch.
+- **Counters judged**: each row lists the loss counters that rose (6.
+  above); no bound on them is judged, because 05 §6 gives none.
 - **SITL**: the background is synthetic; a SITL background needs WSL
   and is a flag away (`runner.Options.Vehicles`), not done here.
