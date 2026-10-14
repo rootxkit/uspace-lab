@@ -94,6 +94,31 @@ type Config struct {
 	RecentMax int
 	HTTP      *http.Client
 	Now       func() time.Time
+	// OnFlights, when set, is told of every GET /uss/flights answer as
+	// it is written: when, and the position time of each flight's
+	// current state served (by flight id). The load harness times the
+	// display provider's display from it (05 §7 "DP display after SP
+	// response"), on this process's clock.
+	OnFlights func(at time.Time, served map[string]time.Time)
+	// OnNotification, when set, is told of every notification received,
+	// on its arrival (the load harness times F3548 notifications from
+	// it).
+	OnNotification func(Notification)
+}
+
+// Notification is one notification the peer received.
+type Notification struct {
+	At time.Time
+	// Standard is "f3548" (POST /uss/v1/operational_intents) or "f3411"
+	// (POST /uss/identification_service_areas/{id}).
+	Standard string
+	// EntityID is the operational intent or ISA it names; State the
+	// operational intent's state it carries, "" when it says the intent
+	// was deleted (F3548: operational_intent omitted).
+	EntityID string
+	State    string
+	// Subscriptions are the subscription ids it names (F3548).
+	Subscriptions []string
 }
 
 type flight struct {
@@ -112,6 +137,8 @@ type Peer struct {
 	flights  map[int]*flight
 	isaID    string
 	isaVer   string
+	subID    string
+	subVer   string
 	intents  map[string]*f3548.OperationalIntent
 	counters core.Counters
 }
@@ -135,7 +162,7 @@ func New(cfg Config) (*Peer, error) {
 	}
 	p := &Peer{cfg: cfg, flights: map[int]*flight{}, intents: map[string]*f3548.OperationalIntent{}}
 	for _, a := range cfg.Aircraft {
-		p.flights[a.Sysid] = &flight{id: uuidFrom("peer-flight:" + a.Serial), aircraft: a}
+		p.flights[a.Sysid] = &flight{id: FlightID(a.Serial), aircraft: a}
 	}
 	return p, nil
 }
@@ -148,6 +175,17 @@ func (p *Peer) ISA() (id, version string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.isaID, p.isaVer
+}
+
+// FlightID is the F3411 flight id this peer serves for serial.
+func FlightID(serial string) string { return uuidFrom("peer-flight:" + serial) }
+
+// Subscription is the id and version of the F3548 subscription written,
+// empty before.
+func (p *Peer) Subscription() (id, version string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.subID, p.subVer
 }
 
 // Intents returns the operational intents written, by id.
@@ -230,21 +268,29 @@ func (p *Peer) put(ctx context.Context, url string, body, out any, ok ...int) er
 	return p.call(ctx, http.MethodPut, url, body, out, ok...)
 }
 
+// call sends body as JSON (nil: no body) and decodes the answer into out
+// when the DSS answers one of ok.
 func (p *Peer) call(ctx context.Context, method, url string, body, out any, ok ...int) error {
-	b, err := json.Marshal(body)
-	if err != nil {
-		return fmt.Errorf("simussp: %w", err)
+	var rd io.Reader = http.NoBody
+	if body != nil {
+		b, err := json.Marshal(body)
+		if err != nil {
+			return fmt.Errorf("simussp: %w", err)
+		}
+		rd = bytes.NewReader(b)
 	}
 	tok, err := p.cfg.Tokens.Token(ctx)
 	if err != nil {
 		return fmt.Errorf("simussp: token: %w", err)
 	}
-	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(b))
+	req, err := http.NewRequestWithContext(ctx, method, url, rd)
 	if err != nil {
 		return fmt.Errorf("simussp: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+tok)
-	req.Header.Set("Content-Type", "application/json")
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 	resp, err := p.cfg.HTTP.Do(req)
 	if err != nil {
 		return fmt.Errorf("simussp: %s %s: %w", method, url, err)
@@ -354,6 +400,61 @@ func (p *Peer) keyFor(ctx context.Context, v f3548.Volume4D) (f3548.Key, error) 
 	return key, nil
 }
 
+// PutSubscription creates an F3548 subscription to operational intent
+// changes over v (PUT /dss/v1/subscriptions/{subscriptionid}), so the
+// USSs whose intents change there notify this peer.
+func (p *Peer) PutSubscription(ctx context.Context, v f3548.Volume4D) error {
+	notify, constraints := true, false
+	body := f3548.PutSubscriptionParameters{Extents: v, NotifyForOperationalIntents: &notify, NotifyForConstraints: &constraints, UssBaseUrl: p.cfg.BaseURL}
+	id := uuidFrom("peer-subscription:" + p.cfg.BaseURL + ":" + p.cfg.Now().Format(time.RFC3339Nano))
+	var out f3548.PutSubscriptionResponse
+	if err := p.put(ctx, strings.TrimRight(p.cfg.DSSUTMBase, "/")+"/dss/v1/subscriptions/"+id, body, &out, http.StatusOK); err != nil {
+		p.counters.Inc("subscription_write_failures")
+		return err
+	}
+	p.counters.Inc("subscription_writes")
+	p.mu.Lock()
+	p.subID, p.subVer = out.Subscription.Id, out.Subscription.Version
+	p.mu.Unlock()
+	return nil
+}
+
+// DeleteSubscription deletes the subscription PutSubscription wrote
+// (DELETE /dss/v1/subscriptions/{id}/{version}); none written is no
+// call.
+func (p *Peer) DeleteSubscription(ctx context.Context) error {
+	id, ver := p.Subscription()
+	if id == "" {
+		return nil
+	}
+	var out f3548.DeleteSubscriptionResponse
+	if err := p.call(ctx, http.MethodDelete, strings.TrimRight(p.cfg.DSSUTMBase, "/")+"/dss/v1/subscriptions/"+id+"/"+ver, nil, &out, http.StatusOK); err != nil {
+		return err
+	}
+	p.mu.Lock()
+	p.subID, p.subVer = "", ""
+	p.mu.Unlock()
+	return nil
+}
+
+// DeleteISA deletes the ISA PutISA wrote (F3411 v22a DELETE
+// /dss/identification_service_areas/{id}/{version}), so display
+// providers stop polling this peer; none written is no call.
+func (p *Peer) DeleteISA(ctx context.Context) error {
+	id, ver := p.ISA()
+	if id == "" {
+		return nil
+	}
+	var out f3411.DeleteIdentificationServiceAreaResponse
+	if err := p.call(ctx, http.MethodDelete, strings.TrimRight(p.cfg.DSSRIDBase, "/")+"/dss/identification_service_areas/"+id+"/"+ver, nil, &out, http.StatusOK); err != nil {
+		return err
+	}
+	p.mu.Lock()
+	p.isaID, p.isaVer = "", ""
+	p.mu.Unlock()
+	return nil
+}
+
 func volume4D(in Intent) f3548.Volume4D {
 	r := float32(in.RadiusM)
 	return f3548.Volume4D{
@@ -374,9 +475,9 @@ func (p *Peer) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /uss/flights", p.withScope(string(f3411.ScopeDisplayProvider), p.handleFlights))
 	mux.HandleFunc("GET /uss/flights/{id}/details", p.withScope(string(f3411.ScopeDisplayProvider), p.handleDetails))
-	mux.HandleFunc("POST /uss/identification_service_areas/{id}", p.withScope(string(f3411.ScopeServiceProvider), p.handleNotification))
+	mux.HandleFunc("POST /uss/identification_service_areas/{id}", p.withScope(string(f3411.ScopeServiceProvider), p.handleISANotification))
 	mux.HandleFunc("GET /uss/v1/operational_intents/{entityid}", p.withScope(ScopeStrategicCoordination, p.handleIntent))
-	mux.HandleFunc("POST /uss/v1/operational_intents", p.withScope(ScopeStrategicCoordination, p.handleNotification))
+	mux.HandleFunc("POST /uss/v1/operational_intents", p.withScope(ScopeStrategicCoordination, p.handleIntentNotification))
 	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		errorResponse(w, http.StatusNotFound, "no such endpoint")
 	})
@@ -460,8 +561,8 @@ func (p *Peer) handleFlights(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	now := p.cfg.Now()
+	served := map[string]time.Time{}
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	flights := []f3411.RIDFlight{}
 	for _, fl := range p.flights {
 		if fl.current == nil {
@@ -492,9 +593,16 @@ func (p *Peer) handleFlights(w http.ResponseWriter, r *http.Request) {
 			f.RecentPositions = &recent
 		}
 		flights = append(flights, f)
+		served[fl.id] = cur.Timestamp.Value
 	}
+	p.mu.Unlock()
 	p.counters.Inc("flights_requests")
 	writeJSON(w, f3411.GetFlightsResponse{Flights: &flights, Timestamp: f3411.Time{Format: f3411.RFC3339, Value: now}})
+	// The answer's own timestamp is when it was made: a display timed
+	// from it is timed from no later than the response.
+	if p.cfg.OnFlights != nil {
+		p.cfg.OnFlights(now, served)
+	}
 }
 
 func (p *Peer) handleDetails(w http.ResponseWriter, r *http.Request) {
@@ -532,10 +640,51 @@ func (p *Peer) handleIntent(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, f3548.GetOperationalIntentDetailsResponse{OperationalIntent: cp})
 }
 
-func (p *Peer) handleNotification(w http.ResponseWriter, r *http.Request) {
+// handleISANotification accepts an F3411 ISA notification.
+func (p *Peer) handleISANotification(w http.ResponseWriter, r *http.Request) {
+	at := p.cfg.Now()
 	_, _ = io.Copy(io.Discard, http.MaxBytesReader(w, r.Body, f3411.MaxMessageBytes))
 	p.counters.Inc("notifications")
 	w.WriteHeader(http.StatusNoContent)
+	if p.cfg.OnNotification != nil {
+		p.cfg.OnNotification(Notification{At: at, Standard: "f3411", EntityID: r.PathValue("id")})
+	}
+}
+
+// handleIntentNotification accepts an F3548 operational intent
+// notification (PutOperationalIntentDetailsParameters) and reads which
+// intent it names, in which state, for which subscriptions. A body it
+// cannot read is still accepted (no judgement here) and counted.
+func (p *Peer) handleIntentNotification(w http.ResponseWriter, r *http.Request) {
+	at := p.cfg.Now()
+	b, err := io.ReadAll(http.MaxBytesReader(w, r.Body, f3411.MaxMessageBytes))
+	p.counters.Inc("notifications")
+	w.WriteHeader(http.StatusNoContent)
+	var body struct {
+		OperationalIntentID string `json:"operational_intent_id"`
+		OperationalIntent   *struct {
+			Reference struct {
+				State string `json:"state"`
+			} `json:"reference"`
+		} `json:"operational_intent"`
+		Subscriptions []struct {
+			SubscriptionID string `json:"subscription_id"`
+		} `json:"subscriptions"`
+	}
+	if err != nil || json.Unmarshal(b, &body) != nil || body.OperationalIntentID == "" {
+		p.counters.Inc("notifications_unreadable")
+		return
+	}
+	n := Notification{At: at, Standard: "f3548", EntityID: body.OperationalIntentID}
+	if body.OperationalIntent != nil {
+		n.State = body.OperationalIntent.Reference.State
+	}
+	for _, s := range body.Subscriptions {
+		n.Subscriptions = append(n.Subscriptions, s.SubscriptionID)
+	}
+	if p.cfg.OnNotification != nil {
+		p.cfg.OnNotification(n)
+	}
 }
 
 func uuidFrom(s string) string {

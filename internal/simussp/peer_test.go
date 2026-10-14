@@ -51,6 +51,7 @@ type dss struct {
 	oirIDs []string
 	ovns   []string
 	paths  []string
+	subs   []f3548.PutSubscriptionParameters
 	status int
 }
 
@@ -78,6 +79,22 @@ func (d *dss) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				SubscriptionId: "00000000-0000-4000-8000-000000000001", UssAvailability: "Normal", UssBaseUrl: "https://peer.lab.test", Version: 1})
 		}
 		_ = json.NewEncoder(w).Encode(f3548.QueryOperationalIntentReferenceResponse{OperationalIntentReferences: refs})
+	case r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/rid/v2/dss/identification_service_areas/"):
+		// DELETE .../{id}/{version}: the id is the second-last element.
+		parts := strings.Split(r.URL.Path, "/")
+		_ = json.NewEncoder(w).Encode(f3411.DeleteIdentificationServiceAreaResponse{ServiceArea: f3411.IdentificationServiceArea{
+			Id: parts[len(parts)-2], Owner: "lab-peer", Version: id}})
+	case r.Method == http.MethodPut && strings.HasPrefix(r.URL.Path, "/dss/v1/subscriptions/"):
+		var p f3548.PutSubscriptionParameters
+		if json.Unmarshal(b, &p) != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		d.subs = append(d.subs, p)
+		_ = json.NewEncoder(w).Encode(f3548.PutSubscriptionResponse{Subscription: f3548.Subscription{Id: id, Version: "s1", UssBaseUrl: p.UssBaseUrl}})
+	case r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/dss/v1/subscriptions/"):
+		parts := strings.Split(r.URL.Path, "/")
+		_ = json.NewEncoder(w).Encode(f3548.DeleteSubscriptionResponse{Subscription: f3548.Subscription{Id: parts[len(parts)-2], Version: id}})
 	case strings.HasPrefix(r.URL.Path, "/rid/v2/dss/identification_service_areas/"):
 		var p f3411.CreateIdentificationServiceAreaParameters
 		if json.Unmarshal(b, &p) != nil {
@@ -289,5 +306,139 @@ func TestRestartedPeerWritesNewReferences(t *testing.T) {
 	err = second.PutIntents(context.Background())
 	if !errors.As(err, &de) || de.Status != http.StatusConflict {
 		t.Fatalf("a reused id: got %v, want a 409", err)
+	}
+}
+
+// The served flights are reported with the time of the answer and the
+// position time of each flight served; a view that holds none of them
+// reports an empty answer (the pair E-01 asks for).
+func TestFlightsAnswersAreReported(t *testing.T) {
+	type report struct {
+		at     time.Time
+		served map[string]time.Time
+	}
+	var mu sync.Mutex
+	var got []report
+	p, srv := newPeer(t, &dss{})
+	p.cfg.OnFlights = func(at time.Time, served map[string]time.Time) {
+		mu.Lock()
+		got = append(got, report{at, served})
+		mu.Unlock()
+	}
+	t0 := time.Now().UTC().Truncate(time.Millisecond)
+	ts := vehicle.FormatTime(t0)
+	p.Observe(&vehicle.Sample{Schema: vehicle.Schema, Sysid: 3, TS: &ts, LatDeg: 41.7152, LonDeg: 44.8272, AltAMSLM: 635,
+		AltHAEM: vehicle.F(650.9), HeightTakeoffM: 30, Armed: true, Status: vehicle.StatusAirborne, FixOK: true})
+	before := time.Now()
+	if status, body := get(t, srv.URL+"/uss/flights?view=41.71,44.82,41.72,44.83", "dp"); status != http.StatusOK {
+		t.Fatalf("%d %s", status, body)
+	}
+	if status, body := get(t, srv.URL+"/uss/flights?view=41.60,44.70,41.61,44.71", "dp"); status != http.StatusOK {
+		t.Fatalf("%d %s", status, body)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(got) != 2 {
+		t.Fatalf("%d reports, want 2", len(got))
+	}
+	want := FlightID("LABPEER0003")
+	if pos, ok := got[0].served[want]; !ok || !pos.Equal(t0) || len(got[0].served) != 1 || got[0].at.Before(before) {
+		t.Fatalf("first answer reported %+v, want flight %s at %s", got[0], want, t0)
+	}
+	if len(got[1].served) != 0 {
+		t.Fatalf("an answer for an empty view reported %v", got[1].served)
+	}
+}
+
+// An F3548 notification is reported with the intent, its state and the
+// subscriptions; a deletion carries no state; a body that names no
+// intent is accepted and counted, never reported.
+func TestIntentNotificationsAreReported(t *testing.T) {
+	var mu sync.Mutex
+	var got []Notification
+	p, srv := newPeer(t, &dss{})
+	p.cfg.OnNotification = func(n Notification) {
+		mu.Lock()
+		got = append(got, n)
+		mu.Unlock()
+	}
+	post := func(body string) int {
+		req, _ := http.NewRequest(http.MethodPost, srv.URL+"/uss/v1/operational_intents", strings.NewReader(body))
+		req.Header.Set("Authorization", "Bearer sc")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = resp.Body.Close()
+		return resp.StatusCode
+	}
+	id := "2f8343be-6482-4d1b-a474-16847e01af1e"
+	for _, b := range []string{
+		`{"operational_intent_id":"` + id + `","operational_intent":{"reference":{"id":"` + id + `","state":"Activated"}},"subscriptions":[{"subscription_id":"sub-1","notification_index":3}]}`,
+		`{"operational_intent_id":"` + id + `","subscriptions":[{"subscription_id":"sub-1","notification_index":4}]}`,
+		`{"subscriptions":[]}`,
+		`not json`,
+	} {
+		if s := post(b); s != http.StatusNoContent {
+			t.Fatalf("POST %s: %d", b, s)
+		}
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(got) != 2 {
+		t.Fatalf("reported %+v, want two", got)
+	}
+	if got[0].Standard != "f3548" || got[0].EntityID != id || got[0].State != "Activated" || !slices.Equal(got[0].Subscriptions, []string{"sub-1"}) || got[0].At.IsZero() {
+		t.Fatalf("first %+v", got[0])
+	}
+	if got[1].EntityID != id || got[1].State != "" {
+		t.Fatalf("deletion %+v", got[1])
+	}
+	if p.Counters().Get("notifications") != 4 || p.Counters().Get("notifications_unreadable") != 2 {
+		t.Fatalf("counters %d notifications, %d unreadable", p.Counters().Get("notifications"), p.Counters().Get("notifications_unreadable"))
+	}
+}
+
+// The subscription and the ISA are written and deleted with the ids and
+// versions the DSS gave; with nothing written, a delete calls nothing.
+func TestSubscriptionAndISAAreDeleted(t *testing.T) {
+	d := &dss{}
+	p, _ := newPeer(t, d)
+	ctx := context.Background()
+	if err := p.DeleteSubscription(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.DeleteISA(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if len(d.paths) != 0 {
+		t.Fatalf("deletes with nothing written called %v", d.paths)
+	}
+	now := time.Now().UTC()
+	v := volume4D(Intent{Center: core.LatLon{LatDeg: 41.7151, LonDeg: 44.8271}, RadiusM: 3000, AltLowerW84: 0, AltUpperW84: 3000, Start: now, End: now.Add(time.Hour)})
+	if err := p.PutSubscription(ctx, v); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.PutISA(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if len(d.subs) != 1 || d.subs[0].NotifyForOperationalIntents == nil || !*d.subs[0].NotifyForOperationalIntents || d.subs[0].UssBaseUrl != "https://peer.lab.test" {
+		t.Fatalf("subscription %+v", d.subs)
+	}
+	sid, _ := p.Subscription()
+	iid, _ := p.ISA()
+	if err := p.DeleteSubscription(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.DeleteISA(ctx); err != nil {
+		t.Fatal(err)
+	}
+	wantSub := "DELETE /dss/v1/subscriptions/" + sid + "/s1"
+	wantISA := "DELETE /rid/v2/dss/identification_service_areas/" + iid + "/v1"
+	if !slices.Contains(d.paths, wantSub) || !slices.Contains(d.paths, wantISA) {
+		t.Fatalf("paths %v, want %s and %s", d.paths, wantSub, wantISA)
+	}
+	if id, _ := p.Subscription(); id != "" {
+		t.Fatalf("subscription %q kept after its delete", id)
 	}
 }
