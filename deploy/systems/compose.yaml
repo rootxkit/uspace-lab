@@ -36,7 +36,11 @@
 #   - The lab Caddy at a fixed address (DEMO_CADDY_IP on DEMO_LAB_SUBNET),
 #     trusted by every system for X-Forwarded-For as the droplet's edge
 #     Caddy is, so each client keeps its own rate-limit budget and audit
-#     address instead of all of them being the Caddy.
+#     address instead of all of them being the Caddy. The lab Caddy in
+#     turn trusts X-Forwarded-For from the host's address on the egress
+#     network (DEMO_HOST_GATEWAY), and the authority trusts that address
+#     too: the load harness's simulated receivers, which all run on the
+#     host, each name an address of their own, as real receivers have.
 #   - No web images (the consoles are not needed to judge a scenario).
 #   - The ANSP's manned-adapter polls the lab's sim-adsb (dump1090_json)
 #     on the host instead of replaying its own file; it is the one
@@ -104,7 +108,7 @@ x-authority-env: &authority-env
   AUTHORITY_PUBLIC_URL: https://${AUTHORITY_HOST:?deploy/demo.env}
   AUTHORITY_AUDIENCES: ${AUTHORITY_HOST},authority
   AUTHORITY_MTLS_MODE: "off"
-  AUTHORITY_TRUSTED_PROXIES: "${DEMO_CADDY_IP}/32"
+  AUTHORITY_TRUSTED_PROXIES: "${DEMO_CADDY_IP}/32,${DEMO_HOST_GATEWAY}/32"
   CISP_ISSUER_URL: https://${CISP_HOST:?deploy/demo.env}
   CISP_JWKS_URL: https://${CISP_HOST}/.well-known/jwks.json
   ANSP_ISSUER_URL: https://${ANSP_HOST:?deploy/demo.env}
@@ -126,6 +130,9 @@ services:
       USSP_HOST: ${USSP_HOST}
       ANSP_HOST: ${ANSP_HOST}
       LAB_HOST: ${LAB_HOST}
+      # The host's address on the egress network: X-Forwarded-For is
+      # trusted from it only (the load harness's receivers name theirs).
+      LAB_HOST_GATEWAY: ${DEMO_HOST_GATEWAY:?deploy/demo.env}
     volumes:
       - ./systems/Caddyfile:/etc/caddy/Caddyfile:ro
       - ${DEMO_STATE_DIR:-./local-demo}/tls:/etc/caddy/tls:ro
@@ -648,8 +655,14 @@ networks:
           # Caddy's fixed one (outside it) is never taken first.
           ip_range: ${DEMO_LAB_IP_RANGE:?deploy/demo.env}
   # Outbound and published ports only: Caddy (its published port) and the
-  # ANSP adapter (the host's sim-adsb). `lab` stays internal.
-  egress: {}
+  # ANSP adapter (the host's sim-adsb). `lab` stays internal. A fixed
+  # subnet, so the host's address on it (the gateway, where the published
+  # port's connections come from) is known: DEMO_HOST_GATEWAY.
+  egress:
+    ipam:
+      config:
+        - subnet: ${DEMO_EGRESS_SUBNET:?deploy/demo.env}
+          gateway: ${DEMO_HOST_GATEWAY:?deploy/demo.env}
 
 volumes:
   authority-pgdata:

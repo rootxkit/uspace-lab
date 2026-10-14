@@ -213,11 +213,19 @@ func TestSystemsTrustTheLabCaddyOnly(t *testing.T) {
 	}
 	trusted := regexp.MustCompile(`(?m)^\s*(\w+_TRUSTED_PROX\w*):\s*(.*)$`)
 	want := `"${DEMO_CADDY_IP}/32"`
+	// The authority trusts the host's address on the egress network too:
+	// the load harness gives each simulated receiver its own address
+	// through it (TestReceiversHaveTheirOwnAddress).
+	wantFor := map[string]string{"AUTHORITY_TRUSTED_PROXIES": `"${DEMO_CADDY_IP}/32,${DEMO_HOST_GATEWAY}/32"`}
 	seen := map[string]bool{}
 	for _, m := range trusted.FindAllStringSubmatch(compose, -1) {
 		seen[m[1]] = true
-		if strings.TrimSpace(m[2]) != want {
-			t.Errorf("systems/compose.yaml %s: %s, want %s", m[1], m[2], want)
+		w := want
+		if v, ok := wantFor[m[1]]; ok {
+			w = v
+		}
+		if strings.TrimSpace(m[2]) != w {
+			t.Errorf("systems/compose.yaml %s: %s, want %s", m[1], m[2], w)
 		}
 	}
 	for _, k := range []string{"AUTHORITY_TRUSTED_PROXIES", "CISP_TRUSTED_PROXY_CIDR", "USSP_TRUSTED_PROXIES", "ANSP_TRUSTED_PROXIES"} {
@@ -234,4 +242,40 @@ func TestSystemsTrustTheLabCaddyOnly(t *testing.T) {
 func hostAbove(n string, lo int) bool {
 	v, err := strconv.Atoi(n)
 	return err == nil && v >= lo && v <= 254
+}
+
+// In the lab every client reaches the stack from one host, so every
+// simulated receiver of a load run had one address: the authority's
+// per-address request budget (20 a second) refused part of what four
+// receivers posting every 100 ms sent (586 observations, 440 requests,
+// at the ci tier), which ten real receivers on their own addresses
+// would not see. The host's address on the egress network is fixed
+// (DEMO_HOST_GATEWAY, the network's gateway, where Docker's published
+// port comes from); the lab Caddy trusts X-Forwarded-For from it only,
+// and the authority trusts it beside the Caddy, so a receiver that
+// names its own address is judged under it. Nothing else changes for a
+// client that names none.
+func TestReceiversHaveTheirOwnAddress(t *testing.T) {
+	compose := read(t, "systems/compose.yaml")
+	env := read(t, "demo.env.example")
+	caddy := read(t, "systems/Caddyfile")
+	subnet := regexp.MustCompile(`(?m)^DEMO_EGRESS_SUBNET=(\d+\.\d+\.\d+)\.0/24$`).FindStringSubmatch(env)
+	gw := regexp.MustCompile(`(?m)^DEMO_HOST_GATEWAY=(\d+\.\d+\.\d+)\.1$`).FindStringSubmatch(env)
+	lab := regexp.MustCompile(`(?m)^DEMO_LAB_SUBNET=(\d+\.\d+\.\d+)\.0/24$`).FindStringSubmatch(env)
+	if subnet == nil || gw == nil || gw[1] != subnet[1] || lab == nil || lab[1] == subnet[1] {
+		t.Fatalf("demo.env.example: DEMO_EGRESS_SUBNET %v, DEMO_HOST_GATEWAY %v (the .1 of it, apart from the lab subnet %v)", subnet, gw, lab)
+	}
+	for _, want := range []string{"subnet: ${DEMO_EGRESS_SUBNET:?deploy/demo.env}", "gateway: ${DEMO_HOST_GATEWAY:?deploy/demo.env}",
+		"LAB_HOST_GATEWAY: ${DEMO_HOST_GATEWAY:?deploy/demo.env}"} {
+		if !strings.Contains(compose, want) {
+			t.Errorf("systems/compose.yaml lacks %q", want)
+		}
+	}
+	global, _, _ := strings.Cut(caddy, "(lab_tls)")
+	if !regexp.MustCompile(`(?m)^\s*trusted_proxies static \{\$LAB_HOST_GATEWAY\}/32\s*$`).MatchString(global) {
+		t.Error("the lab Caddy's global options do not trust X-Forwarded-For from {$LAB_HOST_GATEWAY}/32 only")
+	}
+	if strings.Count(caddy, "trusted_proxies") != 1 {
+		t.Error("the Caddyfile trusts a proxy somewhere else too")
+	}
 }
