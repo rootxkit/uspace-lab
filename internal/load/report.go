@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/rootxkit/uspace-lab/conformance/report"
+	"github.com/rootxkit/uspace-lab/internal/runner"
 	"github.com/rootxkit/uspace-lab/internal/scenario"
 )
 
@@ -230,6 +231,11 @@ func (r *Report) Evaluate(c *Criteria, durationS float64) {
 	required := map[string]bool{}
 	for _, id := range r.Tier.Required {
 		required[id] = true
+	}
+	if r.Target.Mode == runner.ModeSystems {
+		for _, id := range r.Tier.RequiredSystems {
+			required[id] = true
+		}
 	}
 	r.Rows, r.Measured, r.Unmeasured, r.Failures = nil, 0, 0, nil
 	for _, row := range c.Rows {

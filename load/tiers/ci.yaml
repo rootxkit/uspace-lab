@@ -59,6 +59,25 @@ required:
   - picture_traceable
   - traffic_traceable
   - evaluation_period
+# The rows only the systems' images can show, required of a systems run
+# of this tier, with load/faults/ci.yaml (restarts).
+required_systems:
+  - sp_flights_p95
+  - sp_flights_p99
+  - details_p95
+  - details_p99
+  - dp_display_p95
+  - dp_display_p99
+  - intent_change_notify
+  - notifications_complete
+  - details_answered
+  - pair_checks
+  - writer_queue
+  - compression
+  - disk_model
+  - restart_recovery
+  - restart_duplicates
+  - restart_backlog
 scale:
   - {quantity: duration, spec: "3600 s (05 §7)", here: "120 s", factor: 0.0333, why: "a pull request's CI budget; one crossing per pair still falls inside it"}
   - {quantity: consoles, spec: "10 (05 §1 at 100 drones)", here: "2", factor: 0.2, why: "every console here subscribes to the whole area (heavier than 05 §1's <= 200-track viewports); two keep the fan-out real at CI size"}

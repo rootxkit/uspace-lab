@@ -11,6 +11,7 @@ import (
 
 	"github.com/rootxkit/uspace-lab/internal/geoidx"
 	"github.com/rootxkit/uspace-lab/internal/observe"
+	"github.com/rootxkit/uspace-lab/internal/runner"
 	"github.com/rootxkit/uspace-lab/internal/vehicle"
 	"github.com/rootxkit/uspace-lab/internal/wire/wiretest"
 )
@@ -465,6 +466,23 @@ func TestDrainSettlesOnDataNotStatus(t *testing.T) {
 			t.Errorf("%s: took %s, errors %v", c.name, took, r.errs)
 		case c.dataFlowing && (len(r.errs) != 1 || !strings.Contains(r.errs[0], "not settled")):
 			t.Errorf("%s: errors %v", c.name, r.errs)
+		}
+	}
+}
+
+// A check required of a systems run fails a systems run that did not
+// measure it, and a reference run of the same tier is not held to it:
+// the reference target has no SP, DSS or peer to show it.
+func TestSystemsRunsAreHeldToTheirOwnRows(t *testing.T) {
+	obs := map[string]Observation{"operator_to_ussp_console_s": latencyObs(0.2)}
+	for _, mode := range []string{runner.ModeReference, runner.ModeSystems} {
+		r := reportWith(nil, obs)
+		r.Tier.RequiredSystems = []string{"loss"}
+		r.Target.Mode = mode
+		r.Evaluate(oneCheck, 60)
+		failed := r.Verdict == VerdictFail && strings.Contains(strings.Join(r.Failures, ";"), "loss: required and not measured")
+		if failed != (mode == runner.ModeSystems) {
+			t.Errorf("%s run: %s %v", mode, r.Verdict, r.Failures)
 		}
 	}
 }

@@ -108,6 +108,12 @@ type Tier struct {
 	MemoryWarmupS float64 `yaml:"memory_warmup_s" json:"memory_warmup_s"`
 	// Required are the check ids this tier must measure and pass.
 	Required []string `yaml:"required" json:"required"`
+	// RequiredSystems are the further checks a systems run of the tier
+	// must measure and pass: the rows only the systems' images can show
+	// (the F3411 SP and DP display, F3548, the probes, the faults), so a
+	// systems run that measured none of them fails instead of passing on
+	// the rows the reference target has too.
+	RequiredSystems []string `yaml:"required_systems" json:"required_systems,omitempty"`
 	// Scale says what this tier changes from 05 §1 / 05 §7, with the
 	// factor and why (a scaled run says so in its report).
 	Scale []ScaleFactor `yaml:"scale" json:"scale"`
@@ -328,7 +334,7 @@ func (f *Files) Validate() error {
 			known[r.Checks[i].ID] = true
 		}
 	}
-	for _, id := range f.Tier.Required {
+	for _, id := range append(slices.Clone(f.Tier.Required), f.Tier.RequiredSystems...) {
 		if !known[id] {
 			return fmt.Errorf("load tier: required check %q is not in the criteria", id)
 		}
