@@ -1,7 +1,9 @@
 package load
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/rootxkit/uspace-core/regnum"
 	"github.com/rootxkit/uspace-core/serial"
@@ -61,5 +63,29 @@ func TestFleetIdentitiesAreRegistrable(t *testing.T) {
 	// must not reuse the serial or the registration.
 	if AircraftSerial(0, 10) == AircraftSerial(0, 50) || ClientRegistration(0, 10) == ClientRegistration(0, 50) {
 		t.Fatal("two client layouts share an identity")
+	}
+}
+
+// Intents are filed at the tier's intents_per_s, not in one burst: the
+// USSP asks the authority's registry once per intent, and a fleet's
+// intents at once spent the USSP's request budget there (429), so every
+// intent was held pending_validation. Filing n intents at rate r takes
+// at least (n - 1) / r; the reference target answers at once, so the
+// bound is the pacing's.
+func TestIntentsArePaced(t *testing.T) {
+	f := loadSmall(t)
+	f.Tier.Operators.IntentsPerS = 20
+	f.Tier.DurationS = 1
+	start := time.Now()
+	rep, err := Run(context.Background(), Options{Files: f, TargetsPath: repo("targets/reference.yaml"), Run: "paced", RepoRoot: repo(".")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := rep.Volumes.IntentsFiled
+	if n != f.Tier.Operators.Aircraft || rep.Volumes.IntentErrors != 0 {
+		t.Fatalf("%d intents filed, %d errors", n, rep.Volumes.IntentErrors)
+	}
+	if took, least := time.Since(start), time.Duration(float64(n-1)/20*float64(time.Second)); took < least {
+		t.Fatalf("%d intents in %s, at 20 a second they take at least %s", n, took, least)
 	}
 }

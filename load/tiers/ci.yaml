@@ -14,6 +14,7 @@ operators:
   poll_ms: 50
   ramp_per_s: 250 # clients connecting per second at the start
   intents: all
+  intents_per_s: 8 # lab: inside the authority's request budget for the USSP's registry checks (one per intent)
 receivers:
   heard_fraction: 0.4 # 05 §1: ~40 % heard by at least one receiver
   aircraft_per_receiver: 10

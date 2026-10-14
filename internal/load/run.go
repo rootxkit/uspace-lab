@@ -368,7 +368,7 @@ func (r *run) intentRequest(a *Aircraft, start, end time.Time) (simop.IntentRequ
 
 // fileIntents files and activates the intents (05 §1: intent operations
 // compressed into the run; "watched" files only those whose traffic is
-// read). Eight at a time.
+// read), at the tier's intents_per_s, eight in flight at most.
 func (r *run) fileIntents(ctx context.Context) {
 	r.intents = map[int]string{}
 	start := time.Now().Add(-time.Minute).UTC()
@@ -409,10 +409,22 @@ func (r *run) fileIntents(ctx context.Context) {
 			}
 		}()
 	}
-	for _, a := range todo {
+	// One intent per tick of the tier's intents_per_s, the first at once.
+	tk := time.NewTicker(time.Duration(float64(time.Second) / r.tier.Operators.IntentsPerS))
+	defer tk.Stop()
+send:
+	for i, a := range todo {
+		if i > 0 {
+			select {
+			case <-tk.C:
+			case <-ctx.Done():
+				break send
+			}
+		}
 		select {
 		case work <- a:
 		case <-ctx.Done():
+			break send
 		}
 	}
 	close(work)

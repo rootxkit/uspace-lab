@@ -33,6 +33,7 @@ const (
 	maxConsoles    = 200
 	maxDurationS   = 6 * 3600
 	maxTelemetryHz = 2 // the USSP's per-flight live bound (05 §5)
+	maxIntentsPerS = 100
 )
 
 // Tier is load/tiers/<name>.yaml: the volumes of one 05 §1 column, the
@@ -63,6 +64,12 @@ type Tier struct {
 		// Intents: "all" files one intent per aircraft at the start,
 		// "watched" only for the aircraft whose traffic is read.
 		Intents string `yaml:"intents" json:"intents"`
+		// IntentsPerS is how many intents are filed per second before the
+		// run (05 §1's 2-3 per drone-day are compressed into the start,
+		// but not into one burst: the USSP asks the authority's registry
+		// once per intent, inside the request budget the authority gives
+		// it, and a fleet's intents at once were held pending_validation).
+		IntentsPerS float64 `yaml:"intents_per_s" json:"intents_per_s"`
 	} `yaml:"operators" json:"operators"`
 	Receivers struct {
 		// HeardFraction is 05 §1's ~40 % of airborne UAS heard by a
@@ -331,6 +338,8 @@ func (t *Tier) validate() error {
 		return fmt.Errorf("operators.poll_ms %d is not in [1, 1000]", t.Operators.PollMS)
 	case t.Operators.RampPerS < 10 || t.Operators.RampPerS > 10000:
 		return fmt.Errorf("operators.ramp_per_s %v is not in [10, 10000]", t.Operators.RampPerS)
+	case !(t.Operators.IntentsPerS >= 0.1 && t.Operators.IntentsPerS <= maxIntentsPerS):
+		return fmt.Errorf("operators.intents_per_s %v is not in [0.1, %d]", t.Operators.IntentsPerS, maxIntentsPerS)
 	case t.Operators.Intents != "all" && t.Operators.Intents != "watched":
 		return fmt.Errorf("operators.intents is all or watched")
 	case t.Receivers.HeardFraction < 0 || t.Receivers.HeardFraction > 1:
