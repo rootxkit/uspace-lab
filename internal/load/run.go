@@ -723,7 +723,8 @@ func (r *run) startStreams(ctx context.Context, wg *sync.WaitGroup) {
 	sub, _ := json.Marshal(map[string]any{"schema": "console/subscribe/v1", "body": map[string]any{"bbox": bb[:], "layers": []string{"tracks", "alerts"}}})
 	for i := range r.tier.Consoles {
 		r.streams = append(r.streams, &stream{name: fmt.Sprintf("console-%02d", i), kind: streamPicture, url: r.pictureURL,
-			header: r.pictureHeader.Clone(), headerFn: r.consoleHeader(), onOpen: sub, timed: i == 0, needSnap: true, ready: make(chan struct{})})
+			header: r.pictureHeader.Clone(), headerFn: r.consoleHeader(), onOpen: sub, timed: i == 0, needSnap: true, ready: make(chan struct{}),
+			readLimit: snapshotLimit(len(r.fleet.Aircraft) + len(r.fleet.Peer))})
 	}
 	for _, a := range r.fleet.Aircraft {
 		id, ok := r.intents[a.Index]

@@ -35,8 +35,11 @@ type stream struct {
 	headerFn func(ctx context.Context, renew bool) (http.Header, error)
 	renew    bool
 	onOpen   []byte
-	aircraft *Aircraft // traffic: whose flight
-	timed    bool      // its frames feed a ledger
+	// readLimit bounds one frame read (0: wire.MaxFrameBytes); a console
+	// subscribed to the whole area has its snapshot's bound.
+	readLimit int
+	aircraft  *Aircraft // traffic: whose flight
+	timed     bool      // its frames feed a ledger
 
 	mu         sync.Mutex
 	frames     map[string]uint64
@@ -301,7 +304,7 @@ func (rd *readers) read(ctx context.Context, s *stream) error {
 		return fmt.Errorf("%s: %w", s.name, err)
 	}
 	defer func() { _ = conn.CloseNow() }()
-	conn.SetReadLimit(wire.MaxFrameBytes)
+	conn.SetReadLimit(int64(s.limit()))
 	s.mu.Lock()
 	s.connects++
 	s.mu.Unlock()
@@ -330,10 +333,30 @@ func (rd *readers) read(ctx context.Context, s *stream) error {
 	}
 }
 
+// limit is the largest frame the stream reads.
+func (s *stream) limit() int {
+	if s.readLimit > 0 {
+		return s.readLimit
+	}
+	return wire.MaxFrameBytes
+}
+
+// snapshotTrackBytes bounds one track in a console snapshot: a track
+// frame is about 1 KB (the 04 §1 estimate's is 1008 bytes), four times
+// that leaves the alerts and the envelope room.
+const snapshotTrackBytes = 4 << 10
+
+// snapshotLimit is the frame bound of a console subscribed to the whole
+// area of a fleet of n aircraft: its snapshot holds every track, and at
+// 1000 aircraft that is past wire.MaxFrameBytes (the first recorded
+// 1000 run lost every console to "message too big" on each snapshot).
+// Still bounded (E-10): by the tier, never by what the system sends.
+func snapshotLimit(n int) int { return max(wire.MaxFrameBytes, n*snapshotTrackBytes) }
+
 // handle reads one frame; at is its arrival on the generator's clock.
 // alert hands an alert/v1 or violation/v1 to the event recorder.
 func (rd *readers) handle(s *stream, b []byte, at time.Time, alert func([]byte, time.Time)) {
-	e, err := wire.ParseEnvelope(b)
+	e, err := wire.ParseEnvelopeWithin(b, s.limit())
 	s.mu.Lock()
 	if s.frames == nil {
 		s.frames = map[string]uint64{}
