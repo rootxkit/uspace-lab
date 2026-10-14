@@ -3,9 +3,11 @@ package seed
 import (
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -67,8 +69,13 @@ type LoadOptions struct {
 	SecretsDir string
 	Geoid      string
 	Lab        string
-	Now        func() time.Time
-	Log        func(format string, args ...any)
+	// Probes is deploy/systems/probes.yaml (empty: none written, and
+	// the run does not read the systems' metrics or databases); Project
+	// the compose project its container names are in.
+	Probes  string
+	Project string
+	Now     func() time.Time
+	Log     func(format string, args ...any)
 }
 
 var receiverID = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,62}$`)
@@ -158,6 +165,10 @@ func SeedLoad(ctx context.Context, o LoadOptions) error {
 	if o.TargetsOut == "" || o.SecretsDir == "" || o.Geoid == "" || o.Lab == "" {
 		return fmt.Errorf("seed: a load seed writes a targets file: name it, its secrets directory, the geoid and the lab file")
 	}
+	probes, err := loadProbes(o.Probes, o.Project)
+	if err != nil {
+		return err
+	}
 	sk, err := openStack(o.Env)
 	if err != nil {
 		return err
@@ -211,14 +222,14 @@ func SeedLoad(ctx context.Context, o LoadOptions) error {
 	if err != nil {
 		return err
 	}
-	return writeLoadTargets(o, sk, ops, insp)
+	return writeLoadTargets(o, sk, ops, insp, probes)
 }
 
 // writeLoadTargets writes the secret files and the targets file of a
 // load run (a runner.Targets with its load block), and reads the file
 // back through runner.LoadTargets: a file the harness would refuse is
 // an error here, not at the start of the run.
-func writeLoadTargets(o LoadOptions, sk *stack, ops []*USSPOperator, insp Session) error {
+func writeLoadTargets(o LoadOptions, sk *stack, ops []*USSPOperator, insp Session, probes *runner.LoadProbes) error {
 	if o.Log == nil {
 		o.Log = func(string, ...any) {}
 	}
@@ -247,7 +258,7 @@ func writeLoadTargets(o LoadOptions, sk *stack, ops []*USSPOperator, insp Sessio
 	// gives the receivers their own addresses from, which the stack
 	// trusts from the host only (deploy/systems); empty, they share the
 	// host's.
-	lt := &runner.LoadTarget{Tier: o.Fleet.Tier, Fleet: o.Fleet.Digest, ReceiversForwardedFor: sk.env["DEMO_LOAD_RECEIVER_ADDRESSES"]}
+	lt := &runner.LoadTarget{Tier: o.Fleet.Tier, Fleet: o.Fleet.Digest, ReceiversForwardedFor: sk.env["DEMO_LOAD_RECEIVER_ADDRESSES"], Probes: probes}
 	for i, op := range ops {
 		if op == nil || op.ClientID == "" || op.ClientSecret == "" {
 			return fmt.Errorf("seed: load client %d has no machine client at the USSP", i)
@@ -302,4 +313,62 @@ func writeLoadTargets(o LoadOptions, sk *stack, ops []*USSPOperator, insp Sessio
 	}
 	o.Log("wrote %s: %d clients, %d receivers", o.TargetsOut, len(lt.Clients), len(lt.Receivers))
 	return nil
+}
+
+// ProbesFormat names deploy/systems/probes.yaml.
+const ProbesFormat = "lab-load-probes/v1"
+
+// probesFile is deploy/systems/probes.yaml.
+type probesFile struct {
+	Format    string            `yaml:"format"`
+	FetchVia  string            `yaml:"fetch_via"`
+	Metrics   map[string]string `yaml:"metrics"`
+	Databases []struct {
+		System   string `yaml:"system"`
+		Service  string `yaml:"service"`
+		Database string `yaml:"database"`
+	} `yaml:"databases"`
+}
+
+var composeName = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,62}$`)
+
+// loadProbes reads the probes file and names its containers in the
+// compose project: fetch is docker exec into the fetch_via service's
+// container and busybox wget, each database's query docker exec into
+// its service's container and psql. Empty path: no probes. Everything
+// is checked before the seed calls a system.
+func loadProbes(path, project string) (*runner.LoadProbes, error) {
+	if path == "" {
+		return nil, nil
+	}
+	b, err := os.ReadFile(path) //nolint:gosec // the lab's own file
+	if err != nil {
+		return nil, fmt.Errorf("seed: probes: %w", err)
+	}
+	var f probesFile
+	if err := yaml.UnmarshalWithOptions(b, &f, yaml.DisallowUnknownField()); err != nil {
+		return nil, fmt.Errorf("seed: probes %s: %w", path, err)
+	}
+	if f.Format != ProbesFormat {
+		return nil, fmt.Errorf("seed: probes %s: format %q, want %s", path, f.Format, ProbesFormat)
+	}
+	if project == "" {
+		project = "uspace-demo"
+	}
+	names := append([]string{project, f.FetchVia}, slices.Collect(maps.Keys(f.Metrics))...)
+	for _, d := range f.Databases {
+		names = append(names, d.Service, d.Database, d.System)
+	}
+	for _, n := range names {
+		if !composeName.MatchString(n) {
+			return nil, fmt.Errorf("seed: probes %s: %q is not a compose project, service or database name", path, n)
+		}
+	}
+	container := func(service string) string { return project + "-" + service + "-1" }
+	p := &runner.LoadProbes{Fetch: []string{"docker", "exec", container(f.FetchVia), "wget", "-qO-"}, Metrics: f.Metrics}
+	for _, d := range f.Databases {
+		p.Databases = append(p.Databases, runner.LoadDatabase{System: d.System,
+			Query: []string{"docker", "exec", container(d.Service), "psql", "-U", "postgres", "-d", d.Database, "-tAc"}})
+	}
+	return p, nil
 }

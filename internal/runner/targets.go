@@ -59,6 +59,25 @@ type LoadTarget struct {
 	// is judged under its own address as a real one is.
 	ReceiversForwardedFor string         `yaml:"receivers_forwarded_for"`
 	Receivers             []LoadReceiver `yaml:"receivers"`
+	// Probes are how the run reads the systems while it loads them.
+	Probes *LoadProbes `yaml:"probes"`
+}
+
+// LoadProbes are the operator's commands that read the systems of a load
+// run: Fetch GETs a URL inside the stack (the URL appended; e.g. docker
+// exec into the lab Caddy and busybox wget), Metrics names each
+// process's /metrics URL, and each database's Query runs one SQL
+// statement (appended) and prints the single value.
+type LoadProbes struct {
+	Fetch     []string          `yaml:"fetch"`
+	Metrics   map[string]string `yaml:"metrics"`
+	Databases []LoadDatabase    `yaml:"databases"`
+}
+
+// LoadDatabase is one system's telemetry database.
+type LoadDatabase struct {
+	System string   `yaml:"system"`
+	Query  []string `yaml:"query"`
 }
 
 // LoadReceiver is one registered receiver of a load fleet.

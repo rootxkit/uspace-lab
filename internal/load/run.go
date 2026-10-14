@@ -139,6 +139,9 @@ func Run(ctx context.Context, opt Options) (*Report, error) {
 		if r.systems, err = systemsCreds(tg, fl, files.Tier.Tier); err != nil {
 			return nil, err
 		}
+		if tg.Load.Probes != nil {
+			r.probes = newProbes(tg.Load.Probes)
+		}
 		evidence = "The systems' images as the targets file names them, seeded for this fleet (loadgen seed); evidence for the images and digests listed, on the host named, when the run passes (docs/PLAN.md L-D4)."
 	}
 	receivers := ""
@@ -147,7 +150,7 @@ func Run(ctx context.Context, opt Options) (*Report, error) {
 	}
 	rep := &Report{Format: ReportFormat, Run: opt.Run, StartedAt: time.Now().UTC(), Tier: &tier, Scaled: len(tier.Scale) > 0,
 		Target: TargetInfo{Mode: tg.Mode, Name: tg.Name, Images: tg.Images, Evidence: evidence, Receivers: receivers},
-		Host:   hostInfo(opt.HostName), Commits: report.LabCommits(opt.RepoRoot), Files: files.Digests, Policy: files.Policy,
+		Host:   hostInfo(opt.HostName, tg.Mode), Commits: report.LabCommits(opt.RepoRoot), Files: files.Digests, Policy: files.Policy,
 		Lab: LabInfo{File: lab.Path, OriginLat: lab.Origin.LatDeg, OriginLon: lab.Origin.LonDeg, OriginAMSL: lab.Origin.AltAMSLM, Geoid: geoDesc}}
 	r.execute(ctx, rep)
 	rep.EndedAt = time.Now().UTC()
@@ -174,6 +177,7 @@ type run struct {
 	pictureHeader http.Header
 	target        *reftarget.Target
 	systems       *systemsTarget
+	probes        *probes
 	tokens        []*oauth.ClientCredentials
 	rxCreds       []rxCred
 	intents       map[int]string
@@ -270,6 +274,16 @@ func (r *run) execute(ctx context.Context, rep *Report) {
 	var memWG sync.WaitGroup
 	memWG.Add(1)
 	go func() { defer memWG.Done(); r.sampleMemory(memCtx) }()
+	if r.probes != nil {
+		// The databases' sizes before the generator, and the processes'
+		// /metrics every memory_sample_s while it runs.
+		r.probes.sizes(ctx, false)
+		memWG.Add(1)
+		go func() {
+			defer memWG.Done()
+			r.probes.run(memCtx, time.Duration(r.tier.MemorySampleS*float64(time.Second)))
+		}()
+	}
 	t0 := time.Now()
 	r.log.Info("generator started", "tier", r.tier.Tier, "aircraft", len(r.fleet.Aircraft), "duration_s", r.tier.DurationS)
 	r.generate(ctx, t0)
@@ -278,6 +292,11 @@ func (r *run) execute(ctx context.Context, rep *Report) {
 	memCancel()
 	memWG.Wait()
 	r.drain(ctx)
+	if r.probes != nil {
+		// After the drain: the counters' last values and the sizes.
+		r.probes.scrape(ctx)
+		r.probes.sizes(ctx, true)
+	}
 	if r.opt.HeapProfile != "" {
 		if err := writeHeapProfile(r.opt.HeapProfile); err != nil {
 			r.fail("heap profile: %v", err)
@@ -902,6 +921,30 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 		obs["memory_growth_ratio"] = notMeasured(fmt.Sprintf("%d memory samples after the %.0f s warm-up, at least 6 are needed", len(judged), t.MemoryWarmupS))
 		obs["memory_monotonic"] = obs["memory_growth_ratio"]
 	}
+	// What the probes read of the systems. In a systems run the memory
+	// row is the systems' processes, never the harness's own heap.
+	probed := []string{"cpa_pair_checks_per_worker", "writer_queue_max_s", "compression_lag_chunks", "disk_growth_vs_model"}
+	switch {
+	case r.probes != nil:
+		fleetSamples := uint64(0)
+		for _, k := range r.handedK {
+			fleetSamples += uint64(k)
+		}
+		rep.Systems = r.probes.observe(obs, r.files.Criteria.Models, fleetSamples, skip)
+		for _, e := range rep.Systems.Errors {
+			r.fail("probe: %s", e)
+		}
+	case r.systems != nil:
+		why := notMeasured("the targets file names no probes (loadgen seed writes them): the systems' metrics and databases are not read")
+		for _, m := range append(probed, "memory_growth_ratio", "memory_monotonic") {
+			obs[m] = why
+		}
+	default:
+		for _, m := range probed {
+			obs[m] = notMeasured(niMetrics)
+		}
+		obs["writer_queue_max_s"], obs["compression_lag_chunks"], obs["disk_growth_vs_model"] = notMeasured(niStorage), notMeasured(niStorage), notMeasured(niStorage)
+	}
 	// A sample handed out more than a period after its slot: the host
 	// stalled or the generator is saturated, and the offered load was
 	// not what the tier says for that moment.
@@ -986,12 +1029,15 @@ func writeHeapProfile(path string) error {
 	return f.Close()
 }
 
-func hostInfo(name string) Host {
+func hostInfo(name, mode string) Host {
 	if name == "" {
 		name = "unnamed (pass --host)"
 	}
-	h := Host{Name: name, OS: runtime.GOOS, Arch: runtime.GOARCH, CPUs: runtime.NumCPU(), Go: runtime.Version(),
-		Note: "the host the generator and the reference target ran on together (L-Q1)"}
+	note := "the host the generator and the reference target ran on together (L-Q1)"
+	if mode == runner.ModeSystems {
+		note = "the host the generator ran on (L-Q1); where the systems ran is the --host name's to say"
+	}
+	h := Host{Name: name, OS: runtime.GOOS, Arch: runtime.GOARCH, CPUs: runtime.NumCPU(), Go: runtime.Version(), Note: note}
 	if b, err := os.ReadFile("/proc/meminfo"); err == nil {
 		for _, line := range strings.Split(string(b), "\n") {
 			if f := strings.Fields(line); len(f) >= 2 && f[0] == "MemTotal:" {

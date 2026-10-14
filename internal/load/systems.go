@@ -42,6 +42,9 @@ func checkSystemsTargets(tg *runner.Targets, t *Tier) error {
 	if tg.USSP == nil || tg.USSP.BaseURL == "" || tg.USSP.TokenURL == "" || tg.USSP.Audience == "" {
 		return fmt.Errorf("load: the targets file names no USSP base URL, token URL and audience")
 	}
+	if err := checkProbes(tg.Load.Probes); err != nil {
+		return err
+	}
 	if tg.Authority == nil || tg.Authority.BaseURL == "" || tg.Authority.PictureURL == "" || tg.Authority.Origin == "" || tg.Authority.SessionFile == "" {
 		return fmt.Errorf("load: the targets file names no authority base URL, picture URL, origin and session file")
 	}
@@ -172,4 +175,29 @@ func receiverAddresses(prefix string, n int) ([]string, error) {
 		out[i] = a.String()
 	}
 	return out, nil
+}
+
+// checkProbes refuses probes that could not read the systems: no fetch
+// command, too many processes, a URL that is not http, a database
+// without a query, with another samples kind, or named twice.
+func checkProbes(p *runner.LoadProbes) error {
+	if p == nil {
+		return nil
+	}
+	if len(p.Fetch) == 0 || len(p.Metrics) == 0 || len(p.Metrics) > probeMaxProcesses {
+		return fmt.Errorf("load: probes: a fetch command and 1 to %d metrics URLs are required", probeMaxProcesses)
+	}
+	for proc, u := range p.Metrics {
+		if proc == "" || (!strings.HasPrefix(u, "http://") && !strings.HasPrefix(u, "https://")) {
+			return fmt.Errorf("load: probes: metrics %q at %q is not a process and an http URL", proc, u)
+		}
+	}
+	seen := map[string]bool{}
+	for _, db := range p.Databases {
+		if db.System == "" || seen[db.System] || len(db.Query) == 0 {
+			return fmt.Errorf("load: probes: database %q needs a query and is named once", db.System)
+		}
+		seen[db.System] = true
+	}
+	return nil
 }

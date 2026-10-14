@@ -55,7 +55,9 @@ type Report struct {
 	Streams    []StreamStats          `json:"streams"`
 	// Memory is the live heap every memory_sample_s, generator and
 	// reference target together (one process).
-	Memory     []uint64 `json:"memory_live_heap_bytes,omitempty"`
+	Memory []uint64 `json:"memory_live_heap_bytes,omitempty"`
+	// Systems is what the probes read of the systems (a systems run).
+	Systems    *Systems `json:"systems,omitempty"`
 	Errors     []string `json:"errors,omitempty"`
 	Measured   int      `json:"checks_measured"`
 	Unmeasured int      `json:"checks_not_measured"`
@@ -468,6 +470,9 @@ func (r *Report) Markdown() string {
 		l.Picture.Handed, l.Picture.Shown, l.Picture.Unshown, l.PictureAccounted, l.PictureDroppedFrames, l.PictureSilent, l.Picture.Untraceable)
 	w("- Traffic streams (watched flights): handed %d, shown %d, unshown %d, untraceable %d.\n", l.Traffic.Handed, l.Traffic.Shown, l.Traffic.Unshown, l.Traffic.Untraceable)
 	w("- Generator sheds: operator %d, Remote ID %d.\n\n", l.GeneratorShedOperator, l.GeneratorShedRID)
+	if r.Systems != nil {
+		r.systemsMarkdown(w)
+	}
 	a := r.Alerts
 	w("## Alerts\n\nExpected %d, raised %d, cleared %d, missed %d, clears missed %d, unexpected %d, untraceable %d.\n\n",
 		a.Expected, a.Raised, a.Cleared, len(a.Missed), len(a.MissedClear), len(a.Unexpected), a.Untraceable)
@@ -512,4 +517,35 @@ func sortedKeys(m map[string]string) []string {
 	}
 	slices.Sort(keys)
 	return keys
+}
+
+// systemsMarkdown renders what the probes read of the systems.
+func (r *Report) systemsMarkdown(w func(format string, a ...any)) {
+	sys := r.Systems
+	w("## The systems (read by the probes)\n\n| Process | Resident memory first / last / max (MB) | Samples | Growth | Monotonic |\n|---|---|---|---|---|\n")
+	for _, m := range sys.Memory {
+		w("| %s | %.1f / %.1f / %.1f | %d | %s | %t |\n", m.Process, float64(m.FirstB)/1e6, float64(m.LastB)/1e6, float64(m.MaxB)/1e6, m.Samples, fmtNum(m.Growth), m.Rising)
+	}
+	w("\n| Database | Fleet samples | Before (MB) | After (MB) | Model (MB) | Growth / model | Compression lag (chunks) |\n|---|---|---|---|---|---|---|\n")
+	for _, st := range sys.Storage {
+		w("| %s | %d | %.1f | %.1f | %.1f | %s | %s |\n", st.System, st.Samples, st.BeforeB/1e6, st.AfterB/1e6, st.ModelB/1e6, fmtNum(st.Ratio), fmtNum(st.LagChunks))
+	}
+	w("\n")
+	for _, proc := range sortedKeysOf(sys.PairChecksPerS) {
+		w("- Pair checks of %s: %s a second over the run.\n", proc, fmtNum(sys.PairChecksPerS[proc]))
+	}
+	w("\nLoss counters that moved during the run (05 §7: accounted for in the report; the systems' own counters, listed, not judged):\n\n")
+	if len(sys.Counters) == 0 {
+		w("- none\n")
+	}
+	for _, c := range sys.Counters {
+		w("- %s `%s`: +%s\n", c.Process, c.Series, fmtNum(c.Delta))
+	}
+	if sys.CountersMore > 0 {
+		w("- and %d more\n", sys.CountersMore)
+	}
+	if sys.ErrorsN > 0 {
+		w("\nProbe errors: %d (the first %d are among the run's errors).\n", sys.ErrorsN, len(sys.Errors))
+	}
+	w("\n")
 }

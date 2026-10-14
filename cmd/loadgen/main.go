@@ -193,6 +193,8 @@ func seedFleet(args []string) int {
 	geo := fs.String("geoid", "", "targets.geoid: the grid the systems use (R-16)")
 	targets := fs.String("targets", "", "the targets file written (default targets/local-load-<tier>.yaml)")
 	secrets := fs.String("secrets", "", "the directory of the secret files it names (default secrets/load-<tier>)")
+	probes := fs.String("probes", "deploy/systems/probes.yaml", "what the run reads of the systems (empty: nothing)")
+	project := fs.String("project", os.Getenv("COMPOSE_PROJECT_NAME"), "the compose project of the stack (default uspace-demo)")
 	timeout := fs.Duration("timeout", time.Hour, "bound on the whole seed")
 	if err := fs.Parse(args); err != nil {
 		return 2
@@ -234,7 +236,7 @@ func seedFleet(args []string) int {
 	ctx, cancel := context.WithTimeout(ctx, *timeout)
 	defer cancel()
 	err = seed.SeedLoad(ctx, seed.LoadOptions{Env: *env, Fleet: fl.SeedFleet(name), TargetsOut: *targets, SecretsDir: *secrets,
-		Geoid: *geo, Lab: *labFile, Log: func(f string, a ...any) { log.Info(fmt.Sprintf(f, a...)) }})
+		Geoid: *geo, Lab: *labFile, Probes: *probes, Project: *project, Log: func(f string, a ...any) { log.Info(fmt.Sprintf(f, a...)) }})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "loadgen:", err)
 		return 1

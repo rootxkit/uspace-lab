@@ -13,6 +13,13 @@
 # Every metric is defined in internal/load/metrics.go; a check naming a
 # metric the harness does not know is refused when the file is loaded.
 source: "docs/spec/05-scale-and-reliability.md §7, §1, §5"
+# 05's design figures (status spec) that turn a measured quantity into a
+# ratio: a stored track sample of about 600 B (05 §1; 05 §4's storage
+# rows follow from it) and a CPA worker's pair budget of about 50 000 a
+# second per core (05 §1).
+models:
+  track_bytes: 600
+  cpa_pairs_per_core_per_s: 50000
 rows:
   - id: offered_load
     property: Offered load
@@ -82,7 +89,7 @@ rows:
     property: CPA budget
     criterion: "pair checks per worker per second within budget; evaluation_period_s never above 2 s"
     checks:
-      - {id: pair_checks, metric: cpa_pair_checks_per_worker, stat: value, op: "<=", value: 1.0, status: spec, basis: "05 §1 (~50 000 pair checks per second per core)"}
+      - {id: pair_checks, metric: cpa_pair_checks_per_worker, stat: value, op: "<=", value: 1.0, status: spec, basis: "05 §1 (~50 000 pair checks per second per core, models.cpa_pairs_per_core_per_s): the busiest CPA process's pair checks per second over the run / that budget"}
       - {id: evaluation_period, metric: cpa_evaluation_period_max_s, stat: value, op: "<=", value: 2.0, unit: s, status: spec, basis: "05 §5 CPA workers"}
 
   - id: storage

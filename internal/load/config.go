@@ -186,7 +186,22 @@ type PairPaths struct {
 // Criteria is load/criteria.yaml: 05 §7's table as checks.
 type Criteria struct {
 	Source string `yaml:"source" json:"source"`
+	// Models are the 05 figures a measured quantity is compared with.
+	Models Models `yaml:"models" json:"models"`
 	Rows   []Row  `yaml:"rows" json:"rows"`
+}
+
+// Models are spec 05's design figures that turn a measured quantity
+// into a ratio (status spec: the owner's targets, not a national
+// choice).
+type Models struct {
+	// TrackBytes is a stored track sample (05 §1: an internal
+	// track/telemetry/v1 of about 600 B; 05 §4's storage rows follow
+	// from it), the disk growth model.
+	TrackBytes float64 `yaml:"track_bytes" json:"track_bytes"`
+	// CPAPairsPerCorePerS is the pair-check budget of one CPA worker
+	// (05 §1: about 50 000 a second per core).
+	CPAPairsPerCorePerS float64 `yaml:"cpa_pairs_per_core_per_s" json:"cpa_pairs_per_core_per_s"`
 }
 
 // Row is one 05 §7 property.
@@ -429,6 +444,9 @@ func (c *Criteria) validate() error {
 			}
 			ids[k.ID] = true
 		}
+	}
+	if !(c.Models.TrackBytes > 0 && c.Models.TrackBytes < 1<<20) || !(c.Models.CPAPairsPerCorePerS > 0 && c.Models.CPAPairsPerCorePerS < 1e9) {
+		return fmt.Errorf("models: track_bytes and cpa_pairs_per_core_per_s must be positive (05 §1)")
 	}
 	return nil
 }

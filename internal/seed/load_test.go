@@ -94,7 +94,11 @@ func TestLoadTargetsWrittenLoad(t *testing.T) {
 	ops := []*USSPOperator{{ClientID: "op-a", ClientSecret: "client-secret-a"}, {ClientID: "op-b", ClientSecret: "client-secret-b"}}
 	o := LoadOptions{Fleet: goodFleet(), TargetsOut: filepath.Join(dir, "targets", "load.yaml"), SecretsDir: filepath.Join(dir, "secrets"),
 		Geoid: "constant:15.9", Lab: filepath.Join(dir, "sitl.env")}
-	if err := writeLoadTargets(o, sk, ops, Session{Token: "session-secret"}); err != nil {
+	probes, err := loadProbes("../../deploy/systems/probes.yaml", "lab-x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := writeLoadTargets(o, sk, ops, Session{Token: "session-secret"}, probes); err != nil {
 		t.Fatal(err)
 	}
 	tg, err := runner.LoadTargets(o.TargetsOut)
@@ -105,6 +109,10 @@ func TestLoadTargetsWrittenLoad(t *testing.T) {
 	if tg.Mode != runner.ModeSystems || lt == nil || lt.Tier != "t" || lt.Fleet != "sha256:ab" || len(lt.Clients) != 2 || lt.Clients[1].ClientID != "op-b" ||
 		len(lt.Receivers) != 1 || lt.Receivers[0].ID != "load-ab-0000" {
 		t.Fatalf("targets %+v load %+v", tg, lt)
+	}
+	if p := lt.Probes; p == nil || strings.Join(p.Fetch, " ") != "docker exec lab-x-caddy-1 wget -qO-" || p.Metrics["ussp-monitor"] != "http://ussp-monitor:8083/metrics" ||
+		len(p.Databases) != 2 || strings.Join(p.Databases[0].Query, " ") != "docker exec lab-x-ussp-timescaledb-1 psql -U postgres -d ussp_timeseries -tAc" || p.Databases[1].System != "authority" {
+		t.Fatalf("probes %+v", lt.Probes)
 	}
 	if lt.ReceiversForwardedFor != "10.77.0.0/16" {
 		t.Fatalf("receivers_forwarded_for %q", lt.ReceiversForwardedFor)
@@ -131,7 +139,39 @@ func TestLoadTargetsWrittenLoad(t *testing.T) {
 	// A receiver the state has no keys for is an error, not a file
 	// naming nothing.
 	delete(st.Receivers, "load-ab-0000")
-	if err := writeLoadTargets(o, sk, ops, Session{Token: "s"}); err == nil || !strings.Contains(err.Error(), "no keys") {
+	if err := writeLoadTargets(o, sk, ops, Session{Token: "s"}, nil); err == nil || !strings.Contains(err.Error(), "no keys") {
 		t.Fatalf("got %v", err)
+	}
+}
+
+// The probes file is the lab's: read whole, its format named, every
+// project, service and database name a plain compose name (they end up
+// in a docker command line), checked before any system is called. No
+// file, no probes.
+func TestLoadProbesFailClosed(t *testing.T) {
+	if p, err := loadProbes("", "x"); p != nil || err != nil {
+		t.Fatalf("no file: %v %v", p, err)
+	}
+	good, err := os.ReadFile("../../deploy/systems/probes.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadProbes("../../deploy/systems/probes.yaml", ""); err != nil {
+		t.Fatalf("the committed file: %v", err)
+	}
+	dir := t.TempDir()
+	for name, c := range map[string]struct{ text, project string }{
+		"format":       {strings.Replace(string(good), "lab-load-probes/v1", "v0", 1), ""},
+		"unknown key":  {string(good) + "\nsurprise: 1\n", ""},
+		"service name": {strings.Replace(string(good), "service: ussp-timescaledb", "service: \"ussp; rm -rf\"", 1), ""},
+		"project name": {string(good), "Lab X"},
+	} {
+		p := filepath.Join(dir, strings.ReplaceAll(name, " ", "-")+".yaml")
+		if err := os.WriteFile(p, []byte(c.text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := loadProbes(p, c.project); err == nil {
+			t.Errorf("%s: taken", name)
+		}
 	}
 }
