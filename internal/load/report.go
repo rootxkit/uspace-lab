@@ -160,16 +160,19 @@ type OperatorLoss struct {
 
 // ReceiverLoss sums the receivers' ledgers (simrx).
 type ReceiverLoss struct {
-	Observed      uint64   `json:"observed"`
-	Sent          uint64   `json:"sent"`
-	Accepted      uint64   `json:"accepted"`
-	Duplicates    uint64   `json:"duplicates"`
-	Refused       uint64   `json:"refused"`
-	BacklogShed   uint64   `json:"backlog_shed"`
-	DroppedByKnob uint64   `json:"dropped_by_knob"`
-	Pending       uint64   `json:"pending"`
-	Unbalanced    uint64   `json:"unbalanced"`
-	Unbalance     []string `json:"unbalance,omitempty"`
+	Observed    uint64 `json:"observed"`
+	Sent        uint64 `json:"sent"`
+	Accepted    uint64 `json:"accepted"`
+	Duplicates  uint64 `json:"duplicates"`
+	Refused     uint64 `json:"refused"`
+	BacklogShed uint64 `json:"backlog_shed"`
+	// BacklogLocations are the samples the authority accepted as backlog
+	// (replayed after an outage): stored, in the past, not shown live.
+	BacklogLocations uint64   `json:"backlog_locations_accepted"`
+	DroppedByKnob    uint64   `json:"dropped_by_knob"`
+	Pending          uint64   `json:"pending"`
+	Unbalanced       uint64   `json:"unbalanced"`
+	Unbalance        []string `json:"unbalance,omitempty"`
 }
 
 // AlertSummary is the expected set against what was observed.
@@ -468,9 +471,9 @@ func (r *Report) Markdown() string {
 	l := r.Loss
 	w("- Operator telemetry: sent %d = accepted %d + refused %d + dropped %d + duplicate %d; %d pending; %d clients unbalanced.\n",
 		l.Operator.Sent, l.Operator.Accepted, l.Operator.Refused, l.Operator.Dropped, l.Operator.Duplicate, l.Operator.Pending, l.Operator.Unbalanced)
-	w("- Receivers: observed %d, sent %d = accepted %d + duplicates %d + refused %d; shed %d; pending %d; %d receivers unbalanced.\n",
-		l.Receivers.Observed, l.Receivers.Sent, l.Receivers.Accepted, l.Receivers.Duplicates, l.Receivers.Refused, l.Receivers.BacklogShed, l.Receivers.Pending, l.Receivers.Unbalanced)
-	w("- Picture (timed console): handed %d, shown %d, unshown %d, accounted %d (refused, dropped_frames %d, sheds), silent %d; untraceable frames %d.\n",
+	w("- Receivers: observed %d, sent %d = accepted %d + duplicates %d + refused %d; shed %d; pending %d; %d samples accepted as backlog; %d receivers unbalanced.\n",
+		l.Receivers.Observed, l.Receivers.Sent, l.Receivers.Accepted, l.Receivers.Duplicates, l.Receivers.Refused, l.Receivers.BacklogShed, l.Receivers.Pending, l.Receivers.BacklogLocations, l.Receivers.Unbalanced)
+	w("- Picture (timed console): handed %d, shown %d, unshown %d, accounted %d (refused, dropped_frames %d, sheds, accepted as backlog), silent %d; untraceable frames %d.\n",
 		l.Picture.Handed, l.Picture.Shown, l.Picture.Unshown, l.PictureAccounted, l.PictureDroppedFrames, l.PictureSilent, l.Picture.Untraceable)
 	w("- Traffic streams (watched flights): handed %d, shown %d, unshown %d, untraceable %d.\n", l.Traffic.Handed, l.Traffic.Shown, l.Traffic.Unshown, l.Traffic.Untraceable)
 	w("- Generator sheds: operator %d, Remote ID %d.\n\n", l.GeneratorShedOperator, l.GeneratorShedRID)

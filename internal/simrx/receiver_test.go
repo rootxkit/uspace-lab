@@ -272,14 +272,21 @@ func TestOutageBuffersAndReplaysAsBacklog(t *testing.T) {
 	l := r.Drain(dctx)
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	backlog := 0
+	backlog, locations := 0, uint64(0)
 	for _, b := range c.batches {
 		if b.Backlog {
 			backlog++
+			locations += uint64(len(b.Observations)) // one pack per sample
 		}
 	}
 	if backlog == 0 || !l.Balanced || l.Pending != 0 {
 		t.Fatalf("backlog batches %d, ledger %+v", backlog, l)
+	}
+	// The locations the authority accepted as backlog are counted: a
+	// load run's picture does not show them live (they are in the past)
+	// and must not take them for silent loss.
+	if l.BacklogLocations == 0 || l.BacklogLocations != locations {
+		t.Fatalf("backlog locations %d, %d sent in backlog batches", l.BacklogLocations, locations)
 	}
 }
 

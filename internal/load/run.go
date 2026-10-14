@@ -841,6 +841,7 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 		lr.Duplicates += l.Duplicates
 		lr.Refused += l.Refused
 		lr.BacklogShed += l.BacklogShed
+		lr.BacklogLocations += l.BacklogLocations
 		lr.DroppedByKnob += l.DroppedByKnob
 		lr.Pending += uint64(l.Pending)
 		if !l.Balanced || l.Pending > 0 {
@@ -919,7 +920,10 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 	if timed != nil && heard > 0 {
 		pc := rep.Loss.Picture
 		dropped := timed.stats().DroppedFrames
-		accounted := lr.Refused + dropped + r.shedRID + lr.BacklogShed + lr.DroppedByKnob + lr.Pending
+		// A sample accepted as backlog (replayed after the authority was
+		// unreachable) is stored and in the past: the live picture rightly
+		// does not show it, and it is not lost.
+		accounted := lr.Refused + dropped + r.shedRID + lr.BacklogShed + lr.DroppedByKnob + lr.Pending + lr.BacklogLocations
 		silent := uint64(0)
 		if pc.Unshown > accounted {
 			silent = pc.Unshown - accounted
