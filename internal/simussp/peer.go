@@ -27,6 +27,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -95,11 +96,19 @@ type Config struct {
 	HTTP      *http.Client
 	Now       func() time.Time
 	// OnFlights, when set, is told of every GET /uss/flights answer as
-	// it is written: when, and the position time of each flight's
+	// it is written: the request (whose token says which display
+	// provider asked), when, and the position time of each flight's
 	// current state served (by flight id). The load harness times the
 	// display provider's display from it (05 §7 "DP display after SP
 	// response"), on this process's clock.
-	OnFlights func(at time.Time, served map[string]time.Time)
+	OnFlights func(r *http.Request, at time.Time, served map[string]time.Time)
+	// NotifyTokens, when set, gives tokens for a subscriber's audience
+	// (its host): the ISA's subscribers the DSS names are notified of its
+	// creation and deletion (F3411 v22a POST
+	// {url}/uss/identification_service_areas/{id}), so a display provider
+	// that subscribed before the ISA existed polls it. Nil: nobody is
+	// notified.
+	NotifyTokens func(audience string) TokenSource
 	// OnNotification, when set, is told of every notification received,
 	// on its arrival (the load harness times F3548 notifications from
 	// it).
@@ -133,14 +142,17 @@ type flight struct {
 type Peer struct {
 	cfg Config
 
-	mu       sync.Mutex
-	flights  map[int]*flight
-	isaID    string
-	isaVer   string
-	subID    string
-	subVer   string
-	intents  map[string]*f3548.OperationalIntent
-	counters core.Counters
+	mu      sync.Mutex
+	flights map[int]*flight
+	isaID   string
+	isaVer  string
+	isa     *f3411.IdentificationServiceArea
+	// notifyErr is the last ISA notification that failed.
+	notifyErr string
+	subID     string
+	subVer    string
+	intents   map[string]*f3548.OperationalIntent
+	counters  core.Counters
 }
 
 // New makes the peer.
@@ -335,8 +347,75 @@ func (p *Peer) PutISA(ctx context.Context) error {
 	p.counters.Inc("isa_writes")
 	p.mu.Lock()
 	p.isaID, p.isaVer = out.ServiceArea.Id, out.ServiceArea.Version
+	area := out.ServiceArea
+	p.isa = &area
 	p.mu.Unlock()
+	if out.Subscribers != nil {
+		ext := body.Extents
+		p.notifyISA(ctx, out.ServiceArea.Id, *out.Subscribers, &area, &ext)
+	}
 	return nil
+}
+
+// notifyISA posts the ISA's change to every subscriber the DSS named
+// (area nil: it was deleted), each with a token for the subscriber's
+// host. A failure is counted and kept (NotifyError), never fatal: the
+// ISA is in the DSS either way.
+func (p *Peer) notifyISA(ctx context.Context, id string, subs []f3411.SubscriberToNotify, area *f3411.IdentificationServiceArea, ext *f3411.Volume4D) {
+	if p.cfg.NotifyTokens == nil {
+		return
+	}
+	for _, s := range subs {
+		u, err := url.Parse(strings.TrimRight(s.Url, "/") + "/uss/identification_service_areas/" + id)
+		if err != nil || u.Host == "" {
+			p.notifyFailed(fmt.Sprintf("subscriber URL %q", s.Url))
+			continue
+		}
+		body := f3411.PutIdentificationServiceAreaNotificationParameters{Subscriptions: s.Subscriptions, ServiceArea: area, Extents: ext}
+		b, err := json.Marshal(body)
+		if err != nil {
+			p.notifyFailed(err.Error())
+			continue
+		}
+		tok, err := p.cfg.NotifyTokens(u.Hostname()).Token(ctx)
+		if err != nil {
+			p.notifyFailed("token for " + u.Hostname() + ": " + err.Error())
+			continue
+		}
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), bytes.NewReader(b))
+		if err != nil {
+			p.notifyFailed(err.Error())
+			continue
+		}
+		req.Header.Set("Authorization", "Bearer "+tok)
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := p.cfg.HTTP.Do(req)
+		if err != nil {
+			p.notifyFailed(err.Error())
+			continue
+		}
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, f3411.MaxMessageBytes))
+		_ = resp.Body.Close()
+		if resp.StatusCode/100 != 2 {
+			p.notifyFailed(fmt.Sprintf("POST %s answered %d", u, resp.StatusCode))
+			continue
+		}
+		p.counters.Inc("isa_notifications")
+	}
+}
+
+func (p *Peer) notifyFailed(why string) {
+	p.counters.Inc("isa_notification_failures")
+	p.mu.Lock()
+	p.notifyErr = why
+	p.mu.Unlock()
+}
+
+// NotifyError is the last ISA notification that failed ("" none).
+func (p *Peer) NotifyError() string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.notifyErr
 }
 
 // PutIntents writes every intent's reference (F3548 PUT
@@ -450,8 +529,11 @@ func (p *Peer) DeleteISA(ctx context.Context) error {
 		return err
 	}
 	p.mu.Lock()
-	p.isaID, p.isaVer = "", ""
+	p.isaID, p.isaVer, p.isa = "", "", nil
 	p.mu.Unlock()
+	if out.Subscribers != nil {
+		p.notifyISA(ctx, id, *out.Subscribers, nil, nil)
+	}
 	return nil
 }
 
@@ -601,7 +683,7 @@ func (p *Peer) handleFlights(w http.ResponseWriter, r *http.Request) {
 	// The answer's own timestamp is when it was made: a display timed
 	// from it is timed from no later than the response.
 	if p.cfg.OnFlights != nil {
-		p.cfg.OnFlights(now, served)
+		p.cfg.OnFlights(r, now, served)
 	}
 }
 

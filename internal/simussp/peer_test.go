@@ -52,7 +52,9 @@ type dss struct {
 	ovns   []string
 	paths  []string
 	subs   []f3548.PutSubscriptionParameters
-	status int
+	// isaSubs are the subscribers the double names for an ISA's writes.
+	isaSubs []f3411.SubscriberToNotify
+	status  int
 }
 
 func (d *dss) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -82,8 +84,12 @@ func (d *dss) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/rid/v2/dss/identification_service_areas/"):
 		// DELETE .../{id}/{version}: the id is the second-last element.
 		parts := strings.Split(r.URL.Path, "/")
+		var subs *[]f3411.SubscriberToNotify
+		if d.isaSubs != nil {
+			subs = &d.isaSubs
+		}
 		_ = json.NewEncoder(w).Encode(f3411.DeleteIdentificationServiceAreaResponse{ServiceArea: f3411.IdentificationServiceArea{
-			Id: parts[len(parts)-2], Owner: "lab-peer", Version: id}})
+			Id: parts[len(parts)-2], Owner: "lab-peer", Version: id}, Subscribers: subs})
 	case r.Method == http.MethodPut && strings.HasPrefix(r.URL.Path, "/dss/v1/subscriptions/"):
 		var p f3548.PutSubscriptionParameters
 		if json.Unmarshal(b, &p) != nil {
@@ -102,8 +108,12 @@ func (d *dss) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		d.isa = append(d.isa, p)
+		var subs *[]f3411.SubscriberToNotify
+		if d.isaSubs != nil {
+			subs = &d.isaSubs
+		}
 		_ = json.NewEncoder(w).Encode(f3411.PutIdentificationServiceAreaResponse{ServiceArea: f3411.IdentificationServiceArea{
-			Id: id, Owner: "lab-peer", UssBaseUrl: p.UssBaseUrl, Version: "v1", TimeStart: *p.Extents.TimeStart, TimeEnd: *p.Extents.TimeEnd}})
+			Id: id, Owner: "lab-peer", UssBaseUrl: p.UssBaseUrl, Version: "v1", TimeStart: *p.Extents.TimeStart, TimeEnd: *p.Extents.TimeEnd}, Subscribers: subs})
 	case strings.HasPrefix(r.URL.Path, "/dss/v1/operational_intent_references/"):
 		var p f3548.PutOperationalIntentReferenceParameters
 		if json.Unmarshal(b, &p) != nil {
@@ -320,7 +330,7 @@ func TestFlightsAnswersAreReported(t *testing.T) {
 	var mu sync.Mutex
 	var got []report
 	p, srv := newPeer(t, &dss{})
-	p.cfg.OnFlights = func(at time.Time, served map[string]time.Time) {
+	p.cfg.OnFlights = func(_ *http.Request, at time.Time, served map[string]time.Time) {
 		mu.Lock()
 		got = append(got, report{at, served})
 		mu.Unlock()
@@ -440,5 +450,80 @@ func TestSubscriptionAndISAAreDeleted(t *testing.T) {
 	}
 	if id, _ := p.Subscription(); id != "" {
 		t.Fatalf("subscription %q kept after its delete", id)
+	}
+}
+
+// The ISA's subscribers the DSS names are notified of its creation (with
+// the service area) and its deletion (without), each with a token for
+// its own host; a subscriber that refuses is counted and named, and
+// with no token source nobody is notified.
+func TestISASubscribersAreNotified(t *testing.T) {
+	type got struct {
+		path, auth string
+		body       f3411.PutIdentificationServiceAreaNotificationParameters
+	}
+	var mu sync.Mutex
+	var posts []got
+	sub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var b f3411.PutIdentificationServiceAreaNotificationParameters
+		_ = json.NewDecoder(r.Body).Decode(&b)
+		mu.Lock()
+		posts = append(posts, got{r.Method + " " + r.URL.Path, r.Header.Get("Authorization"), b})
+		mu.Unlock()
+		if strings.Contains(r.URL.Path, "refuse") {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	t.Cleanup(sub.Close)
+	ctx := context.Background()
+	for _, withTokens := range []bool{true, false} {
+		posts = nil
+		d := &dss{isaSubs: []f3411.SubscriberToNotify{{Url: sub.URL, Subscriptions: []f3411.SubscriptionState{{SubscriptionId: "s-1"}}}}}
+		p, _ := newPeer(t, d)
+		var audiences []string
+		if withTokens {
+			p.cfg.NotifyTokens = func(aud string) TokenSource {
+				audiences = append(audiences, aud)
+				return staticTokens("notify-" + aud)
+			}
+		}
+		if err := p.PutISA(ctx); err != nil {
+			t.Fatal(err)
+		}
+		id, _ := p.ISA()
+		if err := p.DeleteISA(ctx); err != nil {
+			t.Fatal(err)
+		}
+		mu.Lock()
+		n := len(posts)
+		mu.Unlock()
+		if !withTokens {
+			if n != 0 {
+				t.Fatalf("no token source, but %d notifications", n)
+			}
+			continue
+		}
+		if n != 2 || posts[0].path != "POST /uss/identification_service_areas/"+id || posts[0].body.ServiceArea == nil || posts[0].body.ServiceArea.Id != id ||
+			posts[1].body.ServiceArea != nil || posts[0].body.Subscriptions[0].SubscriptionId != "s-1" {
+			t.Fatalf("notifications %+v", posts)
+		}
+		if posts[0].auth != "Bearer notify-127.0.0.1" || len(audiences) != 2 || audiences[0] != "127.0.0.1" {
+			t.Fatalf("auth %q, audiences %v", posts[0].auth, audiences)
+		}
+		if p.Counters().Get("isa_notifications") != 2 || p.NotifyError() != "" {
+			t.Fatalf("counters %d, error %q", p.Counters().Get("isa_notifications"), p.NotifyError())
+		}
+	}
+	// A subscriber that refuses.
+	d := &dss{isaSubs: []f3411.SubscriberToNotify{{Url: sub.URL + "/refuse", Subscriptions: []f3411.SubscriptionState{{SubscriptionId: "s-2"}}}}}
+	p, _ := newPeer(t, d)
+	p.cfg.NotifyTokens = func(string) TokenSource { return staticTokens("x") }
+	if err := p.PutISA(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if p.Counters().Get("isa_notification_failures") != 1 || !strings.Contains(p.NotifyError(), "answered 500") {
+		t.Fatalf("a refused notification: %d failures, %q", p.Counters().Get("isa_notification_failures"), p.NotifyError())
 	}
 }
