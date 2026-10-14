@@ -89,8 +89,14 @@ func TestLoadTargetsWrittenLoad(t *testing.T) {
 	dir := t.TempDir()
 	st := emptyState(t)
 	st.Receivers["load-ab-0000"] = &ReceiverCreds{BearerKey: "bearer-secret", HMACHex: strings.Repeat("ab", 32)}
-	sk := &stack{env: map[string]string{"DEMO_HTTPS_PORT": "8443", "AUTHORITY_IMAGE": "a@sha256:1", "DEMO_LOAD_RECEIVER_ADDRESSES": "10.77.0.0/16"},
-		hosts: map[string]string{"AUTHORITY_HOST": "authority.test", "USSP_HOST": "ussp.test"}, st: st}
+	if err := os.MkdirAll(filepath.Join(dir, "state", "clients"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "state", "clients", "lab-01.secret"), []byte("lab-01-secret\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	sk := &stack{stateDir: filepath.Join(dir, "state"), env: map[string]string{"DEMO_HTTPS_PORT": "8443", "AUTHORITY_IMAGE": "a@sha256:1", "DEMO_LOAD_RECEIVER_ADDRESSES": "10.77.0.0/16"},
+		hosts: map[string]string{"AUTHORITY_HOST": "authority.test", "USSP_HOST": "ussp.test", "LAB_HOST": "lab.test"}, st: st}
 	ops := []*USSPOperator{{ClientID: "op-a", ClientSecret: "client-secret-a"}, {ClientID: "op-b", ClientSecret: "client-secret-b"}}
 	o := LoadOptions{Fleet: goodFleet(), TargetsOut: filepath.Join(dir, "targets", "load.yaml"), SecretsDir: filepath.Join(dir, "secrets"),
 		Geoid: "constant:15.9", Lab: filepath.Join(dir, "sitl.env")}
@@ -114,6 +120,12 @@ func TestLoadTargetsWrittenLoad(t *testing.T) {
 		len(p.Databases) != 2 || strings.Join(p.Databases[0].Query, " ") != "docker exec lab-x-ussp-timescaledb-1 psql -U postgres -d ussp_timeseries -tAc" || p.Databases[1].System != "authority" {
 		t.Fatalf("probes %+v", lt.Probes)
 	}
+	if d := lt.F3411DP; d == nil || d.TokenURL != "https://lab.test:8443/oauth/token" || d.ClientID != "lab-01" || d.Audience != "ussp.test" || d.Scopes[0] != "rid.display_provider" {
+		t.Fatalf("f3411_dp %+v", lt.F3411DP)
+	}
+	if s, err := tg.Secret(lt.F3411DP.SecretFile); err != nil || s != "lab-01-secret" {
+		t.Fatalf("lab-01 secret %q %v", s, err)
+	}
 	if lt.ReceiversForwardedFor != "10.77.0.0/16" {
 		t.Fatalf("receivers_forwarded_for %q", lt.ReceiversForwardedFor)
 	}
@@ -127,7 +139,7 @@ func TestLoadTargetsWrittenLoad(t *testing.T) {
 		t.Fatalf("hmac %q %v", s, err)
 	}
 	text, _ := os.ReadFile(o.TargetsOut)
-	for _, secret := range []string{"client-secret", "bearer-secret", "session-secret", "abab"} {
+	for _, secret := range []string{"client-secret", "bearer-secret", "session-secret", "abab", "lab-01-secret"} {
 		if strings.Contains(string(text), secret) {
 			t.Fatalf("the targets file holds a secret (%s)", secret)
 		}

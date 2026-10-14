@@ -57,10 +57,12 @@ type Report struct {
 	// reference target together (one process).
 	Memory []uint64 `json:"memory_live_heap_bytes,omitempty"`
 	// Systems is what the probes read of the systems (a systems run).
-	Systems    *Systems `json:"systems,omitempty"`
-	Errors     []string `json:"errors,omitempty"`
-	Measured   int      `json:"checks_measured"`
-	Unmeasured int      `json:"checks_not_measured"`
+	Systems *Systems `json:"systems,omitempty"`
+	// F3411 is what the lab's DP polls of the USSP saw (a systems run).
+	F3411      *F3411Polls `json:"f3411,omitempty"`
+	Errors     []string    `json:"errors,omitempty"`
+	Measured   int         `json:"checks_measured"`
+	Unmeasured int         `json:"checks_not_measured"`
 	// Complete is true only when every check of every row was measured.
 	Complete bool     `json:"complete"`
 	Verdict  string   `json:"verdict"`
@@ -472,6 +474,9 @@ func (r *Report) Markdown() string {
 	w("- Generator sheds: operator %d, Remote ID %d.\n\n", l.GeneratorShedOperator, l.GeneratorShedRID)
 	if r.Systems != nil {
 		r.systemsMarkdown(w)
+	}
+	if f := r.F3411; f != nil {
+		w("## F3411 display-provider polls of the USSP\n\n%d views, %d polls, %d flights returned, %d details answered, %d failures (statuses %v).\n\n", f.Views, f.Polls, f.Flights, f.DetailsOK, f.Failures, f.Statuses)
 	}
 	a := r.Alerts
 	w("## Alerts\n\nExpected %d, raised %d, cleared %d, missed %d, clears missed %d, unexpected %d, untraceable %d.\n\n",

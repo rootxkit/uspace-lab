@@ -84,7 +84,10 @@ type Tier struct {
 	// Consoles read the authority picture with the whole area
 	// subscribed; the first one is timed.
 	Consoles int `yaml:"consoles" json:"consoles"`
-	Watch    struct {
+	// DP are the F3411 display-provider polls of the USSP the harness
+	// makes in a systems run (nil: none).
+	DP    *DPPolls `yaml:"dp" json:"dp,omitempty"`
+	Watch struct {
 		// Pairs is the number of scripted conflict pairs (every one is
 		// watched: its expected alerts are the missed-alert count's set).
 		Pairs int `yaml:"pairs" json:"pairs"`
@@ -385,6 +388,11 @@ func (t *Tier) validate() error {
 		return fmt.Errorf("memory_sample_s %v is not in (0, 600]", t.MemorySampleS)
 	case t.MemoryWarmupS < 0 || t.MemoryWarmupS >= t.DurationS:
 		return fmt.Errorf("memory_warmup_s %v is not in [0, duration_s)", t.MemoryWarmupS)
+	}
+	if t.DP != nil {
+		if err := t.DP.validate(); err != nil {
+			return err
+		}
 	}
 	for _, tr := range t.Receivers.Transports {
 		if !slices.Contains(transports, tr) {

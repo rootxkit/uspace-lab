@@ -26,6 +26,8 @@ type systemsTarget struct {
 	rx                           []rxCred
 	// addresses says how the receivers reach the authority (the report).
 	addresses string
+	// dp is the F3411 display-provider client (nil: none named).
+	dp *oauth.ClientCredentials
 }
 
 // checkSystemsTargets refuses a systems targets file that cannot drive
@@ -99,6 +101,16 @@ func systemsCreds(tg *runner.Targets, fl *Fleet, tier string) (*systemsTarget, e
 			return nil, fmt.Errorf("load: operator client %d (%s): no secret: the file is empty", i, c.ClientID)
 		}
 		st.secrets = append(st.secrets, sec)
+	}
+	if d := lt.F3411DP; d != nil {
+		if d.TokenURL == "" || d.ClientID == "" || d.Audience == "" || len(d.Scopes) == 0 {
+			return nil, fmt.Errorf("load: f3411_dp needs a token URL, a client, an audience and scopes")
+		}
+		sec, err := tg.Secret(d.SecretFile)
+		if err != nil {
+			return nil, fmt.Errorf("load: f3411_dp %s: %w", d.ClientID, err)
+		}
+		st.dp = &oauth.ClientCredentials{TokenURL: d.TokenURL, ClientID: d.ClientID, ClientSecret: sec, Audience: d.Audience, Scopes: d.Scopes}
 	}
 	addrs, err := receiverAddresses(lt.ReceiversForwardedFor, len(lt.Receivers))
 	if err != nil {

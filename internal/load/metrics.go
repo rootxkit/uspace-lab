@@ -23,7 +23,9 @@ type MetricDef struct {
 }
 
 const (
-	niF3411   = "F3411 timings need the authority's DP poller and a peer SP against the DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
+	niF3411   = "the reference target has no F3411 SP; a systems run polls the USSP's as a display provider (the tier's dp and the targets file's f3411_dp client)"
+	niDP      = "the authority's DP display of the fleet needs the USSP certified and an oversight area at the authority, which loadgen seed does not register: the lab stack's DP poller has no view to poll"
+	niDPCache = "the DP cache's 24 h bound needs a run of more than 24 h with the authority's DP polling"
 	niF3548   = "F3548 timings need two USSPs against the lab DSS; the load harness drives neither yet (WP-L8 left: systems mode)"
 	niMetrics = "read from the systems' /metrics by name (a systems run with probes); the reference target has none"
 	niChaos   = "the kill / partition / outage scripts are WP-L9's (scripts/chaos/), not built yet"
@@ -57,10 +59,10 @@ var Metrics = map[string]MetricDef{
 	"cpa_evaluation_period_max_s": {Kind: KindValue, Unit: "s", Doc: "the largest evaluation_period_s any proximity alert carried"},
 	"memory_growth_ratio":         {Kind: KindValue, Doc: "median memory of the last third of the run after its warm-up / of the first third: the harness's live heap against the reference target, the largest of every system process's resident memory (process_resident_memory_bytes) in a systems run"},
 	"memory_monotonic":            {Kind: KindValue, Doc: "1 when the medians of the three thirds after the warm-up rise strictly and the last is over 10 % above the first (growth beyond GC noise), for the harness or any system process, else 0"},
-	"f3411_sp_flights_s":          {Kind: KindLatency, Unit: "s", Doc: "SP GET /uss/flights", NotImplemented: niF3411},
-	"f3411_dp_display_s":          {Kind: KindLatency, Unit: "s", Doc: "authority DP display after the SP response", NotImplemented: niF3411},
-	"f3411_details_s":             {Kind: KindLatency, Unit: "s", Doc: "flight details", NotImplemented: niF3411},
-	"f3411_dp_cache_over_24h":     {Kind: KindValue, Doc: "DP cache entries older than 24 h", NotImplemented: niF3411},
+	"f3411_sp_flights_s":          {Kind: KindLatency, Unit: "s", Doc: "the USSP's SP answering GET /uss/flights for a DP view (the lab as the display provider, one poll per view per dp.poll_ms), request to the answer read; only answers that returned flights make it measured"},
+	"f3411_dp_display_s":          {Kind: KindLatency, Unit: "s", Doc: "authority DP display after the SP response", NotImplemented: niDP},
+	"f3411_details_s":             {Kind: KindLatency, Unit: "s", Doc: "the USSP's SP answering GET /uss/flights/{id}/details for a flight a view returned (one per poll, round robin)"},
+	"f3411_dp_cache_over_24h":     {Kind: KindValue, Doc: "DP cache entries older than 24 h", NotImplemented: niDPCache},
 	"f3548_intent_change_s":       {Kind: KindLatency, Unit: "s", Doc: "peer notification of an intent change", NotImplemented: niF3548},
 	"f3548_conflict_notify_s":     {Kind: KindLatency, Unit: "s", Doc: "conflicting-intent notification to the other USS", NotImplemented: niF3548},
 	"f3548_details_s":             {Kind: KindLatency, Unit: "s", Doc: "details request answered", NotImplemented: niF3548},

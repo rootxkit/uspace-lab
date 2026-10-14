@@ -21,6 +21,10 @@ receivers:
   transports: [pack, single] # BT5 / Wi-Fi packs and BT4 legacy, alternating per receiver
   batch_ms: 100
 consoles: 30
+dp:
+  views: 50 # 05 §1: the authority's DP views at 1000 drones, polled by the lab as the display provider in a systems run
+  view_side_m: 4000 # standard: F3411 NetMaxDisplayAreaDiagonalKm 7 bounds a view's diagonal (4.9 km of side)
+  poll_ms: 1000 # 05 §1: one poll a second per active view
 watch:
   pairs: 15
   walkers: 15
@@ -54,5 +58,5 @@ scale:
 not_generated:
   - {source: "ANSP manned feed (tens of aircraft)", why: "the reference target has no manned intake; the systems mode is not built yet"}
   - {source: "sim-ussp as the second USSP on a local DSS", why: "the reference target has no DSS or peer interface; the F3411 and F3548 rows wait for the systems mode"}
-  - {source: "authority DP polls of the USSPs (05 §1: one view per 1 Hz)", why: "the reference authority has no DP poller"}
+  - {source: "authority DP polls of the USSPs (05 §1: one view per 1 Hz)", why: "the reference target has no SP; in a systems run the lab polls the USSP's SP as the display provider (dp), the authority's own DP poller has no view in the lab stack"}
   - {source: "optional national push USSP -> authority", why: "disabled by default (02 F6) and not in the reference target"}

@@ -178,6 +178,7 @@ type run struct {
 	target        *reftarget.Target
 	systems       *systemsTarget
 	probes        *probes
+	sp            *spPoller
 	tokens        []*oauth.ClientCredentials
 	rxCreds       []rxCred
 	intents       map[int]string
@@ -283,6 +284,12 @@ func (r *run) execute(ctx context.Context, rep *Report) {
 			defer memWG.Done()
 			r.probes.run(memCtx, time.Duration(r.tier.MemorySampleS*float64(time.Second)))
 		}()
+	}
+	if r.systems != nil && r.systems.dp != nil && r.tier.DP != nil {
+		// The lab as the DP: every view polled while the generator runs.
+		r.sp = newSPPoller(r.usspBase, r.systems.dp, r.fleet.dpViews(r.tier.DP.ViewSideM, r.tier.DP.Views), time.Duration(r.tier.DP.PollMS)*time.Millisecond)
+		memWG.Add(1)
+		go func() { defer memWG.Done(); r.sp.run(memCtx) }()
 	}
 	t0 := time.Now()
 	r.log.Info("generator started", "tier", r.tier.Tier, "aircraft", len(r.fleet.Aircraft), "duration_s", r.tier.DurationS)
@@ -920,6 +927,22 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 	} else {
 		obs["memory_growth_ratio"] = notMeasured(fmt.Sprintf("%d memory samples after the %.0f s warm-up, at least 6 are needed", len(judged), t.MemoryWarmupS))
 		obs["memory_monotonic"] = obs["memory_growth_ratio"]
+	}
+	// The F3411 SP, as the lab polled it.
+	switch {
+	case r.sp != nil:
+		st, fail := r.sp.observe(obs, t.MinSamples)
+		rep.F3411 = &st
+		if fail != "" {
+			r.fail("%s", fail)
+		}
+	case r.systems != nil && r.tier.DP == nil:
+		obs["f3411_sp_flights_s"], obs["f3411_details_s"] = notMeasured("the tier polls no DP view (dp)"), notMeasured("the tier polls no DP view (dp)")
+	case r.systems != nil:
+		why := notMeasured("the targets file names no f3411_dp client (loadgen seed writes it)")
+		obs["f3411_sp_flights_s"], obs["f3411_details_s"] = why, why
+	default:
+		obs["f3411_sp_flights_s"], obs["f3411_details_s"] = notMeasured(niF3411), notMeasured(niF3411)
 	}
 	// What the probes read of the systems. In a systems run the memory
 	// row is the systems' processes, never the harness's own heap.

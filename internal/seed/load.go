@@ -284,6 +284,18 @@ func writeLoadTargets(o LoadOptions, sk *stack, ops []*USSPOperator, insp Sessio
 		}
 		lt.Receivers = append(lt.Receivers, runner.LoadReceiver{ID: r.ID, BearerKeyFile: b, HMACKeyFile: k})
 	}
+	// The lab as the F3411 display provider: lab-01 of the lab issuer,
+	// rid.display_provider at the USSP's audience.
+	lab01, err := os.ReadFile(filepath.Join(sk.stateDir, "clients", "lab-01.secret"))
+	if err != nil {
+		return fmt.Errorf("seed: the lab issuer's lab-01 secret: %w", err)
+	}
+	dpSecret, err := put("lab-01.secret", strings.TrimSpace(string(lab01)))
+	if err != nil {
+		return err
+	}
+	lt.F3411DP = &runner.TokenCfg{TokenURL: u(h["LAB_HOST"]) + "/oauth/token", ClientID: "lab-01", SecretFile: dpSecret,
+		Audience: h["USSP_HOST"], Scopes: []string{"rid.display_provider"}}
 	t := runner.Targets{
 		Mode: runner.ModeSystems, Name: "lab-load-" + o.Fleet.Tier,
 		Images: map[string]string{"authority": sk.env["AUTHORITY_IMAGE"], "cisp": sk.env["CISP_GO_IMAGE"],

@@ -61,6 +61,9 @@ type LoadTarget struct {
 	Receivers             []LoadReceiver `yaml:"receivers"`
 	// Probes are how the run reads the systems while it loads them.
 	Probes *LoadProbes `yaml:"probes"`
+	// F3411DP is the client the run polls the USSP's F3411 SP with as a
+	// display provider (rid.display_provider at the USSP's audience).
+	F3411DP *TokenCfg `yaml:"f3411_dp"`
 }
 
 // LoadProbes are the operator's commands that read the systems of a load
