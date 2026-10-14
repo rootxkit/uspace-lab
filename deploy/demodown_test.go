@@ -17,7 +17,10 @@ echo "$*" >> "$FAKE_DOCKER_DIR/calls"
 if [ "$1" = compose ]; then
   prev=""
   for a in "$@"; do
-    if [ "$prev" = --env-file ]; then sed -n 's/^\([A-Z_][A-Z0-9_]*\)=.*/\1/p' "$a" >> "$FAKE_DOCKER_DIR/compose-vars"; fi
+    if [ "$prev" = --env-file ]; then
+      case "$a" in /*) echo "$a" >> "$FAKE_DOCKER_DIR/absolute" ;; esac
+      sed -n 's/^\([A-Z_][A-Z0-9_]*\)=.*/\1/p' "$a" >> "$FAKE_DOCKER_DIR/compose-vars"
+    fi
     prev="$a"
   done
 fi
@@ -56,7 +59,26 @@ func demoDown(t *testing.T, env string) (map[string]bool, string, error) {
 	for _, v := range strings.Fields(string(b)) {
 		vars[v] = true
 	}
+	if abs, _ := os.ReadFile(filepath.Join(shim, "absolute")); len(abs) > 0 {
+		t.Errorf("compose was given an absolute --env-file %q: under Git Bash (MSYS_NO_PATHCONV=1) the native docker cannot open /tmp or /c/ paths", strings.TrimSpace(string(abs)))
+	}
 	return vars, string(out), err
+}
+
+// Every --env-file demo-down.sh hands compose is relative to deploy/,
+// for both a demo.env older than the example and the current one, and
+// with or without the generated passwords (demoDown checks it): on
+// Windows the docker CLI is a native program, which cannot open the
+// /tmp/... path mktemp gives under Git Bash once demo-down.sh switches
+// path conversion off. The fill file of the older-demo.env fix was such
+// a path, and demo-down.sh failed on every stack, "couldn't find env
+// file: C:\tmp\tmp...". Without the passwords file the defaults file is
+// handed over too, so both are run.
+func TestDemoDownEnvFilesAreRelative(t *testing.T) {
+	example := read(t, "demo.env.example")
+	if _, out, err := demoDown(t, example); err != nil {
+		t.Fatalf("%v\n%s", err, out)
+	}
 }
 
 // requiredVars are the ${VAR:?...} names of the two compose files:

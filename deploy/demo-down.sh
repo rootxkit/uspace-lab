@@ -15,7 +15,10 @@ env_file=demo.env
 val() { sed -n "s/^$1=//p" "$env_file" | tail -n 1; }
 state="$(val DEMO_STATE_DIR)"; state="${state:-./local-demo}"
 pw="$state/passwords.env"
-tmp="$(mktemp)"; fill="$(mktemp)"; trap 'rm -f "$tmp" "$fill"' EXIT
+# Both files in deploy/, named relative to it: on Windows docker is a
+# native program and cannot open the /tmp/... path mktemp gives under
+# Git Bash with path conversion off (MSYS_NO_PATHCONV, above).
+tmp="$(mktemp ./.demo-down-env.XXXXXX)"; fill="$(mktemp ./.demo-down-env.XXXXXX)"; trap 'rm -f "$tmp" "$fill"' EXIT
 # A demo.env older than the example lacks the variables the compose
 # files have come to require since, and compose then refuses to read the
 # project even to take it down: the example's value fills each one
