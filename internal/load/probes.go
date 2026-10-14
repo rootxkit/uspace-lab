@@ -375,8 +375,12 @@ type Systems struct {
 	// CountersMore is how many moved counters were not listed (bound).
 	CountersMore   int                `json:"loss_counters_not_listed,omitempty"`
 	PairChecksPerS map[string]float64 `json:"pair_checks_per_s,omitempty"`
-	Errors         []string           `json:"errors,omitempty"`
-	ErrorsN        int                `json:"errors_count,omitempty"`
+	// CPUCores is each process's CPU over the run per second of it (1 is
+	// one core busy throughout): where a tier's load lands (05 §3, the
+	// 5000 attempt's "what broke first").
+	CPUCores map[string]float64 `json:"cpu_cores,omitempty"`
+	Errors   []string           `json:"errors,omitempty"`
+	ErrorsN  int                `json:"errors_count,omitempty"`
 	// ErrorsDuringFaults are the probes that failed inside a fault the
 	// run injected.
 	ErrorsDuringFaults int `json:"errors_during_faults,omitempty"`
@@ -397,7 +401,7 @@ type Systems struct {
 func (p *probes) observe(obs map[string]Observation, models Models, fleetSamples uint64, warmup int, excused func(time.Time) bool) *Systems {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	sys := &Systems{PairChecksPerS: map[string]float64{}}
+	sys := &Systems{PairChecksPerS: map[string]float64{}, CPUCores: map[string]float64{}}
 	for _, e := range p.errs {
 		if excused != nil && !e.at.IsZero() && excused(e.at) {
 			sys.ErrorsDuringFaults++
@@ -450,6 +454,9 @@ func (p *probes) observe(obs map[string]Observation, models Models, fleetSamples
 		dt := p.lastAt[proc].Sub(p.firstAt[proc]).Seconds()
 		if dt <= 0 {
 			continue
+		}
+		if c, ok := p.rise[proc][metricCPU]; ok {
+			sys.CPUCores[proc] = round3(c / dt)
 		}
 		var d float64
 		has := false

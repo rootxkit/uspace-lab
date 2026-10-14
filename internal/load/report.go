@@ -617,6 +617,12 @@ func (r *Report) systemsMarkdown(w func(format string, a ...any)) {
 	for _, proc := range sortedKeysOf(sys.PairChecksPerS) {
 		w("- Pair checks of %s: %s a second over the run.\n", proc, fmtNum(sys.PairChecksPerS[proc]))
 	}
+	if len(sys.CPUCores) > 0 {
+		w("\n| Process | CPU over the run (cores) |\n|---|---|\n")
+		for _, proc := range sortedKeysOf(sys.CPUCores) {
+			w("| %s | %s |\n", proc, fmtNum(sys.CPUCores[proc]))
+		}
+	}
 	w("\nLoss counters that moved during the run (05 §7: accounted for in the report; the systems' own counters, listed, not judged):\n\n")
 	if len(sys.Counters) == 0 {
 		w("- none\n")

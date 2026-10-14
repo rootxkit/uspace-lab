@@ -47,7 +47,7 @@ func probeHelper(args []string) int {
 		// moves by 5.
 		switch {
 		case strings.Contains(url, "monitor"):
-			fmt.Printf("# HELP x\nprocess_resident_memory_bytes %d\nussp_traffic_pair_checks{component=\"cpa\"} %d\n", 100_000_000+n*20_000_000, n*60_000)
+			fmt.Printf("# HELP x\nprocess_resident_memory_bytes %d\nussp_traffic_pair_checks{component=\"cpa\"} %d\nprocess_cpu_seconds_total %d\n", 100_000_000+n*20_000_000, n*60_000, n*2)
 		case strings.Contains(url, "writer"):
 			q := 0
 			if n == 2 {
@@ -133,6 +133,9 @@ func TestProbesReadTheSystems(t *testing.T) {
 	}
 	if r := sys.PairChecksPerS["ussp-monitor"]; r <= 0 || val("cpa_pair_checks_per_worker") != round3(r/50000) {
 		t.Fatalf("pair checks %v/s, ratio %v", r, val("cpa_pair_checks_per_worker"))
+	}
+	if sys.CPUCores["ussp-monitor"] <= 0 || sys.CPUCores["ussp-tsdb-writer"] != 0 {
+		t.Fatalf("CPU %v: the monitor's rises, the writer exports none", sys.CPUCores)
 	}
 	if val("disk_growth_vs_model") != 1 || val("compression_lag_chunks") != 0 {
 		t.Fatalf("storage %v lag %v (%+v)", val("disk_growth_vs_model"), val("compression_lag_chunks"), sys.Storage)
