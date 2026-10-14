@@ -297,6 +297,13 @@ func writeLoadTargets(o LoadOptions, sk *stack, ops []*USSPOperator, insp Sessio
 	}
 	lt.F3411DP = &runner.TokenCfg{TokenURL: u(h["LAB_HOST"]) + "/oauth/token", ClientID: "lab-01", SecretFile: dpSecret,
 		Audience: h["USSP_HOST"], Scopes: []string{"rid.display_provider"}}
+	// Every system's readiness, as the chaos matrix reads it: what a
+	// load run's outage faults are judged on.
+	lt.Readiness = map[string]string{
+		"authority": u(h["AUTHORITY_HOST"]) + "/readyz", "cisp": u(h["CISP_HOST"]) + "/readyz",
+		"ussp": u(h["USSP_HOST"]) + "/readyz", "ansp": u(h["ANSP_HOST"]) + "/readyz",
+		"issuer": u(h["LAB_HOST"]) + "/healthz", "dss": u(h["LAB_HOST"]) + "/healthy",
+	}
 	t := runner.Targets{
 		Mode: runner.ModeSystems, Name: "lab-load-" + o.Fleet.Tier,
 		Images: map[string]string{"authority": sk.env["AUTHORITY_IMAGE"], "cisp": sk.env["CISP_GO_IMAGE"],

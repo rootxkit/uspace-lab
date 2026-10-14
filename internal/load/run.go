@@ -161,6 +161,23 @@ func Run(ctx context.Context, opt Options) (*Report, error) {
 			return nil, err
 		}
 		r.faults = newFaultRunner(plan, filepath.Join(opt.RepoRoot, "scripts", "chaos"))
+		if plan.hasOutage() {
+			urls := tg.Load.Readiness
+			for _, sys := range outageSystems {
+				if urls[sys] == "" {
+					return nil, fmt.Errorf("load: the fault plan takes systems down, and the targets file names no readiness URL for %s: seed again (loadgen seed)", sys)
+				}
+			}
+			// The streams are opened later; the probe reads them when it
+			// samples.
+			r.faults.probe = &outageProbe{urls: urls, hc: &http.Client{Timeout: outageProbeTimeout},
+				flags: func() map[string][]string {
+					if r.readers == nil {
+						return nil
+					}
+					return r.readers.currentFlags(r.streams)
+				}}
+		}
 	}
 	receivers := ""
 	if r.systems != nil {
@@ -994,7 +1011,7 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 		if r.systems != nil {
 			why = notMeasured("no fault plan in the run (loadgen run --faults load/faults/<plan>.yaml)")
 		}
-		for _, m := range []string{"restart_recovery_s", "restart_duplicate_alerts", "restart_lost_backlog", "partition_unreplayed", "partition_cross_effects"} {
+		for _, m := range []string{"restart_recovery_s", "restart_duplicate_alerts", "restart_lost_backlog", "partition_unreplayed", "partition_cross_effects", "outage_unflagged"} {
 			obs[m] = why
 		}
 	}

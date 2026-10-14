@@ -47,12 +47,14 @@ type stream struct {
 	// for the first time (a track or a traffic product); status frames
 	// and repeated states keep coming after the generator stops and say
 	// nothing about what is still in flight.
-	lastData    time.Time
-	ready       chan struct{} // closed on the first status (and snapshot, when subscribing)
-	readyOnce   sync.Once
-	needSnap    bool
-	gotStatus   bool
-	degraded    map[string]bool
+	lastData  time.Time
+	ready     chan struct{} // closed on the first status (and snapshot, when subscribing)
+	readyOnce sync.Once
+	needSnap  bool
+	gotStatus bool
+	degraded  map[string]bool
+	// current is the degraded set of the latest status.
+	current     []string
 	evalPeriodS float64
 	// breaks are the connections that ended or failed (bounded);
 	// overBreaks those past the bound.
@@ -383,6 +385,7 @@ func (rd *readers) status(s *stream, e wire.Envelope, at time.Time) {
 	}
 	s.mu.Lock()
 	s.dropped = max(s.dropped, b.DroppedFrames)
+	s.current = append(s.current[:0], b.Degraded...)
 	s.lastStatus = at
 	s.gotStatus = true
 	if s.degraded == nil {
@@ -491,6 +494,28 @@ func (rd *readers) closeHeld() {
 		delete(rd.held, id)
 	}
 	rd.nHeld = 0
+}
+
+// currentFlags is what the streams say is degraded now: the timed
+// console's latest status (picture) and the union of the traffic
+// streams' latest (traffic).
+func (rd *readers) currentFlags(streams []*stream) map[string][]string {
+	out := map[string][]string{}
+	seen := map[string]map[string]bool{streamPicture: {}, streamTraffic: {}}
+	for _, s := range streams {
+		if s.kind == streamPicture && !s.timed {
+			continue
+		}
+		s.mu.Lock()
+		for _, f := range s.current {
+			if !seen[s.kind][f] {
+				seen[s.kind][f] = true
+				out[s.kind] = append(out[s.kind], f)
+			}
+		}
+		s.mu.Unlock()
+	}
+	return out
 }
 
 // noteData records that a frame arriving at at showed a sample for the

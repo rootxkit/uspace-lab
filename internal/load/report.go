@@ -580,4 +580,21 @@ func (r *Report) faultsMarkdown(w func(format string, a ...any)) {
 		w("| %s | `%s.sh %s` | %s | %s | %s | %s | %s |\n", f.Row, f.Domain, strings.Join(f.Args, " "), fmtNum(f.AtS), fmtNum(f.HoldS), opt(f.PictureBackS), opt(f.TrafficBackS), f.Error)
 	}
 	w("\n")
+	for i := range r.Faults {
+		f := &r.Faults[i]
+		if len(f.Outage) == 0 {
+			continue
+		}
+		w("Outage of %s (`%s.sh %s`, %s s), judged on %d samples:\n\n| Claim | Met | Observed | Why |\n|---|---|---|---|\n",
+			f.System, f.Domain, strings.Join(f.Args, " "), fmtNum(f.HoldS), f.OutageSamples)
+		for j := range f.Outage {
+			o := &f.Outage[j]
+			met := "yes"
+			if !o.Met {
+				met = "**no**"
+			}
+			w("| %s | %s | %s | %s |\n", o.Expect.String(), met, strings.ReplaceAll(o.Observed, "|", "/"), o.Expect.Why)
+		}
+		w("\n")
+	}
 }

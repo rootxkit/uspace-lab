@@ -96,7 +96,7 @@ func TestLoadTargetsWrittenLoad(t *testing.T) {
 		t.Fatal(err)
 	}
 	sk := &stack{stateDir: filepath.Join(dir, "state"), env: map[string]string{"DEMO_HTTPS_PORT": "8443", "AUTHORITY_IMAGE": "a@sha256:1", "DEMO_LOAD_RECEIVER_ADDRESSES": "10.77.0.0/16", "DEMO_LOAD_OPERATOR_ADDRESSES": "10.78.0.0/16"},
-		hosts: map[string]string{"AUTHORITY_HOST": "authority.test", "USSP_HOST": "ussp.test", "LAB_HOST": "lab.test"}, st: st}
+		hosts: map[string]string{"AUTHORITY_HOST": "authority.test", "USSP_HOST": "ussp.test", "LAB_HOST": "lab.test", "CISP_HOST": "cisp.test", "ANSP_HOST": "ansp.test"}, st: st}
 	ops := []*USSPOperator{{ClientID: "op-a", ClientSecret: "client-secret-a"}, {ClientID: "op-b", ClientSecret: "client-secret-b"}}
 	o := LoadOptions{Fleet: goodFleet(), TargetsOut: filepath.Join(dir, "targets", "load.yaml"), SecretsDir: filepath.Join(dir, "secrets"),
 		Geoid: "constant:15.9", Lab: filepath.Join(dir, "sitl.env")}
@@ -125,6 +125,18 @@ func TestLoadTargetsWrittenLoad(t *testing.T) {
 	}
 	if s, err := tg.Secret(lt.F3411DP.SecretFile); err != nil || s != "lab-01-secret" {
 		t.Fatalf("lab-01 secret %q %v", s, err)
+	}
+	// Every system's readiness, for the outage faults.
+	want := map[string]string{"authority": "https://authority.test:8443/readyz", "cisp": "https://cisp.test:8443/readyz",
+		"ussp": "https://ussp.test:8443/readyz", "ansp": "https://ansp.test:8443/readyz",
+		"issuer": "https://lab.test:8443/healthz", "dss": "https://lab.test:8443/healthy"}
+	if len(lt.Readiness) != len(want) {
+		t.Fatalf("readiness %v", lt.Readiness)
+	}
+	for k, v := range want {
+		if lt.Readiness[k] != v {
+			t.Errorf("readiness %s %q, want %q", k, lt.Readiness[k], v)
+		}
 	}
 	if lt.ReceiversForwardedFor != "10.77.0.0/16" || lt.OperatorsForwardedFor != "10.78.0.0/16" {
 		t.Fatalf("receivers_forwarded_for %q", lt.ReceiversForwardedFor)

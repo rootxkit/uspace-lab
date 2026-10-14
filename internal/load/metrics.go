@@ -29,7 +29,6 @@ const (
 	niF3548   = "F3548 timings need the fleet's intents inside U-space airspace (DSS-backed) and sim-ussp subscribed as the peer USSP, which the load harness does not drive; the conformance suite runs F3548 against the USSP (WP-L7)"
 	niMetrics = "read from the systems' /metrics by name (a systems run with probes); the reference target has none"
 	niChaos   = "faults are injected into the systems' containers (loadgen run --faults with a systems target); the reference target has none"
-	niOutage  = "a cross-system outage's degraded behaviours are judged per system, with each one's readiness and console status, by the WP-L9 chaos matrix (scripts/chaos, docs/RUNBOOKS/chaos.md); the load harness reads only the authority picture and the USSP traffic streams"
 	niStorage = "the reference target has no database; storage is measured against the systems' images (a systems run with probes)"
 	niZone    = "the load paths script no zone entry yet; zone alerts are proved by the scenario suite (sc-03)"
 	niArt13   = "Art. 13(2) notices go to peers and the ANSP, neither of which the load harness drives yet"
@@ -79,7 +78,7 @@ var Metrics = map[string]MetricDef{
 	"restart_lost_backlog":        {Kind: KindValue, Doc: "samples the clients shed or still held after the drain (operator queue shed and pending, receiver backlog shed and pending)"},
 	"partition_unreplayed":        {Kind: KindValue, Doc: "heard samples never shown nor in a counted loss (the picture's silent loss) in a run with a partition fault"},
 	"partition_cross_effects":     {Kind: KindValue, Doc: "degraded states a stream of another system came to show between a partition's injection and 30 s after its restore"},
-	"outage_unflagged":            {Kind: KindValue, Doc: "degraded behaviours not flagged with age during a 5 min outage", NotImplemented: niOutage},
+	"outage_unflagged":            {Kind: KindValue, Doc: "the outage faults' claims (load/faults: the system down, the others ready, the consumers' checks degraded and their ages growing, the streams' flags) not observed, the stack's recovery after each restore included"},
 	"vectors_failed":              {Kind: KindValue, Doc: "knowledge/vectors cases failing in an image under test", NotImplemented: niVectors},
 }
 
