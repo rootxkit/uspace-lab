@@ -180,3 +180,51 @@ func TestIntentsEndedBeforeTheReportAreCounted(t *testing.T) {
 		t.Fatalf("none ended: the report says %d", rep.Volumes.IntentsEnded)
 	}
 }
+
+// An intent the USSP ended itself (the 5000 run's flights went silent
+// past the USSP's bound) is refused an end, 409 "the intent is ended":
+// it is ended, read back from the USSP, and counted so, not a run error
+// (the first 5000 report listed 1132 of them). An intent refused an end
+// that the USSP still holds activated stays an error.
+func TestAnIntentTheUSSPEndedItselfIsEnded(t *testing.T) {
+	f := loadSmall(t)
+	f.Paths.Pairs.InnerGapM = 30
+	for _, c := range []struct {
+		held  string
+		ended bool
+	}{{"ended", true}, {"activated", false}} {
+		inner := &fakeUSSP{ended: map[string]bool{}, decide: func(int) string { return "accepted" }}
+		h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch {
+			case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/v1/intents/"):
+				_ = json.NewEncoder(w).Encode(map[string]any{"intent_id": strings.TrimPrefix(r.URL.Path, "/v1/intents/"), "state": c.held})
+				return
+			case r.Method == http.MethodPatch:
+				body, _ := io.ReadAll(r.Body)
+				r.Body = io.NopCloser(bytes.NewReader(body))
+				if strings.Contains(string(body), `"end"`) {
+					w.WriteHeader(http.StatusConflict)
+					_, _ = w.Write([]byte(`{"type":"https://schemas.uspace.ge/problems/end_refused","status":409,"detail":"the intent is ended and cannot be ended"}`))
+					return
+				}
+			}
+			inner.ServeHTTP(w, r)
+		})
+		srv := httptest.NewServer(h)
+		rep, err := Run(context.Background(), Options{Files: f, TargetsPath: systemsTargets(t, f, srv.URL, nil), Run: "x", RepoRoot: repo("."), ReadyTimeout: time.Second})
+		srv.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		notEnded := strings.Contains(strings.Join(rep.Errors, "; "), "not ended")
+		inner.mu.Lock()
+		filed := inner.filed
+		inner.mu.Unlock()
+		switch {
+		case c.ended && (rep.Volumes.IntentsEnded != filed || filed == 0 || notEnded):
+			t.Errorf("held ended: filed %d, ended %d, errors %v", filed, rep.Volumes.IntentsEnded, rep.Errors)
+		case !c.ended && (rep.Volumes.IntentsEnded != 0 || !notEnded):
+			t.Errorf("held activated: ended %d, errors %v", rep.Volumes.IntentsEnded, rep.Errors)
+		}
+	}
+}

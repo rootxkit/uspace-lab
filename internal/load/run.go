@@ -1398,6 +1398,14 @@ func (r *run) endIntents(ctx context.Context, rep *Report) {
 					r.peer.noteOp(j.id, j.a, "", time.Now())
 				}
 				d, err := in.Change(ctx, j.id, "end")
+				if err != nil {
+					// Refused because the USSP ended it already (a flight
+					// silent past its bound): what the end was for. Read
+					// back, never assumed from the refusal.
+					if g, gerr := in.Get(ctx, j.id); gerr == nil && g.State == "ended" {
+						d, err = g, nil
+					}
+				}
 				mu.Lock()
 				switch {
 				case err != nil:
