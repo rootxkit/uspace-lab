@@ -34,6 +34,10 @@ type FaultSpec struct {
 	// NetImage is the packet-filter image a partition runs in a
 	// target's network namespace (scripts/chaos/net).
 	NetImage string `json:"net_image,omitempty"`
+	// Source is the source type a disable row switches; enabled reads
+	// the authority's switch for it (set by the harness).
+	Source  string `json:"source,omitempty"`
+	enabled func(ctx context.Context) (bool, error)
 
 	part *partState
 }
@@ -93,6 +97,10 @@ func faultSpec(r *Row, l *Lab, cs map[string]Container) (FaultSpec, error) {
 	case "clock":
 		f.Kind = kindSkew
 		return f, nil
+	case domainDisable:
+		// No container is touched: the switch is the authority's.
+		f.Kind, f.Source = kindDisabled, r.Args[0]
+		return f, nil
 	default:
 		return f, fmt.Errorf("chaos: domain %q has no fault check", r.Domain)
 	}
@@ -118,6 +126,8 @@ func faultSpec(r *Row, l *Lab, cs map[string]Container) (FaultSpec, error) {
 // not when it is not.
 func (f *FaultSpec) heldNow(ctx context.Context, d Docker, cs map[string]Container) (bool, string) {
 	switch f.Kind {
+	case kindDisabled:
+		return f.switchedOff(ctx, true)
 	case kindDown:
 		for _, s := range f.Services {
 			if c, ok := cs[s]; ok && (c.Running() || c.Status == "paused" || c.Status == "restarting") {
@@ -176,6 +186,8 @@ func (f *FaultSpec) heldNow(ctx context.Context, d Docker, cs map[string]Contain
 // this host's), the database accepting, the partition healed.
 func (f *FaultSpec) restoredNow(ctx context.Context, d Docker, cs, before map[string]Container) (bool, string) {
 	switch f.Kind {
+	case kindDisabled:
+		return f.switchedOff(ctx, false)
 	case kindDown:
 		for _, s := range f.Services {
 			c, ok := cs[s]
@@ -222,6 +234,29 @@ func (f *FaultSpec) restoredNow(ctx context.Context, d Docker, cs, before map[st
 		return true, "every filter removed"
 	}
 	return false, "no check for kind " + f.Kind
+}
+
+// switchedOff reports whether the authority holds the source switched
+// off (off true) or on (off false), from its own list of switches.
+func (f *FaultSpec) switchedOff(ctx context.Context, off bool) (bool, string) {
+	if f.enabled == nil {
+		return false, "no admin session to read the authority's switches with"
+	}
+	on, err := f.enabled(ctx)
+	if err != nil {
+		return false, "the authority's switches: " + err.Error()
+	}
+	if on == off {
+		return false, fmt.Sprintf("the authority holds %s switched %s", f.Source, onOff(on))
+	}
+	return true, fmt.Sprintf("the authority holds %s switched %s", f.Source, onOff(on))
+}
+
+func onOff(on bool) string {
+	if on {
+		return "on"
+	}
+	return "off"
 }
 
 // filter reads the partition's DROP rule in a container's network

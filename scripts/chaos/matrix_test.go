@@ -20,11 +20,11 @@ func TestCommittedMatrixValidates(t *testing.T) {
 	// Every domain of 05 §6 the brief names has a row (WP-L9 "What to
 	// build"), and every row's script exists.
 	want := []string{"adapter", "api", "hotpath", "stall", "source", "nats", "timescale", "postgres", "partition",
-		"system", "dss", "ansp-feed", "issuer", "clock", "stack"}
+		"system", "dss", "ansp-feed", "issuer", "clock", "stack", "disable"}
 	have := map[string]bool{}
 	for _, r := range m.Rows {
 		have[r.Domain] = true
-		if r.Domain == "clock" {
+		if !scripted(r.Domain) {
 			continue
 		}
 		if _, err := os.Stat(r.Domain + ".sh"); err != nil {

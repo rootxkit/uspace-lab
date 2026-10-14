@@ -71,7 +71,7 @@ func cmdCheck(args []string) int {
 	}
 	for i := range m.Rows {
 		r := &m.Rows[i]
-		if r.Domain != "clock" {
+		if scripted(r.Domain) {
 			if _, err := os.Stat(filepath.Join(filepath.Dir(*matrix), r.Domain+".sh")); err != nil {
 				fmt.Printf("FAIL row %s: no script for domain %s\n", r.ID, r.Domain)
 				return exitFail
@@ -183,7 +183,7 @@ func cmdRun(args []string) int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 	h := &harness{m: m, lab: lab, docker: cliDocker{bin: "docker"}, scripts: filepath.Dir(c.matrix), bash: bash, out: os.Stdout, status: map[string]*StatusLog{}}
-	h.shell = h.runScript
+	h.shell = h.dispatch
 	if !*noBG && m.Background.Scenario != "" {
 		h.settle = time.Duration(m.Background.RealertWithinS * float64(time.Second))
 	}
@@ -213,6 +213,12 @@ func cmdRun(args []string) int {
 	for i := range sel {
 		if sel[i].Domain == "clock" {
 			if h.skewRig, err = newSkewRig(c.targets, site, m.Background.Scenario); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				return exitUsage
+			}
+		}
+		if sel[i].Domain == domainDisable && h.admin == nil {
+			if h.admin, err = newAdminAPI(c.targets, h.lab.HTTP, *runID); err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				return exitUsage
 			}

@@ -209,7 +209,13 @@ var domainArgs = map[string]int{
 	"adapter": 1, "api": 1, "hotpath": 1, "stall": 1, "source": 1, "nats": 1,
 	"timescale": 2, "postgres": 2, "dbhost": 1, "system": 1, "partition": 1,
 	"dss": 1, "ansp-feed": 1, "issuer": 1, "stack": 0, "clock": 0,
+	// The harness switches the source type itself (disable.go).
+	domainDisable: 1,
 }
+
+// scripted is whether a domain has a script (the harness runs clock and
+// disable itself).
+func scripted(domain string) bool { return domain != "clock" && domain != domainDisable }
 
 // The same names lib.sh accepts.
 var nameRe = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,62}$`)
