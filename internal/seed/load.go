@@ -631,7 +631,8 @@ func loadProbes(path, project string) (*runner.LoadProbes, error) {
 		}
 	}
 	container := func(service string) string { return project + "-" + service + "-1" }
-	p := &runner.LoadProbes{Fetch: []string{"docker", "exec", container(f.FetchVia), "wget", "-qO-"}, Metrics: f.Metrics, HotPath: f.HotPath}
+	p := &runner.LoadProbes{Fetch: []string{"docker", "exec", container(f.FetchVia), "wget", "-qO-"}, Metrics: f.Metrics, HotPath: f.HotPath,
+		Stats: []string{"docker", "stats", "--no-stream", "--format", "{{.Name}}\t{{.CPUPerc}}"}, StatsPrefix: project + "-"}
 	for _, d := range f.Databases {
 		p.Databases = append(p.Databases, runner.LoadDatabase{System: d.System, DPCache: d.DPCache,
 			Query: []string{"docker", "exec", container(d.Service), "psql", "-U", "postgres", "-d", d.Database, "-tAc"}})

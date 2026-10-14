@@ -113,6 +113,12 @@ type LoadProbes struct {
 	// HotPath names, per hot-path process, the series counting its
 	// messages (the 04 §1 estimate of the JSON share).
 	HotPath map[string]string `yaml:"hot_path,omitempty"`
+	// Stats prints every container's CPU, a "name<TAB>percent%" line
+	// each (docker stats); only the names starting StatsPrefix (the
+	// compose project's) are kept: the brokers and the databases, which
+	// have no /metrics.
+	Stats       []string `yaml:"stats,omitempty"`
+	StatsPrefix string   `yaml:"stats_prefix,omitempty"`
 }
 
 // LoadDatabase is one system's telemetry database.

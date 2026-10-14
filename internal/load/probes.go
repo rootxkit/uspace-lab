@@ -134,6 +134,9 @@ type probes struct {
 	// dp is the display provider's cache as read after the run (nil:
 	// not read).
 	dp *DPCache
+	// cpuPct are each container's CPU percentages as docker stats gave
+	// them (bounded).
+	cpuPct map[string][]float64
 }
 
 // DPCache is the display provider's cache as read after a run: how long
@@ -252,6 +255,26 @@ func (p *probes) rises() map[string]map[string]float64 {
 
 // run scrapes every period until ctx ends.
 func (p *probes) run(ctx context.Context, period time.Duration) {
+	var wg sync.WaitGroup
+	defer wg.Wait()
+	if len(p.cfg.Stats) > 0 {
+		// docker stats takes seconds: on its own ticker, never holding
+		// the scrapes back.
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			tk := time.NewTicker(period)
+			defer tk.Stop()
+			for {
+				p.stats(ctx)
+				select {
+				case <-ctx.Done():
+					return
+				case <-tk.C:
+				}
+			}
+		}()
+	}
 	p.scrape(ctx)
 	tk := time.NewTicker(period)
 	defer tk.Stop()
@@ -262,6 +285,33 @@ func (p *probes) run(ctx context.Context, period time.Duration) {
 		case <-tk.C:
 			p.scrape(ctx)
 		}
+	}
+}
+
+// stats reads every container's CPU once.
+func (p *probes) stats(ctx context.Context) {
+	b, err := command(ctx, p.cfg.Stats)
+	if err != nil {
+		if ctx.Err() == nil {
+			p.fail("container CPU: %v", err)
+		}
+		return
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.cpuPct == nil {
+		p.cpuPct = map[string][]float64{}
+	}
+	for _, line := range strings.Split(string(b), "\n") {
+		name, pct, ok := strings.Cut(strings.TrimSpace(line), "\t")
+		if !ok || !strings.HasPrefix(name, p.cfg.StatsPrefix) {
+			continue
+		}
+		v, err := strconv.ParseFloat(strings.TrimSuffix(strings.TrimSpace(pct), "%"), 64)
+		if err != nil || len(p.cpuPct[name]) >= probeMaxSamples {
+			continue
+		}
+		p.cpuPct[name] = append(p.cpuPct[name], v)
 	}
 }
 
@@ -336,6 +386,14 @@ func (p *probes) dpCache(ctx context.Context, db runner.LoadDatabase) {
 	p.mu.Unlock()
 }
 
+// ContainerCPU is one container's CPU over the run, percent of a core.
+type ContainerCPU struct {
+	Container string  `json:"container"`
+	Samples   int     `json:"samples"`
+	MeanPct   float64 `json:"mean_pct"`
+	MaxPct    float64 `json:"max_pct"`
+}
+
 // SystemCounter is one loss counter of a system that moved in the run.
 type SystemCounter struct {
 	Process string  `json:"process"`
@@ -379,8 +437,12 @@ type Systems struct {
 	// one core busy throughout): where a tier's load lands (05 §3, the
 	// 5000 attempt's "what broke first").
 	CPUCores map[string]float64 `json:"cpu_cores,omitempty"`
-	Errors   []string           `json:"errors,omitempty"`
-	ErrorsN  int                `json:"errors_count,omitempty"`
+	// ContainerCPU is every container's CPU as docker stats sampled it,
+	// mean and largest, in percent of one core: the brokers and the
+	// databases too.
+	ContainerCPU []ContainerCPU `json:"container_cpu,omitempty"`
+	Errors       []string       `json:"errors,omitempty"`
+	ErrorsN      int            `json:"errors_count,omitempty"`
 	// ErrorsDuringFaults are the probes that failed inside a fault the
 	// run injected.
 	ErrorsDuringFaults int `json:"errors_during_faults,omitempty"`
@@ -524,6 +586,16 @@ func (p *probes) observe(obs map[string]Observation, models Models, fleetSamples
 		obs["compression_lag_chunks"] = valueObs(lag)
 	} else {
 		obs["compression_lag_chunks"] = notMeasured(fmt.Sprintf("the compression lag of %d of %d databases was read", lagMeasured, len(p.cfg.Databases)))
+	}
+	for _, name := range sortedKeysOf(p.cpuPct) {
+		s := p.cpuPct[name]
+		c := ContainerCPU{Container: name, Samples: len(s)}
+		for _, v := range s {
+			c.MeanPct += v / float64(len(s))
+			c.MaxPct = math.Max(c.MaxPct, v)
+		}
+		c.MeanPct = round3(c.MeanPct)
+		sys.ContainerCPU = append(sys.ContainerCPU, c)
 	}
 	// The display provider's cache: judged only once it has cached for
 	// longer than the bound (and the hour disposal is checked in); a

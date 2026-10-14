@@ -33,6 +33,11 @@ func probeHelper(args []string) int {
 		return 3
 	}
 	switch args[0] {
+	case "stats":
+		// docker stats: two of the project's containers (one unreadable)
+		// and another project's.
+		fmt.Print("lab-x-ussp-nats-1\t12.5%\nother-nats-1\t50%\nlab-x-dss-1\tbad\n")
+		return 0
 	case "fetch":
 		url := args[len(args)-1]
 		f := filepath.Join(dir, strings.NewReplacer(":", "_", "/", "_").Replace(url))
@@ -300,5 +305,21 @@ func TestDPCacheIsJudgedOnlyWhenOldEnough(t *testing.T) {
 	p.observe(obs, Models{TrackBytes: 600, CPAPairsPerCorePerS: 50000}, 1000, 0, nil)
 	if obs["f3411_dp_cache_over_24h"].Measured || !strings.Contains(obs["f3411_dp_cache_over_24h"].Reason, "dp_cache") {
 		t.Errorf("no cache named: %+v", obs["f3411_dp_cache_over_24h"])
+	}
+}
+
+// docker stats is read for the project's containers only, an
+// unreadable line skipped, each container's mean and largest kept.
+func TestContainerCPU(t *testing.T) {
+	cfg := helperProbes(t)
+	cfg.Stats, cfg.StatsPrefix = []string{os.Args[0], "stats"}, "lab-x-"
+	p := newProbes(cfg)
+	p.stats(context.Background())
+	p.stats(context.Background())
+	obs := map[string]Observation{}
+	sys := p.observe(obs, Models{TrackBytes: 600, CPAPairsPerCorePerS: 50000}, 1000, 0, nil)
+	if len(sys.ContainerCPU) != 1 || sys.ContainerCPU[0].Container != "lab-x-ussp-nats-1" || sys.ContainerCPU[0].Samples != 2 ||
+		sys.ContainerCPU[0].MeanPct != 12.5 || sys.ContainerCPU[0].MaxPct != 12.5 {
+		t.Fatalf("container CPU %+v", sys.ContainerCPU)
 	}
 }

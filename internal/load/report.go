@@ -623,6 +623,12 @@ func (r *Report) systemsMarkdown(w func(format string, a ...any)) {
 			w("| %s | %s |\n", proc, fmtNum(sys.CPUCores[proc]))
 		}
 	}
+	if len(sys.ContainerCPU) > 0 {
+		w("\n| Container (docker stats) | Samples | CPU mean (%% of a core) | CPU max |\n|---|---|---|---|\n")
+		for _, c := range sys.ContainerCPU {
+			w("| %s | %d | %s | %s |\n", c.Container, c.Samples, fmtNum(c.MeanPct), fmtNum(c.MaxPct))
+		}
+	}
 	w("\nLoss counters that moved during the run (05 §7: accounted for in the report; the systems' own counters, listed, not judged):\n\n")
 	if len(sys.Counters) == 0 {
 		w("- none\n")
