@@ -13,6 +13,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/rootxkit/uspace-lab/internal/observe"
 )
 
 // fakeUSSP answers the token endpoint, files every intent with the
@@ -154,5 +156,27 @@ func TestARunEndsItsIntents(t *testing.T) {
 	}
 	if rep3.Volumes.IntentsEnded != 0 || !strings.Contains(strings.Join(rep3.Errors, "; "), "not ended") {
 		t.Fatalf("ended %d, errors %v", rep3.Volumes.IntentsEnded, rep3.Errors)
+	}
+}
+
+// A run with a peer ends its intents after the drain and before the
+// report is collected (the deletions owed to the peer are timed): the
+// count it set is the report's, where collecting used to overwrite it
+// with 0 (the first recorded 100 run said "Intents ended after the run
+// 0" with all 100 ended at the USSP). Ended after collecting, as
+// without a peer, the count set then stands too.
+func TestIntentsEndedBeforeTheReportAreCounted(t *testing.T) {
+	f := loadSmall(t)
+	r := &run{tier: f.Tier, files: f, fleet: &Fleet{}, picture: NewLedger(), traffic: NewReceiptLedger(), readers: &readers{},
+		rec: observe.NewRecorder(nil), memory: make([]uint64, 12)}
+	rep := &Report{Volumes: Volumes{IntentsEnded: 7}}
+	r.collect(rep, time.Now(), 1)
+	if rep.Volumes.IntentsEnded != 7 {
+		t.Fatalf("ended before collecting: the report says %d", rep.Volumes.IntentsEnded)
+	}
+	rep = &Report{}
+	r.collect(rep, time.Now(), 1)
+	if rep.Volumes.IntentsEnded != 0 {
+		t.Fatalf("none ended: the report says %d", rep.Volumes.IntentsEnded)
 	}
 }

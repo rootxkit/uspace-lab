@@ -1041,6 +1041,9 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 	}
 	v.OperatorTargetPerS = float64(len(fl.Aircraft)) * t.Operators.TelemetryHz
 	v.RIDTargetPerS = float64(heard) * t.Operators.TelemetryHz
+	// A run with a peer ended its intents before this (the deletions owed
+	// to the peer are timed): kept, not overwritten with none.
+	v.IntentsEnded = rep.Volumes.IntentsEnded
 	rep.Volumes = v
 	ratio := func(got, want float64) Observation {
 		if want <= 0 {
