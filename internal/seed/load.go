@@ -16,6 +16,7 @@ import (
 	"github.com/rootxkit/uspace-core/regnum"
 	"github.com/rootxkit/uspace-core/serial"
 
+	"github.com/rootxkit/uspace-lab/internal/oauth"
 	"github.com/rootxkit/uspace-lab/internal/runner"
 	"github.com/rootxkit/uspace-lab/internal/scenario"
 )
@@ -277,11 +278,6 @@ func SeedLoad(ctx context.Context, o LoadOptions) error {
 		}
 	}
 	o.Log("authority: %d load receivers registered, keys kept", len(o.Fleet.Receivers))
-	if p := o.Fleet.Peer; p != nil {
-		if err := seedLoadPeer(ctx, o, sk, auth, ussp, admin, reg, firstOperator, p); err != nil {
-			return err
-		}
-	}
 	ops := make([]*USSPOperator, len(o.Fleet.Clients))
 	for i, c := range o.Fleet.Clients {
 		bind := make(map[string]string, len(c.Serials))
@@ -293,6 +289,11 @@ func SeedLoad(ctx context.Context, o LoadOptions) error {
 		}
 	}
 	o.Log("ussp: %d load operators active, their aircraft bound", len(ops))
+	if p := o.Fleet.Peer; p != nil {
+		if err := seedLoadPeer(ctx, o, sk, auth, ussp, admin, reg, firstOperator, ops[0], p); err != nil {
+			return err
+		}
+	}
 	insp, err := auth.SignIn(ctx, "lab-inspector")
 	if err != nil {
 		return err
@@ -417,9 +418,11 @@ func writeLoadTargets(o LoadOptions, sk *stack, ops []*USSPOperator, insp Sessio
 
 // seedLoadPeer registers what the peer needs: its aircraft under the
 // first client's operator, the oversight area, and the U-space airspace
-// square, waiting until the USSP's CIS cache holds the airspace when it
-// was published now (an intent filed before that is not DSS-backed).
-func seedLoadPeer(ctx context.Context, o LoadOptions, sk *stack, auth *Authority, ussp *USSP, admin, reg Session, operatorID string, p *LoadPeer) error {
+// square, then waits until the USSP's geo-awareness (its CIS cache) puts
+// the airspace over the square's centre: an intent filed before that is
+// not DSS-backed. The designation's dates are the day's, so a second
+// seed on the same day publishes nothing again.
+func seedLoadPeer(ctx context.Context, o LoadOptions, sk *stack, auth *Authority, ussp *USSP, admin, reg Session, operatorID string, op *USSPOperator, p *LoadPeer) error {
 	for _, sn := range p.Serials {
 		if err := auth.EnsureUAS(ctx, reg, RegistryUAS{Serial: sn, OperatorID: operatorID, ClassLabel: o.Fleet.ClassLabel}); err != nil {
 			return err
@@ -436,20 +439,22 @@ func seedLoadPeer(ctx context.Context, o LoadOptions, sk *stack, auth *Authority
 	if err != nil {
 		return err
 	}
-	before, err := ussp.CISUSpace(ctx)
-	if err != nil {
+	from := o.Now().UTC().Truncate(24 * time.Hour).Add(-24 * time.Hour)
+	if err := auth.USpace(ctx, admin, LoadUSpaceID, feature, from, from.AddDate(0, 1, 0), "uspace-lab load U-space"); err != nil {
 		return err
 	}
-	version, digest := sk.st.USpaceVersion, sk.st.USpaceDigest
-	if err := auth.USpace(ctx, admin, LoadUSpaceID, feature, o.Now().Add(-time.Hour), o.Now().AddDate(0, 1, 0), "uspace-lab load U-space"); err != nil {
+	c := lab.At(p.USpaceCentre)
+	const d = 0.001 // about 100 m: a box well inside the square
+	box := [4]float64{c.LonDeg - d, c.LatDeg - d, c.LonDeg + d, c.LatDeg + d}
+	if op == nil || op.ClientID == "" || op.ClientSecret == "" {
+		return fmt.Errorf("seed: no USSP machine client to read the USSP's geo-awareness with")
+	}
+	tokens := &oauth.ClientCredentials{TokenURL: ussp.url("/oauth/token"), ClientID: op.ClientID, ClientSecret: op.ClientSecret,
+		Audience: ussp.Host, Scopes: []string{"ussp.geo"}, HTTP: ussp.C.HTTP}
+	if err := ussp.WaitUSpaceAt(ctx, tokens.Token, box, LoadUSpaceID, 3*time.Minute); err != nil {
 		return err
 	}
-	if sk.st.USpaceVersion != version || sk.st.USpaceDigest != digest || before == "0" {
-		if err := ussp.WaitCISUSpace(ctx, before, 3*time.Minute); err != nil {
-			return err
-		}
-	}
-	o.Log("authority: %d peer aircraft in the registry, the oversight area %v, U-space airspace %s held by the USSP's CIS", len(p.Serials), p.Area, LoadUSpaceID)
+	o.Log("authority: %d peer aircraft in the registry, the oversight area %v; the USSP puts U-space airspace %s over the square", len(p.Serials), p.Area, LoadUSpaceID)
 	return nil
 }
 

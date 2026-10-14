@@ -6,58 +6,63 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"regexp"
+	"slices"
 	"strings"
 	"time"
 )
 
 func jsonRaw(b []byte) json.RawMessage { return json.RawMessage(b) }
 
-// cisUSpace reads the U-space airspace version of the USSP's CIS cache
-// from its readiness ("uspace_airspace:N" in the cis dependency's
-// detail).
-var cisUSpace = regexp.MustCompile(`uspace_airspace:(\d+)`)
-
-// CISUSpace is the version of the U-space airspace dataset the USSP's
-// CIS cache holds, as its /readyz says ("0": none).
-func (u *USSP) CISUSpace(ctx context.Context) (string, error) {
-	ans, err := u.C.Do(ctx, http.MethodGet, u.url("/readyz"), Auth{}, nil)
+// USpaceAt lists the U-space airspaces the USSP's geo-awareness (its CIS
+// cache) puts in box [west, south, east, north] now (GET /v1/geo, an
+// operator token with ussp.geo), and its CIS version.
+func (u *USSP) USpaceAt(ctx context.Context, token string, box [4]float64) (ids []string, cisVersion string, err error) {
+	q := url.Values{"bbox": {fmt.Sprintf("%.7f,%.7f,%.7f,%.7f", box[0], box[1], box[2], box[3])}}
+	ans, err := u.C.Expect(ctx, http.MethodGet, u.url("/v1/geo?"+q.Encode()), Auth{Bearer: token}, nil, "USSP geo-awareness", http.StatusOK)
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
-	var r struct {
-		Dependencies map[string]struct {
-			Detail string `json:"detail"`
-		} `json:"dependencies"`
+	var g struct {
+		CISVersion string `json:"cis_version"`
+		USpace     []struct {
+			Identifier string `json:"identifier"`
+		} `json:"uspace_airspaces"`
 	}
-	if err := ans.JSON(&r); err != nil {
-		return "", err
+	if err := ans.JSON(&g); err != nil {
+		return nil, "", err
 	}
-	m := cisUSpace.FindStringSubmatch(r.Dependencies["cis"].Detail)
-	if m == nil {
-		return "", fmt.Errorf("seed: the USSP's readiness names no uspace_airspace version in its cis dependency (%q)", r.Dependencies["cis"].Detail)
+	for _, a := range g.USpace {
+		ids = append(ids, a.Identifier)
 	}
-	return m[1], nil
+	return ids, g.CISVersion, nil
 }
 
-// WaitCISUSpace waits until the USSP's CIS cache holds a U-space
-// airspace version other than before (and not none), bounded.
-func (u *USSP) WaitCISUSpace(ctx context.Context, before string, bound time.Duration) error {
+// WaitUSpaceAt waits, bounded, until the USSP's geo-awareness puts the
+// U-space airspace id in box.
+func (u *USSP) WaitUSpaceAt(ctx context.Context, token func(context.Context) (string, error), box [4]float64, id string, bound time.Duration) error {
 	ctx, cancel := context.WithTimeout(ctx, bound)
 	defer cancel()
-	last := before
+	last := "nothing read"
 	tk := time.NewTicker(2 * time.Second)
 	defer tk.Stop()
 	for {
-		if v, err := u.CISUSpace(ctx); err == nil {
-			last = v
-			if v != before && v != "0" {
-				return nil
+		tok, err := token(ctx)
+		if err == nil {
+			var ids []string
+			var v string
+			if ids, v, err = u.USpaceAt(ctx, tok, box); err == nil {
+				if slices.Contains(ids, id) {
+					return nil
+				}
+				last = fmt.Sprintf("U-space airspaces %v at CIS %q", ids, v)
 			}
+		}
+		if err != nil {
+			last = err.Error()
 		}
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("seed: the USSP's CIS cache still holds U-space airspace version %s after %s (before the seed: %s)", last, bound, before)
+			return fmt.Errorf("seed: after %s the USSP's geo-awareness does not put U-space airspace %s over the load's square (last: %s)", bound, id, last)
 		case <-tk.C:
 		}
 	}

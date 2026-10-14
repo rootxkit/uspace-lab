@@ -26,39 +26,43 @@ func tlsClient(t *testing.T, srv *httptest.Server) *Client {
 	return &Client{HTTP: srv.Client(), Port: port, Wait: func(context.Context, time.Duration) error { return nil }}
 }
 
-// The USSP's CIS version of the U-space airspace is read from its
-// readiness, and the wait ends when it moves, or fails, naming what it
+// The wait for the USSP's geo-awareness ends when it puts the airspace
+// in the box, asked with the operator's token, and fails, naming what it
 // last saw, when it does not: the run's intents would not be DSS-backed.
-func TestWaitForTheUSSPsCIS(t *testing.T) {
+func TestWaitForTheUSSPsGeoAwareness(t *testing.T) {
 	var mu sync.Mutex
-	// The CIS takes version 2 on the second read after moves is set.
+	// The USSP holds the airspace from the second read after moves.
 	moves, reads := false, 0
-	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	var auths []string
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		defer mu.Unlock()
-		version := "1"
+		auths = append(auths, r.Header.Get("Authorization")+" "+r.URL.Query().Get("bbox"))
+		ids := `[]`
 		if moves {
 			if reads++; reads >= 2 {
-				version = "2"
+				ids = `[{"identifier":"LABUSP1"}]`
 			}
 		}
-		_, _ = fmt.Fprintf(w, `{"dependencies":{"cis":{"state":"up","detail":"zones:0,uspace_airspace:%s,restrictions:0, age 3 s"}}}`, version)
+		_, _ = fmt.Fprintf(w, `{"cis_version":"zones:0,uspace_airspace:2,restrictions:0","uspace_airspaces":%s}`, ids)
 	}))
 	t.Cleanup(srv.Close)
 	u := &USSP{C: tlsClient(t, srv), Host: "127.0.0.1"}
 	ctx := context.Background()
-	if v, err := u.CISUSpace(ctx); err != nil || v != "1" {
-		t.Fatalf("version %q %v", v, err)
-	}
-	err := u.WaitCISUSpace(ctx, "1", 300*time.Millisecond)
-	if err == nil || !strings.Contains(err.Error(), "still holds U-space airspace version 1") {
-		t.Fatalf("an unchanged CIS: %v", err)
+	tok := func(context.Context) (string, error) { return "op-token", nil }
+	box := [4]float64{44.8, 41.7, 44.81, 41.71}
+	err := u.WaitUSpaceAt(ctx, tok, box, "LABUSP1", 300*time.Millisecond)
+	if err == nil || !strings.Contains(err.Error(), "does not put U-space airspace LABUSP1") || !strings.Contains(err.Error(), "uspace_airspace:2") {
+		t.Fatalf("an airspace the USSP does not hold: %v", err)
 	}
 	mu.Lock()
 	moves = true
 	mu.Unlock()
-	if err := u.WaitCISUSpace(ctx, "1", 10*time.Second); err != nil {
-		t.Fatalf("a CIS that took the new version: %v", err)
+	if err := u.WaitUSpaceAt(ctx, tok, box, "LABUSP1", 10*time.Second); err != nil {
+		t.Fatalf("an airspace the USSP took: %v", err)
+	}
+	if auths[0] != "Bearer op-token 44.8000000,41.7000000,44.8100000,41.7100000" {
+		t.Fatalf("asked with %q", auths[0])
 	}
 }
 
