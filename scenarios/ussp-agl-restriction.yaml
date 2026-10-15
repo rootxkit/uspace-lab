@@ -1,0 +1,112 @@
+format: scenario/v1
+id: ussp-agl-restriction
+title: "An AGL restriction inside an AGL U-space airspace (DEMOU1, 0-120 m AGL) is planned, activated and published by the ANSP, and the USSP raises restriction_activated on the intent under it within one tick, clearing it at its end"
+source: "uspace-ansp docs/PLAN.md D3 and section 15 gap 3 (AGL restriction limits, owner 2026-10-16); spec 02 section 1 (altitudes with their reference: AMSL, AGL, WGS84), 02 F2, 04 section 3.3; uspace-ussp WP-7 (AGL over an area)"
+owners: [ussp, ansp, cisp]
+policy: policy/demo.yaml
+systems: [ussp, ansp]
+reference: false
+country: GEO
+note: >-
+  The AGL twin of ussp-wp12-restriction. Needs the ANSP, the CISP and the
+  USSP deployed together, each with the geoid and the ANSP and the USSP
+  api with the DEM of the airspace (ANSP_TERRAIN_DIR, USSP_TERRAIN_DIR):
+  without it the ANSP refuses the plan 503 terrain_unavailable and the
+  USSP refuses the intent under the airspace's AGL ceiling
+  (airspace_ceiling_not_judged), so the run fails at plan or at the
+  intent, never passes silently. The U-space airspace is an AGL one
+  (extra.uspace_airspace_id: DEMOU1 on staging, whose limits are 0-120 m
+  AGL) and the origin (SITL_HOME) is inside it. The restriction is a
+  300 m circle over A's intent from 0 to 120 m AGL, in the airspace's
+  own reference, so the ANSP compares it with the airspace's ceiling
+  directly; its F3548 volume and the USSP's judgement take the ground
+  from the DEM. A's intent stays 60 m over its home, under the 120 m
+  ceiling over ground that falls by less than 60 m within 400 m.
+duration_s: 175
+tail_s: 8
+aircraft:
+  - name: a
+    sysid: 1
+    serial: LABX9AGLR00001
+    operator_reg: GEOLAB000001
+    operator:
+      system: ussp
+      intent:
+        center: {north_m: 0, east_m: 0}
+        radius_m: 400
+        alt_lower_rel_m: -10
+        alt_upper_rel_m: 60
+        starts_before_s: 60
+        lasts_s: 3600
+        category: open
+        subcategory: A2
+        class_label: C2
+steps:
+  - id: climb
+    at_s: 0
+    aircraft: [a]
+    do: takeoff
+    alt_rel_m: 30
+  - id: hover
+    aircraft: [a]
+    do: hold
+    for_s: 90
+  - id: plan
+    at_s: 30
+    do: request
+    request:
+      system: ansp
+      method: POST
+      path: /v1/restrictions
+      # One key per execution (the body's times are new each time; a key
+      # seen with another body is 409).
+      headers: {Idempotency-Key: "uspace-lab-${run}-agl-plan-${time:0}"}
+      body:
+        uspace_airspace_id: "${extra:uspace_airspace_id}"
+        geometry: {type: Point, coordinates: ["${lng:0,0}", "${lat:0,0}"]}
+        radius_m: 300
+        lower_m: 0
+        lower_ref: AGL
+        upper_m: 120
+        upper_ref: AGL
+        starts_at: "${time:30}"
+        ends_at: "${time:3600}"
+        reason_text: "uspace-lab ussp-agl-restriction ${run}"
+      # Planned (201), not refused: AGL is accepted (D3) and compared
+      # with the AGL airspace directly; a 503 terrain_unavailable here is
+      # a deployment without the DEM.
+      expect: 201
+      capture: {restriction_id: id}
+  - id: activate
+    at_s: 40
+    do: request
+    request:
+      system: ansp
+      method: POST
+      path: /v1/restrictions/${restriction_id}/activate
+      expect: 200
+  - id: end
+    at_s: 100
+    do: request
+    request:
+      system: ansp
+      method: POST
+      path: /v1/restrictions/${restriction_id}/end
+      body: {reason: "uspace-lab ussp-agl-restriction ${run} ended"}
+      expect: 200
+  - id: down
+    at_s: 125
+    aircraft: [a]
+    do: land
+expect:
+  - name: agl-restriction-activated-on-the-intent
+    system: ussp
+    kind: restriction_activated
+    aircraft: a
+    # Raised by the activation, published by the CISP and followed by
+    # the USSP; never by the plan (a planned restriction is not in
+    # force). Cleared resolved once the ANSP ends it.
+    raise: {after: activate, min_s: 0, max_s: 10}
+    clear: {after: end, min_s: 0, max_s: 15, reason: resolved}
+judged_kinds: ["ussp:restriction_activated"]
+measure: [latency, ledger]

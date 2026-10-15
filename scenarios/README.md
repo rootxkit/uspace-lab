@@ -88,6 +88,7 @@ records.
 | `ussp-wp7-authorisation.yaml` | ussp RUNBOOKS/WP-7 | no | ussp WP-7 |
 | `ussp-wp10-conformance.yaml` | ussp RUNBOOKS/WP-10 | no | ussp WP-10 |
 | `ussp-wp12-restriction.yaml` | ussp RUNBOOKS/WP-12 | no | ussp WP-12 |
+| `ussp-agl-restriction.yaml` | ansp PLAN D3, gap 3 | no | ansp WP-5, WP-8, WP-9; ussp WP-7 (AGL over an area) |
 | `ansp-inv02-manned.yaml` | ansp INV-02, SC-15 | no | ansp WP-4, WP-6 |
 | `authority-sc08-rid-switch.yaml` | SC-08 1-3 | no | authority |
 
@@ -102,6 +103,7 @@ scenarios here:
 | uspace-ussp WP-10 (S-M2) | `ussp-wp10-conformance.yaml` |
 | uspace-ussp WP-11 (S-M3) | `sc-01-hover-inside-minima.yaml`, `sc-02-head-on-and-short-return.yaml`, `sc-21-slow-to-hover.yaml` |
 | uspace-ussp WP-12 (N-M1, S-M4) | `ussp-wp12-restriction.yaml`, `sc-03-zone-entry-exit.yaml` (zone path) |
+| uspace-ansp D3 (AGL restriction limits), uspace-ussp WP-7 (AGL over an area) | `ussp-agl-restriction.yaml` (an AGL U-space airspace about the origin, `extra.uspace_airspace_id`: DEMOU1 on staging; the DEM in the ANSP and the USSP api) |
 | uspace-ansp INV-02 (WP-4, WP-6) | `ansp-inv02-manned.yaml` |
 | uspace-authority SC-* | `sc-03-zone-entry-exit.yaml`, `sc-22-missing-inputs-visible.yaml` (before the registry is seeded, its AGL zone imported), `authority-sc08-rid-switch.yaml` |
 
