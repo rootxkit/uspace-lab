@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/rootxkit/uspace-lab/conformance/report"
+	"github.com/rootxkit/uspace-lab/internal/runner"
 	"github.com/rootxkit/uspace-lab/internal/scenario"
 )
 
@@ -61,10 +62,19 @@ type Report struct {
 	// Faults are the faults the run injected and what they did.
 	Faults []FaultRecord `json:"faults,omitempty"`
 	// F3411 is what the lab's DP polls of the USSP saw (a systems run).
-	F3411      *F3411Polls `json:"f3411,omitempty"`
-	Errors     []string    `json:"errors,omitempty"`
-	Measured   int         `json:"checks_measured"`
-	Unmeasured int         `json:"checks_not_measured"`
+	F3411 *F3411Polls `json:"f3411,omitempty"`
+	// Peer is what the peer USSP saw and was told (a systems run).
+	Peer *PeerReport `json:"peer,omitempty"`
+	// Vectors is the vectors row's evidence (a systems run).
+	Vectors *VectorsReport `json:"vectors,omitempty"`
+	// Zone is the zone's entries against its alerts (a systems run).
+	Zone *ZoneJudgement `json:"zone,omitempty"`
+	// Protobuf is the 04 §1 estimate of the hot path's JSON share (a
+	// systems run with probes).
+	Protobuf   *Protobuf `json:"protobuf,omitempty"`
+	Errors     []string  `json:"errors,omitempty"`
+	Measured   int       `json:"checks_measured"`
+	Unmeasured int       `json:"checks_not_measured"`
 	// Complete is true only when every check of every row was measured.
 	Complete bool     `json:"complete"`
 	Verdict  string   `json:"verdict"`
@@ -228,6 +238,11 @@ func (r *Report) Evaluate(c *Criteria, durationS float64) {
 	required := map[string]bool{}
 	for _, id := range r.Tier.Required {
 		required[id] = true
+	}
+	if r.Target.Mode == runner.ModeSystems {
+		for _, id := range r.Tier.RequiredSystems {
+			required[id] = true
+		}
 	}
 	r.Rows, r.Measured, r.Unmeasured, r.Failures = nil, 0, 0, nil
 	for _, row := range c.Rows {
@@ -480,6 +495,61 @@ func (r *Report) Markdown() string {
 	if r.Systems != nil {
 		r.systemsMarkdown(w)
 	}
+	if pb := r.Protobuf; pb != nil {
+		w("## 04 §1: the hot path's JSON share (estimate)\n\nOne encoding/json decode and encode of a %d-byte track frame: %.1f us on this host. %s.\n\n| Process | Messages (series) | CPU (s) | CPU per message (us) | JSON share |\n|---|---|---|---|---|\n",
+			pb.FrameBytes, pb.JSONUS, pb.Note)
+		for _, h := range pb.Processes {
+			w("| %s | %s (%s) | %s | %s | %s |\n", h.Process, fmtNum(h.Msgs), h.Series, fmtNum(h.CPUS), fmtNum(h.CPUPerMsgUS), fmtNum(h.Share))
+		}
+		w("\n")
+	}
+	if z := r.Zone; z != nil {
+		w("## Zone %s\n\n%d entries due, %d raised, %d cleared, %d missed, %d clears missed, %d unexpected; the slowest raise %.2f ticks of %.0f s.\n\n",
+			LoadZoneID, z.Due, z.Raised, z.Cleared, z.Missed, z.MissedClears, z.Unexpected, z.Ticks, z.TickS)
+		for _, l := range z.Lines {
+			w("- %s\n", l)
+		}
+		if len(z.Lines) > 0 {
+			w("\n")
+		}
+	}
+	if v := r.Vectors; v != nil {
+		w("## Vectors against the images\n\n%d knowledge/vectors files; %.0f s.\n\n| System | Binaries (uspace-core) | Error |\n|---|---|---|\n", v.LabVectors, v.TookS)
+		for _, iv := range v.Images {
+			var bs []string
+			for _, b := range iv.Binaries {
+				bs = append(bs, fmt.Sprintf("%#q (%s)", b.Path, b.Core))
+			}
+			w("| %s | %s | %s |\n", iv.System, strings.Join(bs, ", "), iv.Error)
+		}
+		w("\n| uspace-core | Passed | Failed | Skipped | Vectors differing | Error |\n|---|---|---|---|---|---|\n")
+		for i := range v.Cores {
+			c := &v.Cores[i]
+			w("| %s | %d | %d | %d | %s | %s |\n", c.Version, c.Passed, c.Failed, c.Skipped, strings.Join(c.Mismatched, ", "), c.Error)
+		}
+		for i := range v.Cores {
+			c := &v.Cores[i]
+			for _, t := range c.Tests {
+				w("- %s failed: %s\n", c.Version, t)
+			}
+		}
+		w("\n")
+	}
+	if p := r.Peer; p != nil {
+		w("## Peer USSP\n\n%s (aircraft %s). The display provider (%s) polled it %d times (others %d); the timed console showed %d frames of its flights, %d displays timed, %d frames untied; %d of the fleet's tracks from the USSP's SP were on it.\n\n",
+			p.BaseURL, strings.Join(p.Aircraft, ", "), p.DisplayProvider, p.DPPolls, p.OtherPolls, p.PeerFrames, p.Displayed, p.Untied, p.FleetTracks)
+		w("F3548: %d intents inside the U-space square, %d changes owed to the peer; %d notifications received (%v), %d naming no intent of the run; details %d answered, %d failed%s.\n\n",
+			p.IntentsInUSpace, p.ChangesOwed, p.Notifications, p.ByState, p.Unmatched, p.DetailsAnswered, p.DetailsFailed, lastErr(p.DetailsLast))
+		for _, m := range p.Missing {
+			w("- %s\n", m)
+		}
+		for _, e := range p.Errors {
+			w("- error: %s\n", e)
+		}
+		if len(p.Missing) > 0 || len(p.Errors) > 0 {
+			w("\n")
+		}
+	}
 	if len(r.Faults) > 0 {
 		r.faultsMarkdown(w)
 	}
@@ -547,6 +617,18 @@ func (r *Report) systemsMarkdown(w func(format string, a ...any)) {
 	for _, proc := range sortedKeysOf(sys.PairChecksPerS) {
 		w("- Pair checks of %s: %s a second over the run.\n", proc, fmtNum(sys.PairChecksPerS[proc]))
 	}
+	if len(sys.CPUCores) > 0 {
+		w("\n| Process | CPU over the run (cores) |\n|---|---|\n")
+		for _, proc := range sortedKeysOf(sys.CPUCores) {
+			w("| %s | %s |\n", proc, fmtNum(sys.CPUCores[proc]))
+		}
+	}
+	if len(sys.ContainerCPU) > 0 {
+		w("\n| Container (docker stats) | Samples | CPU mean (%% of a core) | CPU max |\n|---|---|---|---|\n")
+		for _, c := range sys.ContainerCPU {
+			w("| %s | %d | %s | %s |\n", c.Container, c.Samples, fmtNum(c.MeanPct), fmtNum(c.MaxPct))
+		}
+	}
 	w("\nLoss counters that moved during the run (05 §7: accounted for in the report; the systems' own counters, listed, not judged):\n\n")
 	if len(sys.Counters) == 0 {
 		w("- none\n")
@@ -560,10 +642,20 @@ func (r *Report) systemsMarkdown(w func(format string, a ...any)) {
 	if sys.ErrorsN > 0 {
 		w("\nProbe errors: %d (the first %d are among the run's errors).\n", sys.ErrorsN, len(sys.Errors))
 	}
+	if d := sys.DPCache; d != nil {
+		w("\nThe display provider's cache (%s): caching for %.1f h, %s entries older than 24 h.\n", d.System, d.SinceS/3600, fmtNum(d.Over))
+	}
 	if sys.ErrorsDuringFaults > 0 {
 		w("\nProbes that failed inside a fault the run injected: %d.\n", sys.ErrorsDuringFaults)
 	}
 	w("\n")
+}
+
+func lastErr(s string) string {
+	if s == "" {
+		return ""
+	}
+	return " (last: " + s + ")"
 }
 
 // faultsMarkdown renders the faults the run injected.
@@ -580,4 +672,21 @@ func (r *Report) faultsMarkdown(w func(format string, a ...any)) {
 		w("| %s | `%s.sh %s` | %s | %s | %s | %s | %s |\n", f.Row, f.Domain, strings.Join(f.Args, " "), fmtNum(f.AtS), fmtNum(f.HoldS), opt(f.PictureBackS), opt(f.TrafficBackS), f.Error)
 	}
 	w("\n")
+	for i := range r.Faults {
+		f := &r.Faults[i]
+		if len(f.Outage) == 0 {
+			continue
+		}
+		w("Outage of %s (`%s.sh %s`, %s s), judged on %d samples:\n\n| Claim | Met | Observed | Why |\n|---|---|---|---|\n",
+			f.System, f.Domain, strings.Join(f.Args, " "), fmtNum(f.HoldS), f.OutageSamples)
+		for j := range f.Outage {
+			o := &f.Outage[j]
+			met := "yes"
+			if !o.Met {
+				met = "**no**"
+			}
+			w("| %s | %s | %s | %s |\n", o.Expect.String(), met, strings.ReplaceAll(o.Observed, "|", "/"), o.Expect.Why)
+		}
+		w("\n")
+	}
 }

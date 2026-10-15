@@ -33,6 +33,11 @@ func probeHelper(args []string) int {
 		return 3
 	}
 	switch args[0] {
+	case "stats":
+		// docker stats: two of the project's containers (one unreadable)
+		// and another project's.
+		fmt.Print("lab-x-ussp-nats-1\t12.5%\nother-nats-1\t50%\nlab-x-dss-1\tbad\n")
+		return 0
 	case "fetch":
 		url := args[len(args)-1]
 		f := filepath.Join(dir, strings.NewReplacer(":", "_", "/", "_").Replace(url))
@@ -47,7 +52,7 @@ func probeHelper(args []string) int {
 		// moves by 5.
 		switch {
 		case strings.Contains(url, "monitor"):
-			fmt.Printf("# HELP x\nprocess_resident_memory_bytes %d\nussp_traffic_pair_checks{component=\"cpa\"} %d\n", 100_000_000+n*20_000_000, n*60_000)
+			fmt.Printf("# HELP x\nprocess_resident_memory_bytes %d\nussp_traffic_pair_checks{component=\"cpa\"} %d\nprocess_cpu_seconds_total %d\n", 100_000_000+n*20_000_000, n*60_000, n*2)
 		case strings.Contains(url, "writer"):
 			q := 0
 			if n == 2 {
@@ -60,6 +65,16 @@ func probeHelper(args []string) int {
 		system, stmt := args[1], args[len(args)-1]
 		if strings.Contains(stmt, "compression") {
 			fmt.Println("0")
+			return 0
+		}
+		// The display provider's cache: how long it has cached, and what
+		// is older than 24 h, as the test sets them.
+		if strings.Contains(stmt, "network_rid") {
+			fmt.Println(os.Getenv("LOAD_PROBE_DP_SINCE"))
+			return 0
+		}
+		if strings.Contains(stmt, "ussp_flights") {
+			fmt.Println(os.Getenv("LOAD_PROBE_DP_OVER"))
 			return 0
 		}
 		f := filepath.Join(dir, "size-"+system)
@@ -123,6 +138,9 @@ func TestProbesReadTheSystems(t *testing.T) {
 	}
 	if r := sys.PairChecksPerS["ussp-monitor"]; r <= 0 || val("cpa_pair_checks_per_worker") != round3(r/50000) {
 		t.Fatalf("pair checks %v/s, ratio %v", r, val("cpa_pair_checks_per_worker"))
+	}
+	if sys.CPUCores["ussp-monitor"] <= 0 || sys.CPUCores["ussp-tsdb-writer"] != 0 {
+		t.Fatalf("CPU %v: the monitor's rises, the writer exports none", sys.CPUCores)
 	}
 	if val("disk_growth_vs_model") != 1 || val("compression_lag_chunks") != 0 {
 		t.Fatalf("storage %v lag %v (%+v)", val("disk_growth_vs_model"), val("compression_lag_chunks"), sys.Storage)
@@ -225,6 +243,26 @@ func TestProbeFailuresDuringAFaultAreExcused(t *testing.T) {
 	}
 }
 
+// A scrape the run cancels (its probes stop when the generator ends)
+// is not a probe failure: the recorded 1000 runs listed every process
+// as failed, "context canceled", at that moment. The same fetch failing
+// on a live context is one per process.
+func TestACancelledScrapeIsNoFailure(t *testing.T) {
+	cfg := helperProbes(t)
+	cfg.Fetch = []string{os.Args[0], "fail"}
+	p := newProbes(cfg)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	p.scrape(ctx)
+	if len(p.errs) != 0 {
+		t.Fatalf("a cancelled scrape failed: %+v", p.errs)
+	}
+	p.scrape(context.Background())
+	if len(p.errs) != 2 {
+		t.Fatalf("a failing scrape: %+v", p.errs)
+	}
+}
+
 // A process restarted during the run starts its counters at zero again:
 // the increase over the run is the sum of the increases between scrapes,
 // a fall being a restart (the counter's new value is all new). Taken as
@@ -244,5 +282,64 @@ func TestCountersSurviveARestart(t *testing.T) {
 	}
 	if len(sys.Counters) != 1 || sys.Counters[0].Delta != 95 {
 		t.Fatalf("counters %+v", sys.Counters)
+	}
+}
+
+// The display provider's 24 h bound is judged only on a cache older than
+// the bound and the hour its disposal is checked in: a younger one cannot
+// hold anything older than 24 h, so its 0 is not measured. On an old
+// enough cache an entry past 24 h is counted (and fails the check), none
+// passes; a run whose probes name no cache does not measure the row.
+func TestDPCacheIsJudgedOnlyWhenOldEnough(t *testing.T) {
+	ctx := context.Background()
+	for _, c := range []struct {
+		name, since, over string
+		measured          bool
+		value             float64
+	}{
+		{"young", "3600", "0", false, 0},
+		{"old, one entry past 24 h", "95000", "1", true, 1},
+		{"old, none past", "95000", "0", true, 0},
+	} {
+		cfg := helperProbes(t)
+		cfg.Databases[0].DPCache = true
+		t.Setenv("LOAD_PROBE_DP_SINCE", c.since)
+		t.Setenv("LOAD_PROBE_DP_OVER", c.over)
+		p := newProbes(cfg)
+		p.sizes(ctx, false)
+		p.sizes(ctx, true)
+		obs := map[string]Observation{}
+		sys := p.observe(obs, Models{TrackBytes: 600, CPAPairsPerCorePerS: 50000}, 1000, 0, nil)
+		o := obs["f3411_dp_cache_over_24h"]
+		if o.Measured != c.measured || (c.measured && *o.Value != c.value) || sys.DPCache == nil {
+			t.Errorf("%s: %+v (cache %+v)", c.name, o, sys.DPCache)
+		}
+		if !c.measured && !strings.Contains(o.Reason, "has cached for 1.0 h") {
+			t.Errorf("%s: reason %q", c.name, o.Reason)
+		}
+	}
+	p := newProbes(helperProbes(t))
+	p.sizes(ctx, false)
+	p.sizes(ctx, true)
+	obs := map[string]Observation{}
+	p.observe(obs, Models{TrackBytes: 600, CPAPairsPerCorePerS: 50000}, 1000, 0, nil)
+	if obs["f3411_dp_cache_over_24h"].Measured || !strings.Contains(obs["f3411_dp_cache_over_24h"].Reason, "dp_cache") {
+		t.Errorf("no cache named: %+v", obs["f3411_dp_cache_over_24h"])
+	}
+}
+
+// docker stats is read for the project's containers only, an
+// unreadable line skipped, each container's mean and largest kept.
+func TestContainerCPU(t *testing.T) {
+	cfg := helperProbes(t)
+	cfg.Stats, cfg.StatsPrefix = []string{os.Args[0], "stats"}, "lab-x-"
+	p := newProbes(cfg)
+	p.stats(context.Background())
+	p.stats(context.Background())
+	obs := map[string]Observation{}
+	sys := p.observe(obs, Models{TrackBytes: 600, CPAPairsPerCorePerS: 50000}, 1000, 0, nil)
+	if len(sys.ContainerCPU) != 1 || sys.ContainerCPU[0].Container != "lab-x-ussp-nats-1" || sys.ContainerCPU[0].Samples != 2 ||
+		sys.ContainerCPU[0].MeanPct != 12.5 || sys.ContainerCPU[0].MaxPct != 12.5 {
+		t.Fatalf("container CPU %+v", sys.ContainerCPU)
 	}
 }

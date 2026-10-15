@@ -1,0 +1,56 @@
+chaos run 20261014T215032Z: FAIL (2026-10-14T21:50:32Z to 2026-10-14T23:20:47Z, project uspace-demo, lab b5c9b83, core v1.6.0)
+background scripts/chaos/background.yaml: verdict fail, missed 0, false 11, 25 finding(s)
+authority-rid-ingest         PASS     fault seen +2.7s, held 30/30, restored +0.5s
+ussp-telemetry-ingest        PASS     fault seen +2.7s, held 30/30, restored +0.6s [ussp-telemetry-ingest ussp_dropped_rate{component="telemetry"} +14]
+authority-api                FAIL     fault seen +5.2s, held 23/23, restored +0.5s [authority-api uspace_authority_user_bootstrap_refused{component="authz"} +1]
+    - during others ready always: ansp not ready at +-0.0s (HTTP 503 not_ready [jwks=down]); cisp ready in all 23 samples; dss ready in all 23 samples; issuer ready in all 23 samples; ussp ready in all 23 samples (05 §6: everyone else unaffected)
+    - after all recovered: ansp recovered at +0.5s; authority recovered at +0.5s; cisp recovered at +0.5s; dss recovered at +0.5s; issuer recovered at +0.5s; ussp not recovered by +10s (HTTP 200 degraded [registry=degraded]) (WP-L9: back within 10 s after a process restart)
+    - alert: authority stream silent at +46.9s into the row (stream authority-picture silent 19.2 s (the row does not take it down): a kept alert over it is unproven)
+ussp-api                     PASS     fault seen +5.2s, held 22/22, restored +0.5s
+cisp-api                     FAIL     fault seen +5.3s, held 22/22, restored +0.5s
+    - after all recovered: ansp not recovered by +10s (HTTP 200 ready [cisp_publisher=down]); authority recovered at +0.5s; cisp recovered at +0.5s; dss recovered at +0.5s; issuer recovered at +0.5s; ussp recovered at +0.5s (WP-L9: back within 10 s after a process restart)
+ansp-api                     PASS     fault seen +5.2s, held 21/21, restored +0.5s
+ussp-monitor                 PASS     fault seen +2.7s, held 30/30, restored +0.5s
+ussp-monitor-stalled         FAIL     fault seen +2.2s, held 30/30, restored +0.5s
+    - alert: ussp cleared e1f07a98-1f39-44d8-85de-adfddb89e949 at +32.8s into the row (stale)
+    - alert: ussp re raised c9fa7000-9068-4c37-8b62-0fb341f70d42 at +32.8s into the row
+ussp-rid-sp                  PASS     fault seen +2.7s, held 30/30, restored +0.5s
+authority-detect             FAIL     fault seen +2.7s, held 30/30, restored +0.5s
+    - alert: authority duplicate raise 01M4Y78VDGEXABEEMN1Z7KK8YV at +33.9s into the row
+cisp-deliver                 PASS     fault seen +2.7s, held 30/30, restored +0.5s
+ansp-manned-feed             PASS     fault seen +2.3s, held 60/60, restored +0.5s
+authority-dp-poller          FAIL     fault seen +2.3s, held 60/60, restored +0.5s
+    - during authority source network_rid/* in [stale down]: authority console status source network_rid/* unknown until +30s in 32 frame(s), want [stale down] (05 §6: its tracks age out as stale; consoles show state (the picture shows a source stale once its adapter is silent 10 s))
+    - after authority source network_rid/* in [live]: authority console status source network_rid/* unknown until +30s in 23 frame(s), want [live] (the source is shown live again)
+authority-rid-disabled       FAIL     fault seen +0.5s, held 60/60, restored +0.5s [audit: no audit event of a person switching direct_rid on again (1 source_disabled events in the window)] [authority-rid-ingest uspace_authority_batches_refused{component="rid_ingest"} +60] [authority-rid-ingest uspace_authority_refused_disabled{component="rid_ingest"} +60]
+    - audit: no audit event of a person switching direct_rid on again (1 source_disabled events in the window)
+    - alert: authority duplicate raise 01M4Y7P661C4RK0BFD699C2BZM at +62.6s into the row
+ussp-nats                    FAIL     fault seen +2.5s, held 60/60, restored +0.5s [ussp-monitor ussp_monitor_publish_dropped{component="conformance"} +10] [ussp-traffic-ws ussp_picture_dropped_after_silence{component="traffic_ws"} +1]
+    - alert: ussp stream silent at +0.6s into the row (stream ussp-alerts-a silent 64.4 s (the row does not take it down): a kept alert over it is unproven)
+    - alert: ussp duplicate raise 3351c534-c4eb-4501-9a82-96fcb45d4c38 at +65.1s into the row
+authority-nats               FAIL     fault seen +2.4s, held 60/60, restored +0.5s [authority-picture-ws uspace_authority_bus_lost{component="bus"} +1] [authority-rid-ingest uspace_authority_batches_refused{component="rid_ingest"} +31] [authority-rid-ingest uspace_authority_refused_queue_unavailable{component="rid_ingest"} +31] [authority-tsdb-writer uspace_authority_gaps{component="tsdb_writer"} +2]
+    - alert: authority cleared 01M4Y7P661C4RK0BFD699C2BZM at +64.4s into the row (stale)
+    - alert: authority duplicate raise 01M4Y7X90HMGSGM2W6EVEGSEC3 at +64.8s into the row
+cisp-nats                    PASS     fault seen +2.4s, held 60/60, restored +0.5s
+ansp-nats                    PASS     fault seen +2.4s, held 60/60, restored +0.5s
+ussp-timescaledb             PASS     fault seen +2.4s, held 60/60, restored +0.5s
+authority-timescaledb        PASS     fault seen +2.4s, held 60/60, restored +0.5s [authority-picture-ws uspace_authority_session_refused{component="sessions"} +2]
+ussp-postgres                PASS     fault seen +2.4s, held 60/60, restored +0.5s
+authority-postgres           FAIL     fault seen +2.4s, held 60/60, restored +0.5s [authority-picture-ws uspace_authority_session_refused{component="sessions"} +98]
+    - alert: authority stream silent at +14.5s into the row (stream authority-picture silent 49.6 s (the row does not take it down): a kept alert over it is unproven)
+ussp-dbhost                  PASS     fault seen +2.4s, held 60/60, restored +0.5s
+ussp-partition               FAIL     fault seen +22.8s, held 18/18, restored +0.6s [ussp-telemetry-ingest ussp_dropped_rate{component="telemetry"} +86] [ussp-telemetry-ingest ussp_flights_telemetry_lost{component="flights"} +2] [ussp-traffic-ws ussp_picture_dropped_after_silence{component="traffic_ws"} +1]
+    - alert: ussp stream silent at +17.1s into the row (stream ussp-alerts-a silent 139.3 s, past the row's window)
+cisp-down                    FAIL     fault seen +11.7s, held 110/110, restored +0.5s
+    - alert: ussp stream silent at +-130.6s into the row (stream ussp-alerts-a silent 139.3 s (the row does not take it down): a kept alert over it is unproven)
+    - alert: ussp duplicate raise 08da5601-ab4f-4c99-9df8-0b9ade9b589b at +8.6s into the row
+authority-down               FAIL     fault seen +19.8s, held 113/113, restored +0.5s
+    - during cisp,ussp,ansp,issuer,dss ready always: ansp not ready at +-0.0s (HTTP 503 not_ready [jwks=down]); cisp ready in all 113 samples; dss ready in all 113 samples; issuer ready in all 113 samples; ussp ready in all 113 samples (05 §6: no real-time service depends on the authority)
+    - alert: authority duplicate raise 01M4Y9J92BZWTV0B74FRAQT70X at +359.7s into the row
+dss-down                     PASS     fault seen +4.8s, held 112/112, restored +2.9s
+issuer-down                  FAIL     fault seen +4.8s, held 45/45, restored +3.0s
+    - during authority,cisp,ussp,ansp,dss ready always: ansp not ready at +0.0s (HTTP 503 not_ready [jwks=down]); authority ready in all 45 samples; cisp ready in all 45 samples; dss ready in all 45 samples; ussp ready in all 45 samples (05 §6: tokens valid for their TTL, JWKS cached)
+receiver-clock               PASS     [clock -10s: left -10.0s, accepted 202] [clock +45s: left +45.0s, refused 401] [clock -45s: left -45.0s, refused 401] [authority-rid-ingest uspace_authority_batches_refused{component="rid_ingest"} +2] [authority-rid-ingest uspace_authority_refused_skew{component="rid_ingest"} +2]
+stack-restart                FAIL     fault seen +12.2s, held 30/30, restored +11.7s [ussp-telemetry-ingest ussp_dropped_rate{component="telemetry"} +38] [ussp-telemetry-ingest ussp_ws_auth_refused{component="guard"} +11] [ussp-traffic-ws ussp_ws_auth_refused{component="guard"} +12]
+    - alert: ussp duplicate raise f3276345-19ca-44ac-8ae8-42002735c2f2 at +59.3s into the row
+    - alert: authority duplicate raise 01M4YA62YHKS9KR1QYMRGZ6BHG at +79.5s into the row

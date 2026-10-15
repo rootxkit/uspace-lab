@@ -6,11 +6,76 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 )
 
 func jsonRaw(b []byte) json.RawMessage { return json.RawMessage(b) }
+
+// The datasets of the USSP's geo-awareness the seed waits on.
+const (
+	GeoUSpace = "uspace_airspaces"
+	GeoZones  = "zones"
+)
+
+// GeoAt lists the identifiers of dataset (GeoUSpace, GeoZones) the USSP's
+// geo-awareness (its CIS cache) puts in box [west, south, east, north]
+// now (GET /v1/geo, an operator token with ussp.geo), and its CIS
+// version.
+func (u *USSP) GeoAt(ctx context.Context, token string, box [4]float64, dataset string) (ids []string, cisVersion string, err error) {
+	q := url.Values{"bbox": {fmt.Sprintf("%.7f,%.7f,%.7f,%.7f", box[0], box[1], box[2], box[3])}}
+	ans, err := u.C.Expect(ctx, http.MethodGet, u.url("/v1/geo?"+q.Encode()), Auth{Bearer: token}, nil, "USSP geo-awareness", http.StatusOK)
+	if err != nil {
+		return nil, "", err
+	}
+	var g map[string]json.RawMessage
+	if err := ans.JSON(&g); err != nil {
+		return nil, "", err
+	}
+	var items []struct {
+		Identifier string `json:"identifier"`
+	}
+	if err := json.Unmarshal(g[dataset], &items); err != nil {
+		return nil, "", fmt.Errorf("seed: the USSP's geo-awareness answered no %s list: %w", dataset, err)
+	}
+	_ = json.Unmarshal(g["cis_version"], &cisVersion)
+	for _, a := range items {
+		ids = append(ids, a.Identifier)
+	}
+	return ids, cisVersion, nil
+}
+
+// WaitGeoAt waits, bounded, until the USSP's geo-awareness puts id of
+// dataset in box.
+func (u *USSP) WaitGeoAt(ctx context.Context, token func(context.Context) (string, error), box [4]float64, dataset, id string, bound time.Duration) error {
+	ctx, cancel := context.WithTimeout(ctx, bound)
+	defer cancel()
+	last := "nothing read"
+	tk := time.NewTicker(2 * time.Second)
+	defer tk.Stop()
+	for {
+		tok, err := token(ctx)
+		if err == nil {
+			var ids []string
+			var v string
+			if ids, v, err = u.GeoAt(ctx, tok, box, dataset); err == nil {
+				if slices.Contains(ids, id) {
+					return nil
+				}
+				last = fmt.Sprintf("%s %v at CIS %q", dataset, ids, v)
+			}
+		}
+		if err != nil {
+			last = err.Error()
+		}
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("seed: after %s the USSP's geo-awareness does not put %s %s where the load needs it (last: %s)", bound, dataset, id, last)
+		case <-tk.C:
+		}
+	}
+}
 
 // USSP drives the USSP's account API (uspace-ussp api/openapi.yaml at
 // the image's commit): operator self-registration, the portal session,

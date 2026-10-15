@@ -1,22 +1,78 @@
 # Faults for a 60-minute systems run (tiers 100 and 1000; WP-L8,
-# docs/RUNBOOKS/load.md): 05 §7's restart row (each component of the hot
-# path killed once, in turn, and started again) and its partition row
-# (NATS of one system stopped for 60 s, then of the other), by the WP-L9
-# scripts (scripts/chaos/<domain>.sh inject|restore ARGS), after the
-# first 10 minutes. Each fault is restored 30 s before the next one.
-# The cross-system outages (05 §7's last row) are judged by the chaos
-# matrix (scripts/chaos), which reads every system's readiness; they are
-# not in this plan.
+# docs/RUNBOOKS/load.md), by the WP-L9 scripts (scripts/chaos/<domain>.sh
+# inject|restore ARGS), one at a time:
+#
+#   - 05 §7's restart row: each component of the hot path killed once, in
+#     turn, and started again, from minute 5;
+#   - its partition row: NATS of one system stopped for 60 s, then of the
+#     other;
+#   - its cross-system outage row: the CISP, the authority, the DSS and
+#     the ANSP each taken down for 5 min, every other system judged on
+#     what 05 §6 and the failure columns of 02 say it does meanwhile
+#     (internal/load/outage.go). The bounds are the chaos matrix's
+#     (scripts/chaos/matrix.yaml), the lab's own, not national figures.
+#
+# Each fault is restored and settled (30 s, an outage's recover_within_s)
+# before the next one.
 format: lab-load-faults/v1
 faults:
-  - {row: restart, at_s: 600, hold_s: 5, domain: adapter, args: [ussp-telemetry-ingest], system: ussp}
-  - {row: restart, at_s: 720, hold_s: 5, domain: hotpath, args: [ussp-monitor], system: ussp}
-  - {row: restart, at_s: 840, hold_s: 5, domain: hotpath, args: [ussp-traffic-ws], system: ussp}
-  - {row: restart, at_s: 960, hold_s: 5, domain: hotpath, args: [ussp-rid-sp], system: ussp}
-  - {row: restart, at_s: 1080, hold_s: 5, domain: hotpath, args: [ussp-tsdb-writer], system: ussp}
-  - {row: restart, at_s: 1200, hold_s: 5, domain: adapter, args: [authority-rid-ingest], system: authority}
-  - {row: restart, at_s: 1320, hold_s: 5, domain: hotpath, args: [authority-detect], system: authority}
-  - {row: restart, at_s: 1440, hold_s: 5, domain: hotpath, args: [authority-picture-ws], system: authority}
-  - {row: restart, at_s: 1560, hold_s: 5, domain: hotpath, args: [authority-tsdb-writer], system: authority}
-  - {row: partition, at_s: 1800, hold_s: 60, domain: nats, args: [ussp], system: ussp}
-  - {row: partition, at_s: 2100, hold_s: 60, domain: nats, args: [authority], system: authority}
+  - {row: restart, at_s: 300, hold_s: 5, domain: adapter, args: [ussp-telemetry-ingest], system: ussp}
+  - {row: restart, at_s: 420, hold_s: 5, domain: hotpath, args: [ussp-monitor], system: ussp}
+  - {row: restart, at_s: 540, hold_s: 5, domain: hotpath, args: [ussp-traffic-ws], system: ussp}
+  - {row: restart, at_s: 660, hold_s: 5, domain: hotpath, args: [ussp-rid-sp], system: ussp}
+  - {row: restart, at_s: 780, hold_s: 5, domain: hotpath, args: [ussp-tsdb-writer], system: ussp}
+  - {row: restart, at_s: 900, hold_s: 5, domain: adapter, args: [authority-rid-ingest], system: authority}
+  - {row: restart, at_s: 1020, hold_s: 5, domain: hotpath, args: [authority-detect], system: authority}
+  - {row: restart, at_s: 1140, hold_s: 5, domain: hotpath, args: [authority-picture-ws], system: authority}
+  - {row: restart, at_s: 1260, hold_s: 5, domain: hotpath, args: [authority-tsdb-writer], system: authority}
+  - {row: partition, at_s: 1380, hold_s: 60, domain: nats, args: [ussp], system: ussp}
+  - {row: partition, at_s: 1500, hold_s: 60, domain: nats, args: [authority], system: authority}
+
+  - row: outage
+    at_s: 1620
+    hold_s: 300
+    domain: system
+    args: [cisp]
+    system: cisp
+    recover_within_s: 90
+    expect:
+      - {system: cisp, ready: lost, within_s: 15, why: "the CISP is down (the fault, seen in place)"}
+      - {system: others, ready: always, why: "05 §6 CISP: subscribers run on cache; 02 F3: they keep serving"}
+      - {system: ansp, check: cisp, in: [degraded, down, stale, unknown], within_s: 90, why: "02 F2: the ANSP raises an alarm and takes its degraded path (lab bound 90 s: its CISP check polls)"}
+      - {system: ussp, check: cis, age_grows: true, why: "05 §6 CISP: subscribers run on cache with cis_age_s (05 §7: everything flagged with age)"}
+
+  - row: outage
+    at_s: 2040
+    hold_s: 300
+    domain: system
+    args: [authority]
+    system: authority
+    recover_within_s: 120
+    expect:
+      - {system: authority, ready: lost, within_s: 15, why: "the authority is down (the fault, seen in place)"}
+      - {system: others, ready: always, why: "05 §6 Authority: no real-time service depends on the authority; the CISP keeps serving"}
+      - {system: ussp, check: registry, age_grows: true, why: "05 §6 Authority, 02 F8: USSPs use the validity cache (05 §7: flagged with age)"}
+
+  - row: outage
+    at_s: 2490
+    hold_s: 300
+    domain: dss
+    args: [dss]
+    system: dss
+    recover_within_s: 120
+    expect:
+      - {system: dss, ready: lost, within_s: 15, why: "the DSS is down (the fault, seen in place)"}
+      - {system: ussp, check: dss, in: [down, degraded], within_s: 90, why: "02 F6: the USSP shows DSS state (lab bound 90 s: its DSS check polls)"}
+      - {system: others, ready: always, why: "05 §6 DSS: local intents and all in-flight services continue"}
+
+  - row: outage
+    at_s: 2940
+    hold_s: 300
+    domain: system
+    args: [ansp]
+    system: ansp
+    recover_within_s: 90
+    expect:
+      - {system: ansp, ready: lost, within_s: 15, why: "the ANSP is down (the fault, seen in place)"}
+      - {system: others, ready: always, why: "05 §6 ANSP feed: no other system stops with it"}
+      - {stream: traffic, flag: manned, within_s: 60, why: "05 §6 ANSP feed: USSP traffic information marks manned traffic unavailable"}

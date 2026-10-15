@@ -13,6 +13,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/rootxkit/uspace-lab/internal/load"
+	"github.com/rootxkit/uspace-lab/internal/runner"
 )
 
 // harness runs the rows.
@@ -32,6 +35,25 @@ type harness struct {
 	settle time.Duration
 	// shell runs a domain script; tests replace it.
 	shell func(ctx context.Context, domain, action string, args []string) ScriptRun
+	// admin is the authority's console API as the targets file's admin
+	// session reaches it (the disable row; nil without one).
+	admin *adminAPI
+	// probes read every process's /metrics (deploy/systems/probes.yaml;
+	// nil: the counters are not read).
+	probes *runner.LoadProbes
+}
+
+// dispatch runs a row's act: the disable domain through the admin API,
+// every other domain's script.
+func (h *harness) dispatch(ctx context.Context, domain, action string, args []string) ScriptRun {
+	if domain != domainDisable {
+		return h.runScript(ctx, domain, action, args)
+	}
+	if h.admin == nil {
+		return ScriptRun{Command: "disable " + action, Start: time.Now().UTC(), End: time.Now().UTC(), ExitCode: 1,
+			Output: []string{"no admin session (requests.authority in the targets file)"}}
+	}
+	return h.admin.switchRun(ctx, action, args)
 }
 
 // ScriptRun is one domain script run: what it printed and how it exited.
@@ -203,15 +225,23 @@ type RowResult struct {
 	Injected time.Time `json:"injected_at"`
 	// FaultAt is when the fault was first seen in place; the during
 	// bounds count from it.
-	FaultAt  time.Time         `json:"fault_at"`
-	Restored time.Time         `json:"restored_at"`
-	Ended    time.Time         `json:"ended_at"`
-	Inject   *ScriptRun        `json:"inject,omitempty"`
-	Restore  *ScriptRun        `json:"restore,omitempty"`
-	Fault    *FaultResult      `json:"fault,omitempty"`
-	Skew     []SkewResult      `json:"skew,omitempty"`
-	Expect   []ExpectResult    `json:"expectations"`
-	Alerts   map[string]string `json:"alerts,omitempty"`
+	FaultAt  time.Time      `json:"fault_at"`
+	Restored time.Time      `json:"restored_at"`
+	Ended    time.Time      `json:"ended_at"`
+	Inject   *ScriptRun     `json:"inject,omitempty"`
+	Restore  *ScriptRun     `json:"restore,omitempty"`
+	Fault    *FaultResult   `json:"fault,omitempty"`
+	Skew     []SkewResult   `json:"skew,omitempty"`
+	Expect   []ExpectResult `json:"expectations"`
+	// Audit is what the audit log says of a disable row's switches.
+	Audit *AuditResult `json:"audit,omitempty"`
+	// Counters are the systems' loss counters that rose from before the
+	// injection to the end of the recovery (05 §5: every dropped_*,
+	// gap, degraded counter), listed, not judged; CounterErrors the
+	// processes that did not answer either time.
+	Counters      []load.SystemCounter `json:"loss_counters,omitempty"`
+	CounterErrors []string             `json:"loss_counter_errors,omitempty"`
+	Alerts        map[string]string    `json:"alerts,omitempty"`
 	// AlertFindings are the background alert's duplicate raises and
 	// clears inside this row's window (filled after the background ends).
 	AlertFindings []AlertFinding           `json:"alert_findings,omitempty"`
@@ -261,6 +291,21 @@ func (h *harness) runRow(ctx context.Context, r Row) *RowResult {
 	}
 	every := time.Duration(h.m.Probe.EveryS * float64(time.Second))
 	samples := []Sample{base}
+	var counters0 map[string]map[string]float64
+	if h.probes != nil {
+		var errs []string
+		counters0, errs = load.LossCounters(ctx, h.probes)
+		rr.CounterErrors = append(rr.CounterErrors, prefixed("before: ", errs)...)
+		defer func() {
+			after, errs := load.LossCounters(context.WithoutCancel(ctx), h.probes)
+			rr.Counters = load.CounterRises(counters0, after)
+			rr.CounterErrors = append(rr.CounterErrors, prefixed("after: ", errs)...)
+		}()
+	}
+	if spec.Kind == kindDisabled && h.admin != nil {
+		// Seen from the authority's side: its own list of switches.
+		spec.enabled = func(ctx context.Context) (bool, error) { return h.admin.enabled(ctx, spec.Source) }
+	}
 
 	if r.Domain == "clock" {
 		rr.Injected = time.Now().UTC()
@@ -369,8 +414,27 @@ func (h *harness) runRow(ctx context.Context, r Row) *RowResult {
 		e := &r.After[i]
 		rr.Expect = append(rr.Expect, judgeExpect(*e, phaseAfter, e.systems(h.systemNames(), &r), rr.Restored, samples, &base, after))
 	}
+	if r.Domain == domainDisable {
+		// SC-08, SC-22: every disable is an audited act by a person.
+		res := AuditResult{Note: "no admin session to read the audit log with"}
+		if h.admin != nil {
+			res = h.admin.audited(ctx, r.Args[0], rr.Injected, rr.Restored)
+		}
+		rr.Audit = &res
+		if !res.Pass {
+			fail("audit: %s", res.Note)
+		}
+	}
 	h.finishRow(rr, samples)
 	return rr
+}
+
+func prefixed(p string, ss []string) []string {
+	out := make([]string, 0, len(ss))
+	for _, s := range ss {
+		out = append(out, p+s)
+	}
+	return out
 }
 
 // afterMet is every after-expectation already met (the row can stop

@@ -32,6 +32,13 @@ exit 0
 // was given and the output.
 func demoDown(t *testing.T, env string) (map[string]bool, string, error) {
 	t.Helper()
+	return demoDownWith(t, env, nil)
+}
+
+// demoDownWith is demoDown with setup called on the copy of deploy/
+// before the script runs.
+func demoDownWith(t *testing.T, env string, setup func(dir string)) (map[string]bool, string, error) {
+	t.Helper()
 	if _, err := exec.LookPath("bash"); err != nil {
 		t.Skipf("bash: %v", err)
 	}
@@ -46,6 +53,9 @@ func demoDown(t *testing.T, env string) (map[string]bool, string, error) {
 	}
 	if err := os.WriteFile(filepath.Join(dir, "demo.env"), []byte(env), 0o600); err != nil {
 		t.Fatal(err)
+	}
+	if setup != nil {
+		setup(dir)
 	}
 	shim := t.TempDir()
 	if err := os.WriteFile(filepath.Join(shim, "docker"), []byte(fakeDocker), 0o755); err != nil {
@@ -135,5 +145,48 @@ func TestDemoDownWithAnOlderDemoEnv(t *testing.T) {
 	}
 	if len(requiredVars(t)) < 5 {
 		t.Fatalf("only %v required", requiredVars(t))
+	}
+}
+
+// A fault's state (scripts/chaos/lib.sh, DEMO_STATE_DIR/chaos) records
+// containers stopped or cut; once demo-down has removed every container
+// it describes nothing, and kept it makes the next stack's fault refuse
+// to start, "system authority is already down (restore it first)" (a
+// load run killed in its authority outage left one, and the next chaos
+// matrix failed authority-down on it). demo-down removes it and says
+// so; with none there is nothing said, and the rest of the state stays.
+func TestDemoDownRemovesFaultState(t *testing.T) {
+	example := read(t, "demo.env.example")
+	var dir string
+	_, out, err := demoDownWith(t, example, func(d string) {
+		dir = d
+		if err := os.MkdirAll(filepath.Join(d, "local-demo", "chaos"), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		for _, f := range []string{"local-demo/chaos/system-authority.order", "local-demo/passwords.env"} {
+			if err := os.WriteFile(filepath.Join(d, f), []byte("x\n"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+	})
+	if err != nil {
+		t.Fatalf("%v\n%s", err, out)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "local-demo", "chaos")); !os.IsNotExist(err) {
+		t.Errorf("the fault state is still there (%v)\n%s", err, out)
+	}
+	if !strings.Contains(out, "removed the fault state") || !strings.Contains(out, "system-authority.order") {
+		t.Errorf("not said:\n%s", out)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "local-demo", "passwords.env")); err != nil {
+		t.Errorf("the rest of the state went too: %v", err)
+	}
+	_, out, err = demoDownWith(t, example, func(d string) {
+		if err := os.MkdirAll(filepath.Join(d, "local-demo"), 0o750); err != nil {
+			t.Fatal(err)
+		}
+	})
+	if err != nil || strings.Contains(out, "fault state") {
+		t.Errorf("without a fault state: %v\n%s", err, out)
 	}
 }

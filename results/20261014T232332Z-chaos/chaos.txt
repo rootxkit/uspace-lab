@@ -1,0 +1,3 @@
+chaos run 20261014T232332Z: PASS (2026-10-14T23:23:32Z to 2026-10-14T23:30:05Z, project uspace-demo, lab f54b2bf, core v1.6.0)
+background scripts/chaos/background.yaml: verdict fail, missed 0, false 1, 2 finding(s)
+authority-rid-disabled       PASS     fault seen +0.5s, held 60/60, restored +0.5s [audit: both switches audited as acts of e9b9ee3093132ca81c8bacba80cbd650, e9b9ee3093132ca81c8bacba80cbd650, e9b9ee3093132ca81c8bacba80cbd650] [authority-rid-ingest uspace_authority_batches_refused{component="rid_ingest"} +60] [authority-rid-ingest uspace_authority_refused_disabled{component="rid_ingest"} +60]

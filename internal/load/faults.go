@@ -54,6 +54,22 @@ type Fault struct {
 	// System is the system the fault is in (partition: the others must
 	// show nothing).
 	System string `yaml:"system" json:"system"`
+	// Expect are an outage's claims (outage.go): what the faulted system
+	// and every other one show while it is down. An outage needs at least
+	// one; the other rows take none.
+	Expect []OutageExpect `yaml:"expect,omitempty" json:"expect,omitempty"`
+	// RecoverWithinS bounds the stack's recovery after an outage's
+	// restore (default 120 s); the next fault waits for it.
+	RecoverWithinS float64 `yaml:"recover_within_s,omitempty" json:"recover_within_s,omitempty"`
+}
+
+// settleS is how long after its restore a fault still owns what fails:
+// faultGapS, or an outage's recovery bound when that is longer.
+func (f *Fault) settleS() float64 {
+	if f.Row == FaultOutage {
+		return max(faultGapS, f.recoverWithin().Seconds())
+	}
+	return faultGapS
 }
 
 var faultName = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,62}$`)
@@ -99,15 +115,40 @@ func LoadFaults(path, scripts string, durationS float64) (*FaultPlan, error) {
 		if !(f.HoldS > 0 && f.HoldS <= maxFaultHoldS) {
 			return nil, fmt.Errorf("load faults: fault %d: hold_s %v is not in (0, %d]", i, f.HoldS, maxFaultHoldS)
 		}
+		if f.Row == FaultOutage {
+			if len(f.Expect) == 0 || len(f.Expect) > maxExpectations {
+				return nil, fmt.Errorf("load faults: fault %d: an outage needs 1 to %d expectations (what 05 §6 says everyone shows)", i, maxExpectations)
+			}
+			for j := range f.Expect {
+				if err := f.Expect[j].validate(f.HoldS); err != nil {
+					return nil, fmt.Errorf("load faults: fault %d: expectation %d: %w", i, j, err)
+				}
+			}
+			if f.RecoverWithinS < 0 || f.RecoverWithinS > maxFaultHoldS {
+				return nil, fmt.Errorf("load faults: fault %d: recover_within_s %v is not in [0, %d]", i, f.RecoverWithinS, maxFaultHoldS)
+			}
+		} else if len(f.Expect) > 0 || f.RecoverWithinS != 0 {
+			return nil, fmt.Errorf("load faults: fault %d: only an outage takes expectations and recover_within_s", i)
+		}
 		if f.AtS < free {
-			return nil, fmt.Errorf("load faults: fault %d at %v s starts before the one before it is restored and %d s have passed (%v s)", i, f.AtS, faultGapS, free)
+			return nil, fmt.Errorf("load faults: fault %d at %v s starts before the one before it is restored and settled (%v s)", i, f.AtS, free)
 		}
-		if f.AtS+f.HoldS+faultGapS > durationS {
-			return nil, fmt.Errorf("load faults: fault %d (%v s + %v s) does not end %d s before the run (%v s)", i, f.AtS, f.HoldS, faultGapS, durationS)
+		if f.AtS+f.HoldS+f.settleS() > durationS {
+			return nil, fmt.Errorf("load faults: fault %d (%v s + %v s + %v s to settle) does not end before the run (%v s)", i, f.AtS, f.HoldS, f.settleS(), durationS)
 		}
-		free = f.AtS + f.HoldS + faultGapS
+		free = f.AtS + f.HoldS + f.settleS()
 	}
 	return &p, nil
+}
+
+// hasOutage reports whether the plan takes a system down.
+func (p *FaultPlan) hasOutage() bool {
+	for _, f := range p.Faults {
+		if f.Row == FaultOutage {
+			return true
+		}
+	}
+	return false
 }
 
 // FaultRecord is what a fault did, on the generator's clock.
@@ -117,14 +158,21 @@ type FaultRecord struct {
 	// opens), InjectedAt when it returned.
 	StartedAt  *time.Time `json:"started_at,omitempty"`
 	InjectedAt *time.Time `json:"injected_at,omitempty"`
-	RestoredAt *time.Time `json:"restored_at,omitempty"`
-	InjectOut  string     `json:"inject_output,omitempty"`
-	RestoreOut string     `json:"restore_output,omitempty"`
-	Error      string     `json:"error,omitempty"`
+	// RestoringAt is when the restore script started (the hold ends),
+	// RestoredAt when it returned.
+	RestoringAt *time.Time `json:"restoring_at,omitempty"`
+	RestoredAt  *time.Time `json:"restored_at,omitempty"`
+	InjectOut   string     `json:"inject_output,omitempty"`
+	RestoreOut  string     `json:"restore_output,omitempty"`
+	Error       string     `json:"error,omitempty"`
 	// Recovered is the first sample newly shown after the restore, on
 	// the picture and on any traffic stream (absent: never).
 	PictureBackS *float64 `json:"picture_back_s,omitempty"`
 	TrafficBackS *float64 `json:"traffic_back_s,omitempty"`
+	// Outage is an outage's expectations as observed, the stack's
+	// recovery last; OutageSamples how many samples they were judged on.
+	Outage        []OutageResult `json:"outage,omitempty"`
+	OutageSamples int            `json:"outage_samples,omitempty"`
 }
 
 // faultRunner runs the plan's faults from the generator's start and
@@ -133,13 +181,20 @@ type faultRunner struct {
 	plan    *FaultPlan
 	scripts string
 	run     func(ctx context.Context, script string, args ...string) (string, error)
+	// probe samples what an outage is judged on (nil: an outage cannot
+	// be judged, and each of its expectations is unmet).
+	probe *outageProbe
+	every time.Duration
 
-	mu      sync.Mutex
-	records []FaultRecord
+	mu       sync.Mutex
+	records  []FaultRecord
+	samples  [][]outageSample
+	sampling sync.WaitGroup
 }
 
 func newFaultRunner(plan *FaultPlan, scripts string) *faultRunner {
-	fr := &faultRunner{plan: plan, scripts: scripts, records: make([]FaultRecord, len(plan.Faults))}
+	fr := &faultRunner{plan: plan, scripts: scripts, records: make([]FaultRecord, len(plan.Faults)),
+		samples: make([][]outageSample, len(plan.Faults)), every: outageSampleEvery}
 	for i, f := range plan.Faults {
 		fr.records[i].Fault = f
 	}
@@ -153,7 +208,9 @@ func (fr *faultRunner) bash(ctx context.Context, script string, args ...string) 
 	ctx, cancel := context.WithTimeout(ctx, faultScriptTime)
 	defer cancel()
 	argv := append([]string{"bash", filepath.ToSlash(filepath.Join(fr.scripts, script))}, args...)
-	b, err := command(ctx, argv)
+	// A whole system's restore starts a dozen containers: the script's
+	// own bound, never a probe's 20 s.
+	b, err := commandWithin(ctx, faultScriptTime, argv)
 	out := string(b)
 	if len(out) > faultOutputMax {
 		out = out[:faultOutputMax]
@@ -164,6 +221,8 @@ func (fr *faultRunner) bash(ctx context.Context, script string, args ...string) 
 // execute injects and restores every fault at its time; a script that
 // fails is a run error (its restore is still run).
 func (fr *faultRunner) execute(ctx context.Context, t0 time.Time, fail func(string, ...any)) {
+	// An outage's samples run past its restore, through its recovery.
+	defer fr.sampling.Wait()
 	for i, f := range fr.plan.Faults {
 		at := time.NewTimer(time.Until(t0.Add(seconds(f.AtS))))
 		select {
@@ -178,6 +237,13 @@ func (fr *faultRunner) execute(ctx context.Context, t0 time.Time, fail func(stri
 		fr.mu.Lock()
 		fr.records[i].StartedAt = &started
 		fr.mu.Unlock()
+		var stopSampling context.CancelFunc
+		if f.Row == FaultOutage && fr.probe != nil {
+			var sctx context.Context
+			sctx, stopSampling = context.WithCancel(ctx)
+			fr.sampling.Add(1)
+			go func() { defer fr.sampling.Done(); fr.sampleOutage(sctx, i) }()
+		}
 		out, err := fr.run(ctx, f.Domain+".sh", append([]string{"inject"}, f.Args...)...)
 		now := time.Now()
 		fr.mu.Lock()
@@ -196,6 +262,10 @@ func (fr *faultRunner) execute(ctx context.Context, t0 time.Time, fail func(stri
 		}
 		hold.Stop()
 		// The restore runs whatever happened, past a cancelled run too.
+		restoring := time.Now()
+		fr.mu.Lock()
+		fr.records[i].RestoringAt = &restoring
+		fr.mu.Unlock()
 		out, err = fr.run(context.WithoutCancel(ctx), f.Domain+".sh", append([]string{"restore"}, f.Args...)...)
 		now = time.Now()
 		fr.mu.Lock()
@@ -207,8 +277,44 @@ func (fr *faultRunner) execute(ctx context.Context, t0 time.Time, fail func(stri
 		if err != nil {
 			fail("fault %d (%s %v): restore failed: %v", i, f.Domain, f.Args, err)
 		}
+		if stopSampling != nil {
+			// Through the recovery window, then stop.
+			fr.sampling.Add(1)
+			go func() {
+				defer fr.sampling.Done()
+				defer stopSampling()
+				t := time.NewTimer(f.recoverWithin())
+				defer t.Stop()
+				select {
+				case <-ctx.Done():
+				case <-t.C:
+				}
+			}()
+		}
 		if ctx.Err() != nil {
 			return
+		}
+	}
+}
+
+// sampleOutage samples fault i's outage every fr.every until ctx ends.
+func (fr *faultRunner) sampleOutage(ctx context.Context, i int) {
+	tk := time.NewTicker(fr.every)
+	defer tk.Stop()
+	for {
+		s := fr.probe.sample(ctx)
+		if ctx.Err() != nil {
+			return
+		}
+		fr.mu.Lock()
+		if len(fr.samples[i]) < maxOutageSamples {
+			fr.samples[i] = append(fr.samples[i], s)
+		}
+		fr.mu.Unlock()
+		select {
+		case <-ctx.Done():
+			return
+		case <-tk.C:
 		}
 	}
 }
@@ -241,8 +347,8 @@ func (fr *faultRunner) shown(kind string, at time.Time) {
 func (fr *faultRunner) observe(obs map[string]Observation, end time.Time, events []observe.Event, lost, silent uint64, flags []flagSeen) []FaultRecord {
 	fr.mu.Lock()
 	defer fr.mu.Unlock()
-	worst, restarts, partitions := 0.0, 0, 0
-	cross := 0
+	worst, restarts, partitions, outages := 0.0, 0, 0, 0
+	cross, unflagged := 0, 0
 	for i := range fr.records {
 		r := &fr.records[i]
 		switch r.Row {
@@ -260,6 +366,21 @@ func (fr *faultRunner) observe(obs map[string]Observation, end time.Time, events
 				return *p
 			}
 			worst = max(worst, back(r.PictureBackS), back(r.TrafficBackS))
+		case FaultOutage:
+			outages++
+			r.OutageSamples = len(fr.samples[i])
+			if r.StartedAt == nil || r.RestoringAt == nil || r.RestoredAt == nil {
+				r.Outage = []OutageResult{{Expect: OutageExpect{System: r.System, Ready: "lost"}, Observed: "the outage was not injected and restored"}}
+			} else {
+				// The hold is from the inject script's start to the restore
+				// script's; the recovery counts from the restore's end.
+				r.Outage = append(judgeOutage(&r.Fault, fr.samples[i], *r.StartedAt, *r.RestoringAt), judgeRecovered(&r.Fault, fr.samples[i], *r.RestoredAt))
+			}
+			for j := range r.Outage {
+				if !r.Outage[j].Met {
+					unflagged++
+				}
+			}
 		case FaultPartition:
 			partitions++
 			if r.StartedAt == nil || r.RestoredAt == nil {
@@ -290,6 +411,11 @@ func (fr *faultRunner) observe(obs map[string]Observation, end time.Time, events
 		obs["partition_cross_effects"] = valueObs(float64(cross))
 	} else {
 		obs["partition_unreplayed"], obs["partition_cross_effects"] = none(FaultPartition), none(FaultPartition)
+	}
+	if outages > 0 {
+		obs["outage_unflagged"] = valueObs(float64(unflagged))
+	} else {
+		obs["outage_unflagged"] = none(FaultOutage)
 	}
 	return append([]FaultRecord(nil), fr.records...)
 }
@@ -325,9 +451,9 @@ func duplicateRaises(events []observe.Event) int {
 }
 
 // during reports whether t falls inside a fault: from the start of its
-// inject script to
-// faultGapS after its restore (or the run's end when it was never
-// restored).
+// inject script to its settle time after its restore (faultGapS, or an
+// outage's recovery bound), or the run's end when it was never
+// restored.
 func (fr *faultRunner) during(t time.Time) bool {
 	fr.mu.Lock()
 	defer fr.mu.Unlock()
@@ -336,7 +462,7 @@ func (fr *faultRunner) during(t time.Time) bool {
 		if r.StartedAt == nil || t.Before(*r.StartedAt) {
 			continue
 		}
-		if r.RestoredAt == nil || !t.After(r.RestoredAt.Add(faultGapS*time.Second)) {
+		if r.RestoredAt == nil || !t.After(r.RestoredAt.Add(seconds(r.settleS()))) {
 			return true
 		}
 	}

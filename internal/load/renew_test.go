@@ -69,6 +69,11 @@ func TestStreamsRenewCredentialsWhenRefused(t *testing.T) {
 		if len(renewals) != 2 || renewals[0] || !renewals[1] {
 			t.Fatalf("%s: renewals %v, want one refusal then one renewal", start, renewals)
 		}
+		// The refusal is recorded as a break, and excused: a connection
+		// on fresh credentials followed it.
+		if n, _ := s.unexcused(nil); n != 0 || s.stats().Breaks != 1 {
+			t.Fatalf("%s: %d breaks, %d unexcused, want one excused", start, s.stats().Breaks, n)
+		}
 	}
 }
 
@@ -100,5 +105,43 @@ func TestConsolesShareARenewedSession(t *testing.T) {
 	// Refused again on the renewed session: a second sign-in.
 	if hb2, _ := b(context.Background(), true); signIns != 2 || hb2.Get("Cookie") != "uspace_session=session-2" {
 		t.Fatalf("%d sign-ins, %v", signIns, hb2)
+	}
+}
+
+// A stream that breaks is a run error unless something the run did
+// explains it: a fault it injected (a restarted picture-ws closes every
+// console), or expired credentials refused and replaced by a connection
+// on fresh ones (a 60-minute run outlives a token). A break outside both
+// still fails the run, and so does a refusal that was never followed by
+// a connection. Before, any second connection failed the run, so every
+// fault plan that restarted a stream's process failed it too.
+func TestStreamBreaksAreExcusedOnlyByAFaultOrARenewal(t *testing.T) {
+	t0 := time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC)
+	inFault := func(at time.Time) bool {
+		return !at.Before(t0.Add(10*time.Second)) && at.Before(t0.Add(20*time.Second))
+	}
+	cases := []struct {
+		name    string
+		breaks  []streamBreak
+		conns   int
+		excused func(time.Time) bool
+		want    int
+	}{
+		{"none", nil, 1, inFault, 0},
+		{"inside a fault", []streamBreak{{at: t0.Add(12 * time.Second), err: "closed", connects: 1}}, 2, inFault, 0},
+		{"outside every fault", []streamBreak{{at: t0.Add(30 * time.Second), err: "closed", connects: 1}}, 2, inFault, 1},
+		{"no fault plan", []streamBreak{{at: t0.Add(12 * time.Second), err: "closed", connects: 1}}, 2, nil, 1},
+		{"renewed and connected again", []streamBreak{{at: t0.Add(30 * time.Second), err: "4401", renew: true, connects: 1}}, 2, nil, 0},
+		{"renewal never connected", []streamBreak{{at: t0.Add(30 * time.Second), err: "401", renew: true, connects: 1}}, 1, nil, 1},
+	}
+	for _, c := range cases {
+		s := &stream{breaks: c.breaks, connects: c.conns}
+		if n, last := s.unexcused(c.excused); n != c.want || (n > 0 && last == "") {
+			t.Errorf("%s: %d unexcused (last %q), want %d", c.name, n, last, c.want)
+		}
+	}
+	over := &stream{connects: 1, overBreaks: 3}
+	if n, _ := over.unexcused(inFault); n != 3 {
+		t.Errorf("breaks past the bound: %d unexcused, want 3", n)
 	}
 }

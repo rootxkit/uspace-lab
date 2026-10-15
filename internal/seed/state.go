@@ -39,6 +39,9 @@ type State struct {
 	USpace        string `json:"uspace"`
 	USpaceVersion int    `json:"uspace_version"`
 	USpaceDigest  string `json:"uspace_digest"`
+	// LoadZoneDigest is the load zone the seed last published (its ED-269
+	// document).
+	LoadZoneDigest string `json:"load_zone_digest,omitempty"`
 }
 
 // Account is a console account: its password, its TOTP secret once

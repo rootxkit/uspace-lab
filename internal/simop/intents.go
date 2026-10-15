@@ -124,6 +124,23 @@ func (in *Intents) File(ctx context.Context, r IntentRequest) (Decision, error) 
 	return d, nil
 }
 
+// Get reads an intent's decision as it stands (GET /v1/intents/{id}):
+// a decision held pending_dss moves on once the USSP's DSS write lands.
+func (in *Intents) Get(ctx context.Context, id string) (Decision, error) {
+	var d Decision
+	status, body, err := in.do(ctx, http.MethodGet, "/v1/intents/"+id, nil)
+	if err != nil {
+		return d, err
+	}
+	if status != http.StatusOK {
+		return d, fmt.Errorf("simop: intent %s answered %d: %s", id, status, shortBody(body))
+	}
+	if err := json.Unmarshal(body, &d); err != nil {
+		return d, fmt.Errorf("simop: decision: %w", err)
+	}
+	return d, nil
+}
+
 // Change patches an intent: activate or end.
 func (in *Intents) Change(ctx context.Context, id, action string) (Decision, error) {
 	var d Decision
@@ -141,20 +158,26 @@ func (in *Intents) Change(ctx context.Context, id, action string) (Decision, err
 }
 
 func (in *Intents) do(ctx context.Context, method, path string, v any) (int, []byte, error) {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return 0, nil, fmt.Errorf("simop: %w", err)
+	var rd io.Reader = http.NoBody
+	if v != nil {
+		b, err := json.Marshal(v)
+		if err != nil {
+			return 0, nil, fmt.Errorf("simop: %w", err)
+		}
+		rd = bytes.NewReader(b)
 	}
 	tok, err := in.Tokens.Token(ctx)
 	if err != nil {
 		return 0, nil, fmt.Errorf("simop: token: %w", err)
 	}
-	req, err := http.NewRequestWithContext(ctx, method, strings.TrimRight(in.BaseURL, "/")+path, bytes.NewReader(b))
+	req, err := http.NewRequestWithContext(ctx, method, strings.TrimRight(in.BaseURL, "/")+path, rd)
 	if err != nil {
 		return 0, nil, fmt.Errorf("simop: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+tok)
-	req.Header.Set("Content-Type", "application/json")
+	if v != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 	hc := in.HTTP
 	if hc == nil {
 		hc = http.DefaultClient

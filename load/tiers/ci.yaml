@@ -25,6 +25,27 @@ dp:
   views: 10 # 05 §1: the authority's DP views at 100 drones, polled by the lab as the display provider in a systems run
   view_side_m: 4000 # standard: F3411 NetMaxDisplayAreaDiagonalKm 7 bounds a view's diagonal (4.9 km of side)
   poll_ms: 1000 # 05 §1: one poll a second per active view
+peer:
+  aircraft: 4 # lab: the peer USSP's own flights, a second Service Provider for the authority's display provider (systems mode)
+  centre: {north_m: 1000, east_m: 1000}
+  radius_m: 150
+  speed_ms: 5
+  alt_rel_m: 145 # lab: 30 m above the pairs' 115 m and 55 m above the top walker layer: no alert with the fleet
+  # lab: the U-space airspace square the seed designates, over the 4 x 4
+  # walkers of 2000..4100 m (their intents inside, every other outside):
+  # their changes are DSS-backed and notified to the peer (F3548)
+  uspace: {centre: {north_m: 3050, east_m: 3050}, half_side_m: 1400}
+zone:
+  aircraft: 2 # lab: two lines through the zone, 250 m apart, east-west (their intents 50 m apart)
+  centre: {north_m: -1500, east_m: 6000} # lab: clear of the walkers, the pairs and the peer by more than 1 km
+  side_m: 400
+  spacing_m: 250
+  amplitude_m: 600 # lab: an entry every 60 s per aircraft, inside for 40 s
+  speed_ms: 10
+  alt_rel_m: 170 # lab: 25 m above the peer's 145 m
+  type: CONDITIONAL # the intent is authorised with the zone's condition and is still an incursion (scripts/chaos/background.yaml)
+  raise_margin_s: 3 # lab: transport past the monitor's tick
+  clear_within_s: 30
 watch:
   pairs: 4
   walkers: 4
@@ -49,6 +70,27 @@ required:
   - picture_traceable
   - traffic_traceable
   - evaluation_period
+# The rows only the systems' images can show, required of a systems run
+# of this tier, with load/faults/ci.yaml (restarts).
+required_systems:
+  - sp_flights_p95
+  - sp_flights_p99
+  - details_p95
+  - details_p99
+  - dp_display_p95
+  - dp_display_p99
+  - intent_change_notify
+  - notifications_complete
+  - details_answered
+  - pair_checks
+  - writer_queue
+  - compression
+  - disk_model
+  - vectors_pass
+  - zone_alert_tick
+  - restart_recovery
+  - restart_duplicates
+  - restart_backlog
 scale:
   - {quantity: duration, spec: "3600 s (05 §7)", here: "120 s", factor: 0.0333, why: "a pull request's CI budget; one crossing per pair still falls inside it"}
   - {quantity: consoles, spec: "10 (05 §1 at 100 drones)", here: "2", factor: 0.2, why: "every console here subscribes to the whole area (heavier than 05 §1's <= 200-track viewports); two keep the fan-out real at CI size"}
@@ -57,6 +99,6 @@ scale:
 # them; their rows stay "not measured").
 not_generated:
   - {source: "ANSP manned feed (tens of aircraft)", why: "the reference target has no manned intake; in a systems run the ANSP adapter polls a sim-adsb the load harness does not serve, so the USSP shows manned traffic unavailable (its degraded state, in the report)"}
-  - {source: "sim-ussp as the second USSP on a local DSS", why: "the reference target has no DSS or peer interface; in a systems run the F3548 rows need the fleet's intents inside U-space airspace (DSS-backed) and sim-ussp subscribed as the peer, which the load harness does not drive"}
-  - {source: "authority DP polls of the USSPs (05 §1: one view per 1 Hz)", why: "the reference target has no SP; in a systems run the lab polls the USSP's SP as the display provider (dp), the authority's own DP poller has no view in the lab stack"}
+  - {source: "the second USSP's own intents", why: "in a systems run the harness's peer USSP (peer) is the second USSP on the lab DSS: it serves its own flights and is notified of the fleet's intents in the U-space square, but files no intent of its own, so no conflict between the two USSPs is made (the reference target has no DSS or peer)"}
+  - {source: "authority DP polls of the USSPs (05 §1: one view per 1 Hz), against the reference target", why: "the reference target has no SP; in a systems run the authority's display provider polls the USSP's and the peer's SPs over the oversight area the seed adds, and the lab polls the USSP's SP as a display provider too (dp)"}
   - {source: "optional national push USSP -> authority", why: "disabled by default (02 F6) and not in the reference target"}

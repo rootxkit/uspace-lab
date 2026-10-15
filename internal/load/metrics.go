@@ -24,16 +24,15 @@ type MetricDef struct {
 
 const (
 	niF3411   = "the reference target has no F3411 SP; a systems run polls the USSP's as a display provider (the tier's dp and the targets file's f3411_dp client)"
-	niDP      = "the authority's DP display of the fleet needs the USSP certified and an oversight area at the authority, which loadgen seed does not register: the lab stack's DP poller has no view to poll"
-	niDPCache = "the DP cache's 24 h bound needs a run of more than 24 h with the authority's DP polling"
-	niF3548   = "F3548 timings need the fleet's intents inside U-space airspace (DSS-backed) and sim-ussp subscribed as the peer USSP, which the load harness does not drive; the conformance suite runs F3548 against the USSP (WP-L7)"
+	niDP      = "the reference target has no display provider; a systems run times the authority's with the peer USSP (the tier's peer)"
+	niDPCache = "the reference target has no display provider cache; a systems run reads the authority's (probes, dp_cache)"
+	niF3548   = "the reference target has no DSS and no peer; a systems run times F3548 notifications and details at the peer USSP (the tier's peer)"
 	niMetrics = "read from the systems' /metrics by name (a systems run with probes); the reference target has none"
 	niChaos   = "faults are injected into the systems' containers (loadgen run --faults with a systems target); the reference target has none"
-	niOutage  = "a cross-system outage's degraded behaviours are judged per system, with each one's readiness and console status, by the WP-L9 chaos matrix (scripts/chaos, docs/RUNBOOKS/chaos.md); the load harness reads only the authority picture and the USSP traffic streams"
 	niStorage = "the reference target has no database; storage is measured against the systems' images (a systems run with probes)"
-	niZone    = "the load paths script no zone entry yet; zone alerts are proved by the scenario suite (sc-03)"
-	niArt13   = "Art. 13(2) notices go to peers and the ANSP, neither of which the load harness drives yet"
-	niVectors = "the vectors run in uspace-core's CI and per image in the conformance suite, not in a load run"
+	niZone    = "the reference target has no zones; a systems run flies the tier's zone aircraft through the zone its seed publishes"
+	niArt13   = "no aircraft of the load deviates from its authorisation, so no Art. 13(2) notice is due; and the lab's U-space airspace is designated without the conformance monitoring service (services_required NID, GEO, FA, TI; 2021/664 Art. 3(3))"
+	niVectors = "the reference target is no image; a systems run runs the knowledge vectors against the uspace-core every image under test was built with"
 )
 
 // Metrics is every metric a criteria check may name.
@@ -61,14 +60,15 @@ var Metrics = map[string]MetricDef{
 	"memory_growth_ratio":         {Kind: KindValue, Doc: "median memory of the last third of the run after its warm-up / of the first third: the harness's live heap against the reference target, the largest of every system process's resident memory (process_resident_memory_bytes) in a systems run"},
 	"memory_monotonic":            {Kind: KindValue, Doc: "1 when the medians of the three thirds after the warm-up rise strictly and the last is over 10 % above the first (growth beyond GC noise), for the harness or any system process, else 0"},
 	"f3411_sp_flights_s":          {Kind: KindLatency, Unit: "s", Doc: "the USSP's SP answering GET /uss/flights for a DP view (the lab as the display provider, one poll per view per dp.poll_ms), request to the answer read; only answers that returned flights make it measured"},
-	"f3411_dp_display_s":          {Kind: KindLatency, Unit: "s", Doc: "authority DP display after the SP response", NotImplemented: niDP},
+	"f3411_dp_display_s":          {Kind: KindLatency, Unit: "s", Doc: "the peer USSP's first answer to the authority's display provider holding a position (the SP response) -> the authority picture's frame that first shows it on the timed console (network_rid, tied by time and place)"},
 	"f3411_details_s":             {Kind: KindLatency, Unit: "s", Doc: "the USSP's SP answering GET /uss/flights/{id}/details for a flight a view returned (one per poll, round robin)"},
-	"f3411_dp_cache_over_24h":     {Kind: KindValue, Doc: "DP cache entries older than 24 h", NotImplemented: niDPCache},
-	"f3548_intent_change_s":       {Kind: KindLatency, Unit: "s", Doc: "peer notification of an intent change", NotImplemented: niF3548},
-	"f3548_conflict_notify_s":     {Kind: KindLatency, Unit: "s", Doc: "conflicting-intent notification to the other USS", NotImplemented: niF3548},
-	"f3548_details_s":             {Kind: KindLatency, Unit: "s", Doc: "details request answered", NotImplemented: niF3548},
-	"f3548_constraint_notify_s":   {Kind: KindLatency, Unit: "s", Doc: "constraint notification", NotImplemented: niF3548},
-	"zone_alert_ticks":            {Kind: KindValue, Doc: "monitor ticks from zone entry to the zone alert", NotImplemented: niZone},
+	"f3411_dp_cache_over_24h":     {Kind: KindValue, Doc: "the authority's display provider cache entries (ussp_flights) older than 24 h after the run, judged once it has cached for 25 h (its first network track)"},
+	"f3548_intent_change_s":       {Kind: KindLatency, Unit: "s", Doc: "the lab's request that filed, activated or ended an intent inside the U-space square -> the USSP's notification of that change arriving at the peer (its subscription)"},
+	"f3548_notifications_missing": {Kind: KindValue, Doc: "changes of the fleet's intents inside the U-space square (filed, activated, ended) of which the peer was not notified within 15 s of the run's end"},
+	"f3548_conflict_notify_s":     {Kind: KindLatency, Unit: "s", Doc: "conflicting-intent notification to the other USS"},
+	"f3548_details_s":             {Kind: KindLatency, Unit: "s", Doc: "the peer's GET /uss/v1/operational_intents/{id} of a notified intent at the USSP, request to answer (a request not answered with 200 counts at its 10 s bound)"},
+	"f3548_constraint_notify_s":   {Kind: KindLatency, Unit: "s", Doc: "constraint notification"},
+	"zone_alert_ticks":            {Kind: KindValue, Doc: "the slowest zone_incursion raise on a zone aircraft's USSP traffic stream, from the hand-out of its first sample inside the zone, in monitor ticks (the largest evaluation_period_s the alerts carried, else 1 s)"},
 	"art13_notice_s":              {Kind: KindLatency, Unit: "s", Doc: "Art. 13(2) notice to peers and the ANSP, acknowledged", NotImplemented: niArt13},
 	"cpa_pair_checks_per_worker":  {Kind: KindValue, Doc: "pair checks per second of the busiest CPA process (its *_pair_checks counters over the run) / the models' budget per core"},
 	"writer_queue_max_s":          {Kind: KindValue, Unit: "s", Doc: "the largest *_tsdb_writer_queue_age_seconds any system process showed (the age of its writer's oldest held row)"},
@@ -79,9 +79,13 @@ var Metrics = map[string]MetricDef{
 	"restart_lost_backlog":        {Kind: KindValue, Doc: "samples the clients shed or still held after the drain (operator queue shed and pending, receiver backlog shed and pending)"},
 	"partition_unreplayed":        {Kind: KindValue, Doc: "heard samples never shown nor in a counted loss (the picture's silent loss) in a run with a partition fault"},
 	"partition_cross_effects":     {Kind: KindValue, Doc: "degraded states a stream of another system came to show between a partition's injection and 30 s after its restore"},
-	"outage_unflagged":            {Kind: KindValue, Doc: "degraded behaviours not flagged with age during a 5 min outage", NotImplemented: niOutage},
-	"vectors_failed":              {Kind: KindValue, Doc: "knowledge/vectors cases failing in an image under test", NotImplemented: niVectors},
+	"outage_unflagged":            {Kind: KindValue, Doc: "the outage faults' claims (load/faults: the system down, the others ready, the consumers' checks degraded and their ages growing, the streams' flags) not observed, the stack's recovery after each restore included"},
+	"vectors_failed":              {Kind: KindValue, Doc: "uspace-core vector tests failing at the versions the images' Go binaries were built with, vector files those versions vendor that differ from knowledge/vectors, and images with no binary built with uspace-core"},
 }
+
+// peerMetrics are the metrics the peer USSP measures (the DP display
+// first).
+var peerMetrics = []string{"f3411_dp_display_s", "f3548_intent_change_s", "f3548_notifications_missing", "f3548_conflict_notify_s", "f3548_details_s", "f3548_constraint_notify_s"}
 
 // Observation is what a run measured for one metric.
 type Observation struct {

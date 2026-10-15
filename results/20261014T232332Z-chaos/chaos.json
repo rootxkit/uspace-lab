@@ -1,0 +1,543 @@
+{
+  "format": "chaos-result/v1",
+  "run": "20261014T232332Z",
+  "started_at": "2026-10-14T23:23:32.2941018Z",
+  "ended_at": "2026-10-14T23:30:05.2126143Z",
+  "host": {
+    "os": "windows/amd64"
+  },
+  "commits": {
+    "lab": "f54b2bf8d860a1bbf972c6f49405c3c0be7272c1",
+    "lab_dirty": false,
+    "core": "v1.6.0"
+  },
+  "matrix": {
+    "path": "scripts/chaos/matrix.yaml",
+    "digest": "sha256:4069c1efce23fe3c844edbe8559bf38d31861ab33807eab96bd9714ecd46780a"
+  },
+  "pending": [
+    "pending GCAA (L-Q4, spec Q17): stale_after_s 15 and live_max_age_s 10 (scenarios/policy/demo.yaml) decide when a track the faults starve ages out, which the stale_ok rows allow",
+    "pending GCAA (spec 02 F3): the 300 s CIS cache bound after which a USSP refuses new U-space authorisations; the cisp-down row holds 300 s and judges the cache age shown, not the refusal",
+    "pending GCAA (spec 02 F8): the 24 h registry validity cache the authority-down row leans on",
+    "pending GCAA (spec 05 §6): the 5 min local disk spill of ingest while NATS is down; the nats rows hold 60 s"
+  ],
+  "project": "uspace-demo",
+  "systems": [
+    "authority",
+    "cisp",
+    "ussp",
+    "ansp",
+    "issuer",
+    "dss"
+  ],
+  "images": {
+    "ansp-api": "ghcr.io/rootxkit/uspace-ansp@sha256:1fcfb3c9762189f737250c65ad24166c025c12576abb7babffcf07d705a6921a (sha256:1fcfb3c9762189f737250c65ad24166c025c12576abb7babffcf07d705a6921a)",
+    "ansp-manned-adapter": "ghcr.io/rootxkit/uspace-ansp@sha256:1fcfb3c9762189f737250c65ad24166c025c12576abb7babffcf07d705a6921a (sha256:1fcfb3c9762189f737250c65ad24166c025c12576abb7babffcf07d705a6921a)",
+    "ansp-manned-feed": "ghcr.io/rootxkit/uspace-ansp@sha256:1fcfb3c9762189f737250c65ad24166c025c12576abb7babffcf07d705a6921a (sha256:1fcfb3c9762189f737250c65ad24166c025c12576abb7babffcf07d705a6921a)",
+    "ansp-migrate": "ghcr.io/rootxkit/uspace-ansp@sha256:1fcfb3c9762189f737250c65ad24166c025c12576abb7babffcf07d705a6921a (sha256:1fcfb3c9762189f737250c65ad24166c025c12576abb7babffcf07d705a6921a)",
+    "ansp-nats": "nats:2-alpine@sha256:ac8f88a6494bffc2c2a5289a0ca61cb28a9145c11ba5677cf24265d07f46d8d4 (sha256:ac8f88a6494bffc2c2a5289a0ca61cb28a9145c11ba5677cf24265d07f46d8d4)",
+    "ansp-timescaledb": "timescale/timescaledb-ha:pg16@sha256:e9f34d8dd27621ec3933386eb07b70021d15b8116247362e0537bbff94ef0769 (sha256:e9f34d8dd27621ec3933386eb07b70021d15b8116247362e0537bbff94ef0769)",
+    "authority-api": "ghcr.io/rootxkit/uspace-authority@sha256:53d6f97cd745677da893a62669f45477d1eaa403b369bc174b6ccc8c11ee11cc (sha256:53d6f97cd745677da893a62669f45477d1eaa403b369bc174b6ccc8c11ee11cc)",
+    "authority-detect": "ghcr.io/rootxkit/uspace-authority@sha256:53d6f97cd745677da893a62669f45477d1eaa403b369bc174b6ccc8c11ee11cc (sha256:53d6f97cd745677da893a62669f45477d1eaa403b369bc174b6ccc8c11ee11cc)",
+    "authority-dp-poller": "ghcr.io/rootxkit/uspace-authority@sha256:53d6f97cd745677da893a62669f45477d1eaa403b369bc174b6ccc8c11ee11cc (sha256:53d6f97cd745677da893a62669f45477d1eaa403b369bc174b6ccc8c11ee11cc)",
+    "authority-manned-ingest": "ghcr.io/rootxkit/uspace-authority@sha256:53d6f97cd745677da893a62669f45477d1eaa403b369bc174b6ccc8c11ee11cc (sha256:53d6f97cd745677da893a62669f45477d1eaa403b369bc174b6ccc8c11ee11cc)",
+    "authority-migrate": "ghcr.io/rootxkit/uspace-authority@sha256:53d6f97cd745677da893a62669f45477d1eaa403b369bc174b6ccc8c11ee11cc (sha256:53d6f97cd745677da893a62669f45477d1eaa403b369bc174b6ccc8c11ee11cc)",
+    "authority-nats": "nats:2-alpine@sha256:ac8f88a6494bffc2c2a5289a0ca61cb28a9145c11ba5677cf24265d07f46d8d4 (sha256:ac8f88a6494bffc2c2a5289a0ca61cb28a9145c11ba5677cf24265d07f46d8d4)",
+    "authority-picture-ws": "ghcr.io/rootxkit/uspace-authority@sha256:53d6f97cd745677da893a62669f45477d1eaa403b369bc174b6ccc8c11ee11cc (sha256:53d6f97cd745677da893a62669f45477d1eaa403b369bc174b6ccc8c11ee11cc)",
+    "authority-postgres": "timescale/timescaledb-ha:pg16@sha256:e9f34d8dd27621ec3933386eb07b70021d15b8116247362e0537bbff94ef0769 (sha256:e9f34d8dd27621ec3933386eb07b70021d15b8116247362e0537bbff94ef0769)",
+    "authority-rid-ingest": "ghcr.io/rootxkit/uspace-authority@sha256:53d6f97cd745677da893a62669f45477d1eaa403b369bc174b6ccc8c11ee11cc (sha256:53d6f97cd745677da893a62669f45477d1eaa403b369bc174b6ccc8c11ee11cc)",
+    "authority-tsdb-writer": "ghcr.io/rootxkit/uspace-authority@sha256:53d6f97cd745677da893a62669f45477d1eaa403b369bc174b6ccc8c11ee11cc (sha256:53d6f97cd745677da893a62669f45477d1eaa403b369bc174b6ccc8c11ee11cc)",
+    "caddy": "caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d (sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d)",
+    "cisp-api": "ghcr.io/rootxkit/uspace-cisp@sha256:2e7861488e178de967829e7ebb623a3c5b480f0dcca8e5ee1acab4e45028f42a (sha256:2e7861488e178de967829e7ebb623a3c5b480f0dcca8e5ee1acab4e45028f42a)",
+    "cisp-deliver": "ghcr.io/rootxkit/uspace-cisp@sha256:2e7861488e178de967829e7ebb623a3c5b480f0dcca8e5ee1acab4e45028f42a (sha256:2e7861488e178de967829e7ebb623a3c5b480f0dcca8e5ee1acab4e45028f42a)",
+    "cisp-migrate": "ghcr.io/rootxkit/uspace-cisp@sha256:2e7861488e178de967829e7ebb623a3c5b480f0dcca8e5ee1acab4e45028f42a (sha256:2e7861488e178de967829e7ebb623a3c5b480f0dcca8e5ee1acab4e45028f42a)",
+    "cisp-nats": "nats:2-alpine@sha256:ac8f88a6494bffc2c2a5289a0ca61cb28a9145c11ba5677cf24265d07f46d8d4 (sha256:ac8f88a6494bffc2c2a5289a0ca61cb28a9145c11ba5677cf24265d07f46d8d4)",
+    "cisp-postgres": "timescale/timescaledb-ha:pg16@sha256:e9f34d8dd27621ec3933386eb07b70021d15b8116247362e0537bbff94ef0769 (sha256:e9f34d8dd27621ec3933386eb07b70021d15b8116247362e0537bbff94ef0769)",
+    "dss": "interuss/dss:v0.23.0@sha256:0781042bef785f6c968efd4b4e1e85854db9bf361116916d0673d2c89db91582 (sha256:0781042bef785f6c968efd4b4e1e85854db9bf361116916d0673d2c89db91582)",
+    "dss-crdb": "cockroachdb/cockroach:v24.1.3@sha256:1936a3bf5a7121bca0ae78094f87073b96a513369661279698f6ef3985d4eb63 (sha256:1936a3bf5a7121bca0ae78094f87073b96a513369661279698f6ef3985d4eb63)",
+    "dss-migrate-aux": "interuss/dss:v0.23.0@sha256:0781042bef785f6c968efd4b4e1e85854db9bf361116916d0673d2c89db91582 (sha256:0781042bef785f6c968efd4b4e1e85854db9bf361116916d0673d2c89db91582)",
+    "dss-migrate-rid": "interuss/dss:v0.23.0@sha256:0781042bef785f6c968efd4b4e1e85854db9bf361116916d0673d2c89db91582 (sha256:0781042bef785f6c968efd4b4e1e85854db9bf361116916d0673d2c89db91582)",
+    "dss-migrate-scd": "interuss/dss:v0.23.0@sha256:0781042bef785f6c968efd4b4e1e85854db9bf361116916d0673d2c89db91582 (sha256:0781042bef785f6c968efd4b4e1e85854db9bf361116916d0673d2c89db91582)",
+    "lab-issuer": "uspace-lab/lab-issuer:local (sha256:beaa4f4aebda7685db1fed4b0aa3d3e4099b48b21e8e400f53cf95a2044b48b9)",
+    "ussp-api": "ghcr.io/rootxkit/uspace-ussp@sha256:854cca7146277e6dc767cd7efce279f350994c9f152344a8af457c917db5935d (sha256:854cca7146277e6dc767cd7efce279f350994c9f152344a8af457c917db5935d)",
+    "ussp-dss-sync": "ghcr.io/rootxkit/uspace-ussp@sha256:854cca7146277e6dc767cd7efce279f350994c9f152344a8af457c917db5935d (sha256:854cca7146277e6dc767cd7efce279f350994c9f152344a8af457c917db5935d)",
+    "ussp-migrate": "ghcr.io/rootxkit/uspace-ussp@sha256:854cca7146277e6dc767cd7efce279f350994c9f152344a8af457c917db5935d (sha256:854cca7146277e6dc767cd7efce279f350994c9f152344a8af457c917db5935d)",
+    "ussp-migrate-timeseries": "ghcr.io/rootxkit/uspace-ussp@sha256:854cca7146277e6dc767cd7efce279f350994c9f152344a8af457c917db5935d (sha256:854cca7146277e6dc767cd7efce279f350994c9f152344a8af457c917db5935d)",
+    "ussp-monitor": "ghcr.io/rootxkit/uspace-ussp@sha256:854cca7146277e6dc767cd7efce279f350994c9f152344a8af457c917db5935d (sha256:854cca7146277e6dc767cd7efce279f350994c9f152344a8af457c917db5935d)",
+    "ussp-nats": "nats:2-alpine@sha256:ac8f88a6494bffc2c2a5289a0ca61cb28a9145c11ba5677cf24265d07f46d8d4 (sha256:ac8f88a6494bffc2c2a5289a0ca61cb28a9145c11ba5677cf24265d07f46d8d4)",
+    "ussp-rid-sp": "ghcr.io/rootxkit/uspace-ussp@sha256:854cca7146277e6dc767cd7efce279f350994c9f152344a8af457c917db5935d (sha256:854cca7146277e6dc767cd7efce279f350994c9f152344a8af457c917db5935d)",
+    "ussp-telemetry-ingest": "ghcr.io/rootxkit/uspace-ussp@sha256:854cca7146277e6dc767cd7efce279f350994c9f152344a8af457c917db5935d (sha256:854cca7146277e6dc767cd7efce279f350994c9f152344a8af457c917db5935d)",
+    "ussp-timescaledb": "timescale/timescaledb-ha:pg16@sha256:e9f34d8dd27621ec3933386eb07b70021d15b8116247362e0537bbff94ef0769 (sha256:e9f34d8dd27621ec3933386eb07b70021d15b8116247362e0537bbff94ef0769)",
+    "ussp-traffic-ws": "ghcr.io/rootxkit/uspace-ussp@sha256:854cca7146277e6dc767cd7efce279f350994c9f152344a8af457c917db5935d (sha256:854cca7146277e6dc767cd7efce279f350994c9f152344a8af457c917db5935d)",
+    "ussp-tsdb-writer": "ghcr.io/rootxkit/uspace-ussp@sha256:854cca7146277e6dc767cd7efce279f350994c9f152344a8af457c917db5935d (sha256:854cca7146277e6dc767cd7efce279f350994c9f152344a8af457c917db5935d)"
+  },
+  "background": {
+    "scenario": "scripts/chaos/background.yaml",
+    "scenario_digest": "sha256:508dee9426f697396e1278a63f2e19006ba64bff969ed2dc5067ad81f073d336",
+    "hold_s": 285,
+    "raised_at": {
+      "authority": "2026-10-14T23:24:17.1224321Z",
+      "ussp": "2026-10-14T23:24:17.1211001Z"
+    },
+    "verdict": "fail",
+    "missed_alerts": 0,
+    "false_alert_count": 1,
+    "failures": [
+      "authority-incursion: cleared at 23:24:21.428, outside [23:29:10.473, 23:29:48.473]",
+      "false alert: authority zone_incursion 01M4YBR8R1WVNM2S41WKPWF9RN (aircraft \"a\", peer \"\", subject \"CHAOSZ\") raised at 23:25:25.122"
+    ],
+    "findings": [
+      {
+        "system": "authority",
+        "what": "stale_clear",
+        "alert_id": "01M4YBP6B1Q0XB08A5DT4M8F68",
+        "at": "2026-10-14T23:24:21.4287912Z",
+        "reason": "source_disabled",
+        "row": "authority-rid-disabled",
+        "offset_s": 0,
+        "allowed": true
+      },
+      {
+        "system": "authority",
+        "what": "re_raised",
+        "alert_id": "01M4YBR8R1WVNM2S41WKPWF9RN",
+        "at": "2026-10-14T23:25:25.122847Z",
+        "row": "authority-rid-disabled",
+        "offset_s": 63.7,
+        "allowed": true
+      }
+    ],
+    "events": [
+      {
+        "system": "ussp",
+        "alert_id": "0d69eeec-d821-460c-b19f-89c202ca00e2",
+        "phase": "raised",
+        "at": "2026-10-14T23:24:17.1211001Z"
+      },
+      {
+        "system": "authority",
+        "alert_id": "01M4YBP6B1Q0XB08A5DT4M8F68",
+        "phase": "raised",
+        "at": "2026-10-14T23:24:17.1224321Z"
+      },
+      {
+        "system": "authority",
+        "alert_id": "01M4YBP6B1Q0XB08A5DT4M8F68",
+        "phase": "cleared",
+        "reason": "source_disabled",
+        "at": "2026-10-14T23:24:21.4287912Z"
+      },
+      {
+        "system": "authority",
+        "alert_id": "01M4YBR8R1WVNM2S41WKPWF9RN",
+        "phase": "raised",
+        "at": "2026-10-14T23:25:25.122847Z"
+      },
+      {
+        "system": "ussp",
+        "alert_id": "0d69eeec-d821-460c-b19f-89c202ca00e2",
+        "phase": "cleared",
+        "reason": "resolved",
+        "at": "2026-10-14T23:29:20.1258197Z"
+      },
+      {
+        "system": "authority",
+        "alert_id": "01M4YBR8R1WVNM2S41WKPWF9RN",
+        "phase": "cleared",
+        "reason": "resolved",
+        "at": "2026-10-14T23:29:20.1258197Z"
+      }
+    ],
+    "streams": {
+      "authority-picture": {
+        "system": "authority",
+        "frames": 496,
+        "first": "2026-10-14T23:23:33.1280216Z",
+        "last": "2026-10-14T23:30:04.36148Z"
+      },
+      "ussp-alerts-a": {
+        "system": "ussp",
+        "frames": 199,
+        "first": "2026-10-14T23:23:33.1238405Z",
+        "last": "2026-10-14T23:30:05.1082544Z"
+      }
+    },
+    "result_file": "results/20261014T232332Z-chaos/chaos-background.json",
+    "note": "the runner's verdict fail (missed 0, false 1) is recorded, not judged: the rows' alert findings and the exit check judge every raise and clear"
+  },
+  "rows": [
+    {
+      "id": "authority-rid-disabled",
+      "domain": "disable",
+      "args": [
+        "direct_rid"
+      ],
+      "system": "authority",
+      "cite": [
+        "05 §6 'One source type or instance (disabled or dead)'",
+        "knowledge/scenarios.md SC-08 (a disable is an audited act by a person)",
+        "SC-22 (nothing hidden)"
+      ],
+      "claim": "Direct Remote ID switched off by a person at the authority's console: its tracks age out as source_disabled, counted; the console shows the source disabled; the other sources and every other system unaffected; the switch is an audited act of that person. Switched on again, the source is live and the alert on the aircraft it hears raised again.",
+      "hold_s": 60,
+      "baseline": {
+        "at": "2026-10-14T23:24:17.6409711Z",
+        "phase": "before",
+        "ready": {
+          "ansp": {
+            "at": "2026-10-14T23:24:17.1229372Z",
+            "code": 200,
+            "status": "ready",
+            "checks": {
+              "cis_notify_keys": "ok",
+              "cis_publisher_keys": "ok",
+              "cisp": "ok",
+              "cisp_publisher": "ok",
+              "dss": "ok",
+              "geoid": "ok",
+              "jwks": "ok",
+              "nats": "ok",
+              "relational": "ok"
+            },
+            "details": {
+              "cisp": "ok (age 53 s); ussp_list: no version published yet; restrictions: no version published yet",
+              "cisp_publisher": "ok (last heartbeat 204 at 2026-10-14T23:24:08.692Z)",
+              "dss": "ok (last answer at 2026-10-14T23:23:50.649Z)",
+              "geoid": "mapped: true"
+            },
+            "took_ms": 3
+          },
+          "authority": {
+            "at": "2026-10-14T23:24:17.1229372Z",
+            "code": 200,
+            "status": "ready",
+            "checks": {
+              "archive": "ok",
+              "occurrences": "ok",
+              "relational": "ok",
+              "telemetry": "ok"
+            },
+            "took_ms": 2
+          },
+          "cisp": {
+            "at": "2026-10-14T23:24:17.1229372Z",
+            "code": 200,
+            "status": "ready",
+            "checks": {
+              "database": "ok",
+              "migrations": "ok",
+              "nats": "ok"
+            },
+            "took_ms": 5
+          },
+          "dss": {
+            "at": "2026-10-14T23:24:17.1229372Z",
+            "code": 200,
+            "status": "ok",
+            "took_ms": 1
+          },
+          "issuer": {
+            "at": "2026-10-14T23:24:17.1229372Z",
+            "code": 200,
+            "status": "ok",
+            "took_ms": 1
+          },
+          "ussp": {
+            "at": "2026-10-14T23:24:17.1229372Z",
+            "code": 200,
+            "status": "ready",
+            "checks": {
+              "ansp_coordination": "ok",
+              "cis": "ok",
+              "cis_notify_keys": "ok",
+              "cis_publisher_keys": "ok",
+              "client_address": "ok",
+              "dss": "ok",
+              "geoid": "ok",
+              "issuer": "ok",
+              "jwks": "ok",
+              "nats": "ok",
+              "occurrences": "ok",
+              "operating_status": "ok",
+              "postgres": "ok",
+              "records": "ok",
+              "registry": "ok",
+              "timescaledb": "ok",
+              "weather": "ok"
+            },
+            "details": {
+              "ansp_coordination": "0 pending (0 retrying, oldest 0 s), 0 escalated, 0 failed",
+              "cis": "zones:1,uspace_airspace:1,restrictions:0, age 44 s",
+              "cis_notify_keys": "age_s=0",
+              "cis_publisher_keys": "age_s=0",
+              "client_address": "age_s=0",
+              "dss": "f3548: uss_availability Unknown",
+              "geoid": "mapped: true",
+              "issuer": "age_s=0",
+              "jwks": "age_s=0",
+              "nats": "age_s=0",
+              "occurrences": "0 pending, 0 failed, 0 past their 72 h deadline",
+              "operating_status": "USSP_CERTIFICATE_ID is not set: no operating-status notice can be sent (Art. 7(6))",
+              "postgres": "age_s=0",
+              "records": "USSP_RECORDS_DIR is not set: no daily record bundle is built (no flight to bundle yet)",
+              "registry": "last_success_age_s=14; feed_cursor=12, feed_age_s=14",
+              "timescaledb": "age_s=0",
+              "weather": "not_configured: no weather source is configured (USSP_WEATHER_SOURCE); GET /v1/weather answers 503 and every decision says weather_unavailable"
+            },
+            "took_ms": 3
+          }
+        }
+      },
+      "injected_at": "2026-10-14T23:24:21.4213586Z",
+      "fault_at": "2026-10-14T23:24:21.9213586Z",
+      "restored_at": "2026-10-14T23:25:21.4376666Z",
+      "ended_at": "2026-10-14T23:26:06.4385922Z",
+      "inject": {
+        "command": "PUT /v1/sources/direct_rid {enabled: false}",
+        "start": "2026-10-14T23:24:21.4213586Z",
+        "end": "2026-10-14T23:24:21.4287912Z",
+        "exit_code": 0,
+        "output": [
+          "chaos: 2026-10-14T23:24:21.428Z PUT /v1/sources/direct_rid {enabled: false} answered 200: changed true, enabled false, by e9b9ee3093132ca81c8bacba80cbd650"
+        ]
+      },
+      "restore": {
+        "command": "PUT /v1/sources/direct_rid {enabled: true}",
+        "start": "2026-10-14T23:25:21.4303648Z",
+        "end": "2026-10-14T23:25:21.4376666Z",
+        "exit_code": 0,
+        "output": [
+          "chaos: 2026-10-14T23:25:21.437Z PUT /v1/sources/direct_rid {enabled: true} answered 200: changed true, enabled true, by e9b9ee3093132ca81c8bacba80cbd650"
+        ]
+      },
+      "fault": {
+        "spec": {
+          "kind": "disabled",
+          "services": null,
+          "network": "uspace-demo_lab",
+          "source": "direct_rid"
+        },
+        "observed": true,
+        "first_held_after_s": 0.5,
+        "held_samples": 60,
+        "during_samples": 60,
+        "held_at_end": true,
+        "restored": true,
+        "restored_after_s": 0.5
+      },
+      "expectations": [
+        {
+          "phase": "during",
+          "expect": {
+            "System": [
+              "authority"
+            ],
+            "Ready": "",
+            "Check": "",
+            "In": [
+              "disabled"
+            ],
+            "NotIn": null,
+            "Always": false,
+            "Recovered": false,
+            "Status": "",
+            "StatusNot": "",
+            "Source": "direct_rid/*",
+            "Field": "",
+            "WithinS": 10,
+            "Why": "05 §6: consoles show state; SC-22: a disabled source is said, not hidden"
+          },
+          "systems": [
+            "authority"
+          ],
+          "pass": true,
+          "after_s": {
+            "authority": 0.5
+          },
+          "observed": "authority console status source direct_rid/* \"disabled\" at +0.5s"
+        },
+        {
+          "phase": "during",
+          "expect": {
+            "System": [
+              "authority"
+            ],
+            "Ready": "always",
+            "Check": "",
+            "In": null,
+            "NotIn": null,
+            "Always": false,
+            "Recovered": false,
+            "Status": "",
+            "StatusNot": "",
+            "Source": "",
+            "Field": "",
+            "WithinS": 0,
+            "Why": "a switch is not an outage: the api and every process answer"
+          },
+          "systems": [
+            "authority"
+          ],
+          "pass": true,
+          "observed": "authority ready in all 60 samples"
+        },
+        {
+          "phase": "during",
+          "expect": {
+            "System": [
+              "others"
+            ],
+            "Ready": "always",
+            "Check": "",
+            "In": null,
+            "NotIn": null,
+            "Always": false,
+            "Recovered": false,
+            "Status": "",
+            "StatusNot": "",
+            "Source": "",
+            "Field": "",
+            "WithinS": 0,
+            "Why": "05 §6: other sources unaffected, everyone else unaffected"
+          },
+          "systems": [
+            "ansp",
+            "cisp",
+            "dss",
+            "issuer",
+            "ussp"
+          ],
+          "pass": true,
+          "observed": "ansp ready in all 60 samples; cisp ready in all 60 samples; dss ready in all 60 samples; issuer ready in all 60 samples; ussp ready in all 60 samples"
+        },
+        {
+          "phase": "after",
+          "expect": {
+            "System": [
+              "authority"
+            ],
+            "Ready": "",
+            "Check": "",
+            "In": [
+              "live"
+            ],
+            "NotIn": null,
+            "Always": false,
+            "Recovered": false,
+            "Status": "",
+            "StatusNot": "",
+            "Source": "direct_rid/*",
+            "Field": "",
+            "WithinS": 30,
+            "Why": "switched on, the source is live again"
+          },
+          "systems": [
+            "authority"
+          ],
+          "pass": true,
+          "after_s": {
+            "authority": 2.9
+          },
+          "observed": "authority console status source direct_rid/* \"live\" at +2.9s"
+        },
+        {
+          "phase": "after",
+          "expect": {
+            "System": [
+              "all"
+            ],
+            "Ready": "",
+            "Check": "",
+            "In": null,
+            "NotIn": null,
+            "Always": false,
+            "Recovered": true,
+            "Status": "",
+            "StatusNot": "",
+            "Source": "",
+            "Field": "",
+            "WithinS": 30,
+            "Why": "everything as before"
+          },
+          "systems": [
+            "ansp",
+            "authority",
+            "cisp",
+            "dss",
+            "issuer",
+            "ussp"
+          ],
+          "pass": true,
+          "after_s": {
+            "ansp": 0.5,
+            "authority": 0.5,
+            "cisp": 0.5,
+            "dss": 0.5,
+            "issuer": 0.5,
+            "ussp": 0.5
+          },
+          "observed": "ansp recovered at +0.5s; authority recovered at +0.5s; cisp recovered at +0.5s; dss recovered at +0.5s; issuer recovered at +0.5s; ussp recovered at +0.5s"
+        }
+      ],
+      "audit": {
+        "events": 3,
+        "actors": [
+          "e9b9ee3093132ca81c8bacba80cbd650",
+          "e9b9ee3093132ca81c8bacba80cbd650",
+          "e9b9ee3093132ca81c8bacba80cbd650"
+        ],
+        "pass": true,
+        "note": "both switches audited as acts of e9b9ee3093132ca81c8bacba80cbd650, e9b9ee3093132ca81c8bacba80cbd650, e9b9ee3093132ca81c8bacba80cbd650"
+      },
+      "loss_counters": [
+        {
+          "process": "authority-rid-ingest",
+          "series": "uspace_authority_batches_refused{component=\"rid_ingest\"}",
+          "delta": 60
+        },
+        {
+          "process": "authority-rid-ingest",
+          "series": "uspace_authority_refused_disabled{component=\"rid_ingest\"}",
+          "delta": 60
+        }
+      ],
+      "alerts": {
+        "authority": "stale_ok"
+      },
+      "alert_findings": [
+        {
+          "system": "authority",
+          "what": "stale_clear",
+          "alert_id": "01M4YBP6B1Q0XB08A5DT4M8F68",
+          "at": "2026-10-14T23:24:21.4287912Z",
+          "reason": "source_disabled",
+          "row": "authority-rid-disabled",
+          "offset_s": 0,
+          "allowed": true
+        },
+        {
+          "system": "authority",
+          "what": "re_raised",
+          "alert_id": "01M4YBR8R1WVNM2S41WKPWF9RN",
+          "at": "2026-10-14T23:25:25.122847Z",
+          "row": "authority-rid-disabled",
+          "offset_s": 63.7,
+          "allowed": true
+        }
+      ],
+      "status_frames": {
+        "ansp": 53,
+        "authority": 53
+      },
+      "samples": 106,
+      "samples_file": "samples/authority-rid-disabled.json.gz",
+      "verdict": "pass"
+    }
+  ],
+  "verdict": "pass",
+  "sessions": {
+    "command": "deploy/local-demo/bin/demo-seed --steps sessions --geoid deploy/local-demo/ground/egm2008-2_5.pgm scripts/chaos/background.yaml",
+    "every": "15m0s",
+    "runs": null
+  }
+}

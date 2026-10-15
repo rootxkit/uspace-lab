@@ -13,6 +13,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/rootxkit/uspace-lab/internal/observe"
 )
 
 // fakeUSSP answers the token endpoint, files every intent with the
@@ -154,5 +156,75 @@ func TestARunEndsItsIntents(t *testing.T) {
 	}
 	if rep3.Volumes.IntentsEnded != 0 || !strings.Contains(strings.Join(rep3.Errors, "; "), "not ended") {
 		t.Fatalf("ended %d, errors %v", rep3.Volumes.IntentsEnded, rep3.Errors)
+	}
+}
+
+// A run with a peer ends its intents after the drain and before the
+// report is collected (the deletions owed to the peer are timed): the
+// count it set is the report's, where collecting used to overwrite it
+// with 0 (the first recorded 100 run said "Intents ended after the run
+// 0" with all 100 ended at the USSP). Ended after collecting, as
+// without a peer, the count set then stands too.
+func TestIntentsEndedBeforeTheReportAreCounted(t *testing.T) {
+	f := loadSmall(t)
+	r := &run{tier: f.Tier, files: f, fleet: &Fleet{}, picture: NewLedger(), traffic: NewReceiptLedger(), readers: &readers{},
+		rec: observe.NewRecorder(nil), memory: make([]uint64, 12)}
+	rep := &Report{Volumes: Volumes{IntentsEnded: 7}}
+	r.collect(rep, time.Now(), 1)
+	if rep.Volumes.IntentsEnded != 7 {
+		t.Fatalf("ended before collecting: the report says %d", rep.Volumes.IntentsEnded)
+	}
+	rep = &Report{}
+	r.collect(rep, time.Now(), 1)
+	if rep.Volumes.IntentsEnded != 0 {
+		t.Fatalf("none ended: the report says %d", rep.Volumes.IntentsEnded)
+	}
+}
+
+// An intent the USSP ended itself (the 5000 run's flights went silent
+// past the USSP's bound) is refused an end, 409 "the intent is ended":
+// it is ended, read back from the USSP, and counted so, not a run error
+// (the first 5000 report listed 1132 of them). An intent refused an end
+// that the USSP still holds activated stays an error.
+func TestAnIntentTheUSSPEndedItselfIsEnded(t *testing.T) {
+	f := loadSmall(t)
+	f.Paths.Pairs.InnerGapM = 30
+	for _, c := range []struct {
+		held  string
+		ended bool
+	}{{"ended", true}, {"activated", false}} {
+		inner := &fakeUSSP{ended: map[string]bool{}, decide: func(int) string { return "accepted" }}
+		h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch {
+			case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/v1/intents/"):
+				_ = json.NewEncoder(w).Encode(map[string]any{"intent_id": strings.TrimPrefix(r.URL.Path, "/v1/intents/"), "state": c.held})
+				return
+			case r.Method == http.MethodPatch:
+				body, _ := io.ReadAll(r.Body)
+				r.Body = io.NopCloser(bytes.NewReader(body))
+				if strings.Contains(string(body), `"end"`) {
+					w.WriteHeader(http.StatusConflict)
+					_, _ = w.Write([]byte(`{"type":"https://schemas.uspace.ge/problems/end_refused","status":409,"detail":"the intent is ended and cannot be ended"}`))
+					return
+				}
+			}
+			inner.ServeHTTP(w, r)
+		})
+		srv := httptest.NewServer(h)
+		rep, err := Run(context.Background(), Options{Files: f, TargetsPath: systemsTargets(t, f, srv.URL, nil), Run: "x", RepoRoot: repo("."), ReadyTimeout: time.Second})
+		srv.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		notEnded := strings.Contains(strings.Join(rep.Errors, "; "), "not ended")
+		inner.mu.Lock()
+		filed := inner.filed
+		inner.mu.Unlock()
+		switch {
+		case c.ended && (rep.Volumes.IntentsEnded != filed || filed == 0 || notEnded):
+			t.Errorf("held ended: filed %d, ended %d, errors %v", filed, rep.Volumes.IntentsEnded, rep.Errors)
+		case !c.ended && (rep.Volumes.IntentsEnded != 0 || !notEnded):
+			t.Errorf("held activated: ended %d, errors %v", rep.Volumes.IntentsEnded, rep.Errors)
+		}
 	}
 }

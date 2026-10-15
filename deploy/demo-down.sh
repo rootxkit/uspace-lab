@@ -47,6 +47,13 @@ if [ -n "$left_containers" ] || [ -n "$left_volumes" ]; then
   [ -z "$left_volumes" ] || echo "volumes: $left_volumes" >&2
   exit 1
 fi
+# A fault's state (scripts/chaos/lib.sh) describes containers that are
+# gone now; kept, it makes the next stack's fault refuse to start.
+if [ -d "$state/chaos" ]; then
+  faults="$(ls -A "$state/chaos")"
+  rm -rf "$state/chaos"
+  [ -z "$faults" ] || echo "demo-down: removed the fault state of containers now gone: $(tr '\n' ' ' <<<"$faults")"
+fi
 if [ "${1:-}" = "--purge" ]; then
   rm -rf "$state"
   echo "demo-down: removed $state"

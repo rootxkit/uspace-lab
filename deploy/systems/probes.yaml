@@ -29,8 +29,18 @@ metrics:
   ussp-tsdb-writer: http://ussp-tsdb-writer:8086/metrics
   ansp-api: http://ansp-api:8080/metrics
   ansp-manned-feed: http://ansp-manned-feed:8080/metrics
+# The hot path's messages, per process: the series that counts them,
+# set against the process's CPU over a run (process_cpu_seconds_total)
+# for the 04 §1 estimate of what JSON costs it (internal/load protobuf).
+hot_path:
+  ussp-telemetry-ingest: 'ussp_accepted{component="telemetry"}'
+  ussp-traffic-ws: 'ussp_traffic_ws_frames_sent{component="traffic_ws"}'
+  authority-picture-ws: 'uspace_authority_frames_sent{component="picture"}'
 # The telemetry databases, read with psql in their own container (the
 # postgres superuser over the local socket; no password leaves it).
+# dp_cache: the authority's display provider caches what it polled in
+# ussp_flights there, disposed of within 24 h (F3411
+# NetDpMaxDataRetentionPeriodSeconds; 05 §4).
 databases:
   - {system: ussp, service: ussp-timescaledb, database: ussp_timeseries}
-  - {system: authority, service: authority-postgres, database: authority_ts}
+  - {system: authority, service: authority-postgres, database: authority_ts, dp_cache: true}

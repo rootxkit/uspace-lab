@@ -46,10 +46,15 @@ type Envelope struct {
 
 // ParseEnvelope decodes a frame's envelope, refusing an oversized frame or
 // one without a schema.
-func ParseEnvelope(b []byte) (Envelope, error) {
+func ParseEnvelope(b []byte) (Envelope, error) { return ParseEnvelopeWithin(b, MaxFrameBytes) }
+
+// ParseEnvelopeWithin is ParseEnvelope with its own bound: a reader that
+// asked for more than MaxFrameBytes can hold (a whole-area snapshot)
+// says how much more.
+func ParseEnvelopeWithin(b []byte, maxBytes int) (Envelope, error) {
 	var e Envelope
-	if len(b) > MaxFrameBytes {
-		return e, fmt.Errorf("wire: frame of %d bytes exceeds %d", len(b), MaxFrameBytes)
+	if len(b) > maxBytes {
+		return e, fmt.Errorf("wire: frame of %d bytes exceeds %d", len(b), maxBytes)
 	}
 	if err := json.Unmarshal(b, &e); err != nil {
 		return e, fmt.Errorf("wire: not an envelope: %w", err)

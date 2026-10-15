@@ -27,6 +27,7 @@ const (
 	maxSystemCounters  = 200
 	probeErrorsKept    = 20
 	metricRSS          = "process_resident_memory_bytes"
+	metricCPU          = "process_cpu_seconds_total"
 	metricWriterQueueS = "_tsdb_writer_queue_age_seconds"
 	metricPairChecks   = "_pair_checks"
 )
@@ -39,10 +40,15 @@ var lossCounter = regexp.MustCompile(`(^|_)(dropped|gaps?|degraded|lost|refused|
 // command runs argv with extra appended, bounded in time and output; an
 // error carries the command's own words (its stderr, bounded).
 func command(ctx context.Context, argv []string, extra ...string) ([]byte, error) {
+	return commandWithin(ctx, probeTimeout, argv, extra...)
+}
+
+// commandWithin is command bounded by timeout instead of a probe's.
+func commandWithin(ctx context.Context, timeout time.Duration, argv []string, extra ...string) ([]byte, error) {
 	if len(argv) == 0 {
 		return nil, fmt.Errorf("load: probe: no command")
 	}
-	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	args := append(append([]string{}, argv[1:]...), extra...)
 	cmd := exec.CommandContext(ctx, argv[0], args...) //nolint:gosec // the operator's targets file names the probe command
@@ -130,7 +136,33 @@ type probes struct {
 	sizes0  map[string]float64
 	sizes1  map[string]float64
 	lag     map[string]float64
+	// dp is the display provider's cache as read after the run (nil:
+	// not read).
+	dp *DPCache
+	// cpuPct are each container's CPU percentages as docker stats gave
+	// them (bounded).
+	cpuPct map[string][]float64
 }
+
+// DPCache is the display provider's cache as read after a run: how long
+// the display provider has been caching (its first network track) and
+// how many cached entries are older than F3411's 24 h.
+type DPCache struct {
+	System string  `json:"system"`
+	SinceS float64 `json:"caching_for_s"`
+	Over   float64 `json:"entries_over_24h"`
+}
+
+// Queries of the display provider's cache (uspace-authority's
+// ussp_flights and tracks hypertables at the image under test).
+const (
+	sqlDPOver  = "SELECT count(*) FROM ussp_flights WHERE rx_ts < now() - interval '24 hours'"
+	sqlDPSince = "SELECT coalesce(extract(epoch FROM now() - min(rx_ts)), 0) FROM tracks WHERE source = 'network_rid'"
+	// dpCacheJudgedAfterS is how long the display provider must have
+	// cached before the 24 h bound can be judged: a day, and the hour
+	// the authority checks its disposal in.
+	dpCacheJudgedAfterS = 25 * 3600
+)
 
 func newProbes(cfg *runner.LoadProbes) *probes {
 	return &probes{cfg: cfg, rss: map[string][]uint64{}, prev: map[string]map[string]float64{}, rise: map[string]map[string]float64{},
@@ -172,6 +204,11 @@ func (p *probes) scrape(ctx context.Context) {
 	for _, proc := range p.processes() {
 		b, err := command(ctx, p.cfg.Fetch, p.cfg.Metrics[proc])
 		if err != nil {
+			if ctx.Err() != nil {
+				// The run stopped the probes mid-scrape (the generator
+				// ended): that says nothing of the process.
+				return
+			}
 			p.fail("metrics of %s: %v", proc, err)
 			continue
 		}
@@ -211,8 +248,43 @@ func (p *probes) record(proc string, m map[string]float64, now time.Time) {
 	}
 }
 
+// rises is a copy of every process's series rises so far.
+func (p *probes) rises() map[string]map[string]float64 {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	out := make(map[string]map[string]float64, len(p.rise))
+	for proc, m := range p.rise {
+		c := make(map[string]float64, len(m))
+		for s, v := range m {
+			c[s] = v
+		}
+		out[proc] = c
+	}
+	return out
+}
+
 // run scrapes every period until ctx ends.
 func (p *probes) run(ctx context.Context, period time.Duration) {
+	var wg sync.WaitGroup
+	defer wg.Wait()
+	if len(p.cfg.Stats) > 0 {
+		// docker stats takes seconds: on its own ticker, never holding
+		// the scrapes back.
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			tk := time.NewTicker(period)
+			defer tk.Stop()
+			for {
+				p.stats(ctx)
+				select {
+				case <-ctx.Done():
+					return
+				case <-tk.C:
+				}
+			}
+		}()
+	}
 	p.scrape(ctx)
 	tk := time.NewTicker(period)
 	defer tk.Stop()
@@ -223,6 +295,33 @@ func (p *probes) run(ctx context.Context, period time.Duration) {
 		case <-tk.C:
 			p.scrape(ctx)
 		}
+	}
+}
+
+// stats reads every container's CPU once.
+func (p *probes) stats(ctx context.Context) {
+	b, err := command(ctx, p.cfg.Stats)
+	if err != nil {
+		if ctx.Err() == nil {
+			p.fail("container CPU: %v", err)
+		}
+		return
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.cpuPct == nil {
+		p.cpuPct = map[string][]float64{}
+	}
+	for _, line := range strings.Split(string(b), "\n") {
+		name, pct, ok := strings.Cut(strings.TrimSpace(line), "\t")
+		if !ok || !strings.HasPrefix(name, p.cfg.StatsPrefix) {
+			continue
+		}
+		v, err := strconv.ParseFloat(strings.TrimSuffix(strings.TrimSpace(pct), "%"), 64)
+		if err != nil || len(p.cpuPct[name]) >= probeMaxSamples {
+			continue
+		}
+		p.cpuPct[name] = append(p.cpuPct[name], v)
 	}
 }
 
@@ -274,7 +373,35 @@ func (p *probes) sizes(ctx context.Context, after bool) {
 		p.mu.Lock()
 		p.lag[db.System] = lag
 		p.mu.Unlock()
+		if db.DPCache {
+			p.dpCache(ctx, db)
+		}
 	}
+}
+
+// dpCache reads the display provider's cache of db.
+func (p *probes) dpCache(ctx context.Context, db runner.LoadDatabase) {
+	since, err := p.query(ctx, db, sqlDPSince)
+	if err != nil {
+		p.fail("display provider cache age in %s: %v", db.System, err)
+		return
+	}
+	over, err := p.query(ctx, db, sqlDPOver)
+	if err != nil {
+		p.fail("display provider cache in %s: %v", db.System, err)
+		return
+	}
+	p.mu.Lock()
+	p.dp = &DPCache{System: db.System, SinceS: math.Round(since), Over: over}
+	p.mu.Unlock()
+}
+
+// ContainerCPU is one container's CPU over the run, percent of a core.
+type ContainerCPU struct {
+	Container string  `json:"container"`
+	Samples   int     `json:"samples"`
+	MeanPct   float64 `json:"mean_pct"`
+	MaxPct    float64 `json:"max_pct"`
 }
 
 // SystemCounter is one loss counter of a system that moved in the run.
@@ -316,11 +443,21 @@ type Systems struct {
 	// CountersMore is how many moved counters were not listed (bound).
 	CountersMore   int                `json:"loss_counters_not_listed,omitempty"`
 	PairChecksPerS map[string]float64 `json:"pair_checks_per_s,omitempty"`
-	Errors         []string           `json:"errors,omitempty"`
-	ErrorsN        int                `json:"errors_count,omitempty"`
+	// CPUCores is each process's CPU over the run per second of it (1 is
+	// one core busy throughout): where a tier's load lands (05 §3, the
+	// 5000 attempt's "what broke first").
+	CPUCores map[string]float64 `json:"cpu_cores,omitempty"`
+	// ContainerCPU is every container's CPU as docker stats sampled it,
+	// mean and largest, in percent of one core: the brokers and the
+	// databases too.
+	ContainerCPU []ContainerCPU `json:"container_cpu,omitempty"`
+	Errors       []string       `json:"errors,omitempty"`
+	ErrorsN      int            `json:"errors_count,omitempty"`
 	// ErrorsDuringFaults are the probes that failed inside a fault the
 	// run injected.
 	ErrorsDuringFaults int `json:"errors_during_faults,omitempty"`
+	// DPCache is the display provider's cache after the run.
+	DPCache *DPCache `json:"dp_cache,omitempty"`
 }
 
 // observe turns what the probes read into observations: memory, the
@@ -336,7 +473,7 @@ type Systems struct {
 func (p *probes) observe(obs map[string]Observation, models Models, fleetSamples uint64, warmup int, excused func(time.Time) bool) *Systems {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	sys := &Systems{PairChecksPerS: map[string]float64{}}
+	sys := &Systems{PairChecksPerS: map[string]float64{}, CPUCores: map[string]float64{}}
 	for _, e := range p.errs {
 		if excused != nil && !e.at.IsZero() && excused(e.at) {
 			sys.ErrorsDuringFaults++
@@ -389,6 +526,9 @@ func (p *probes) observe(obs map[string]Observation, models Models, fleetSamples
 		dt := p.lastAt[proc].Sub(p.firstAt[proc]).Seconds()
 		if dt <= 0 {
 			continue
+		}
+		if c, ok := p.rise[proc][metricCPU]; ok {
+			sys.CPUCores[proc] = round3(c / dt)
 		}
 		var d float64
 		has := false
@@ -456,6 +596,36 @@ func (p *probes) observe(obs map[string]Observation, models Models, fleetSamples
 		obs["compression_lag_chunks"] = valueObs(lag)
 	} else {
 		obs["compression_lag_chunks"] = notMeasured(fmt.Sprintf("the compression lag of %d of %d databases was read", lagMeasured, len(p.cfg.Databases)))
+	}
+	for _, name := range sortedKeysOf(p.cpuPct) {
+		s := p.cpuPct[name]
+		c := ContainerCPU{Container: name, Samples: len(s)}
+		for _, v := range s {
+			c.MeanPct += v / float64(len(s))
+			c.MaxPct = math.Max(c.MaxPct, v)
+		}
+		c.MeanPct = round3(c.MeanPct)
+		sys.ContainerCPU = append(sys.ContainerCPU, c)
+	}
+	// The display provider's cache: judged only once it has cached for
+	// longer than the bound (and the hour disposal is checked in); a
+	// younger cache cannot hold anything older than 24 h, so a 0 there
+	// would prove nothing.
+	sys.DPCache = p.dp
+	named := false
+	for _, db := range p.cfg.Databases {
+		named = named || db.DPCache
+	}
+	switch {
+	case !named:
+		obs["f3411_dp_cache_over_24h"] = notMeasured("no probed database holds the display provider's cache (deploy/systems/probes.yaml dp_cache)")
+	case p.dp == nil:
+		obs["f3411_dp_cache_over_24h"] = notMeasured("the display provider's cache could not be read (the probes' errors say why)")
+	case p.dp.SinceS < dpCacheJudgedAfterS:
+		obs["f3411_dp_cache_over_24h"] = notMeasured(fmt.Sprintf("the authority's display provider has cached for %.1f h (its first network track); the 24 h bound is judged once it has cached for %d h (a day, and the hour disposal is checked in)",
+			p.dp.SinceS/3600, dpCacheJudgedAfterS/3600))
+	default:
+		obs["f3411_dp_cache_over_24h"] = valueObs(p.dp.Over)
 	}
 	return sys
 }

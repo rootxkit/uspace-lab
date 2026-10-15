@@ -26,6 +26,7 @@ import (
 
 	"github.com/rootxkit/uspace-lab/internal/runner"
 	"github.com/rootxkit/uspace-lab/internal/scenario"
+	"github.com/rootxkit/uspace-lab/internal/seed"
 )
 
 // ResultFormat names chaos.json's shape.
@@ -71,7 +72,7 @@ func cmdCheck(args []string) int {
 	}
 	for i := range m.Rows {
 		r := &m.Rows[i]
-		if r.Domain != "clock" {
+		if scripted(r.Domain) {
 			if _, err := os.Stat(filepath.Join(filepath.Dir(*matrix), r.Domain+".sh")); err != nil {
 				fmt.Printf("FAIL row %s: no script for domain %s\n", r.ID, r.Domain)
 				return exitFail
@@ -93,7 +94,7 @@ func totalHold(rows []Row) float64 {
 
 // common flags of run, watch and skew.
 type common struct {
-	matrix, env, targets, project string
+	matrix, env, targets, project, probes string
 }
 
 func (c *common) bind(fs *flag.FlagSet) {
@@ -101,6 +102,7 @@ func (c *common) bind(fs *flag.FlagSet) {
 	fs.StringVar(&c.env, "env", "deploy/demo.env", "the demo env file (hosts, port, state directory)")
 	fs.StringVar(&c.targets, "targets", "targets/local-demo.yaml", "the targets file demo-seed wrote (console sessions, receiver keys)")
 	fs.StringVar(&c.project, "project", "", "the compose project (default CHAOS_PROJECT, COMPOSE_PROJECT_NAME, uspace-demo)")
+	fs.StringVar(&c.probes, "probes", "deploy/systems/probes.yaml", "what reads every process's /metrics: each row lists the loss counters that rose (empty: none read)")
 }
 
 // siteLab is the sitl.env the targets file names (the origin the
@@ -183,7 +185,7 @@ func cmdRun(args []string) int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 	h := &harness{m: m, lab: lab, docker: cliDocker{bin: "docker"}, scripts: filepath.Dir(c.matrix), bash: bash, out: os.Stdout, status: map[string]*StatusLog{}}
-	h.shell = h.runScript
+	h.shell = h.dispatch
 	if !*noBG && m.Background.Scenario != "" {
 		h.settle = time.Duration(m.Background.RealertWithinS * float64(time.Second))
 	}
@@ -210,9 +212,21 @@ func cmdRun(args []string) int {
 		fmt.Fprintln(os.Stderr, err)
 		return exitUsage
 	}
+	if c.probes != "" {
+		if h.probes, err = seed.LoadProbes(c.probes, h.lab.Project); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return exitUsage
+		}
+	}
 	for i := range sel {
 		if sel[i].Domain == "clock" {
 			if h.skewRig, err = newSkewRig(c.targets, site, m.Background.Scenario); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				return exitUsage
+			}
+		}
+		if sel[i].Domain == domainDisable && h.admin == nil {
+			if h.admin, err = newAdminAPI(c.targets, h.lab.HTTP, *runID); err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				return exitUsage
 			}
@@ -582,6 +596,12 @@ func (r *RunResult) Summary() string {
 		}
 		for _, s := range rr.Skew {
 			fmt.Fprintf(&b, " [clock %+gs: left %+.1fs, %s %d]", s.SkewS, s.Measured, s.Got, s.Code)
+		}
+		if a := rr.Audit; a != nil {
+			fmt.Fprintf(&b, " [audit: %s]", a.Note)
+		}
+		for _, c := range rr.Counters {
+			fmt.Fprintf(&b, " [%s %s +%g]", c.Process, c.Series, c.Delta)
 		}
 		b.WriteString("\n")
 		for _, f := range rr.Failures {

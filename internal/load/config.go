@@ -86,7 +86,13 @@ type Tier struct {
 	Consoles int `yaml:"consoles" json:"consoles"`
 	// DP are the F3411 display-provider polls of the USSP the harness
 	// makes in a systems run (nil: none).
-	DP    *DPPolls `yaml:"dp" json:"dp,omitempty"`
+	DP *DPPolls `yaml:"dp" json:"dp,omitempty"`
+	// Peer is the peer USSP a systems run embeds (peer.go; nil: none):
+	// the authority's DP display and the F3548 rows.
+	Peer *PeerCfg `yaml:"peer" json:"peer,omitempty"`
+	// Zone is a zone a systems run's seed publishes and a few aircraft
+	// fly through (zone.go; nil: none): the zone alert row.
+	Zone  *ZoneCfg `yaml:"zone" json:"zone,omitempty"`
 	Watch struct {
 		// Pairs is the number of scripted conflict pairs (every one is
 		// watched: its expected alerts are the missed-alert count's set).
@@ -105,6 +111,12 @@ type Tier struct {
 	MemoryWarmupS float64 `yaml:"memory_warmup_s" json:"memory_warmup_s"`
 	// Required are the check ids this tier must measure and pass.
 	Required []string `yaml:"required" json:"required"`
+	// RequiredSystems are the further checks a systems run of the tier
+	// must measure and pass: the rows only the systems' images can show
+	// (the F3411 SP and DP display, F3548, the probes, the faults), so a
+	// systems run that measured none of them fails instead of passing on
+	// the rows the reference target has too.
+	RequiredSystems []string `yaml:"required_systems" json:"required_systems,omitempty"`
 	// Scale says what this tier changes from 05 §1 / 05 §7, with the
 	// factor and why (a scaled run says so in its report).
 	Scale []ScaleFactor `yaml:"scale" json:"scale"`
@@ -325,7 +337,7 @@ func (f *Files) Validate() error {
 			known[r.Checks[i].ID] = true
 		}
 	}
-	for _, id := range f.Tier.Required {
+	for _, id := range append(slices.Clone(f.Tier.Required), f.Tier.RequiredSystems...) {
 		if !known[id] {
 			return fmt.Errorf("load tier: required check %q is not in the criteria", id)
 		}
@@ -391,6 +403,16 @@ func (t *Tier) validate() error {
 	}
 	if t.DP != nil {
 		if err := t.DP.validate(); err != nil {
+			return err
+		}
+	}
+	if t.Peer != nil {
+		if err := t.Peer.validate(); err != nil {
+			return err
+		}
+	}
+	if t.Zone != nil {
+		if err := t.Zone.validate(t); err != nil {
 			return err
 		}
 	}
@@ -491,10 +513,18 @@ func (p *Paths) validate(pol *scenario.Policy, t *Tier) error {
 		return fmt.Errorf("walkers: radius_m %v overlaps the next cell (spacing_m %v)", w.RadiusM, w.SpacingM)
 	}
 	layers := append(slices.Clone(w.LayersRelM), pr.AltRelM)
+	if t.Peer != nil {
+		// The peer's aircraft fly at an altitude of their own too: no
+		// alert is due between them and the fleet.
+		layers = append(layers, t.Peer.AltRelM)
+	}
+	if t.Zone != nil {
+		layers = append(layers, t.Zone.AltRelM)
+	}
 	for i := range layers {
 		for j := i + 1; j < len(layers); j++ {
 			if math.Abs(layers[i]-layers[j]) < dV+w.MarginM {
-				return fmt.Errorf("walkers/pairs: altitudes %v and %v m are closer than the vertical minimum %.0f m (+%.0f m margin)", layers[i], layers[j], dV, w.MarginM)
+				return fmt.Errorf("walkers/pairs/peer: altitudes %v and %v m are closer than the vertical minimum %.0f m (+%.0f m margin)", layers[i], layers[j], dV, w.MarginM)
 			}
 		}
 	}
@@ -522,9 +552,35 @@ func (p *Paths) validate(pol *scenario.Policy, t *Tier) error {
 	return p.checkBounds(t)
 }
 
-// checkBounds checks that every path stays inside bounds_m.
+// checkBounds checks that every path stays inside bounds_m, and that
+// the zone (when the tier has one) is clear of every path but its own
+// aircraft's: an alert of it on anything else would be a false alarm.
 func (p *Paths) checkBounds(t *Tier) error {
+	if z := t.Zone; z != nil {
+		const clearM = 100 // past the zone's edge, metres
+		h := z.SideM/2 + clearM
+		zs, zn, zw, ze := z.Centre.NorthM-h, z.Centre.NorthM+h, z.Centre.EastM-h, z.Centre.EastM+h
+		meets := func(s, n, w, e float64) bool { return n >= zs && s <= zn && e >= zw && w <= ze }
+		walkers := t.Operators.Aircraft - 2*t.Watch.Pairs - z.Aircraft
+		cols, rows := gridOf(walkers)
+		wk := &p.Walkers
+		if walkers > 0 && meets(wk.Origin.NorthM-wk.RadiusM, wk.Origin.NorthM+float64(rows-1)*wk.SpacingM+wk.RadiusM,
+			wk.Origin.EastM-wk.RadiusM, wk.Origin.EastM+float64(cols-1)*wk.SpacingM+wk.RadiusM) {
+			return fmt.Errorf("zone: the zone (%v m about %+v, %d m clear) meets the walkers' grid", z.SideM, z.Centre, clearM)
+		}
+		pr := &p.Pairs
+		if t.Watch.Pairs > 0 && meets(pr.Origin.NorthM-pairIntentMarginM, pr.Origin.NorthM+pairIntentMarginM,
+			pr.Origin.EastM-pr.AmplitudeM, pr.Origin.EastM+float64(t.Watch.Pairs-1)*pr.SpacingM+pr.AmplitudeM) {
+			return fmt.Errorf("zone: the zone meets the pairs' row")
+		}
+		if pe := t.Peer; pe != nil && meets(pe.Centre.NorthM-pe.RadiusM, pe.Centre.NorthM+pe.RadiusM, pe.Centre.EastM-pe.RadiusM, pe.Centre.EastM+pe.RadiusM) {
+			return fmt.Errorf("zone: the zone meets the peer's circle")
+		}
+	}
 	walkers := t.Operators.Aircraft - 2*t.Watch.Pairs
+	if t.Zone != nil {
+		walkers -= t.Zone.Aircraft
+	}
 	cols, rows := gridOf(walkers)
 	w := &p.Walkers
 	in := func(n, e float64) bool {

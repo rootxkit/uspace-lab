@@ -134,6 +134,10 @@ services:
       # The host's address on the egress network: X-Forwarded-For is
       # trusted from it only (the load harness's receivers name theirs).
       LAB_HOST_GATEWAY: ${DEMO_HOST_GATEWAY:?deploy/demo.env}
+      # The load harness's peer USSP, served on the host (docs/RUNBOOKS/
+      # load.md "Systems mode").
+      LOAD_PEER_HOST: ${LOAD_PEER_HOST:?deploy/demo.env}
+      LOAD_PEER_PORT: ${DEMO_LOAD_PEER_PORT:?deploy/demo.env}
     volumes:
       - ./systems/Caddyfile:/etc/caddy/Caddyfile:ro
       - ${DEMO_STATE_DIR:-./local-demo}/tls:/etc/caddy/tls:ro
@@ -145,8 +149,11 @@ services:
         # X-Forwarded-For (*_TRUSTED_PROXIES), as the droplet's systems
         # trust their edge Caddy's.
         ipv4_address: ${DEMO_CADDY_IP:?deploy/demo.env}
-        aliases: ["${AUTHORITY_HOST}", "${CISP_HOST}", "${USSP_HOST}", "${ANSP_HOST}", "${LAB_HOST}"]
+        aliases: ["${AUTHORITY_HOST}", "${CISP_HOST}", "${USSP_HOST}", "${ANSP_HOST}", "${LAB_HOST}", "${LOAD_PEER_HOST}"]
       egress: {}
+    # The host, where the load harness serves its peer USSP (Docker
+    # Desktop resolves the name already; on Linux this maps it).
+    extra_hosts: ["host.docker.internal:host-gateway"]
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2019/config/"]
       interval: 5s

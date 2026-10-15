@@ -245,6 +245,25 @@ rows:
       - {system: authority, source: "network_rid/*", in: [live], within_s: 30, why: "the source is shown live again"}
       - {system: all, recovered: true, within_s: 30, why: "the adapter restarted, everything as before"}
 
+  # ---- one source type (disabled) ---------------------------------------
+  - id: authority-rid-disabled
+    domain: disable
+    args: [direct_rid]
+    system: authority
+    cite: ["05 §6 'One source type or instance (disabled or dead)'", "knowledge/scenarios.md SC-08 (a disable is an audited act by a person)", "SC-22 (nothing hidden)"]
+    claim: "Direct Remote ID switched off by a person at the authority's console: its tracks age out as source_disabled, counted; the console shows the source disabled; the other sources and every other system unaffected; the switch is an audited act of that person. Switched on again, the source is live and the alert on the aircraft it hears raised again."
+    hold_s: 60
+    recover_within_s: 30
+    alerts: {authority: stale_ok}
+    alerts_reason: "the authority hears the background aircraft by direct Remote ID only: switched off, its alert clears as source_disabled (allowed), and is raised again once the source is on"
+    during:
+      - {system: authority, source: "direct_rid/*", in: [disabled], within_s: 10, why: "05 §6: consoles show state; SC-22: a disabled source is said, not hidden"}
+      - {system: authority, ready: always, why: "a switch is not an outage: the api and every process answer"}
+      - {system: others, ready: always, why: "05 §6: other sources unaffected, everyone else unaffected"}
+    after:
+      - {system: authority, source: "direct_rid/*", in: [live], within_s: 30, why: "switched on, the source is live again"}
+      - {system: all, recovered: true, within_s: 30, why: "everything as before"}
+
   # ---- NATS (one system) ------------------------------------------------
   - id: ussp-nats
     domain: nats

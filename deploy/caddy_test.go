@@ -149,3 +149,41 @@ func TestCaddyRoutesHealthAndMetrics(t *testing.T) {
 		t.Fatal("pathMatches is wrong")
 	}
 }
+
+// The load harness's peer USSP is a site of the lab Caddy like every
+// system: proxied to the host whatever the path, /metrics closed, its
+// host an alias of the Caddy on the lab network (so the systems resolve
+// it) and named by the certificate (gen-secrets.sh), as every site is.
+// A site the certificate does not name is refused by every client.
+func TestThePeerUSSPIsASite(t *testing.T) {
+	sites := caddySites(t)
+	for _, p := range []string{"/uss/flights", "/uss/v1/operational_intents", "/"} {
+		if got := caddyRouteOf(t, sites, "{$LOAD_PEER_HOST}", p); got != "reverse_proxy host.docker.internal:{$LOAD_PEER_PORT}" {
+			t.Errorf("{$LOAD_PEER_HOST}%s: %q", p, got)
+		}
+	}
+	if got := caddyRouteOf(t, sites, "{$LOAD_PEER_HOST}", "/metrics"); got != "respond 404" {
+		t.Errorf("{$LOAD_PEER_HOST}/metrics: %q", got)
+	}
+	compose := read(t, "systems/compose.yaml")
+	if !strings.Contains(compose, `"${LAB_HOST}", "${LOAD_PEER_HOST}"]`) || !strings.Contains(compose, `extra_hosts: ["host.docker.internal:host-gateway"]`) {
+		t.Error("the lab Caddy is not the peer host's alias or does not map host.docker.internal")
+	}
+	gen := read(t, "systems/gen-secrets.sh")
+	m := regexp.MustCompile(`(?m)^for h in ([A-Z_ ]+); do$`).FindStringSubmatch(gen)
+	if m == nil {
+		t.Fatal("gen-secrets.sh: no host loop for the certificate")
+	}
+	named := map[string]bool{}
+	for _, h := range strings.Fields(m[1]) {
+		named["{$"+h+"}"] = true
+	}
+	for site := range sites {
+		if !named[site] {
+			t.Errorf("the site %s is not named by the certificate (gen-secrets.sh hosts %v)", site, m[1])
+		}
+	}
+	if len(sites) < 6 {
+		t.Fatalf("only %d sites", len(sites))
+	}
+}

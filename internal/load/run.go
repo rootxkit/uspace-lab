@@ -148,6 +148,12 @@ func Run(ctx context.Context, opt Options) (*Report, error) {
 		if tg.Load.Probes != nil {
 			r.probes = newProbes(tg.Load.Probes)
 		}
+		if tier.Peer != nil {
+			if r.peer, err = newPeerRun(tg, fl, r.systems.usspBase); err != nil {
+				return nil, err
+			}
+		}
+		r.images = tg.Images
 		evidence = "The systems' images as the targets file names them, seeded for this fleet (loadgen seed); evidence for the images and digests listed, on the host named, when the run passes (docs/PLAN.md L-D4)."
 	}
 	if opt.FaultsPath != "" {
@@ -161,6 +167,23 @@ func Run(ctx context.Context, opt Options) (*Report, error) {
 			return nil, err
 		}
 		r.faults = newFaultRunner(plan, filepath.Join(opt.RepoRoot, "scripts", "chaos"))
+		if plan.hasOutage() {
+			urls := tg.Load.Readiness
+			for _, sys := range outageSystems {
+				if urls[sys] == "" {
+					return nil, fmt.Errorf("load: the fault plan takes systems down, and the targets file names no readiness URL for %s: seed again (loadgen seed)", sys)
+				}
+			}
+			// The streams are opened later; the probe reads them when it
+			// samples.
+			r.faults.probe = &outageProbe{urls: urls, hc: &http.Client{Timeout: outageProbeTimeout},
+				flags: func() map[string][]string {
+					if r.readers == nil {
+						return nil
+					}
+					return r.readers.currentFlags(r.streams)
+				}}
+		}
 	}
 	receivers := ""
 	if r.systems != nil {
@@ -201,7 +224,20 @@ type run struct {
 	probes           *probes
 	sp               *spPoller
 	faults           *faultRunner
-	tokens           []*oauth.ClientCredentials
+	// peer is the embedded peer USSP (systems mode with a tier peer).
+	peer *peerRun
+	// images are the systems' images (systems mode); vectors what the
+	// vectors step found of them.
+	images  map[string]string
+	vectors *VectorsReport
+	// intentsEnded says endIntents ran (it runs once).
+	intentsEnded bool
+	// zoneK are the samples of each zone aircraft that enter the zone,
+	// zoneAt when each was handed out (the zone row's start).
+	zoneMu sync.Mutex
+	zoneK  map[string]map[int64]bool
+	zoneAt map[string]map[int64]time.Time
+	tokens []*oauth.ClientCredentials
 	// clientHTTP and clientAddr are each operator client's HTTP client
 	// and own address (nil, "": the defaults; systems mode).
 	clientHTTP []*http.Client
@@ -261,6 +297,18 @@ func (r *run) execute(ctx context.Context, rep *Report) {
 		r.fail("%s: %v", what, err)
 		r.finish(rep)
 		return
+	}
+	if r.peer != nil {
+		// The peer first: its subscription must stand before the intents
+		// whose changes it is owed are filed, and its ISA before the
+		// display provider is to poll it.
+		peerCtx, peerCancel := context.WithCancel(ctx)
+		defer func() { peerCancel(); r.peer.stop(); r.peer.wg.Wait() }()
+		ramp := float64(r.tier.Operators.Aircraft) / max(r.tier.Operators.RampPerS, 1)
+		until := time.Now().Add(seconds(ramp+r.tier.DurationS+r.tier.DrainS) + 20*time.Minute)
+		if err := r.peer.start(peerCtx, until, r.fleet.period); err != nil {
+			r.fail("%v", err)
+		}
 	}
 	r.fileIntents(ctx)
 	// Registered after the target's teardown, so it runs before it.
@@ -336,10 +384,22 @@ func (r *run) execute(ctx context.Context, rep *Report) {
 	memCancel()
 	memWG.Wait()
 	r.drain(ctx)
+	if r.peer != nil {
+		// Ended here, not when the run is torn down: the deletions owed to
+		// the peer are timed too.
+		r.endIntents(ctx, rep)
+		r.peer.awaitNotifications(ctx)
+	}
 	if r.probes != nil {
 		// After the drain: the counters' last values and the sizes.
 		r.probes.scrape(ctx)
 		r.probes.sizes(ctx, true)
+	}
+	if r.systems != nil && len(r.images) > 0 {
+		// After the load: the vectors against the packages in every
+		// image (05 §7), read from the images themselves.
+		r.log.Info("running the knowledge vectors against the images' uspace-core")
+		r.vectors = newVectorsRunner(filepath.Join(r.opt.RepoRoot, "knowledge", "vectors")).run(ctx, r.images)
 	}
 	if r.opt.HeapProfile != "" {
 		if err := writeHeapProfile(r.opt.HeapProfile); err != nil {
@@ -417,10 +477,10 @@ func (r *run) intentRequest(a *Aircraft, start, end time.Time) (simop.IntentRequ
 	fl := r.fleet
 	c := scenario.Move(fl.originLatLon(), a.centre)
 	var shape simop.Volume3D
-	if a.Role == RolePair && r.files.Paths.Pairs.InnerGapM > 0 {
+	if b, ok := fl.intentBox(a); ok {
 		// A box on the member's own side of the line: the two members'
-		// intents never share airspace (pairBox).
-		b := fl.pairBox(a)
+		// intents never share airspace (pairBox); a zone aircraft's over
+		// its whole line.
 		var poly simop.Polygon
 		for _, o := range []scenario.Offset{{NorthM: -pairIntentMarginM, EastM: b.WestM}, {NorthM: -pairIntentMarginM, EastM: b.EastM},
 			{NorthM: pairIntentMarginM, EastM: b.EastM}, {NorthM: pairIntentMarginM, EastM: b.WestM}} {
@@ -487,10 +547,8 @@ func (r *run) fileIntents(ctx context.Context) {
 				var id string
 				if err == nil {
 					in := &simop.Intents{BaseURL: r.usspBase, Tokens: r.tokens[a.Client], HTTP: r.httpOf(a.Client)}
-					var d simop.Decision
-					if d, err = in.File(ctx, req); err == nil && d.State == "accepted" {
-						d, err = in.Change(ctx, d.IntentID, "activate")
-					}
+					d, ferr := r.fileOne(ctx, in, a, req)
+					err = ferr
 					// Only an activated intent flies: anything else
 					// (rejected, held pending) is the USSP's refusal,
 					// said with its reasons.
@@ -532,6 +590,60 @@ send:
 	}
 	close(work)
 	wg.Wait()
+}
+
+// intentDSSWait bounds the wait for a decision the USSP holds
+// pending_dss (an intent in U-space airspace waits for its DSS write).
+const intentDSSWait = 3 * time.Minute
+
+// fileOne files a's intent and activates it, waiting for each decision
+// the USSP holds pending_dss to move on; the peer is told when each
+// request was sent.
+func (r *run) fileOne(ctx context.Context, in *simop.Intents, a *Aircraft, req simop.IntentRequest) (simop.Decision, error) {
+	filed := time.Now()
+	d, err := in.File(ctx, req)
+	if err != nil {
+		return d, err
+	}
+	if r.peer != nil && d.IntentID != "" {
+		r.peer.noteOp(d.IntentID, a, "Accepted", filed)
+	}
+	if d, err = awaitDSS(ctx, in, d); err != nil || d.State != "accepted" {
+		return d, err
+	}
+	activated := time.Now()
+	if r.peer != nil {
+		r.peer.noteOp(d.IntentID, a, "Activated", activated)
+	}
+	if d, err = in.Change(ctx, d.IntentID, "activate"); err != nil {
+		return d, err
+	}
+	return awaitDSS(ctx, in, d)
+}
+
+// awaitDSS reads an intent until its decision is no longer pending_dss,
+// bounded by intentDSSWait; any other decision is returned as it is.
+func awaitDSS(ctx context.Context, in *simop.Intents, d simop.Decision) (simop.Decision, error) {
+	if d.State != "pending_dss" {
+		return d, nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, intentDSSWait)
+	defer cancel()
+	tk := time.NewTicker(time.Second)
+	defer tk.Stop()
+	for d.State == "pending_dss" {
+		select {
+		case <-ctx.Done():
+			return d, fmt.Errorf("still pending_dss after %s (%s)", intentDSSWait, reasonsOf(d.Conflicts))
+		case <-tk.C:
+		}
+		next, err := in.Get(ctx, d.IntentID)
+		if err != nil {
+			continue
+		}
+		d = next
+	}
+	return d, nil
 }
 
 // startClients starts one operator client per aircraft and one receiver
@@ -597,6 +709,9 @@ func wsURL(base string) string {
 // stream of every watched aircraft with an intent.
 func (r *run) startStreams(ctx context.Context, wg *sync.WaitGroup) {
 	rd := &readers{rec: r.rec, picture: r.picture, traffic: r.traffic, bySer: map[string]*Aircraft{}, byMAC: map[string]*Aircraft{}, raised: map[string]time.Time{}, peers: map[string]string{}}
+	if r.peer != nil {
+		rd.network = r.peer.network
+	}
 	r.readers = rd
 	for _, a := range r.fleet.Aircraft {
 		rd.bySer[a.Serial], rd.byMAC[a.MAC] = a, a
@@ -608,7 +723,8 @@ func (r *run) startStreams(ctx context.Context, wg *sync.WaitGroup) {
 	sub, _ := json.Marshal(map[string]any{"schema": "console/subscribe/v1", "body": map[string]any{"bbox": bb[:], "layers": []string{"tracks", "alerts"}}})
 	for i := range r.tier.Consoles {
 		r.streams = append(r.streams, &stream{name: fmt.Sprintf("console-%02d", i), kind: streamPicture, url: r.pictureURL,
-			header: r.pictureHeader.Clone(), headerFn: r.consoleHeader(), onOpen: sub, timed: i == 0, needSnap: true, ready: make(chan struct{})})
+			header: r.pictureHeader.Clone(), headerFn: r.consoleHeader(), onOpen: sub, timed: i == 0, needSnap: true, ready: make(chan struct{}),
+			readLimit: snapshotLimit(len(r.fleet.Aircraft) + len(r.fleet.Peer))})
 	}
 	for _, a := range r.fleet.Aircraft {
 		id, ok := r.intents[a.Index]
@@ -688,6 +804,13 @@ func (r *run) generate(ctx context.Context, t0 time.Time) {
 		next[i] = t0.Add(period * time.Duration(i%50) / 50)
 	}
 	end := t0.Add(time.Duration(r.tier.DurationS * float64(time.Second)))
+	r.zoneK, r.zoneAt = map[string]map[int64]bool{}, map[string]map[int64]time.Time{}
+	for _, x := range fl.ZoneExpected {
+		if r.zoneK[x.Aircraft] == nil {
+			r.zoneK[x.Aircraft], r.zoneAt[x.Aircraft] = map[int64]bool{}, map[int64]time.Time{}
+		}
+		r.zoneK[x.Aircraft][x.K] = true
+	}
 	tk := time.NewTicker(10 * time.Millisecond)
 	defer tk.Stop()
 	for {
@@ -705,6 +828,11 @@ func (r *run) generate(ctx context.Context, t0 time.Time) {
 				continue
 			}
 			s := fl.Sample(a, k[i], now, t0)
+			if a.Role == RoleZone && r.zoneK[a.Name][k[i]] {
+				r.zoneMu.Lock()
+				r.zoneAt[a.Name][k[i]] = now
+				r.zoneMu.Unlock()
+			}
 			k[i]++
 			next[i] = next[i].Add(period)
 			if next[i].Before(now) {
@@ -884,6 +1012,8 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 	consoleFrames := uint64(0)
 	for _, s := range r.streams {
 		st := s.stats()
+		n, last := s.unexcused(r.excused())
+		st.Unexcused = n
 		rep.Streams = append(rep.Streams, st)
 		if s.kind == streamPicture {
 			for _, n := range st.Frames {
@@ -893,8 +1023,8 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 				timed = s
 			}
 		}
-		if st.LastError != "" && st.Connects != 1 {
-			r.fail("stream %s connected %d times; last error: %s", st.Name, st.Connects, st.LastError)
+		if n > 0 {
+			r.fail("stream %s broke %d times outside every fault and credential renewal (%d connections); last: %s", st.Name, n, st.Connects, last)
 		}
 	}
 	// Offered load.
@@ -912,6 +1042,9 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 	}
 	v.OperatorTargetPerS = float64(len(fl.Aircraft)) * t.Operators.TelemetryHz
 	v.RIDTargetPerS = float64(heard) * t.Operators.TelemetryHz
+	// A run with a peer ended its intents before this (the deletions owed
+	// to the peer are timed): kept, not overwritten with none.
+	v.IntentsEnded = rep.Volumes.IntentsEnded
 	rep.Volumes = v
 	ratio := func(got, want float64) Observation {
 		if want <= 0 {
@@ -992,7 +1125,7 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 		if r.systems != nil {
 			why = notMeasured("no fault plan in the run (loadgen run --faults load/faults/<plan>.yaml)")
 		}
-		for _, m := range []string{"restart_recovery_s", "restart_duplicate_alerts", "restart_lost_backlog", "partition_unreplayed", "partition_cross_effects"} {
+		for _, m := range []string{"restart_recovery_s", "restart_duplicate_alerts", "restart_lost_backlog", "partition_unreplayed", "partition_cross_effects", "outage_unflagged"} {
 			obs[m] = why
 		}
 	}
@@ -1012,9 +1145,37 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 	default:
 		obs["f3411_sp_flights_s"], obs["f3411_details_s"] = notMeasured(niF3411), notMeasured(niF3411)
 	}
+	// The vectors against every image's uspace-core.
+	switch {
+	case r.vectors != nil:
+		rep.Vectors = r.vectors
+		r.vectors.observe(obs)
+	case r.systems != nil:
+		obs["vectors_failed"] = notMeasured("the targets file names no image")
+	default:
+		obs["vectors_failed"] = notMeasured(niVectors)
+	}
+	// The peer USSP: the authority's DP display and the F3548 rows.
+	switch {
+	case r.peer != nil:
+		rep.Peer = r.peer.observe(obs, t.MinSamples)
+		for _, e := range rep.Peer.Errors {
+			r.fail("%s", e)
+		}
+	case r.systems != nil:
+		why := notMeasured("the tier has no peer USSP (peer): the authority's DP display and the F3548 rows are timed at it")
+		for _, m := range peerMetrics {
+			obs[m] = why
+		}
+	default:
+		obs["f3411_dp_display_s"] = notMeasured(niDP)
+		for _, m := range peerMetrics[1:] {
+			obs[m] = notMeasured(niF3548)
+		}
+	}
 	// What the probes read of the systems. In a systems run the memory
 	// row is the systems' processes, never the harness's own heap.
-	probed := []string{"cpa_pair_checks_per_worker", "writer_queue_max_s", "compression_lag_chunks", "disk_growth_vs_model"}
+	probed := []string{"cpa_pair_checks_per_worker", "writer_queue_max_s", "compression_lag_chunks", "disk_growth_vs_model", "f3411_dp_cache_over_24h"}
 	switch {
 	case r.probes != nil:
 		fleetSamples := uint64(0)
@@ -1022,6 +1183,12 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 			fleetSamples += uint64(k)
 		}
 		rep.Systems = r.probes.observe(obs, r.files.Criteria.Models, fleetSamples, skip, r.excused())
+		if len(r.probes.cfg.HotPath) > 0 {
+			r.readers.frameMu.Lock()
+			frame := r.readers.frame
+			r.readers.frameMu.Unlock()
+			rep.Protobuf = protobufEstimate(frame, r.probes.cfg.HotPath, r.probes.rises())
+		}
 		for _, e := range rep.Systems.Errors {
 			r.fail("probe: %s", e)
 		}
@@ -1035,6 +1202,7 @@ func (r *run) collect(rep *Report, t0 time.Time, genS float64) {
 			obs[m] = notMeasured(niMetrics)
 		}
 		obs["writer_queue_max_s"], obs["compression_lag_chunks"], obs["disk_growth_vs_model"] = notMeasured(niStorage), notMeasured(niStorage), notMeasured(niStorage)
+		obs["f3411_dp_cache_over_24h"] = notMeasured(niDPCache)
 	}
 	// A sample handed out more than a period after its slot: the host
 	// stalled or the generator is saturated, and the offered load was
@@ -1099,6 +1267,44 @@ func (r *run) judgeAlerts(rep *Report, obs map[string]Observation, t0 time.Time)
 		obs["cpa_evaluation_period_max_s"] = valueObs(evalMax)
 	} else {
 		obs["cpa_evaluation_period_max_s"] = notMeasured("no proximity alert carried evaluation_period_s")
+	}
+	// The zone: its entries join the expected set, its raises are timed
+	// in monitor ticks.
+	switch z := r.fleet.zone; {
+	case z != nil && r.systems != nil:
+		tick := 1.0
+		if evalMax > 0 {
+			// The monitor's tick as its alerts say it (05 §5: 1 s, widened
+			// to 2 s under load).
+			tick = evalMax
+		}
+		zj := judgeZone(r.fleet.ZoneExpected, r.rec.Events(), t0, tick, z.RaiseMarginS, z.ClearWithinS, func(name string, k int64) (time.Time, bool) {
+			r.zoneMu.Lock()
+			defer r.zoneMu.Unlock()
+			at, ok := r.zoneAt[name][k]
+			return at, ok
+		})
+		rep.Zone = &zj
+		if zj.Raised > 0 {
+			obs["zone_alert_ticks"] = valueObs(round3(zj.Ticks))
+		} else {
+			obs["zone_alert_ticks"] = notMeasured(fmt.Sprintf("%d zone entries due, no zone raise observed (each missed one is a missed alert)", zj.Due))
+		}
+		add := func(m string, n int) {
+			if o := obs[m]; o.Measured && o.Value != nil {
+				obs[m] = valueObs(*o.Value + float64(n))
+			} else if n > 0 || m == "expected_raises" {
+				obs[m] = valueObs(float64(n))
+			}
+		}
+		add("expected_raises", zj.Due)
+		add("missed_raises", zj.Missed)
+		add("missed_clears", zj.MissedClears)
+		add("unexpected_alerts", zj.Unexpected)
+	case r.systems != nil:
+		obs["zone_alert_ticks"] = notMeasured("the tier has no zone (zone): no zone entry is flown")
+	default:
+		obs["zone_alert_ticks"] = notMeasured(niZone)
 	}
 }
 
@@ -1167,6 +1373,10 @@ const endIntentsTimeout = 2 * time.Minute
 // the next run's intents are rejected (intent_filed_first). An intent
 // the USSP does not end is an error of the run.
 func (r *run) endIntents(ctx context.Context, rep *Report) {
+	if r.intentsEnded {
+		return
+	}
+	r.intentsEnded = true
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), endIntentsTimeout)
 	defer cancel()
 	type job struct {
@@ -1184,7 +1394,18 @@ func (r *run) endIntents(ctx context.Context, rep *Report) {
 			defer wg.Done()
 			for j := range work {
 				in := &simop.Intents{BaseURL: r.usspBase, Tokens: r.tokens[j.a.Client], HTTP: r.httpOf(j.a.Client)}
+				if r.peer != nil {
+					r.peer.noteOp(j.id, j.a, "", time.Now())
+				}
 				d, err := in.Change(ctx, j.id, "end")
+				if err != nil {
+					// Refused because the USSP ended it already (a flight
+					// silent past its bound): what the end was for. Read
+					// back, never assumed from the refusal.
+					if g, gerr := in.Get(ctx, j.id); gerr == nil && g.State == "ended" {
+						d, err = g, nil
+					}
+				}
 				mu.Lock()
 				switch {
 				case err != nil:

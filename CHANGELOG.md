@@ -45,6 +45,25 @@ request (docs/PLAN.md §5).
 
 ### Added
 
+- WP-L8, WP-L9: the open systems rows. An embedded peer USSP
+  (`internal/simussp`, served through the lab Caddy as
+  `LOAD_PEER_HOST`) times the F3411 DP display from its own answer to
+  the picture frame and the F3548 intent notifications from the lab's
+  request, and asks for each notified intent's details. The seed adds
+  the authority's DP oversight area, moves the U-space airspace over
+  the peer's square and publishes the load zone. Zone aircraft time the
+  zone alert in monitor ticks. Cross-system outages (CISP, authority,
+  DSS, ANSP, 5 min each) are judged under load on every system's
+  readiness (`internal/readiness`, shared with the chaos harness). The
+  vectors are run against the uspace-core each image was built with.
+  The probes add the authority's DP cache (judged once it is 25 h
+  old), per-process and per-container CPU, and the 04 §1 JSON-share
+  estimate. A tier's `required_systems` checks fail a systems run that
+  measured none of them. The chaos matrix adds the `disable` domain
+  (a source switched off at the authority's console and found in its
+  audit log) and per-row loss counters. `demo-down.sh` removes the
+  chaos fault state with the containers. Findings:
+  `docs/decisions/2026-10-14-load-findings.md`.
 - WP-L9 (L-M3): the chaos matrix (`scripts/chaos/`, `make chaos`,
   `chaos.yml`, `docs/RUNBOOKS/chaos.md`). One script per failure domain
   of spec 05 §6 (`inject`/`restore`, each saying what it did and when,

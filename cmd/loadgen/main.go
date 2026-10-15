@@ -86,7 +86,7 @@ func check(args []string) int {
 			bad++
 			continue
 		}
-		fmt.Printf("ok   %s: tier %s, %d aircraft, %.0f s, %d checks required\n", t, f.Tier.Tier, f.Tier.Operators.Aircraft, f.Tier.DurationS, len(f.Tier.Required))
+		fmt.Printf("ok   %s: tier %s, %d aircraft, %.0f s, %d checks required (%d more in a systems run)\n", t, f.Tier.Tier, f.Tier.Operators.Aircraft, f.Tier.DurationS, len(f.Tier.Required), len(f.Tier.RequiredSystems))
 	}
 	if bad > 0 {
 		return 1

@@ -7,13 +7,16 @@
 #   deploy/systems/gen-secrets.sh <demo.env>
 #
 # It never overwrites a file that exists, so a second run changes nothing,
-# and it never prints a secret, only file names. A failure is never
+# except the Caddy certificate when the hosts it must name are not the
+# ones it was made for (tls/hosts; a host added to demo.env, as
+# LOAD_PEER_HOST was); it never prints a secret, only file names. A failure is never
 # silent: it names the step and repeats openssl's own diagnostics on
 # stderr, and the exit status is non-zero.
 #
 #   ca/ca.pem, ca/ca.key      the lab CA (RSA 3072, 30 days), trusted by
 #                             every system (SSL_CERT_FILE) and the runner
-#   tls/cert.pem, key.pem     the Caddy certificate for the five hosts
+#   tls/cert.pem, key.pem     the Caddy certificate for the six hosts
+#                             (tls/hosts lists them)
 #   authority/                token-1.pem, publication-1.pem, pii.key,
 #                             registry-hash.key, admin.pw
 #   cisp/                     signing.pem, session.pem, secrets.key
@@ -89,19 +92,27 @@ if [ ! -e "$state/ca/ca.pem" ]; then
     -addext "keyUsage=critical,keyCertSign,cRLSign"
   note "$state/ca/ca.pem"
 fi
+sans=""
+for h in AUTHORITY_HOST CISP_HOST USSP_HOST ANSP_HOST LAB_HOST LOAD_PEER_HOST; do
+  v="$(val "$h")"
+  [ -n "$v" ] || die "$h is not set in $env_file"
+  sans="${sans:+$sans,}DNS:$v"
+done
+# A certificate made for other hosts (or before tls/hosts was written) is
+# made again: Caddy would serve a host it does not name with a
+# certificate every client refuses.
+if [ -e "$state/tls/cert.pem" ] && [ "$(cat "$state/tls/hosts" 2>/dev/null || true)" != "$sans" ]; then
+  echo "gen-secrets: the Caddy certificate does not name $sans: making it again"
+  rm -f "$state/tls/cert.pem" "$state/tls/key.pem" "$state/tls/hosts"
+fi
 if [ ! -e "$state/tls/cert.pem" ]; then
-  sans=""
-  for h in AUTHORITY_HOST CISP_HOST USSP_HOST ANSP_HOST LAB_HOST; do
-    v="$(val "$h")"
-    [ -n "$v" ] || die "$h is not set in $env_file"
-    sans="${sans:+$sans,}DNS:$v"
-  done
   ossl req -newkey rsa:3072 -nodes -keyout "$state/tls/key.pem" -out "$state/tls/req.csr" \
     -subj "/CN=$(val LAB_HOST)/O=uspace-lab"
   printf 'subjectAltName=%s\nbasicConstraints=CA:FALSE\nkeyUsage=digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth\n' "$sans" > "$state/tls/ext.cnf"
   ossl x509 -req -in "$state/tls/req.csr" -CA "$state/ca/ca.pem" -CAkey "$state/ca/ca.key" \
     -CAcreateserial -days 30 -sha256 -extfile "$state/tls/ext.cnf" -out "$state/tls/cert.pem"
   rm -f "$state/tls/req.csr" "$state/tls/ext.cnf"
+  printf '%s' "$sans" > "$state/tls/hosts"
   note "$state/tls/cert.pem"
 fi
 # The containers run as other users and read these through bind mounts.

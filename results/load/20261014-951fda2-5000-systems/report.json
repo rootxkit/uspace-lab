@@ -1,0 +1,5193 @@
+{
+  "format": "load-report/v1",
+  "run": "20261014-951fda2-5000-systems",
+  "started_at": "2026-10-14T21:20:46.842125Z",
+  "ended_at": "2026-10-14T21:45:47.9851706Z",
+  "generator_s": 600.003,
+  "tier": {
+    "tier": "5000",
+    "title": "5000 drones for 60 minutes (attempted: the report says what breaks first)",
+    "column": 5000,
+    "duration_s": 600,
+    "drain_s": 120,
+    "operators": {
+      "aircraft": 5000,
+      "clients": 200,
+      "telemetry_hz": 1,
+      "telemetry_hz_status": "pending GCAA",
+      "poll_ms": 50,
+      "ramp_per_s": 250,
+      "intents": "all",
+      "intents_per_s": 8
+    },
+    "receivers": {
+      "heard_fraction": 0.4,
+      "aircraft_per_receiver": 25,
+      "transports": [
+        "pack",
+        "single"
+      ],
+      "batch_ms": 100
+    },
+    "consoles": 60,
+    "dp": {
+      "views": 200,
+      "view_side_m": 4000,
+      "poll_ms": 1000
+    },
+    "peer": {
+      "aircraft": 4,
+      "centre": {
+        "north_m": 1000,
+        "east_m": 1000
+      },
+      "radius_m": 150,
+      "speed_ms": 5,
+      "alt_rel_m": 145,
+      "uspace": {
+        "centre": {
+          "north_m": 3050,
+          "east_m": 3050
+        },
+        "half_side_m": 1400
+      }
+    },
+    "zone": {
+      "aircraft": 2,
+      "centre": {
+        "north_m": -1500,
+        "east_m": 6000
+      },
+      "side_m": 400,
+      "spacing_m": 250,
+      "amplitude_m": 600,
+      "speed_ms": 10,
+      "alt_rel_m": 170,
+      "type": "CONDITIONAL",
+      "raise_margin_s": 3,
+      "clear_within_s": 30
+    },
+    "watch": {
+      "pairs": 15,
+      "walkers": 15
+    },
+    "min_samples": 1000,
+    "memory_sample_s": 10,
+    "memory_warmup_s": 900,
+    "required": [
+      "operator_rate",
+      "rid_rate",
+      "generator_on_time",
+      "operator_to_console_p99",
+      "receiver_to_picture_p99",
+      "proximity_raise_p99",
+      "expected_set",
+      "missed_raises",
+      "missed_clears",
+      "no_false_alarm",
+      "alerts_traceable",
+      "operator_identity",
+      "receiver_identity",
+      "picture_identity",
+      "picture_traceable",
+      "traffic_traceable",
+      "evaluation_period",
+      "memory_monotonic"
+    ],
+    "required_systems": [
+      "sp_flights_p95",
+      "sp_flights_p99",
+      "details_p95",
+      "details_p99",
+      "dp_display_p95",
+      "dp_display_p99",
+      "intent_change_notify",
+      "notifications_complete",
+      "details_answered",
+      "pair_checks",
+      "writer_queue",
+      "compression",
+      "disk_model",
+      "vectors_pass",
+      "zone_alert_tick"
+    ],
+    "scale": [
+      {
+        "quantity": "console viewports",
+        "spec": "60 consoles each viewing \u003c= 200 tracks (05 §1)",
+        "here": "the same count, each subscribed to the whole area",
+        "factor": 1,
+        "why": "the reference picture has no viewport throttle; whole-area subscriptions are the worst case"
+      },
+      {
+        "quantity": "duration (override)",
+        "spec": "3600 s (this tier)",
+        "here": "600 s",
+        "factor": 0.16666666666666666,
+        "why": "--duration-s given for this run"
+      }
+    ],
+    "not_generated": [
+      {
+        "source": "ANSP manned feed (tens of aircraft)",
+        "why": "the reference target has no manned intake; in a systems run the ANSP adapter polls a sim-adsb the load harness does not serve, so the USSP shows manned traffic unavailable (its degraded state, in the report)"
+      },
+      {
+        "source": "the second USSP's own intents",
+        "why": "in a systems run the harness's peer USSP (peer) is the second USSP on the lab DSS: it serves its own flights and is notified of the fleet's intents in the U-space square, but files no intent of its own, so no conflict between the two USSPs is made (the reference target has no DSS or peer)"
+      },
+      {
+        "source": "authority DP polls of the USSPs (05 §1: one view per 1 Hz), against the reference target",
+        "why": "the reference target has no SP; in a systems run the authority's display provider polls the USSP's and the peer's SPs over the oversight area the seed adds, and the lab polls the USSP's SP as a display provider too (dp)"
+      },
+      {
+        "source": "optional national push USSP -\u003e authority",
+        "why": "disabled by default (02 F6) and not in the reference target"
+      }
+    ]
+  },
+  "scaled": true,
+  "target": {
+    "mode": "systems",
+    "name": "lab-load-5000",
+    "evidence": "The systems' images as the targets file names them, seeded for this fleet (loadgen seed); evidence for the images and digests listed, on the host named, when the run passes (docs/PLAN.md L-D4).",
+    "images": {
+      "ansp": "ghcr.io/rootxkit/uspace-ansp@sha256:1fcfb3c9762189f737250c65ad24166c025c12576abb7babffcf07d705a6921a",
+      "authority": "ghcr.io/rootxkit/uspace-authority@sha256:53d6f97cd745677da893a62669f45477d1eaa403b369bc174b6ccc8c11ee11cc",
+      "cisp": "ghcr.io/rootxkit/uspace-cisp@sha256:2e7861488e178de967829e7ebb623a3c5b480f0dcca8e5ee1acab4e45028f42a",
+      "ussp": "ghcr.io/rootxkit/uspace-ussp@sha256:854cca7146277e6dc767cd7efce279f350994c9f152344a8af457c917db5935d"
+    },
+    "receivers": "each receiver under its own address of 10.77.0.0/16, named in X-Forwarded-For, which the lab Caddy and the authority trust from the host only (deploy/systems)"
+  },
+  "host": {
+    "name": "dev workstation (Windows 11, 16 logical CPUs, 16 GB); the systems stack on the same host in Docker Desktop 28.5.1 (16 CPUs, 7.7 GB), other projects' containers beside it",
+    "os": "windows",
+    "arch": "amd64",
+    "cpus": 16,
+    "mem_total_bytes": null,
+    "go": "go1.27.1",
+    "note": "the host the generator ran on (L-Q1); where the systems ran is the --host name's to say"
+  },
+  "commits": {
+    "lab": "951fda2a15bcf06cb42aa26e441187bf2642b256",
+    "lab_dirty": false,
+    "core": "v1.6.0",
+    "go": "go1.27.1"
+  },
+  "files": {
+    "criteria": "sha256:e71056638dd19f4627f5276018e4cbf81ffc8f617b59bb97adac78151fef9515",
+    "paths": "sha256:e020b22b17a1807faaf7960ed6cfa8f19fddda897e055e83ee0fe65eea1bf4fa",
+    "policy": "sha256:19124b6573ade992e321dbb2f18313bf01ec7ac262db03d75216da38f94db8df",
+    "tier": "sha256:fe103fd3cec1e53386be1510d209887e1c2c2c60110e637b29e24835df657d3a"
+  },
+  "policy": {
+    "policy_version": 1,
+    "source": "docs/PLAN.md §7.1 L-Q4 (owner-only, open; GCAA answers); knowledge/scenarios.md conventions",
+    "deviation": {
+      "h_m": 50,
+      "v_m": 15,
+      "t_s": 60
+    },
+    "telemetry_lost_s": 5,
+    "lost_link_s": 15,
+    "nonconformance_nearby_radius_m": 2000,
+    "cpa": {
+      "t_cpa_max_s": 60,
+      "d_horizontal_min_m": 60,
+      "d_vertical_min_m": 20,
+      "neighbour_radius_m": 800,
+      "neighbour_max_age_s": 10
+    },
+    "height_limit_agl_m": 120,
+    "monitor": {
+      "clear_after_s": 3,
+      "stale_after_s": 15,
+      "live_max_age_s": 10,
+      "pressure_uncertainty_m": 250,
+      "conditional_severity": "warning"
+    }
+  },
+  "lab": {
+    "file": "sim\\sitl.env.example",
+    "origin_lat_deg": 41.7151,
+    "origin_lon_deg": 44.8271,
+    "origin_alt_amsl_m": 605,
+    "geoid": "WGS84 EGM2008, 2.5-minute grid"
+  },
+  "volumes": {
+    "aircraft": 5000,
+    "operator_clients": 200,
+    "heard_aircraft": 2000,
+    "receivers": 80,
+    "consoles": 60,
+    "watched_aircraft": 47,
+    "intents_filed": 5000,
+    "intent_errors": 0,
+    "intents_ended": 3868,
+    "operator_msgs_per_s": 4986.811,
+    "operator_target_per_s": 5000,
+    "rid_locations_per_s": 1994.824,
+    "rid_target_per_s": 2000,
+    "console_frames_per_s": 16931.633,
+    "generator_late": 7300
+  },
+  "rows": [
+    {
+      "id": "offered_load",
+      "property": "Offered load",
+      "criterion": "the tier's 05 §1 rates were reached (a latency measured at a lower load proves nothing about the tier)",
+      "result": "fail",
+      "checks": [
+        {
+          "id": "operator_rate",
+          "metric": "operator_rate_ratio",
+          "stat": "value",
+          "op": "\u003e=",
+          "value": 0.95,
+          "unit": "",
+          "status": "lab",
+          "basis": "05 §1 operator telemetry row at the tier",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0.997
+          },
+          "result": "pass"
+        },
+        {
+          "id": "rid_rate",
+          "metric": "rid_rate_ratio",
+          "stat": "value",
+          "op": "\u003e=",
+          "value": 0.95,
+          "unit": "",
+          "status": "lab",
+          "basis": "05 §1 direct RID row at the tier",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0.997
+          },
+          "result": "pass"
+        },
+        {
+          "id": "generator_on_time",
+          "metric": "generator_late_ratio",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 0.001,
+          "unit": "",
+          "status": "lab",
+          "basis": "the rate held moment by moment, not only on average: at most one sample in a thousand more than a period late",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0.0024395949603983557
+          },
+          "result": "fail",
+          "reason": "generator_late_ratio value is 0.0024395949603983557, the criterion is \u003c= 0.001"
+        }
+      ]
+    },
+    {
+      "id": "ingest_to_picture",
+      "property": "Ingest-to-picture latency",
+      "criterion": "p99 \u003c 1 s (operator telemetry to USSP console frame; receiver frame to authority picture)",
+      "result": "fail",
+      "checks": [
+        {
+          "id": "operator_to_console_p99",
+          "metric": "operator_to_ussp_console_s",
+          "stat": "p99",
+          "op": "\u003c",
+          "value": 1,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (Art. 11 traffic information without delay; the figure is the spec's)",
+          "required": true,
+          "observed": {
+            "measured": false,
+            "reason": "only 61 samples, the check needs 1000",
+            "n": 61
+          },
+          "result": "not measured",
+          "reason": "only 61 samples, the check needs 1000"
+        },
+        {
+          "id": "receiver_to_picture_p99",
+          "metric": "receiver_to_authority_picture_s",
+          "stat": "p99",
+          "op": "\u003c",
+          "value": 1,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (the figure is the spec's)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 40392,
+            "p50": 230.583,
+            "p95": 230.583,
+            "p99": 230.583,
+            "max": 230.583,
+            "mean": 146.904
+          },
+          "result": "fail",
+          "reason": "receiver_to_authority_picture_s p99 is 230.583, the criterion is \u003c 1"
+        }
+      ]
+    },
+    {
+      "id": "f3411_timing",
+      "property": "F3411 timing",
+      "criterion": "SP GET /uss/flights p95 \u003c= 1 s, p99 \u003c= 3 s; DP display p95 \u003c= 1 s, p99 \u003c= 3 s; details p95 \u003c= 2 s, p99 \u003c= 6 s; DP cache empty of anything older than 24 h",
+      "result": "fail",
+      "checks": [
+        {
+          "id": "sp_flights_p95",
+          "metric": "f3411_sp_flights_s",
+          "stat": "p95",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 107504,
+            "p50": 0.095,
+            "p95": 0.707,
+            "p99": 1.132,
+            "max": 2.649,
+            "mean": 0.189
+          },
+          "result": "pass"
+        },
+        {
+          "id": "sp_flights_p99",
+          "metric": "f3411_sp_flights_s",
+          "stat": "p99",
+          "op": "\u003c=",
+          "value": 3,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 107504,
+            "p50": 0.095,
+            "p95": 0.707,
+            "p99": 1.132,
+            "max": 2.649,
+            "mean": 0.189
+          },
+          "result": "pass"
+        },
+        {
+          "id": "dp_display_p95",
+          "metric": "f3411_dp_display_s",
+          "stat": "p95",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 3296,
+            "p50": 0.05,
+            "p95": 2.175,
+            "p99": 6.267,
+            "max": 7.802,
+            "mean": 0.375
+          },
+          "result": "fail",
+          "reason": "f3411_dp_display_s p95 is 2.175, the criterion is \u003c= 1"
+        },
+        {
+          "id": "dp_display_p99",
+          "metric": "f3411_dp_display_s",
+          "stat": "p99",
+          "op": "\u003c=",
+          "value": 3,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 3296,
+            "p50": 0.05,
+            "p95": 2.175,
+            "p99": 6.267,
+            "max": 7.802,
+            "mean": 0.375
+          },
+          "result": "fail",
+          "reason": "f3411_dp_display_s p99 is 6.267, the criterion is \u003c= 3"
+        },
+        {
+          "id": "details_p95",
+          "metric": "f3411_details_s",
+          "stat": "p95",
+          "op": "\u003c=",
+          "value": 2,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 104433,
+            "p50": 0.065,
+            "p95": 0.588,
+            "p99": 0.991,
+            "max": 2.455,
+            "mean": 0.146
+          },
+          "result": "pass"
+        },
+        {
+          "id": "details_p99",
+          "metric": "f3411_details_s",
+          "stat": "p99",
+          "op": "\u003c=",
+          "value": 6,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3411 v22a (05 §7)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 104433,
+            "p50": 0.065,
+            "p95": 0.588,
+            "p99": 0.991,
+            "max": 2.455,
+            "mean": 0.146
+          },
+          "result": "pass"
+        },
+        {
+          "id": "dp_cache_24h",
+          "metric": "f3411_dp_cache_over_24h",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "standard",
+          "basis": "F3411 v22a NetDpMaxDataRetentionPeriodSeconds 86400",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "the authority's display provider has cached for 0.4 h (its first network track); the 24 h bound is judged once it has cached for 25 h (a day, and the hour disposal is checked in)"
+          },
+          "result": "not measured",
+          "reason": "the authority's display provider has cached for 0.4 h (its first network track); the 24 h bound is judged once it has cached for 25 h (a day, and the hour disposal is checked in)"
+        }
+      ]
+    },
+    {
+      "id": "f3548_timing",
+      "property": "F3548 timing",
+      "criterion": "peer notification of an intent change \u003c= 5 s; conflicting-intent notification \u003c= 1 s; details answered \u003c= 1 s; constraint notification \u003c= 5 s",
+      "result": "partial",
+      "checks": [
+        {
+          "id": "intent_change_notify",
+          "metric": "f3548_intent_change_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 5,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 43,
+            "p50": 0.214,
+            "p95": 1.224,
+            "p99": 1.479,
+            "max": 1.479,
+            "mean": 0.454
+          },
+          "result": "pass"
+        },
+        {
+          "id": "notifications_complete",
+          "metric": "f3548_notifications_missing",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "standard",
+          "basis": "F3548-21: a USS notifies every subscriber the DSS names of each change of its operational intent; a change not notified has no latency to judge",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "conflict_notify",
+          "metric": "f3548_conflict_notify_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "no intent of the run conflicts with another USS's: the peer files none, so no conflicting-intent notification is due"
+          },
+          "result": "not measured",
+          "reason": "no intent of the run conflicts with another USS's: the peer files none, so no conflicting-intent notification is due"
+        },
+        {
+          "id": "details_answered",
+          "metric": "f3548_details_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 32,
+            "p50": 0.002,
+            "p95": 0.008,
+            "p99": 0.011,
+            "max": 0.011,
+            "mean": 0.002
+          },
+          "result": "pass"
+        },
+        {
+          "id": "constraint_notify",
+          "metric": "f3548_constraint_notify_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 5,
+          "unit": "s",
+          "status": "standard",
+          "basis": "F3548-21 (05 §7)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "no constraint is created during the run: no system of the lab stack publishes F3548 constraints (uss_qualifier has no constraint management at the pinned commit, WP-L7)"
+          },
+          "result": "not measured",
+          "reason": "no constraint is created during the run: no system of the lab stack publishes F3548 constraints (uss_qualifier has no constraint management at the pinned commit, WP-L7)"
+        }
+      ]
+    },
+    {
+      "id": "alert_latency",
+      "property": "Alert latency",
+      "criterion": "proximity / nonconformance raised p99 \u003c 2 s after the triggering sample's captured_at; zone alert within one tick of entry; Art. 13(2) notices to peers and ANSP within 5 s and acknowledged",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "proximity_raise_p99",
+          "metric": "alert_raise_s",
+          "stat": "p99",
+          "op": "\u003c",
+          "value": 2,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (Art. 13 without delay; the figure is the spec's)",
+          "required": true,
+          "observed": {
+            "measured": false,
+            "reason": "no sample was observed"
+          },
+          "result": "not measured",
+          "reason": "no sample was observed"
+        },
+        {
+          "id": "zone_alert_tick",
+          "metric": "zone_alert_ticks",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": true,
+          "observed": {
+            "measured": false,
+            "reason": "10 zone entries due, no zone raise observed (each missed one is a missed alert)"
+          },
+          "result": "not measured",
+          "reason": "10 zone entries due, no zone raise observed (each missed one is a missed alert)"
+        },
+        {
+          "id": "art13_notice",
+          "metric": "art13_notice_s",
+          "stat": "max",
+          "op": "\u003c=",
+          "value": 5,
+          "unit": "s",
+          "status": "pending GCAA",
+          "basis": "05 §7 (Art. 13(2); the figure is the spec's)",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "no aircraft of the load deviates from its authorisation, so no Art. 13(2) notice is due; and the lab's U-space airspace is designated without the conformance monitoring service (services_required NID, GEO, FA, TI; 2021/664 Art. 3(3))"
+          },
+          "result": "not measured",
+          "reason": "no aircraft of the load deviates from its authorisation, so no Art. 13(2) notice is due; and the lab's U-space airspace is designated without the conformance monitoring service (services_required NID, GEO, FA, TI; 2021/664 Art. 3(3))"
+        }
+      ]
+    },
+    {
+      "id": "missed_alerts",
+      "property": "Missed alerts",
+      "criterion": "zero against the scenario's expected set; every expected clear observed",
+      "result": "fail",
+      "checks": [
+        {
+          "id": "expected_set",
+          "metric": "expected_raises",
+          "stat": "value",
+          "op": "\u003e=",
+          "value": 1,
+          "unit": "",
+          "status": "lab",
+          "basis": "a run with no alert due cannot count a miss",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 100
+          },
+          "result": "pass"
+        },
+        {
+          "id": "missed_raises",
+          "metric": "missed_raises",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 100
+          },
+          "result": "fail",
+          "reason": "missed_raises value is 100, the criterion is == 0"
+        },
+        {
+          "id": "missed_clears",
+          "metric": "missed_clears",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "no_false_alarm",
+          "metric": "unexpected_alerts",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "lab",
+          "basis": "the paths keep every walker outside the CPA minima (load/paths.yaml, checked at load); an alert there is a false alarm or a broken expected set",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "alerts_traceable",
+          "metric": "alert_untraceable",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "lab",
+          "basis": "every raise names a captured_at the generator sent",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "no_silent_loss",
+      "property": "No silent loss",
+      "criterion": "every dropped_*, gap, degraded counter accounted for in the report; sum of accepted + dropped = sent",
+      "result": "fail",
+      "checks": [
+        {
+          "id": "operator_identity",
+          "metric": "operator_ledgers_unbalanced",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7, 05 §5 (operator WS: accepted + refused + dropped + duplicate = sent, per client)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 5000
+          },
+          "result": "fail",
+          "reason": "operator_ledgers_unbalanced value is 5000, the criterion is == 0"
+        },
+        {
+          "id": "receiver_identity",
+          "metric": "receiver_ledgers_unbalanced",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7, 05 §5 (receiver -\u003e authority: accepted + duplicates + refused = sent)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "picture_identity",
+          "metric": "picture_silent_loss",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7: every heard sample is on the picture or in a counted loss",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 940375
+          },
+          "result": "fail",
+          "reason": "picture_silent_loss value is 940375, the criterion is == 0"
+        },
+        {
+          "id": "picture_traceable",
+          "metric": "picture_untraceable_frames",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "lab",
+          "basis": "every track frame names a sample the generator sent",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 74462
+          },
+          "result": "fail",
+          "reason": "picture_untraceable_frames value is 74462, the criterion is == 0"
+        },
+        {
+          "id": "traffic_traceable",
+          "metric": "traffic_untraceable_frames",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "lab",
+          "basis": "every own track in a traffic product names a sample the generator sent",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "cpa_budget",
+      "property": "CPA budget",
+      "criterion": "pair checks per worker per second within budget; evaluation_period_s never above 2 s",
+      "result": "partial",
+      "checks": [
+        {
+          "id": "pair_checks",
+          "metric": "cpa_pair_checks_per_worker",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §1 (~50 000 pair checks per second per core, models.cpa_pairs_per_core_per_s): the busiest CPA process's pair checks per second over the run / that budget",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0.001
+          },
+          "result": "pass"
+        },
+        {
+          "id": "evaluation_period",
+          "metric": "cpa_evaluation_period_max_s",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 2,
+          "unit": "s",
+          "status": "spec",
+          "basis": "05 §5 CPA workers",
+          "required": true,
+          "observed": {
+            "measured": false,
+            "reason": "no proximity alert carried evaluation_period_s"
+          },
+          "result": "not measured",
+          "reason": "no proximity alert carried evaluation_period_s"
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "property": "Storage",
+      "criterion": "write rate sustained with writer queue \u003c 10 s; compression job keeps up; disk growth matches the model within 20 %",
+      "result": "pass",
+      "checks": [
+        {
+          "id": "writer_queue",
+          "metric": "writer_queue_max_s",
+          "stat": "value",
+          "op": "\u003c",
+          "value": 10,
+          "unit": "s",
+          "status": "spec",
+          "basis": "05 §5 TimescaleDB writer",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 1.112075351
+          },
+          "result": "pass"
+        },
+        {
+          "id": "compression",
+          "metric": "compression_lag_chunks",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §4",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        },
+        {
+          "id": "disk_model",
+          "metric": "disk_growth_vs_model",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1.2,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §4 (within 20 %)",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0.219
+          },
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "id": "restart",
+      "property": "Restart",
+      "criterion": "kill each component in turn mid-run: picture recovers within 10 s, no duplicate alerts, no lost backlog",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "restart_recovery",
+          "metric": "restart_recovery_s",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 10,
+          "unit": "s",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "no fault plan in the run (loadgen run --faults load/faults/\u003cplan\u003e.yaml)"
+          },
+          "result": "not measured",
+          "reason": "no fault plan in the run (loadgen run --faults load/faults/\u003cplan\u003e.yaml)"
+        },
+        {
+          "id": "restart_duplicates",
+          "metric": "restart_duplicate_alerts",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "no fault plan in the run (loadgen run --faults load/faults/\u003cplan\u003e.yaml)"
+          },
+          "result": "not measured",
+          "reason": "no fault plan in the run (loadgen run --faults load/faults/\u003cplan\u003e.yaml)"
+        },
+        {
+          "id": "restart_backlog",
+          "metric": "restart_lost_backlog",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "no fault plan in the run (loadgen run --faults load/faults/\u003cplan\u003e.yaml)"
+          },
+          "result": "not measured",
+          "reason": "no fault plan in the run (loadgen run --faults load/faults/\u003cplan\u003e.yaml)"
+        }
+      ]
+    },
+    {
+      "id": "partition",
+      "property": "Partition",
+      "criterion": "kill NATS of one system for 60 s: ingest spills and replays; other systems show nothing",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "partition_replay",
+          "metric": "partition_unreplayed",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §6 NATS row",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "no fault plan in the run (loadgen run --faults load/faults/\u003cplan\u003e.yaml)"
+          },
+          "result": "not measured",
+          "reason": "no fault plan in the run (loadgen run --faults load/faults/\u003cplan\u003e.yaml)"
+        },
+        {
+          "id": "partition_isolation",
+          "metric": "partition_cross_effects",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §6",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "no fault plan in the run (loadgen run --faults load/faults/\u003cplan\u003e.yaml)"
+          },
+          "result": "not measured",
+          "reason": "no fault plan in the run (loadgen run --faults load/faults/\u003cplan\u003e.yaml)"
+        }
+      ]
+    },
+    {
+      "id": "cross_system_outage",
+      "property": "Cross-system outage",
+      "criterion": "CISP, authority, DSS, ANSP each taken down for 5 min: the degraded behaviours of 02 observed, nothing hidden, everything flagged with age",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "outage_flagged",
+          "metric": "outage_unflagged",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §6, 02 failure columns",
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "no fault plan in the run (loadgen run --faults load/faults/\u003cplan\u003e.yaml)"
+          },
+          "result": "not measured",
+          "reason": "no fault plan in the run (loadgen run --faults load/faults/\u003cplan\u003e.yaml)"
+        }
+      ]
+    },
+    {
+      "id": "memory",
+      "property": "Memory",
+      "criterion": "no monotonic growth over the soak",
+      "result": "not measured",
+      "checks": [
+        {
+          "id": "memory_monotonic",
+          "metric": "memory_monotonic",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "min_duration_s": 1800,
+          "required": true,
+          "observed": {
+            "measured": false,
+            "reason": "no system process had 6 resident-memory samples after the warm-up (17 processes read)"
+          },
+          "result": "not measured",
+          "reason": "no system process had 6 resident-memory samples after the warm-up (17 processes read)"
+        },
+        {
+          "id": "memory_growth",
+          "metric": "memory_growth_ratio",
+          "stat": "value",
+          "op": "\u003c=",
+          "value": 1.5,
+          "unit": "",
+          "status": "lab",
+          "basis": "the live heap at the end against the start of the soak after the warm-up (generator and reference target together)",
+          "min_duration_s": 1800,
+          "required": false,
+          "observed": {
+            "measured": false,
+            "reason": "no system process had 6 resident-memory samples after the warm-up (17 processes read)"
+          },
+          "result": "not measured",
+          "reason": "no system process had 6 resident-memory samples after the warm-up (17 processes read)"
+        }
+      ]
+    },
+    {
+      "id": "vectors",
+      "property": "Vectors",
+      "criterion": "all knowledge/vectors behaviour vectors pass against the packages in every image under test; schema examples pass everywhere",
+      "result": "pass",
+      "checks": [
+        {
+          "id": "vectors_pass",
+          "metric": "vectors_failed",
+          "stat": "value",
+          "op": "==",
+          "value": 0,
+          "unit": "",
+          "status": "spec",
+          "basis": "05 §7",
+          "required": true,
+          "observed": {
+            "measured": true,
+            "n": 1,
+            "value": 0
+          },
+          "result": "pass"
+        }
+      ]
+    }
+  ],
+  "metrics": {
+    "alert_raise_s": {
+      "measured": false,
+      "reason": "no sample was observed"
+    },
+    "alert_untraceable": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "art13_notice_s": {
+      "measured": false,
+      "reason": "no aircraft of the load deviates from its authorisation, so no Art. 13(2) notice is due; and the lab's U-space airspace is designated without the conformance monitoring service (services_required NID, GEO, FA, TI; 2021/664 Art. 3(3))"
+    },
+    "compression_lag_chunks": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "cpa_evaluation_period_max_s": {
+      "measured": false,
+      "reason": "no proximity alert carried evaluation_period_s"
+    },
+    "cpa_pair_checks_per_worker": {
+      "measured": true,
+      "n": 1,
+      "value": 0.001
+    },
+    "disk_growth_vs_model": {
+      "measured": true,
+      "n": 1,
+      "value": 0.219
+    },
+    "expected_raises": {
+      "measured": true,
+      "n": 1,
+      "value": 100
+    },
+    "f3411_details_s": {
+      "measured": true,
+      "n": 104433,
+      "p50": 0.065,
+      "p95": 0.588,
+      "p99": 0.991,
+      "max": 2.455,
+      "mean": 0.146
+    },
+    "f3411_dp_cache_over_24h": {
+      "measured": false,
+      "reason": "the authority's display provider has cached for 0.4 h (its first network track); the 24 h bound is judged once it has cached for 25 h (a day, and the hour disposal is checked in)"
+    },
+    "f3411_dp_display_s": {
+      "measured": true,
+      "n": 3296,
+      "p50": 0.05,
+      "p95": 2.175,
+      "p99": 6.267,
+      "max": 7.802,
+      "mean": 0.375
+    },
+    "f3411_sp_flights_s": {
+      "measured": true,
+      "n": 107504,
+      "p50": 0.095,
+      "p95": 0.707,
+      "p99": 1.132,
+      "max": 2.649,
+      "mean": 0.189
+    },
+    "f3548_conflict_notify_s": {
+      "measured": false,
+      "reason": "no intent of the run conflicts with another USS's: the peer files none, so no conflicting-intent notification is due"
+    },
+    "f3548_constraint_notify_s": {
+      "measured": false,
+      "reason": "no constraint is created during the run: no system of the lab stack publishes F3548 constraints (uss_qualifier has no constraint management at the pinned commit, WP-L7)"
+    },
+    "f3548_details_s": {
+      "measured": true,
+      "n": 32,
+      "p50": 0.002,
+      "p95": 0.008,
+      "p99": 0.011,
+      "max": 0.011,
+      "mean": 0.002
+    },
+    "f3548_intent_change_s": {
+      "measured": true,
+      "n": 43,
+      "p50": 0.214,
+      "p95": 1.224,
+      "p99": 1.479,
+      "max": 1.479,
+      "mean": 0.454
+    },
+    "f3548_notifications_missing": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "generator_late_ratio": {
+      "measured": true,
+      "n": 1,
+      "value": 0.0024395949603983557
+    },
+    "memory_growth_ratio": {
+      "measured": false,
+      "reason": "no system process had 6 resident-memory samples after the warm-up (17 processes read)"
+    },
+    "memory_monotonic": {
+      "measured": false,
+      "reason": "no system process had 6 resident-memory samples after the warm-up (17 processes read)"
+    },
+    "missed_clears": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "missed_raises": {
+      "measured": true,
+      "n": 1,
+      "value": 100
+    },
+    "operator_ledgers_unbalanced": {
+      "measured": true,
+      "n": 1,
+      "value": 5000
+    },
+    "operator_rate_ratio": {
+      "measured": true,
+      "n": 1,
+      "value": 0.997
+    },
+    "operator_to_ussp_console_s": {
+      "measured": false,
+      "reason": "only 61 samples, the check needs 1000",
+      "n": 61
+    },
+    "outage_unflagged": {
+      "measured": false,
+      "reason": "no fault plan in the run (loadgen run --faults load/faults/\u003cplan\u003e.yaml)"
+    },
+    "partition_cross_effects": {
+      "measured": false,
+      "reason": "no fault plan in the run (loadgen run --faults load/faults/\u003cplan\u003e.yaml)"
+    },
+    "partition_unreplayed": {
+      "measured": false,
+      "reason": "no fault plan in the run (loadgen run --faults load/faults/\u003cplan\u003e.yaml)"
+    },
+    "picture_silent_loss": {
+      "measured": true,
+      "n": 1,
+      "value": 940375
+    },
+    "picture_untraceable_frames": {
+      "measured": true,
+      "n": 1,
+      "value": 74462
+    },
+    "receiver_ledgers_unbalanced": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "receiver_to_authority_picture_s": {
+      "measured": true,
+      "n": 40392,
+      "p50": 230.583,
+      "p95": 230.583,
+      "p99": 230.583,
+      "max": 230.583,
+      "mean": 146.904
+    },
+    "restart_duplicate_alerts": {
+      "measured": false,
+      "reason": "no fault plan in the run (loadgen run --faults load/faults/\u003cplan\u003e.yaml)"
+    },
+    "restart_lost_backlog": {
+      "measured": false,
+      "reason": "no fault plan in the run (loadgen run --faults load/faults/\u003cplan\u003e.yaml)"
+    },
+    "restart_recovery_s": {
+      "measured": false,
+      "reason": "no fault plan in the run (loadgen run --faults load/faults/\u003cplan\u003e.yaml)"
+    },
+    "rid_rate_ratio": {
+      "measured": true,
+      "n": 1,
+      "value": 0.997
+    },
+    "traffic_untraceable_frames": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "unexpected_alerts": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "vectors_failed": {
+      "measured": true,
+      "n": 1,
+      "value": 0
+    },
+    "writer_queue_max_s": {
+      "measured": true,
+      "n": 1,
+      "value": 1.112075351
+    },
+    "zone_alert_ticks": {
+      "measured": false,
+      "reason": "10 zone entries due, no zone raise observed (each missed one is a missed alert)"
+    }
+  },
+  "loss": {
+    "operator": {
+      "sent": 2992101,
+      "accepted": 1185208,
+      "refused": 0,
+      "dropped": 1806893,
+      "duplicate": 0,
+      "queue_shed": 0,
+      "pending": 2983184,
+      "unbalanced": 5000,
+      "outcomes": {
+        "accepted": 1185208,
+        "dropped_queue_full": 1796977,
+        "dropped_rate": 9916
+      },
+      "unbalance": [
+        "ac-00000: sent 598, accepted 237, refused 0, dropped 361, duplicate 0, pending 595, acked 2 of 597",
+        "ac-00001: sent 598, accepted 242, refused 0, dropped 356, duplicate 0, pending 596, acked 1 of 597",
+        "ac-00002: sent 598, accepted 240, refused 0, dropped 358, duplicate 0, pending 596, acked 1 of 597",
+        "ac-00003: sent 598, accepted 229, refused 0, dropped 369, duplicate 0, pending 595, acked 2 of 597",
+        "ac-00004: sent 598, accepted 240, refused 0, dropped 358, duplicate 0, pending 596, acked 1 of 597",
+        "ac-00005: sent 598, accepted 245, refused 0, dropped 353, duplicate 0, pending 596, acked 1 of 597",
+        "ac-00006: sent 598, accepted 225, refused 0, dropped 373, duplicate 0, pending 596, acked 1 of 597",
+        "ac-00007: sent 598, accepted 252, refused 0, dropped 346, duplicate 0, pending 596, acked 1 of 597",
+        "ac-00008: sent 598, accepted 229, refused 0, dropped 369, duplicate 0, pending 596, acked 1 of 597",
+        "ac-00009: sent 598, accepted 235, refused 0, dropped 363, duplicate 0, pending 596, acked 1 of 597",
+        "ac-00010: sent 598, accepted 236, refused 0, dropped 362, duplicate 0, pending 595, acked 2 of 597",
+        "ac-00011: sent 598, accepted 237, refused 0, dropped 361, duplicate 0, pending 595, acked 2 of 597",
+        "ac-00012: sent 598, accepted 246, refused 0, dropped 352, duplicate 0, pending 595, acked 2 of 597",
+        "ac-00013: sent 598, accepted 234, refused 0, dropped 364, duplicate 0, pending 596, acked 1 of 597",
+        "ac-00014: sent 598, accepted 261, refused 0, dropped 337, duplicate 0, pending 596, acked 1 of 597",
+        "ac-00015: sent 598, accepted 241, refused 0, dropped 357, duplicate 0, pending 596, acked 1 of 597",
+        "ac-00016: sent 598, accepted 237, refused 0, dropped 361, duplicate 0, pending 596, acked 1 of 597",
+        "ac-00017: sent 598, accepted 219, refused 0, dropped 379, duplicate 0, pending 596, acked 1 of 597",
+        "ac-00018: sent 598, accepted 236, refused 0, dropped 362, duplicate 0, pending 597, acked 0 of 597",
+        "ac-00019: sent 598, accepted 244, refused 0, dropped 354, duplicate 0, pending 597, acked 0 of 597",
+        "ac-00020: sent 598, accepted 227, refused 0, dropped 371, duplicate 0, pending 596, acked 1 of 597",
+        "ac-00021: sent 599, accepted 231, refused 0, dropped 368, duplicate 0, pending 597, acked 1 of 598",
+        "ac-00022: sent 599, accepted 221, refused 0, dropped 378, duplicate 0, pending 598, acked 0 of 598",
+        "ac-00023: sent 599, accepted 256, refused 0, dropped 343, duplicate 0, pending 597, acked 1 of 598",
+        "ac-00024: sent 599, accepted 228, refused 0, dropped 371, duplicate 0, pending 597, acked 1 of 598",
+        "ac-00025: sent 599, accepted 246, refused 0, dropped 353, duplicate 0, pending 597, acked 1 of 598",
+        "ac-00026: sent 599, accepted 264, refused 0, dropped 335, duplicate 0, pending 598, acked 0 of 598",
+        "ac-00027: sent 599, accepted 245, refused 0, dropped 354, duplicate 0, pending 598, acked 0 of 598",
+        "ac-00028: sent 599, accepted 236, refused 0, dropped 363, duplicate 0, pending 598, acked 0 of 598",
+        "ac-00029: sent 599, accepted 224, refused 0, dropped 375, duplicate 0, pending 597, acked 1 of 598",
+        "ac-00030: sent 599, accepted 227, refused 0, dropped 372, duplicate 0, pending 599, acked -1 of 598",
+        "ac-00031: sent 599, accepted 246, refused 0, dropped 353, duplicate 0, pending 597, acked 1 of 598",
+        "ac-00032: sent 599, accepted 224, refused 0, dropped 375, duplicate 0, pending 597, acked 1 of 598",
+        "ac-00033: sent 599, accepted 228, refused 0, dropped 371, duplicate 0, pending 597, acked 1 of 598",
+        "ac-00034: sent 599, accepted 237, refused 0, dropped 362, duplicate 0, pending 597, acked 1 of 598",
+        "ac-00035: sent 599, accepted 239, refused 0, dropped 360, duplicate 0, pending 599, acked -1 of 598",
+        "ac-00036: sent 599, accepted 237, refused 0, dropped 362, duplicate 0, pending 597, acked 1 of 598",
+        "ac-00037: sent 599, accepted 242, refused 0, dropped 357, duplicate 0, pending 597, acked 1 of 598",
+        "ac-00038: sent 599, accepted 256, refused 0, dropped 343, duplicate 0, pending 597, acked 1 of 598",
+        "ac-00039: sent 599, accepted 228, refused 0, dropped 371, duplicate 0, pending 598, acked 0 of 598",
+        "ac-00040: sent 599, accepted 228, refused 0, dropped 371, duplicate 0, pending 597, acked 1 of 598",
+        "ac-00041: sent 599, accepted 227, refused 0, dropped 372, duplicate 0, pending 597, acked 1 of 598",
+        "ac-00042: sent 599, accepted 227, refused 0, dropped 372, duplicate 0, pending 598, acked 0 of 598",
+        "ac-00043: sent 599, accepted 227, refused 0, dropped 372, duplicate 0, pending 597, acked 1 of 598",
+        "ac-00044: sent 599, accepted 244, refused 0, dropped 355, duplicate 0, pending 597, acked 1 of 598",
+        "ac-00045: sent 599, accepted 233, refused 0, dropped 366, duplicate 0, pending 597, acked 1 of 598",
+        "ac-00046: sent 597, accepted 244, refused 0, dropped 353, duplicate 0, pending 595, acked 1 of 596",
+        "ac-00047: sent 597, accepted 231, refused 0, dropped 366, duplicate 0, pending 596, acked 0 of 596",
+        "ac-00048: sent 597, accepted 248, refused 0, dropped 349, duplicate 0, pending 595, acked 1 of 596",
+        "ac-00049: sent 597, accepted 239, refused 0, dropped 358, duplicate 0, pending 595, acked 1 of 596"
+      ]
+    },
+    "receivers": {
+      "observed": 1531952,
+      "sent": 1531952,
+      "accepted": 1531952,
+      "duplicates": 0,
+      "refused": 0,
+      "backlog_shed": 0,
+      "backlog_locations_accepted": 216089,
+      "dropped_by_knob": 0,
+      "pending": 0,
+      "unbalanced": 0
+    },
+    "generator_shed_operator": 0,
+    "generator_shed_rid": 0,
+    "picture": {
+      "handed": 1196900,
+      "shown": 40392,
+      "unshown": 1156508,
+      "repeats": 0,
+      "untraceable": 74462,
+      "negative_latencies": 0
+    },
+    "traffic": {
+      "handed": 28130,
+      "shown": 61,
+      "unshown": 28069,
+      "repeats": 99,
+      "untraceable": 0,
+      "negative_latencies": 0
+    },
+    "picture_dropped_frames": 44,
+    "picture_accounted": 216133,
+    "picture_silent": 940375
+  },
+  "alerts": {
+    "expected": 90,
+    "raised": 0,
+    "cleared": 0,
+    "missed": [
+      {
+        "aircraft": "ac-00000",
+        "peer": "ac-00001",
+        "pair": 0,
+        "crossing_s": 75,
+        "raise_from_s": 10,
+        "raise_to_s": 80,
+        "clear_to_s": 105,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00000",
+        "peer": "ac-00001",
+        "pair": 0,
+        "crossing_s": 255,
+        "raise_from_s": 190,
+        "raise_to_s": 260,
+        "clear_to_s": 285,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00000",
+        "peer": "ac-00001",
+        "pair": 0,
+        "crossing_s": 435,
+        "raise_from_s": 370,
+        "raise_to_s": 440,
+        "clear_to_s": 465,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00001",
+        "peer": "ac-00000",
+        "pair": 0,
+        "crossing_s": 75,
+        "raise_from_s": 10,
+        "raise_to_s": 80,
+        "clear_to_s": 105,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00001",
+        "peer": "ac-00000",
+        "pair": 0,
+        "crossing_s": 255,
+        "raise_from_s": 190,
+        "raise_to_s": 260,
+        "clear_to_s": 285,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00001",
+        "peer": "ac-00000",
+        "pair": 0,
+        "crossing_s": 435,
+        "raise_from_s": 370,
+        "raise_to_s": 440,
+        "clear_to_s": 465,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00002",
+        "peer": "ac-00003",
+        "pair": 1,
+        "crossing_s": 75,
+        "raise_from_s": 10,
+        "raise_to_s": 80,
+        "clear_to_s": 105,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00002",
+        "peer": "ac-00003",
+        "pair": 1,
+        "crossing_s": 255,
+        "raise_from_s": 190,
+        "raise_to_s": 260,
+        "clear_to_s": 285,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00002",
+        "peer": "ac-00003",
+        "pair": 1,
+        "crossing_s": 435,
+        "raise_from_s": 370,
+        "raise_to_s": 440,
+        "clear_to_s": 465,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00003",
+        "peer": "ac-00002",
+        "pair": 1,
+        "crossing_s": 75,
+        "raise_from_s": 10,
+        "raise_to_s": 80,
+        "clear_to_s": 105,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00003",
+        "peer": "ac-00002",
+        "pair": 1,
+        "crossing_s": 255,
+        "raise_from_s": 190,
+        "raise_to_s": 260,
+        "clear_to_s": 285,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00003",
+        "peer": "ac-00002",
+        "pair": 1,
+        "crossing_s": 435,
+        "raise_from_s": 370,
+        "raise_to_s": 440,
+        "clear_to_s": 465,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00004",
+        "peer": "ac-00005",
+        "pair": 2,
+        "crossing_s": 75,
+        "raise_from_s": 10,
+        "raise_to_s": 80,
+        "clear_to_s": 105,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00004",
+        "peer": "ac-00005",
+        "pair": 2,
+        "crossing_s": 255,
+        "raise_from_s": 190,
+        "raise_to_s": 260,
+        "clear_to_s": 285,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00004",
+        "peer": "ac-00005",
+        "pair": 2,
+        "crossing_s": 435,
+        "raise_from_s": 370,
+        "raise_to_s": 440,
+        "clear_to_s": 465,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00005",
+        "peer": "ac-00004",
+        "pair": 2,
+        "crossing_s": 75,
+        "raise_from_s": 10,
+        "raise_to_s": 80,
+        "clear_to_s": 105,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00005",
+        "peer": "ac-00004",
+        "pair": 2,
+        "crossing_s": 255,
+        "raise_from_s": 190,
+        "raise_to_s": 260,
+        "clear_to_s": 285,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00005",
+        "peer": "ac-00004",
+        "pair": 2,
+        "crossing_s": 435,
+        "raise_from_s": 370,
+        "raise_to_s": 440,
+        "clear_to_s": 465,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00006",
+        "peer": "ac-00007",
+        "pair": 3,
+        "crossing_s": 75,
+        "raise_from_s": 10,
+        "raise_to_s": 80,
+        "clear_to_s": 105,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00006",
+        "peer": "ac-00007",
+        "pair": 3,
+        "crossing_s": 255,
+        "raise_from_s": 190,
+        "raise_to_s": 260,
+        "clear_to_s": 285,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00006",
+        "peer": "ac-00007",
+        "pair": 3,
+        "crossing_s": 435,
+        "raise_from_s": 370,
+        "raise_to_s": 440,
+        "clear_to_s": 465,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00007",
+        "peer": "ac-00006",
+        "pair": 3,
+        "crossing_s": 75,
+        "raise_from_s": 10,
+        "raise_to_s": 80,
+        "clear_to_s": 105,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00007",
+        "peer": "ac-00006",
+        "pair": 3,
+        "crossing_s": 255,
+        "raise_from_s": 190,
+        "raise_to_s": 260,
+        "clear_to_s": 285,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00007",
+        "peer": "ac-00006",
+        "pair": 3,
+        "crossing_s": 435,
+        "raise_from_s": 370,
+        "raise_to_s": 440,
+        "clear_to_s": 465,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00008",
+        "peer": "ac-00009",
+        "pair": 4,
+        "crossing_s": 75,
+        "raise_from_s": 10,
+        "raise_to_s": 80,
+        "clear_to_s": 105,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00008",
+        "peer": "ac-00009",
+        "pair": 4,
+        "crossing_s": 255,
+        "raise_from_s": 190,
+        "raise_to_s": 260,
+        "clear_to_s": 285,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00008",
+        "peer": "ac-00009",
+        "pair": 4,
+        "crossing_s": 435,
+        "raise_from_s": 370,
+        "raise_to_s": 440,
+        "clear_to_s": 465,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00009",
+        "peer": "ac-00008",
+        "pair": 4,
+        "crossing_s": 75,
+        "raise_from_s": 10,
+        "raise_to_s": 80,
+        "clear_to_s": 105,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00009",
+        "peer": "ac-00008",
+        "pair": 4,
+        "crossing_s": 255,
+        "raise_from_s": 190,
+        "raise_to_s": 260,
+        "clear_to_s": 285,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00009",
+        "peer": "ac-00008",
+        "pair": 4,
+        "crossing_s": 435,
+        "raise_from_s": 370,
+        "raise_to_s": 440,
+        "clear_to_s": 465,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00010",
+        "peer": "ac-00011",
+        "pair": 5,
+        "crossing_s": 75,
+        "raise_from_s": 10,
+        "raise_to_s": 80,
+        "clear_to_s": 105,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00010",
+        "peer": "ac-00011",
+        "pair": 5,
+        "crossing_s": 255,
+        "raise_from_s": 190,
+        "raise_to_s": 260,
+        "clear_to_s": 285,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00010",
+        "peer": "ac-00011",
+        "pair": 5,
+        "crossing_s": 435,
+        "raise_from_s": 370,
+        "raise_to_s": 440,
+        "clear_to_s": 465,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00011",
+        "peer": "ac-00010",
+        "pair": 5,
+        "crossing_s": 75,
+        "raise_from_s": 10,
+        "raise_to_s": 80,
+        "clear_to_s": 105,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00011",
+        "peer": "ac-00010",
+        "pair": 5,
+        "crossing_s": 255,
+        "raise_from_s": 190,
+        "raise_to_s": 260,
+        "clear_to_s": 285,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00011",
+        "peer": "ac-00010",
+        "pair": 5,
+        "crossing_s": 435,
+        "raise_from_s": 370,
+        "raise_to_s": 440,
+        "clear_to_s": 465,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00012",
+        "peer": "ac-00013",
+        "pair": 6,
+        "crossing_s": 75,
+        "raise_from_s": 10,
+        "raise_to_s": 80,
+        "clear_to_s": 105,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00012",
+        "peer": "ac-00013",
+        "pair": 6,
+        "crossing_s": 255,
+        "raise_from_s": 190,
+        "raise_to_s": 260,
+        "clear_to_s": 285,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00012",
+        "peer": "ac-00013",
+        "pair": 6,
+        "crossing_s": 435,
+        "raise_from_s": 370,
+        "raise_to_s": 440,
+        "clear_to_s": 465,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00013",
+        "peer": "ac-00012",
+        "pair": 6,
+        "crossing_s": 75,
+        "raise_from_s": 10,
+        "raise_to_s": 80,
+        "clear_to_s": 105,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00013",
+        "peer": "ac-00012",
+        "pair": 6,
+        "crossing_s": 255,
+        "raise_from_s": 190,
+        "raise_to_s": 260,
+        "clear_to_s": 285,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00013",
+        "peer": "ac-00012",
+        "pair": 6,
+        "crossing_s": 435,
+        "raise_from_s": 370,
+        "raise_to_s": 440,
+        "clear_to_s": 465,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00014",
+        "peer": "ac-00015",
+        "pair": 7,
+        "crossing_s": 75,
+        "raise_from_s": 10,
+        "raise_to_s": 80,
+        "clear_to_s": 105,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00014",
+        "peer": "ac-00015",
+        "pair": 7,
+        "crossing_s": 255,
+        "raise_from_s": 190,
+        "raise_to_s": 260,
+        "clear_to_s": 285,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00014",
+        "peer": "ac-00015",
+        "pair": 7,
+        "crossing_s": 435,
+        "raise_from_s": 370,
+        "raise_to_s": 440,
+        "clear_to_s": 465,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00015",
+        "peer": "ac-00014",
+        "pair": 7,
+        "crossing_s": 75,
+        "raise_from_s": 10,
+        "raise_to_s": 80,
+        "clear_to_s": 105,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00015",
+        "peer": "ac-00014",
+        "pair": 7,
+        "crossing_s": 255,
+        "raise_from_s": 190,
+        "raise_to_s": 260,
+        "clear_to_s": 285,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00015",
+        "peer": "ac-00014",
+        "pair": 7,
+        "crossing_s": 435,
+        "raise_from_s": 370,
+        "raise_to_s": 440,
+        "clear_to_s": 465,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00016",
+        "peer": "ac-00017",
+        "pair": 8,
+        "crossing_s": 75,
+        "raise_from_s": 10,
+        "raise_to_s": 80,
+        "clear_to_s": 105,
+        "raise_due": true,
+        "clear_due": true
+      },
+      {
+        "aircraft": "ac-00016",
+        "peer": "ac-00017",
+        "pair": 8,
+        "crossing_s": 255,
+        "raise_from_s": 190,
+        "raise_to_s": 260,
+        "clear_to_s": 285,
+        "raise_due": true,
+        "clear_due": true
+      }
+    ],
+    "untraceable": 0
+  },
+  "streams": [
+    {
+      "name": "console-00",
+      "kind": "picture",
+      "timed": true,
+      "connects": 1,
+      "breaks": 1,
+      "breaks_unexcused": 1,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 438,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168708,
+        "violation/v1": 2
+      },
+      "dropped_frames": 44,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ],
+      "last_error": "console-00: upgrade answered 429"
+    },
+    {
+      "name": "console-01",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168712,
+        "violation/v1": 2
+      },
+      "dropped_frames": 44,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-02",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168712,
+        "violation/v1": 2
+      },
+      "dropped_frames": 44,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-03",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-04",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-05",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-06",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-07",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168712,
+        "violation/v1": 2
+      },
+      "dropped_frames": 44,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-08",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 1,
+      "breaks_unexcused": 1,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 438,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168708,
+        "violation/v1": 2
+      },
+      "dropped_frames": 44,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ],
+      "last_error": "console-08: upgrade answered 429"
+    },
+    {
+      "name": "console-09",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168712,
+        "violation/v1": 2
+      },
+      "dropped_frames": 44,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-10",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 1,
+      "breaks_unexcused": 1,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 438,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168708,
+        "violation/v1": 2
+      },
+      "dropped_frames": 44,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ],
+      "last_error": "console-10: upgrade answered 429"
+    },
+    {
+      "name": "console-11",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-12",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-13",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-14",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 1,
+      "breaks_unexcused": 1,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 438,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168708,
+        "violation/v1": 2
+      },
+      "dropped_frames": 44,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ],
+      "last_error": "console-14: upgrade answered 429"
+    },
+    {
+      "name": "console-15",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-16",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168712,
+        "violation/v1": 2
+      },
+      "dropped_frames": 44,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-17",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-18",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-19",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "no_subscription",
+        "cis_stale"
+      ]
+    },
+    {
+      "name": "console-20",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168712,
+        "violation/v1": 2
+      },
+      "dropped_frames": 44,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-21",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-22",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 1,
+      "breaks_unexcused": 1,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 438,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168709,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ],
+      "last_error": "console-22: upgrade answered 429"
+    },
+    {
+      "name": "console-23",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168712,
+        "violation/v1": 2
+      },
+      "dropped_frames": 44,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-24",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-25",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-26",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 1,
+      "breaks_unexcused": 1,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 438,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168709,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ],
+      "last_error": "console-26: upgrade answered 429"
+    },
+    {
+      "name": "console-27",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-28",
+      "kind": "picture",
+      "timed": false,
+      "connects": 2,
+      "breaks": 1,
+      "breaks_unexcused": 1,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 438,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168709,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ],
+      "last_error": "console-28: failed to get reader: received close frame: status = StatusTryAgainLater and reason = \"the session could not be checked; reconnect later\""
+    },
+    {
+      "name": "console-29",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-30",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-31",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "no_subscription",
+        "cis_stale"
+      ]
+    },
+    {
+      "name": "console-32",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-33",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-34",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168712,
+        "violation/v1": 2
+      },
+      "dropped_frames": 44,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-35",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-36",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-37",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 1,
+      "breaks_unexcused": 1,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 438,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168709,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ],
+      "last_error": "console-37: upgrade answered 429"
+    },
+    {
+      "name": "console-38",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 1,
+      "breaks_unexcused": 1,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 438,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168709,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ],
+      "last_error": "console-38: upgrade answered 429"
+    },
+    {
+      "name": "console-39",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168712,
+        "violation/v1": 2
+      },
+      "dropped_frames": 44,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-40",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-41",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-42",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 1,
+      "breaks_unexcused": 1,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 438,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168708,
+        "violation/v1": 2
+      },
+      "dropped_frames": 44,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ],
+      "last_error": "console-42: upgrade answered 429"
+    },
+    {
+      "name": "console-43",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168712,
+        "violation/v1": 2
+      },
+      "dropped_frames": 44,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-44",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 1,
+      "breaks_unexcused": 1,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 438,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168708,
+        "violation/v1": 2
+      },
+      "dropped_frames": 44,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ],
+      "last_error": "console-44: upgrade answered 429"
+    },
+    {
+      "name": "console-45",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-46",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-47",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-48",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 1,
+      "breaks_unexcused": 1,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 438,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168709,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ],
+      "last_error": "console-48: upgrade answered 429"
+    },
+    {
+      "name": "console-49",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 1,
+      "breaks_unexcused": 1,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 438,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168709,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ],
+      "last_error": "console-49: upgrade answered 429"
+    },
+    {
+      "name": "console-50",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 1,
+      "breaks_unexcused": 1,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 438,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168709,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ],
+      "last_error": "console-50: upgrade answered 429"
+    },
+    {
+      "name": "console-51",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 1,
+      "breaks_unexcused": 1,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 438,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168708,
+        "violation/v1": 2
+      },
+      "dropped_frames": 44,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ],
+      "last_error": "console-51: upgrade answered 429"
+    },
+    {
+      "name": "console-52",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 1,
+      "breaks_unexcused": 1,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 438,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168708,
+        "violation/v1": 2
+      },
+      "dropped_frames": 44,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ],
+      "last_error": "console-52: upgrade answered 429"
+    },
+    {
+      "name": "console-53",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-54",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168712,
+        "violation/v1": 2
+      },
+      "dropped_frames": 44,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-55",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-56",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-57",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 1,
+      "breaks_unexcused": 1,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 438,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168708,
+        "violation/v1": 2
+      },
+      "dropped_frames": 44,
+      "degraded": [
+        "no_subscription",
+        "cis_stale"
+      ],
+      "last_error": "console-57: upgrade answered 429"
+    },
+    {
+      "name": "console-58",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 439,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168713,
+        "violation/v1": 2
+      },
+      "dropped_frames": 43,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ]
+    },
+    {
+      "name": "console-59",
+      "kind": "picture",
+      "timed": false,
+      "connects": 1,
+      "breaks": 1,
+      "breaks_unexcused": 1,
+      "frames": {
+        "console/snapshot/v1": 2,
+        "console/status/v1": 438,
+        "source/status/v1": 163,
+        "track/telemetry/v1": 168708,
+        "violation/v1": 2
+      },
+      "dropped_frames": 44,
+      "degraded": [
+        "cis_stale",
+        "no_subscription"
+      ],
+      "last_error": "console-59: upgrade answered 429"
+    },
+    {
+      "name": "traffic-ac-00000",
+      "kind": "traffic",
+      "aircraft": "ac-00000",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 344,
+        "traffic/product/v1": 543
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "policy",
+        "monitor",
+        "econspicuity",
+        "manned"
+      ]
+    },
+    {
+      "name": "traffic-ac-00001",
+      "kind": "traffic",
+      "aircraft": "ac-00001",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 330,
+        "traffic/product/v1": 561
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00002",
+      "kind": "traffic",
+      "aircraft": "ac-00002",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 1,
+        "console/snapshot/v1": 1,
+        "console/status/v1": 325,
+        "traffic/product/v1": 563
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00003",
+      "kind": "traffic",
+      "aircraft": "ac-00003",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 327,
+        "traffic/product/v1": 559
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "policy",
+        "monitor",
+        "econspicuity",
+        "manned"
+      ]
+    },
+    {
+      "name": "traffic-ac-00004",
+      "kind": "traffic",
+      "aircraft": "ac-00004",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 341,
+        "traffic/product/v1": 544
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00005",
+      "kind": "traffic",
+      "aircraft": "ac-00005",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 344,
+        "traffic/product/v1": 539
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "manned",
+        "policy",
+        "monitor",
+        "econspicuity"
+      ]
+    },
+    {
+      "name": "traffic-ac-00006",
+      "kind": "traffic",
+      "aircraft": "ac-00006",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 345,
+        "traffic/product/v1": 543
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00007",
+      "kind": "traffic",
+      "aircraft": "ac-00007",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 333,
+        "traffic/product/v1": 554
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00008",
+      "kind": "traffic",
+      "aircraft": "ac-00008",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 1,
+        "console/snapshot/v1": 1,
+        "console/status/v1": 332,
+        "traffic/product/v1": 558
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00009",
+      "kind": "traffic",
+      "aircraft": "ac-00009",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 335,
+        "traffic/product/v1": 557
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00010",
+      "kind": "traffic",
+      "aircraft": "ac-00010",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 330,
+        "traffic/product/v1": 558
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00011",
+      "kind": "traffic",
+      "aircraft": "ac-00011",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 333,
+        "traffic/product/v1": 554
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00012",
+      "kind": "traffic",
+      "aircraft": "ac-00012",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 332,
+        "traffic/product/v1": 556
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "monitor",
+        "econspicuity",
+        "manned",
+        "policy"
+      ]
+    },
+    {
+      "name": "traffic-ac-00013",
+      "kind": "traffic",
+      "aircraft": "ac-00013",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 1,
+        "console/snapshot/v1": 1,
+        "console/status/v1": 335,
+        "traffic/product/v1": 556
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00014",
+      "kind": "traffic",
+      "aircraft": "ac-00014",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 349,
+        "traffic/product/v1": 542
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00015",
+      "kind": "traffic",
+      "aircraft": "ac-00015",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 327,
+        "traffic/product/v1": 559
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "manned",
+        "policy",
+        "monitor",
+        "econspicuity"
+      ]
+    },
+    {
+      "name": "traffic-ac-00016",
+      "kind": "traffic",
+      "aircraft": "ac-00016",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 344,
+        "traffic/product/v1": 544
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00017",
+      "kind": "traffic",
+      "aircraft": "ac-00017",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 332,
+        "traffic/product/v1": 553
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "monitor",
+        "econspicuity",
+        "manned",
+        "policy"
+      ]
+    },
+    {
+      "name": "traffic-ac-00018",
+      "kind": "traffic",
+      "aircraft": "ac-00018",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 349,
+        "traffic/product/v1": 539
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00019",
+      "kind": "traffic",
+      "aircraft": "ac-00019",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 330,
+        "traffic/product/v1": 558
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00020",
+      "kind": "traffic",
+      "aircraft": "ac-00020",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 333,
+        "traffic/product/v1": 553
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00021",
+      "kind": "traffic",
+      "aircraft": "ac-00021",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 345,
+        "traffic/product/v1": 545
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00022",
+      "kind": "traffic",
+      "aircraft": "ac-00022",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 334,
+        "traffic/product/v1": 556
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00023",
+      "kind": "traffic",
+      "aircraft": "ac-00023",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 339,
+        "traffic/product/v1": 549
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "monitor",
+        "econspicuity",
+        "manned",
+        "policy"
+      ]
+    },
+    {
+      "name": "traffic-ac-00024",
+      "kind": "traffic",
+      "aircraft": "ac-00024",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 339,
+        "traffic/product/v1": 552
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "manned",
+        "policy",
+        "monitor",
+        "econspicuity"
+      ]
+    },
+    {
+      "name": "traffic-ac-00025",
+      "kind": "traffic",
+      "aircraft": "ac-00025",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 343,
+        "traffic/product/v1": 542
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00026",
+      "kind": "traffic",
+      "aircraft": "ac-00026",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 345,
+        "traffic/product/v1": 543
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "policy",
+        "monitor",
+        "econspicuity",
+        "manned"
+      ]
+    },
+    {
+      "name": "traffic-ac-00027",
+      "kind": "traffic",
+      "aircraft": "ac-00027",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 355,
+        "traffic/product/v1": 533
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "monitor",
+        "econspicuity",
+        "manned",
+        "policy"
+      ]
+    },
+    {
+      "name": "traffic-ac-00028",
+      "kind": "traffic",
+      "aircraft": "ac-00028",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 347,
+        "traffic/product/v1": 542
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "monitor",
+        "econspicuity",
+        "manned",
+        "policy"
+      ]
+    },
+    {
+      "name": "traffic-ac-00029",
+      "kind": "traffic",
+      "aircraft": "ac-00029",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 345,
+        "traffic/product/v1": 542
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00030",
+      "kind": "traffic",
+      "aircraft": "ac-00030",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 342,
+        "traffic/product/v1": 545
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "manned",
+        "policy",
+        "monitor",
+        "econspicuity"
+      ]
+    },
+    {
+      "name": "traffic-ac-00031",
+      "kind": "traffic",
+      "aircraft": "ac-00031",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 339,
+        "traffic/product/v1": 546
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00032",
+      "kind": "traffic",
+      "aircraft": "ac-00032",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 338,
+        "traffic/product/v1": 551
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00033",
+      "kind": "traffic",
+      "aircraft": "ac-00033",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 338,
+        "traffic/product/v1": 547
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00034",
+      "kind": "traffic",
+      "aircraft": "ac-00034",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 328,
+        "traffic/product/v1": 564
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "monitor",
+        "econspicuity",
+        "manned",
+        "policy"
+      ]
+    },
+    {
+      "name": "traffic-ac-00035",
+      "kind": "traffic",
+      "aircraft": "ac-00035",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 345,
+        "traffic/product/v1": 543
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00036",
+      "kind": "traffic",
+      "aircraft": "ac-00036",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 2,
+        "console/snapshot/v1": 1,
+        "console/status/v1": 340,
+        "traffic/product/v1": 549
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00037",
+      "kind": "traffic",
+      "aircraft": "ac-00037",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 2,
+        "console/snapshot/v1": 1,
+        "console/status/v1": 331,
+        "traffic/product/v1": 558
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "monitor",
+        "econspicuity",
+        "manned",
+        "policy"
+      ]
+    },
+    {
+      "name": "traffic-ac-00038",
+      "kind": "traffic",
+      "aircraft": "ac-00038",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 343,
+        "traffic/product/v1": 548
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "monitor",
+        "econspicuity",
+        "manned",
+        "policy"
+      ]
+    },
+    {
+      "name": "traffic-ac-00039",
+      "kind": "traffic",
+      "aircraft": "ac-00039",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 1,
+        "console/snapshot/v1": 1,
+        "console/status/v1": 332,
+        "traffic/product/v1": 557
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00040",
+      "kind": "traffic",
+      "aircraft": "ac-00040",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 343,
+        "traffic/product/v1": 550
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "monitor",
+        "econspicuity",
+        "manned",
+        "policy"
+      ]
+    },
+    {
+      "name": "traffic-ac-00041",
+      "kind": "traffic",
+      "aircraft": "ac-00041",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 350,
+        "traffic/product/v1": 540
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-00042",
+      "kind": "traffic",
+      "aircraft": "ac-00042",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 336,
+        "traffic/product/v1": 556
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "monitor",
+        "econspicuity",
+        "manned",
+        "policy"
+      ]
+    },
+    {
+      "name": "traffic-ac-00043",
+      "kind": "traffic",
+      "aircraft": "ac-00043",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 326,
+        "traffic/product/v1": 560
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "policy",
+        "monitor",
+        "econspicuity",
+        "manned"
+      ]
+    },
+    {
+      "name": "traffic-ac-00044",
+      "kind": "traffic",
+      "aircraft": "ac-00044",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "alert/v1": 3,
+        "console/snapshot/v1": 1,
+        "console/status/v1": 333,
+        "traffic/product/v1": 556
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-04998",
+      "kind": "traffic",
+      "aircraft": "ac-04998",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 337,
+        "traffic/product/v1": 548
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "econspicuity",
+        "manned",
+        "policy",
+        "monitor"
+      ]
+    },
+    {
+      "name": "traffic-ac-04999",
+      "kind": "traffic",
+      "aircraft": "ac-04999",
+      "timed": true,
+      "connects": 1,
+      "breaks": 0,
+      "breaks_unexcused": 0,
+      "frames": {
+        "console/snapshot/v1": 1,
+        "console/status/v1": 341,
+        "traffic/product/v1": 549
+      },
+      "dropped_frames": 0,
+      "degraded": [
+        "policy",
+        "monitor",
+        "econspicuity",
+        "manned"
+      ]
+    }
+  ],
+  "memory_live_heap_bytes": [
+    258698784,
+    285822432,
+    310698096,
+    330015960,
+    359795912,
+    366376936,
+    398954104,
+    422427096,
+    476947112,
+    471731192,
+    479208056,
+    496767552,
+    497960392,
+    502111480,
+    497548648,
+    691534376,
+    668749000,
+    668145304,
+    682475824,
+    678523480,
+    685050064,
+    687714992,
+    701524120,
+    699858552,
+    704899016,
+    719373000,
+    720904096,
+    722032144,
+    728727448,
+    753641016,
+    1081485256,
+    1081485256,
+    1081850768,
+    1099273176,
+    1099273176,
+    1105364936,
+    1152859872,
+    1152859872,
+    1119882984,
+    1120216544,
+    1162412280,
+    1162412280,
+    1145640848,
+    1141319688,
+    1141319688,
+    1154437688,
+    1206784728,
+    1206784728,
+    1185829768,
+    1187213608,
+    1187213608,
+    1181679704,
+    1220196008,
+    1220196008,
+    1211006800,
+    1211006800,
+    1221551472,
+    1260355080,
+    1260355080,
+    1287473160
+  ],
+  "systems": {
+    "memory": [
+      {
+        "process": "ansp-api",
+        "samples": 59,
+        "first_bytes": 35729408,
+        "last_bytes": 29782016,
+        "max_bytes": 35729408,
+        "monotonic": false
+      },
+      {
+        "process": "ansp-manned-feed",
+        "samples": 59,
+        "first_bytes": 29986816,
+        "last_bytes": 17682432,
+        "max_bytes": 29986816,
+        "monotonic": false
+      },
+      {
+        "process": "authority-api",
+        "samples": 59,
+        "first_bytes": 52658176,
+        "last_bytes": 39628800,
+        "max_bytes": 53944320,
+        "monotonic": false
+      },
+      {
+        "process": "authority-detect",
+        "samples": 59,
+        "first_bytes": 30969856,
+        "last_bytes": 82808832,
+        "max_bytes": 82808832,
+        "monotonic": false
+      },
+      {
+        "process": "authority-dp-poller",
+        "samples": 59,
+        "first_bytes": 40738816,
+        "last_bytes": 45989888,
+        "max_bytes": 55779328,
+        "monotonic": false
+      },
+      {
+        "process": "authority-manned-ingest",
+        "samples": 59,
+        "first_bytes": 27369472,
+        "last_bytes": 18030592,
+        "max_bytes": 27369472,
+        "monotonic": false
+      },
+      {
+        "process": "authority-picture-ws",
+        "samples": 59,
+        "first_bytes": 55721984,
+        "last_bytes": 89214976,
+        "max_bytes": 89214976,
+        "monotonic": false
+      },
+      {
+        "process": "authority-rid-ingest",
+        "samples": 58,
+        "first_bytes": 148942848,
+        "last_bytes": 127578112,
+        "max_bytes": 148942848,
+        "monotonic": false
+      },
+      {
+        "process": "authority-tsdb-writer",
+        "samples": 58,
+        "first_bytes": 33583104,
+        "last_bytes": 43769856,
+        "max_bytes": 43769856,
+        "monotonic": false
+      },
+      {
+        "process": "cisp-api",
+        "samples": 58,
+        "first_bytes": 34156544,
+        "last_bytes": 25489408,
+        "max_bytes": 34156544,
+        "monotonic": false
+      },
+      {
+        "process": "ussp-api",
+        "samples": 58,
+        "first_bytes": 45899776,
+        "last_bytes": 43622400,
+        "max_bytes": 45899776,
+        "monotonic": false
+      },
+      {
+        "process": "ussp-dss-sync",
+        "samples": 58,
+        "first_bytes": 22429696,
+        "last_bytes": 16945152,
+        "max_bytes": 22429696,
+        "monotonic": false
+      },
+      {
+        "process": "ussp-monitor",
+        "samples": 58,
+        "first_bytes": 105111552,
+        "last_bytes": 85164032,
+        "max_bytes": 479334400,
+        "monotonic": false
+      },
+      {
+        "process": "ussp-rid-sp",
+        "samples": 58,
+        "first_bytes": 64688128,
+        "last_bytes": 32763904,
+        "max_bytes": 104157184,
+        "monotonic": false
+      },
+      {
+        "process": "ussp-telemetry-ingest",
+        "samples": 58,
+        "first_bytes": 555700224,
+        "last_bytes": 932958208,
+        "max_bytes": 1123573760,
+        "monotonic": false
+      },
+      {
+        "process": "ussp-traffic-ws",
+        "samples": 58,
+        "first_bytes": 75321344,
+        "last_bytes": 102879232,
+        "max_bytes": 107982848,
+        "monotonic": false
+      },
+      {
+        "process": "ussp-tsdb-writer",
+        "samples": 58,
+        "first_bytes": 39002112,
+        "last_bytes": 36130816,
+        "max_bytes": 39002112,
+        "monotonic": false
+      }
+    ],
+    "storage": [
+      {
+        "system": "ussp",
+        "before_bytes": 23387159,
+        "after_bytes": 90233879,
+        "fleet_samples": 2992300,
+        "model_bytes": 1795380000,
+        "growth_vs_model": 0.037,
+        "compression_lag_chunks": 0
+      },
+      {
+        "system": "authority",
+        "before_bytes": 20446231,
+        "after_bytes": 741153815,
+        "fleet_samples": 2992300,
+        "model_bytes": 1795380000,
+        "growth_vs_model": 0.401,
+        "compression_lag_chunks": 0
+      }
+    ],
+    "loss_counters": [
+      {
+        "process": "authority-rid-ingest",
+        "series": "uspace_authority_batches_refused{component=\"rid_ingest\"}",
+        "delta": 86320
+      },
+      {
+        "process": "authority-rid-ingest",
+        "series": "uspace_authority_gap_records_written{component=\"rid_ingest\"}",
+        "delta": 212707
+      },
+      {
+        "process": "authority-rid-ingest",
+        "series": "uspace_authority_queue_shed_full_batches{component=\"rid_ingest\"}",
+        "delta": 212707
+      },
+      {
+        "process": "authority-rid-ingest",
+        "series": "uspace_authority_queue_shed_observations{component=\"rid_ingest\"}",
+        "delta": 905078
+      },
+      {
+        "process": "authority-rid-ingest",
+        "series": "uspace_authority_refused_busy{component=\"rid_ingest\"}",
+        "delta": 138
+      },
+      {
+        "process": "authority-rid-ingest",
+        "series": "uspace_authority_refused_queue_full{component=\"rid_ingest\"}",
+        "delta": 84108
+      },
+      {
+        "process": "authority-tsdb-writer",
+        "series": "uspace_authority_gaps{component=\"tsdb_writer\"}",
+        "delta": 214847
+      },
+      {
+        "process": "ussp-api",
+        "series": "ussp_record_gaps_recorded{component=\"records\"}",
+        "delta": 13056
+      },
+      {
+        "process": "ussp-telemetry-ingest",
+        "series": "ussp_drain_shed_age{component=\"telemetry_drain\"}",
+        "delta": 19455
+      },
+      {
+        "process": "ussp-telemetry-ingest",
+        "series": "ussp_dropped_queue_full{component=\"telemetry\"}",
+        "delta": 1772520
+      },
+      {
+        "process": "ussp-telemetry-ingest",
+        "series": "ussp_dropped_queue_full{component=\"telemetry_outbox\"}",
+        "delta": 2803201
+      },
+      {
+        "process": "ussp-telemetry-ingest",
+        "series": "ussp_dropped_rate{component=\"telemetry\"}",
+        "delta": 9799
+      },
+      {
+        "process": "ussp-telemetry-ingest",
+        "series": "ussp_events_dropped_queue_full{component=\"telemetry_outbox\"}",
+        "delta": 836861
+      },
+      {
+        "process": "ussp-telemetry-ingest",
+        "series": "ussp_flights_telemetry_lost{component=\"flights\"}",
+        "delta": 420545
+      },
+      {
+        "process": "ussp-telemetry-ingest",
+        "series": "ussp_gap_samples_dropped{component=\"telemetry_status\"}",
+        "delta": 19455
+      },
+      {
+        "process": "ussp-telemetry-ingest",
+        "series": "ussp_gaps_recorded{component=\"telemetry_status\"}",
+        "delta": 18029
+      },
+      {
+        "process": "ussp-telemetry-ingest",
+        "series": "ussp_replay_window_put_dropped{component=\"replay_window\"}",
+        "delta": 79367
+      },
+      {
+        "process": "ussp-traffic-ws",
+        "series": "ussp_picture_dropped_after_silence{component=\"traffic_ws\"}",
+        "delta": 34564
+      }
+    ],
+    "pair_checks_per_s": {
+      "ussp-monitor": 45.054
+    },
+    "cpu_cores": {
+      "ansp-api": 0.019,
+      "ansp-manned-feed": 0.006,
+      "authority-api": 0.014,
+      "authority-detect": 0.073,
+      "authority-dp-poller": 0.287,
+      "authority-manned-ingest": 0.002,
+      "authority-picture-ws": 0.723,
+      "authority-rid-ingest": 0.662,
+      "authority-tsdb-writer": 0.252,
+      "cisp-api": 0.003,
+      "ussp-api": 0.18,
+      "ussp-dss-sync": 0.002,
+      "ussp-monitor": 1.57,
+      "ussp-rid-sp": 0.662,
+      "ussp-telemetry-ingest": 2.056,
+      "ussp-traffic-ws": 0.826,
+      "ussp-tsdb-writer": 0.064
+    },
+    "container_cpu": [
+      {
+        "container": "uspace-demo-ansp-api-1",
+        "samples": 60,
+        "mean_pct": 0.677,
+        "max_pct": 4.04
+      },
+      {
+        "container": "uspace-demo-ansp-manned-adapter-1",
+        "samples": 60,
+        "mean_pct": 0.045,
+        "max_pct": 1.02
+      },
+      {
+        "container": "uspace-demo-ansp-manned-feed-1",
+        "samples": 60,
+        "mean_pct": 0.634,
+        "max_pct": 2.75
+      },
+      {
+        "container": "uspace-demo-ansp-nats-1",
+        "samples": 60,
+        "mean_pct": 1.091,
+        "max_pct": 4.25
+      },
+      {
+        "container": "uspace-demo-ansp-timescaledb-1",
+        "samples": 60,
+        "mean_pct": 4.281,
+        "max_pct": 11.78
+      },
+      {
+        "container": "uspace-demo-authority-api-1",
+        "samples": 60,
+        "mean_pct": 1.784,
+        "max_pct": 8.98
+      },
+      {
+        "container": "uspace-demo-authority-detect-1",
+        "samples": 60,
+        "mean_pct": 4.203,
+        "max_pct": 21.16
+      },
+      {
+        "container": "uspace-demo-authority-dp-poller-1",
+        "samples": 60,
+        "mean_pct": 22.941,
+        "max_pct": 45.98
+      },
+      {
+        "container": "uspace-demo-authority-manned-ingest-1",
+        "samples": 60,
+        "mean_pct": 0.294,
+        "max_pct": 2.72
+      },
+      {
+        "container": "uspace-demo-authority-nats-1",
+        "samples": 60,
+        "mean_pct": 38.033,
+        "max_pct": 54.04
+      },
+      {
+        "container": "uspace-demo-authority-picture-ws-1",
+        "samples": 60,
+        "mean_pct": 53.643,
+        "max_pct": 185.4
+      },
+      {
+        "container": "uspace-demo-authority-postgres-1",
+        "samples": 60,
+        "mean_pct": 15.258,
+        "max_pct": 43.57
+      },
+      {
+        "container": "uspace-demo-authority-rid-ingest-1",
+        "samples": 60,
+        "mean_pct": 74.906,
+        "max_pct": 137.74
+      },
+      {
+        "container": "uspace-demo-authority-tsdb-writer-1",
+        "samples": 60,
+        "mean_pct": 17.29,
+        "max_pct": 35.87
+      },
+      {
+        "container": "uspace-demo-caddy-1",
+        "samples": 60,
+        "mean_pct": 176.297,
+        "max_pct": 269.17
+      },
+      {
+        "container": "uspace-demo-cisp-api-1",
+        "samples": 60,
+        "mean_pct": 1.567,
+        "max_pct": 6.99
+      },
+      {
+        "container": "uspace-demo-cisp-deliver-1",
+        "samples": 60,
+        "mean_pct": 1.639,
+        "max_pct": 7.28
+      },
+      {
+        "container": "uspace-demo-cisp-nats-1",
+        "samples": 60,
+        "mean_pct": 1.799,
+        "max_pct": 5.9
+      },
+      {
+        "container": "uspace-demo-cisp-postgres-1",
+        "samples": 60,
+        "mean_pct": 4.729,
+        "max_pct": 12.57
+      },
+      {
+        "container": "uspace-demo-dss-1",
+        "samples": 60,
+        "mean_pct": 2.357,
+        "max_pct": 8.11
+      },
+      {
+        "container": "uspace-demo-dss-crdb-1",
+        "samples": 60,
+        "mean_pct": 17.621,
+        "max_pct": 63.88
+      },
+      {
+        "container": "uspace-demo-lab-issuer-1",
+        "samples": 60,
+        "mean_pct": 2.147,
+        "max_pct": 5.86
+      },
+      {
+        "container": "uspace-demo-ussp-api-1",
+        "samples": 60,
+        "mean_pct": 7.975,
+        "max_pct": 50.14
+      },
+      {
+        "container": "uspace-demo-ussp-dss-sync-1",
+        "samples": 60,
+        "mean_pct": 1.321,
+        "max_pct": 7.36
+      },
+      {
+        "container": "uspace-demo-ussp-monitor-1",
+        "samples": 60,
+        "mean_pct": 169.115,
+        "max_pct": 247.36
+      },
+      {
+        "container": "uspace-demo-ussp-nats-1",
+        "samples": 60,
+        "mean_pct": 42.987,
+        "max_pct": 57.05
+      },
+      {
+        "container": "uspace-demo-ussp-rid-sp-1",
+        "samples": 60,
+        "mean_pct": 82.682,
+        "max_pct": 135.5
+      },
+      {
+        "container": "uspace-demo-ussp-telemetry-ingest-1",
+        "samples": 60,
+        "mean_pct": 269.331,
+        "max_pct": 451.6
+      },
+      {
+        "container": "uspace-demo-ussp-timescaledb-1",
+        "samples": 60,
+        "mean_pct": 17.594,
+        "max_pct": 92.19
+      },
+      {
+        "container": "uspace-demo-ussp-traffic-ws-1",
+        "samples": 60,
+        "mean_pct": 77.793,
+        "max_pct": 99.7
+      },
+      {
+        "container": "uspace-demo-ussp-tsdb-writer-1",
+        "samples": 60,
+        "mean_pct": 6.906,
+        "max_pct": 17.32
+      }
+    ],
+    "dp_cache": {
+      "system": "authority",
+      "caching_for_s": 1452,
+      "entries_over_24h": 0
+    }
+  },
+  "f3411": {
+    "views": 182,
+    "polls": 107504,
+    "flights_returned": 1571019,
+    "details_answered": 104433,
+    "failures": 431,
+    "statuses": {
+      "200": 211937,
+      "404": 431
+    },
+    "last_error": "2026-10-14T21:41:32Z GET /uss/flights/{id}/details answered 404"
+  },
+  "peer": {
+    "base_url": "https://peer.uspace.test",
+    "aircraft": [
+      "LABXCP0200N000000",
+      "LABXCP0200N000001",
+      "LABXCP0200N000002",
+      "LABXCP0200N000003"
+    ],
+    "display_provider": "authority-01",
+    "display_provider_polls": 2985,
+    "other_polls": 1313,
+    "peer_frames": 3312,
+    "displays_timed": 3296,
+    "frames_untied": 12,
+    "fleet_network_tracks": 4377,
+    "intents_in_uspace": 16,
+    "changes_owed": 48,
+    "notifications": 48,
+    "notifications_by_state": {
+      "Accepted": 16,
+      "Activated": 16,
+      "deleted": 16
+    },
+    "notifications_unmatched": 0,
+    "details_answered": 32,
+    "details_failed": 0,
+    "counters": {
+      "flights_requests": 4298,
+      "isa_writes": 1,
+      "notifications": 48,
+      "subscription_writes": 1
+    }
+  },
+  "vectors": {
+    "images": [
+      {
+        "system": "ansp",
+        "image": "ghcr.io/rootxkit/uspace-ansp@sha256:1fcfb3c9762189f737250c65ad24166c025c12576abb7babffcf07d705a6921a",
+        "binaries": [
+          {
+            "path": "/api",
+            "main": "github.com/rootxkit/uspace-ansp",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/manned-adapter",
+            "main": "github.com/rootxkit/uspace-ansp",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/manned-feed",
+            "main": "github.com/rootxkit/uspace-ansp",
+            "core": "v1.4.0"
+          }
+        ],
+        "core_versions": [
+          "v1.4.0"
+        ]
+      },
+      {
+        "system": "authority",
+        "image": "ghcr.io/rootxkit/uspace-authority@sha256:53d6f97cd745677da893a62669f45477d1eaa403b369bc174b6ccc8c11ee11cc",
+        "binaries": [
+          {
+            "path": "/uspace-authority",
+            "main": "github.com/rootxkit/uspace-authority",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/libexec/uspace-authority/api",
+            "main": "github.com/rootxkit/uspace-authority",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/libexec/uspace-authority/detect",
+            "main": "github.com/rootxkit/uspace-authority",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/libexec/uspace-authority/dp-poller",
+            "main": "github.com/rootxkit/uspace-authority",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/libexec/uspace-authority/manned-ingest",
+            "main": "github.com/rootxkit/uspace-authority",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/libexec/uspace-authority/picture-ws",
+            "main": "github.com/rootxkit/uspace-authority",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/libexec/uspace-authority/rid-ingest",
+            "main": "github.com/rootxkit/uspace-authority",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/libexec/uspace-authority/tsdb-writer",
+            "main": "github.com/rootxkit/uspace-authority",
+            "core": "v1.4.0"
+          }
+        ],
+        "core_versions": [
+          "v1.4.0"
+        ]
+      },
+      {
+        "system": "cisp",
+        "image": "ghcr.io/rootxkit/uspace-cisp@sha256:2e7861488e178de967829e7ebb623a3c5b480f0dcca8e5ee1acab4e45028f42a",
+        "binaries": [
+          {
+            "path": "/usr/local/bin/api",
+            "main": "github.com/rootxkit/uspace-cisp",
+            "core": "v1.3.0"
+          },
+          {
+            "path": "/usr/local/bin/cispctl",
+            "main": "github.com/rootxkit/uspace-cisp",
+            "core": "v1.3.0"
+          },
+          {
+            "path": "/usr/local/bin/deliver",
+            "main": "github.com/rootxkit/uspace-cisp",
+            "core": "v1.3.0"
+          }
+        ],
+        "core_versions": [
+          "v1.3.0"
+        ]
+      },
+      {
+        "system": "ussp",
+        "image": "ghcr.io/rootxkit/uspace-ussp@sha256:854cca7146277e6dc767cd7efce279f350994c9f152344a8af457c917db5935d",
+        "binaries": [
+          {
+            "path": "/usr/bin/ussp-api",
+            "main": "github.com/rootxkit/uspace-ussp",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/bin/ussp-dss-sync",
+            "main": "github.com/rootxkit/uspace-ussp",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/bin/ussp-monitor",
+            "main": "github.com/rootxkit/uspace-ussp",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/bin/ussp-rid-sp",
+            "main": "github.com/rootxkit/uspace-ussp",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/bin/ussp-telemetry-ingest",
+            "main": "github.com/rootxkit/uspace-ussp",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/bin/ussp-traffic-ws",
+            "main": "github.com/rootxkit/uspace-ussp",
+            "core": "v1.4.0"
+          },
+          {
+            "path": "/usr/bin/ussp-tsdb-writer",
+            "main": "github.com/rootxkit/uspace-ussp",
+            "core": "v1.4.0"
+          }
+        ],
+        "core_versions": [
+          "v1.4.0"
+        ]
+      }
+    ],
+    "cores": [
+      {
+        "version": "v1.3.0",
+        "passed": 711,
+        "failed": 0,
+        "skipped": 30,
+        "vectors_metadata_only": [
+          "alert_lifecycle.json"
+        ]
+      },
+      {
+        "version": "v1.4.0",
+        "passed": 711,
+        "failed": 0,
+        "skipped": 30,
+        "vectors_metadata_only": [
+          "alert_lifecycle.json"
+        ]
+      }
+    ],
+    "lab_vectors": 18,
+    "took_s": 41.559
+  },
+  "zone": {
+    "Due": 10,
+    "Raised": 0,
+    "Cleared": 0,
+    "Missed": 10,
+    "MissedClears": 0,
+    "Unexpected": 0,
+    "tick_s": 1,
+    "ticks": 0,
+    "lines": [
+      "ac-04998: no zone raise for the entry at 40 s",
+      "ac-04998: no zone raise for the entry at 160 s",
+      "ac-04998: no zone raise for the entry at 280 s",
+      "ac-04998: no zone raise for the entry at 400 s",
+      "ac-04998: no zone raise for the entry at 520 s",
+      "ac-04999: no zone raise for the entry at 40 s",
+      "ac-04999: no zone raise for the entry at 160 s",
+      "ac-04999: no zone raise for the entry at 280 s",
+      "ac-04999: no zone raise for the entry at 400 s",
+      "ac-04999: no zone raise for the entry at 520 s"
+    ]
+  },
+  "protobuf": {
+    "frame_bytes": 1013,
+    "json_per_message_us": 18.751,
+    "processes": [
+      {
+        "process": "authority-picture-ws",
+        "messages_series": "uspace_authority_frames_sent{component=\"picture\"}",
+        "cpu_s": 578.57,
+        "messages": 10021387,
+        "cpu_per_message_us": 57.734,
+        "json_per_message_us": 18.751,
+        "json_share": 0.325
+      },
+      {
+        "process": "ussp-telemetry-ingest",
+        "messages_series": "ussp_accepted{component=\"telemetry\"}",
+        "cpu_s": 1638.72,
+        "messages": 1145899,
+        "cpu_per_message_us": 1430.074,
+        "json_per_message_us": 18.751,
+        "json_share": 0.013
+      },
+      {
+        "process": "ussp-traffic-ws",
+        "messages_series": "ussp_traffic_ws_frames_sent{component=\"traffic_ws\"}",
+        "cpu_s": 657.66,
+        "messages": 37828,
+        "cpu_per_message_us": 17385.535,
+        "json_per_message_us": 18.751,
+        "json_share": 0.001
+      }
+    ],
+    "note": "an estimate: one encoding/json decode and encode of a 1013-byte track frame on this host against each process's CPU per message over the run; the systems expose no profile"
+  },
+  "errors": [
+    "intent of ac-02228 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/061bf8e6-ecf9-44c3-b695-11d614d5764a",
+    "intent of ac-01505 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0d4765eb-1dff-4ac9-b507-195b52e3f151",
+    "intent of ac-02335 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/112acfc2-1537-420d-8af9-2c3be0fb018f",
+    "intent of ac-03516 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/08cb64e6-5c5d-4dcb-9b0f-47fe667c9478",
+    "intent of ac-04325 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0524bb05-24a3-4ee3-84e8-2bc180682985",
+    "intent of ac-04282 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/16150fff-0671-4435-b199-127504ea0ebd",
+    "intent of ac-04271 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/109fbb12-12a0-4ee3-b4eb-fb201694601a",
+    "intent of ac-02140 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/03a96ea3-5331-422b-95b9-19ffc49855c1",
+    "intent of ac-03001 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/099db211-ece1-4b11-882b-cac33019b374",
+    "intent of ac-02164 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0ccc5173-1fc0-403b-b74f-1c7b2838726c",
+    "intent of ac-02346 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/16fe46ec-ff02-4e91-a81b-230ec302c12e",
+    "intent of ac-01322 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/141c88eb-6e41-4f6e-8dcb-d4b8e565f254",
+    "intent of ac-04314 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/1017de58-1716-4fef-8650-75f31af5ee7b",
+    "intent of ac-04422 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/052b8d0d-1a31-4a14-bdcf-7b0873468ae6",
+    "intent of ac-00463 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/179139b9-7208-453b-b659-729445b928ac",
+    "intent of ac-04554 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/187e4268-3757-4c66-9201-2c7831b52e2d",
+    "intent of ac-04103 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/09f646b8-8058-4d89-8bb5-71314cf40a17",
+    "intent of ac-04849 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0b778bcb-798d-4bfe-a071-27024a05d924",
+    "intent of ac-02490 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0c78d1cc-f207-4dff-adbe-f605bce22f91",
+    "intent of ac-00838 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/12f4e0b4-9171-4b1c-816d-fb7d9f7de5be",
+    "intent of ac-00190 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/09f32b24-760c-4d85-8f82-d32c29f65884",
+    "intent of ac-03538 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/127c41ac-d8ff-433f-b354-f87cb0899320",
+    "intent of ac-00177 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/167bd110-e81e-418f-b38b-54d937f19560",
+    "intent of ac-04492 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/120f5d5d-399f-42e5-a4f7-7e3050c94218",
+    "intent of ac-03043 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/096194d3-416a-4886-8258-12061769243e",
+    "intent of ac-00554 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/16597f03-e597-4748-bebd-1f1f8c1609f5",
+    "intent of ac-04241 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0fc6c0ca-7b9e-4ffd-8747-0a84281a71e6",
+    "intent of ac-04502 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0791b949-0c39-43f9-a597-a54a66e332df",
+    "intent of ac-04136 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/182315b3-dd33-4783-94de-e3f119c6a9e1",
+    "intent of ac-00714 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/072bae1e-5ec2-4663-a8ab-61f433275d3e",
+    "intent of ac-02613 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0e1e261a-5b25-46df-9e35-58fb63b0ca9b",
+    "intent of ac-01625 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/01b283e2-e272-4e93-85a1-11a950a5fda1",
+    "intent of ac-00444 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/13f0cd12-c385-4816-9557-0592c69c15ff",
+    "intent of ac-01641 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/08c8cfde-cd50-4a99-b5ff-8a93c0cc47b0",
+    "intent of ac-03608 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/08da9095-d7db-478f-bb9b-cf5ed5e705de",
+    "intent of ac-03155 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/09ae2de9-afe4-44ca-ae87-d7e1cad2797b",
+    "intent of ac-03869 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/1022b84d-3b0e-44cc-8df5-7163b5554027",
+    "intent of ac-02292 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0a4c62b8-7e50-4523-be9d-24625318c73a",
+    "intent of ac-04247 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0e8e628c-d3b3-47ba-8cfe-f425bb4b8c2b",
+    "intent of ac-04730 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/12f0b17a-0213-4312-a3c0-a3eba81282b7",
+    "intent of ac-02059 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/131f04cb-9a54-4fb6-8d63-c0c4881fce6d",
+    "intent of ac-01720 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0767072d-c771-4e6a-91ae-25c5661d3fa3",
+    "intent of ac-04942 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0a6dbb50-0ec6-4548-9078-79153e6bbd4d",
+    "intent of ac-00731 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/14fa697a-ab6a-4c43-b355-8b47abce02ce",
+    "intent of ac-03184 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/02efdc3f-f312-4ae3-8f62-c785e3f7f2f3",
+    "intent of ac-00613 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/04da3ceb-6f99-4f55-b1ae-4b966e8a4ce0",
+    "intent of ac-04842 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/10c036b5-5903-4bcb-9aad-773a8825257a",
+    "intent of ac-00286 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0fae8e42-e128-4081-a260-90877e83765a",
+    "intent of ac-02149 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/15f4b617-c559-487d-86cf-eb331cd78e8c",
+    "intent of ac-01171 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0f81fbd5-b0f7-42ca-94a6-62b02f25c49a",
+    "and 1082 more intents not ended",
+    "drain: not settled within drain_s 120 s",
+    "stream console-00 broke 1 times outside every fault and credential renewal (1 connections); last: console-00: upgrade answered 429",
+    "stream console-08 broke 1 times outside every fault and credential renewal (1 connections); last: console-08: upgrade answered 429",
+    "stream console-10 broke 1 times outside every fault and credential renewal (1 connections); last: console-10: upgrade answered 429",
+    "stream console-14 broke 1 times outside every fault and credential renewal (1 connections); last: console-14: upgrade answered 429",
+    "stream console-22 broke 1 times outside every fault and credential renewal (1 connections); last: console-22: upgrade answered 429",
+    "stream console-26 broke 1 times outside every fault and credential renewal (1 connections); last: console-26: upgrade answered 429",
+    "stream console-28 broke 1 times outside every fault and credential renewal (2 connections); last: console-28: failed to get reader: received close frame: status = StatusTryAgainLater and reason = \"the session could not be checked; reconnect later\"",
+    "stream console-37 broke 1 times outside every fault and credential renewal (1 connections); last: console-37: upgrade answered 429",
+    "stream console-38 broke 1 times outside every fault and credential renewal (1 connections); last: console-38: upgrade answered 429",
+    "stream console-42 broke 1 times outside every fault and credential renewal (1 connections); last: console-42: upgrade answered 429",
+    "stream console-44 broke 1 times outside every fault and credential renewal (1 connections); last: console-44: upgrade answered 429",
+    "stream console-48 broke 1 times outside every fault and credential renewal (1 connections); last: console-48: upgrade answered 429",
+    "stream console-49 broke 1 times outside every fault and credential renewal (1 connections); last: console-49: upgrade answered 429",
+    "stream console-50 broke 1 times outside every fault and credential renewal (1 connections); last: console-50: upgrade answered 429",
+    "stream console-51 broke 1 times outside every fault and credential renewal (1 connections); last: console-51: upgrade answered 429",
+    "stream console-52 broke 1 times outside every fault and credential renewal (1 connections); last: console-52: upgrade answered 429",
+    "stream console-57 broke 1 times outside every fault and credential renewal (1 connections); last: console-57: upgrade answered 429",
+    "stream console-59 broke 1 times outside every fault and credential renewal (1 connections); last: console-59: upgrade answered 429",
+    "F3411: 431 of the SP requests failed outside any fault (statuses map[200:211937 404:431]; last: 2026-10-14T21:41:32Z GET /uss/flights/{id}/details answered 404)"
+  ],
+  "checks_measured": 28,
+  "checks_not_measured": 16,
+  "complete": false,
+  "verdict": "fail",
+  "failures": [
+    "generator_on_time: generator_late_ratio value is 0.0024395949603983557, the criterion is \u003c= 0.001",
+    "operator_to_console_p99: required and not measured: only 61 samples, the check needs 1000",
+    "receiver_to_picture_p99: receiver_to_authority_picture_s p99 is 230.583, the criterion is \u003c 1",
+    "dp_display_p95: f3411_dp_display_s p95 is 2.175, the criterion is \u003c= 1",
+    "dp_display_p99: f3411_dp_display_s p99 is 6.267, the criterion is \u003c= 3",
+    "proximity_raise_p99: required and not measured: no sample was observed",
+    "zone_alert_tick: required and not measured: 10 zone entries due, no zone raise observed (each missed one is a missed alert)",
+    "missed_raises: missed_raises value is 100, the criterion is == 0",
+    "operator_identity: operator_ledgers_unbalanced value is 5000, the criterion is == 0",
+    "picture_identity: picture_silent_loss value is 940375, the criterion is == 0",
+    "picture_traceable: picture_untraceable_frames value is 74462, the criterion is == 0",
+    "evaluation_period: required and not measured: no proximity alert carried evaluation_period_s",
+    "memory_monotonic: required and not measured: no system process had 6 resident-memory samples after the warm-up (17 processes read)",
+    "run error: intent of ac-02228 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/061bf8e6-ecf9-44c3-b695-11d614d5764a",
+    "run error: intent of ac-01505 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0d4765eb-1dff-4ac9-b507-195b52e3f151",
+    "run error: intent of ac-02335 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/112acfc2-1537-420d-8af9-2c3be0fb018f",
+    "run error: intent of ac-03516 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/08cb64e6-5c5d-4dcb-9b0f-47fe667c9478",
+    "run error: intent of ac-04325 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0524bb05-24a3-4ee3-84e8-2bc180682985",
+    "run error: intent of ac-04282 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/16150fff-0671-4435-b199-127504ea0ebd",
+    "run error: intent of ac-04271 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/109fbb12-12a0-4ee3-b4eb-fb201694601a",
+    "run error: intent of ac-02140 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/03a96ea3-5331-422b-95b9-19ffc49855c1",
+    "run error: intent of ac-03001 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/099db211-ece1-4b11-882b-cac33019b374",
+    "run error: intent of ac-02164 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0ccc5173-1fc0-403b-b74f-1c7b2838726c",
+    "run error: intent of ac-02346 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/16fe46ec-ff02-4e91-a81b-230ec302c12e",
+    "run error: intent of ac-01322 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/141c88eb-6e41-4f6e-8dcb-d4b8e565f254",
+    "run error: intent of ac-04314 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/1017de58-1716-4fef-8650-75f31af5ee7b",
+    "run error: intent of ac-04422 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/052b8d0d-1a31-4a14-bdcf-7b0873468ae6",
+    "run error: intent of ac-00463 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/179139b9-7208-453b-b659-729445b928ac",
+    "run error: intent of ac-04554 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/187e4268-3757-4c66-9201-2c7831b52e2d",
+    "run error: intent of ac-04103 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/09f646b8-8058-4d89-8bb5-71314cf40a17",
+    "run error: intent of ac-04849 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0b778bcb-798d-4bfe-a071-27024a05d924",
+    "run error: intent of ac-02490 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0c78d1cc-f207-4dff-adbe-f605bce22f91",
+    "run error: intent of ac-00838 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/12f4e0b4-9171-4b1c-816d-fb7d9f7de5be",
+    "run error: intent of ac-00190 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/09f32b24-760c-4d85-8f82-d32c29f65884",
+    "run error: intent of ac-03538 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/127c41ac-d8ff-433f-b354-f87cb0899320",
+    "run error: intent of ac-00177 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/167bd110-e81e-418f-b38b-54d937f19560",
+    "run error: intent of ac-04492 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/120f5d5d-399f-42e5-a4f7-7e3050c94218",
+    "run error: intent of ac-03043 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/096194d3-416a-4886-8258-12061769243e",
+    "run error: intent of ac-00554 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/16597f03-e597-4748-bebd-1f1f8c1609f5",
+    "run error: intent of ac-04241 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0fc6c0ca-7b9e-4ffd-8747-0a84281a71e6",
+    "run error: intent of ac-04502 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0791b949-0c39-43f9-a597-a54a66e332df",
+    "run error: intent of ac-04136 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/182315b3-dd33-4783-94de-e3f119c6a9e1",
+    "run error: intent of ac-00714 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/072bae1e-5ec2-4663-a8ab-61f433275d3e",
+    "run error: intent of ac-02613 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0e1e261a-5b25-46df-9e35-58fb63b0ca9b",
+    "run error: intent of ac-01625 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/01b283e2-e272-4e93-85a1-11a950a5fda1",
+    "run error: intent of ac-00444 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/13f0cd12-c385-4816-9557-0592c69c15ff",
+    "run error: intent of ac-01641 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/08c8cfde-cd50-4a99-b5ff-8a93c0cc47b0",
+    "run error: intent of ac-03608 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/08da9095-d7db-478f-bb9b-cf5ed5e705de",
+    "run error: intent of ac-03155 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/09ae2de9-afe4-44ca-ae87-d7e1cad2797b",
+    "run error: intent of ac-03869 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/1022b84d-3b0e-44cc-8df5-7163b5554027",
+    "run error: intent of ac-02292 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0a4c62b8-7e50-4523-be9d-24625318c73a",
+    "run error: intent of ac-04247 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0e8e628c-d3b3-47ba-8cfe-f425bb4b8c2b",
+    "run error: intent of ac-04730 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/12f0b17a-0213-4312-a3c0-a3eba81282b7",
+    "run error: intent of ac-02059 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/131f04cb-9a54-4fb6-8d63-c0c4881fce6d",
+    "run error: intent of ac-01720 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0767072d-c771-4e6a-91ae-25c5661d3fa3",
+    "run error: intent of ac-04942 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0a6dbb50-0ec6-4548-9078-79153e6bbd4d",
+    "run error: intent of ac-00731 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/14fa697a-ab6a-4c43-b355-8b47abce02ce",
+    "run error: intent of ac-03184 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/02efdc3f-f312-4ae3-8f62-c785e3f7f2f3",
+    "run error: intent of ac-00613 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/04da3ceb-6f99-4f55-b1ae-4b966e8a4ce0",
+    "run error: intent of ac-04842 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/10c036b5-5903-4bcb-9aad-773a8825257a",
+    "run error: intent of ac-00286 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0fae8e42-e128-4081-a260-90877e83765a",
+    "run error: intent of ac-02149 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/15f4b617-c559-487d-86cf-eb331cd78e8c",
+    "run error: intent of ac-01171 not ended: simop: end answered 409: {\"type\":\"https://schemas.uspace.ge/problems/end_refused\",\"title\":\"Conflict\",\"status\":409,\"detail\":\"the intent is ended and cannot be ended\",\"instance\":\"/v1/intents/0f81fbd5-b0f7-42ca-94a6-62b02f25c49a",
+    "run error: and 1082 more intents not ended",
+    "run error: drain: not settled within drain_s 120 s",
+    "run error: stream console-00 broke 1 times outside every fault and credential renewal (1 connections); last: console-00: upgrade answered 429",
+    "run error: stream console-08 broke 1 times outside every fault and credential renewal (1 connections); last: console-08: upgrade answered 429",
+    "run error: stream console-10 broke 1 times outside every fault and credential renewal (1 connections); last: console-10: upgrade answered 429",
+    "run error: stream console-14 broke 1 times outside every fault and credential renewal (1 connections); last: console-14: upgrade answered 429",
+    "run error: stream console-22 broke 1 times outside every fault and credential renewal (1 connections); last: console-22: upgrade answered 429",
+    "run error: stream console-26 broke 1 times outside every fault and credential renewal (1 connections); last: console-26: upgrade answered 429",
+    "run error: stream console-28 broke 1 times outside every fault and credential renewal (2 connections); last: console-28: failed to get reader: received close frame: status = StatusTryAgainLater and reason = \"the session could not be checked; reconnect later\"",
+    "run error: stream console-37 broke 1 times outside every fault and credential renewal (1 connections); last: console-37: upgrade answered 429",
+    "run error: stream console-38 broke 1 times outside every fault and credential renewal (1 connections); last: console-38: upgrade answered 429",
+    "run error: stream console-42 broke 1 times outside every fault and credential renewal (1 connections); last: console-42: upgrade answered 429",
+    "run error: stream console-44 broke 1 times outside every fault and credential renewal (1 connections); last: console-44: upgrade answered 429",
+    "run error: stream console-48 broke 1 times outside every fault and credential renewal (1 connections); last: console-48: upgrade answered 429",
+    "run error: stream console-49 broke 1 times outside every fault and credential renewal (1 connections); last: console-49: upgrade answered 429",
+    "run error: stream console-50 broke 1 times outside every fault and credential renewal (1 connections); last: console-50: upgrade answered 429",
+    "run error: stream console-51 broke 1 times outside every fault and credential renewal (1 connections); last: console-51: upgrade answered 429",
+    "run error: stream console-52 broke 1 times outside every fault and credential renewal (1 connections); last: console-52: upgrade answered 429",
+    "run error: stream console-57 broke 1 times outside every fault and credential renewal (1 connections); last: console-57: upgrade answered 429",
+    "run error: stream console-59 broke 1 times outside every fault and credential renewal (1 connections); last: console-59: upgrade answered 429",
+    "run error: F3411: 431 of the SP requests failed outside any fault (statuses map[200:211937 404:431]; last: 2026-10-14T21:41:32Z GET /uss/flights/{id}/details answered 404)"
+  ]
+}

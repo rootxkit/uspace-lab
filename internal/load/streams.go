@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
+	"github.com/rootxkit/uspace-core/core"
 
 	"github.com/rootxkit/uspace-lab/internal/observe"
 	"github.com/rootxkit/uspace-lab/internal/scenario"
@@ -34,8 +35,11 @@ type stream struct {
 	headerFn func(ctx context.Context, renew bool) (http.Header, error)
 	renew    bool
 	onOpen   []byte
-	aircraft *Aircraft // traffic: whose flight
-	timed    bool      // its frames feed a ledger
+	// readLimit bounds one frame read (0: wire.MaxFrameBytes); a console
+	// subscribed to the whole area has its snapshot's bound.
+	readLimit int
+	aircraft  *Aircraft // traffic: whose flight
+	timed     bool      // its frames feed a ledger
 
 	mu         sync.Mutex
 	frames     map[string]uint64
@@ -47,22 +51,70 @@ type stream struct {
 	// for the first time (a track or a traffic product); status frames
 	// and repeated states keep coming after the generator stops and say
 	// nothing about what is still in flight.
-	lastData    time.Time
-	ready       chan struct{} // closed on the first status (and snapshot, when subscribing)
-	readyOnce   sync.Once
-	needSnap    bool
-	gotStatus   bool
-	degraded    map[string]bool
+	lastData  time.Time
+	ready     chan struct{} // closed on the first status (and snapshot, when subscribing)
+	readyOnce sync.Once
+	needSnap  bool
+	gotStatus bool
+	degraded  map[string]bool
+	// current is the degraded set of the latest status.
+	current     []string
 	evalPeriodS float64
+	// breaks are the connections that ended or failed (bounded);
+	// overBreaks those past the bound.
+	breaks     []streamBreak
+	overBreaks int
+}
+
+// streamBreak is one connection of a stream that ended or failed: when,
+// why, whether it asked for fresh credentials, and how many connections
+// had opened by then.
+type streamBreak struct {
+	at       time.Time
+	err      string
+	renew    bool
+	connects int
+}
+
+// maxBreaks bounds the breaks kept per stream (E-10); later ones are
+// counted as unexcused.
+const maxBreaks = 1000
+
+// unexcused counts the breaks that neither fell inside a fault the run
+// injected (excused, nil: none) nor were a refusal of expired
+// credentials followed by a connection on fresh ones, and returns the
+// last of them. What a break loses shows as unshown samples in the
+// ledgers either way; an unexcused one is a run error because nothing
+// the run did explains it.
+func (s *stream) unexcused(excused func(time.Time) bool) (n int, last string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, b := range s.breaks {
+		switch {
+		case excused != nil && excused(b.at):
+		case b.renew && s.connects > b.connects:
+		default:
+			n++
+			last = b.err
+		}
+	}
+	if s.overBreaks > 0 {
+		n += s.overBreaks
+	}
+	return n, last
 }
 
 // StreamStats is what the report shows of a stream.
 type StreamStats struct {
-	Name          string            `json:"name"`
-	Kind          string            `json:"kind"`
-	Aircraft      string            `json:"aircraft,omitempty"`
-	Timed         bool              `json:"timed"`
-	Connects      int               `json:"connects"`
+	Name     string `json:"name"`
+	Kind     string `json:"kind"`
+	Aircraft string `json:"aircraft,omitempty"`
+	Timed    bool   `json:"timed"`
+	Connects int    `json:"connects"`
+	// Breaks counts the connections that ended or failed; Unexcused
+	// those outside every fault and credential renewal.
+	Breaks        int               `json:"breaks"`
+	Unexcused     int               `json:"breaks_unexcused"`
 	Frames        map[string]uint64 `json:"frames"`
 	DroppedFrames uint64            `json:"dropped_frames"`
 	Degraded      []string          `json:"degraded,omitempty"`
@@ -72,7 +124,8 @@ type StreamStats struct {
 func (s *stream) stats() StreamStats {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	st := StreamStats{Name: s.name, Kind: s.kind, Timed: s.timed, Connects: s.connects, Frames: map[string]uint64{}, DroppedFrames: s.dropped, LastError: s.lastErr}
+	st := StreamStats{Name: s.name, Kind: s.kind, Timed: s.timed, Connects: s.connects, Breaks: len(s.breaks) + s.overBreaks,
+		Frames: map[string]uint64{}, DroppedFrames: s.dropped, LastError: s.lastErr}
 	if s.aircraft != nil {
 		st.Aircraft = s.aircraft.Name
 	}
@@ -109,6 +162,13 @@ type readers struct {
 	nHeld   int
 	// onShown is told every sample newly shown (the faults' recovery).
 	onShown func(kind string, at time.Time)
+	// frame is the first track frame the timed console received, as
+	// sent (the 04 §1 estimate times its JSON).
+	frameMu sync.Mutex
+	frame   []byte
+	// network is told every network_rid track on the timed console (the
+	// peer's display; nil: no peer).
+	network func(instance, trackID string, pos core.LatLon, captured, arrived time.Time)
 	// flags are the degraded states the streams showed for the first
 	// time, with when (bounded).
 	flagMu sync.Mutex
@@ -206,6 +266,11 @@ func (rd *readers) run(ctx context.Context, s *stream) {
 		if err != nil {
 			s.mu.Lock()
 			s.lastErr = err.Error()
+			if len(s.breaks) < maxBreaks {
+				s.breaks = append(s.breaks, streamBreak{at: time.Now(), err: err.Error(), renew: s.renew, connects: s.connects})
+			} else {
+				s.overBreaks++
+			}
 			s.mu.Unlock()
 		}
 		select {
@@ -239,7 +304,7 @@ func (rd *readers) read(ctx context.Context, s *stream) error {
 		return fmt.Errorf("%s: %w", s.name, err)
 	}
 	defer func() { _ = conn.CloseNow() }()
-	conn.SetReadLimit(wire.MaxFrameBytes)
+	conn.SetReadLimit(int64(s.limit()))
 	s.mu.Lock()
 	s.connects++
 	s.mu.Unlock()
@@ -268,10 +333,30 @@ func (rd *readers) read(ctx context.Context, s *stream) error {
 	}
 }
 
+// limit is the largest frame the stream reads.
+func (s *stream) limit() int {
+	if s.readLimit > 0 {
+		return s.readLimit
+	}
+	return wire.MaxFrameBytes
+}
+
+// snapshotTrackBytes bounds one track in a console snapshot: a track
+// frame is about 1 KB (the 04 §1 estimate's is 1008 bytes), four times
+// that leaves the alerts and the envelope room.
+const snapshotTrackBytes = 4 << 10
+
+// snapshotLimit is the frame bound of a console subscribed to the whole
+// area of a fleet of n aircraft: its snapshot holds every track, and at
+// 1000 aircraft that is past wire.MaxFrameBytes (the first recorded
+// 1000 run lost every console to "message too big" on each snapshot).
+// Still bounded (E-10): by the tier, never by what the system sends.
+func snapshotLimit(n int) int { return max(wire.MaxFrameBytes, n*snapshotTrackBytes) }
+
 // handle reads one frame; at is its arrival on the generator's clock.
 // alert hands an alert/v1 or violation/v1 to the event recorder.
 func (rd *readers) handle(s *stream, b []byte, at time.Time, alert func([]byte, time.Time)) {
-	e, err := wire.ParseEnvelope(b)
+	e, err := wire.ParseEnvelopeWithin(b, s.limit())
 	s.mu.Lock()
 	if s.frames == nil {
 		s.frames = map[string]uint64{}
@@ -296,6 +381,11 @@ func (rd *readers) handle(s *stream, b []byte, at time.Time, alert func([]byte, 
 		}
 	case wire.SchemaTrack:
 		if s.timed {
+			rd.frameMu.Lock()
+			if rd.frame == nil {
+				rd.frame = append([]byte(nil), b...)
+			}
+			rd.frameMu.Unlock()
 			rd.track(s, e, at)
 		}
 	case trafficProduct:
@@ -321,6 +411,10 @@ const closeSignInAgain websocket.StatusCode = 4401
 // (schemas/common/envelope/v1 $defs.source).
 const sourceDirectRID = "direct_rid"
 
+// sourceNetworkRID is the track source of what a display provider read
+// from a Service Provider.
+const sourceNetworkRID = "network_rid"
+
 func (rd *readers) status(s *stream, e wire.Envelope, at time.Time) {
 	var b struct {
 		DroppedFrames uint64   `json:"dropped_frames"`
@@ -331,6 +425,7 @@ func (rd *readers) status(s *stream, e wire.Envelope, at time.Time) {
 	}
 	s.mu.Lock()
 	s.dropped = max(s.dropped, b.DroppedFrames)
+	s.current = append(s.current[:0], b.Degraded...)
 	s.lastStatus = at
 	s.gotStatus = true
 	if s.degraded == nil {
@@ -360,6 +455,11 @@ func (rd *readers) track(s *stream, e wire.Envelope, at time.Time) {
 	var b struct {
 		TrackID        string `json:"track_id"`
 		Source         string `json:"source"`
+		SourceInstance string `json:"source_instance"`
+		Position       struct {
+			Lat float64 `json:"lat"`
+			Lng float64 `json:"lng"`
+		} `json:"position"`
 		Identification struct {
 			Serial *string `json:"serial"`
 		} `json:"identification"`
@@ -367,6 +467,10 @@ func (rd *readers) track(s *stream, e wire.Envelope, at time.Time) {
 	captured, err := wire.ParseTime(e.CapturedAt)
 	if json.Unmarshal(e.Body, &b) != nil || err != nil {
 		rd.picture.untraceableFrame()
+		return
+	}
+	if b.Source == sourceNetworkRID && rd.network != nil {
+		rd.network(b.SourceInstance, b.TrackID, core.LatLon{LatDeg: b.Position.Lat, LonDeg: b.Position.Lng}, captured, at)
 		return
 	}
 	if b.Source != sourceDirectRID {
@@ -439,6 +543,28 @@ func (rd *readers) closeHeld() {
 		delete(rd.held, id)
 	}
 	rd.nHeld = 0
+}
+
+// currentFlags is what the streams say is degraded now: the timed
+// console's latest status (picture) and the union of the traffic
+// streams' latest (traffic).
+func (rd *readers) currentFlags(streams []*stream) map[string][]string {
+	out := map[string][]string{}
+	seen := map[string]map[string]bool{streamPicture: {}, streamTraffic: {}}
+	for _, s := range streams {
+		if s.kind == streamPicture && !s.timed {
+			continue
+		}
+		s.mu.Lock()
+		for _, f := range s.current {
+			if !seen[s.kind][f] {
+				seen[s.kind][f] = true
+				out[s.kind] = append(out[s.kind], f)
+			}
+		}
+		s.mu.Unlock()
+	}
+	return out
 }
 
 // noteData records that a frame arriving at at showed a sample for the
