@@ -1,7 +1,8 @@
 # uspace-lab implementation plan
 
-Status: plan for parallel implementation by independent agents. Branch
-`plan/lab-workpackages`. Inputs: the spec in `docs/spec/` (`00 §6.1` lab
+Status: plan for parallel implementation by independent agents; WP-L1 to
+WP-L9 have landed work (`CHANGELOG.md`), and the lab pins `uspace-core`
+v1.6.0 (`go.mod`). Written on branch `plan/lab-workpackages`. Inputs: the spec in `docs/spec/` (`00 §6.1` lab
 row, `00 §7`, `01 §5`, `02 F12`, `04 §1`–`§2`, `05 §6`–`§7`, `07` Phase 0
 and Phase 6, `09 §3`), the knowledge base in `knowledge/` (`LESSONS.md`,
 `scenarios.md`, the 18 vector files), the accepted cross-plan decision

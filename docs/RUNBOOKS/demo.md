@@ -27,8 +27,9 @@ build on.
 2. `deploy/systems/gen-secrets.sh`: the lab CA and Caddy's certificate
    for the five hosts, every system's keys, the database passwords
    (`deploy/local-demo/`, git-ignored).
-3. Builds the ANSP image from `ANSP_SOURCE_COMMIT` if it is not present
-   (the ANSP publishes none); every other image is pulled by digest.
+3. Pulls every image by digest, the ANSP's too (`ANSP_GO_IMAGE`); builds
+   the ANSP image from `ANSP_SOURCE_COMMIT` only if `ANSP_GO_IMAGE` is a
+   local name that is not present.
 4. Starts the DSS and the lab issuer, then writes each issuer client's
    secret to `local-demo/clients/<id>.secret`.
 5. Starts the authority first and waits for its JWKS through Caddy (the
