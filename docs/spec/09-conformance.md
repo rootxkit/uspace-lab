@@ -115,7 +115,7 @@ Provisions checked: 2021/665 — 3 operative points; 2021/666 — 1 replaced poi
 | 947 Art. 14(7) | Certified UA registration mark per ICAO Annex 7 | authority | `03` `registration_mark` | met | |
 | 947 Art. 14(8) | Display the registration number on the UA | operator | — | n/a | physical; upload into RID is 945 Part 2(12)(a) / Part 6(1) |
 | 947 Art. 15(1)–(2) | Zone options; exemption zones | authority | `03` `geo_zones.type`, `regulation_exemption` | met | |
-| 947 Art. 15(3), 18(f) | Zones with period of validity in a common unique digital format | authority, cisp | `02 F1`; `03` `geo_zones` | met | ED-318 |
+| 947 Art. 15(3), 18(f) | Zones with period of validity in a common unique digital format | authority, cisp | `02 F1`; `03` `geo_zones` | met (fixed) | ED-318; the period is published as `limitedApplicability` (until 2026-10-16 it was not published at all) |
 | 947 Art. 17 | Designation of the competent authority | — | `00 §5` | n/a | |
 | 947 Art. 18(a)–(e), (h)–(j) | Enforcement, certificates, competency, authorisations, records, oversight | authority | `01` A6 | met / org | |
 | 947 Art. 18(k) | System to detect and examine non-compliance | authority | `01` A7; `03` `violations` | met | |
@@ -289,3 +289,4 @@ Provisions checked: GDPR — 8 rows.
 |---|---|---|---|
 | 2026-10-04 | §1.6, ED-318 `Metadata` row | The row names core's metadata members, not `creationDateTime`, `updateDateTime`, `originator`; status unchanged. | `docs/decisions/2026-10-02-cross-plan.md` M15 |
 | 2026-10-04 | §2, partitioning row | The grid of `05 §3` replaces H3 resolution 5 / 3; the choice stays internal. | `docs/decisions/2026-10-02-cross-plan.md` M35 |
+| 2026-10-16 | §1, 947 Art. 15(3) row | `met` → `met (fixed)`: the period of validity was stored and used by the authority's own export filter but never published, so the CISP served every zone without an end. | rootxkit/uspace-authority fix/WP-5-period-of-validity |
