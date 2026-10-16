@@ -39,7 +39,7 @@ Contents:
 | SC-14 | Drain against intake after a deliberate outage | ussp, authority | ran 2026-09-27/28 |
 | SC-15 | A stalled adapter must not present old positions as live | authority, ussp, ansp | **not yet passed** |
 | SC-16 | A network Remote ID provider switched off | ussp | ran 2026-10-01 |
-| SC-17 | A registry change reaches every resolver | authority, ussp | **not yet run** as a timed scenario |
+| SC-17 | A registry change reaches every resolver | authority, ussp | **not yet run** as a timed scenario; the USSP clause runs in uspace-ussp's browser-test stack (web/e2e/registry.spec.ts, 2026-10-16), not yet in the lab stack |
 | SC-18 | Storage down while observations arrive | authority | ran 2026-09-30 |
 | SC-19 | Replay holes with their causes | authority, lab | partly run |
 | SC-20 | Soak and missed-alert count | lab | **not yet run** |
@@ -366,6 +366,48 @@ piece against PostgreSQL.
 6. Make the projection unreadable for one refresh.
    - Expect: the readers keep the snapshot they hold. No aircraft turns
      unknown.
+
+### SC-17, the USSP clause: an answer fetched before the feed sees its change
+
+Source: uspace-ussp staging, 2026-10 (WP-5; its `docs/RUNBOOKS/WP-5.md`).
+Rule: LESSONS G-08. A USSP caches the authority's F8 answers and
+invalidates them from the change feed (`GET /v1/registry/changes`).
+On staging an answer fetched just after a registration, before the
+USSP's feed had read the change, was deleted by the poll that brought
+the change. Nothing fetched it again, so the aircraft resolved
+`unknown_operator` / `registry_unavailable` for its whole flight and
+raised a critical `identification` alert inside a PROHIBITED zone.
+Run it in the lab stack as staging ran it, with the authority's real
+feed (the USSP polls every 30 s).
+
+1. Register an operator and a UAS at the authority. File and activate
+   the intent at once, before the USSP's next feed poll. Fly the
+   aircraft inside a PROHIBITED zone (AMSL limits, so no terrain is
+   needed), with the intent's volume outside it.
+   - Expect: a zone incursion alert for the flight, so the zone was
+     judged. Once the USSP's `/readyz` `registry` entry shows a
+     `feed_cursor` at or beyond the registration, the track stays
+     `registered` for two more poll intervals. No `identification`
+     alert is raised for the flight at any point.
+2. Suspend the UAS at the authority in mid-flight.
+   - Expect: the track says `suspended` within one poll interval of the
+     change, plus the projection's refresh. It never says
+     `registry_unavailable` on the way. Still no `identification`
+     alert, because a suspended aircraft is not an incident status.
+3. Presence twin: fly an aircraft whose serial the registry does not
+   hold, without an intent, in the same zone.
+   - Expect: the `identification` alert is raised for its flight.
+4. Take the authority's lookups down while its feed still answers, then
+   change a bound key.
+   - Expect: the key is deleted and shows as unavailable. It is never
+     kept `valid`. The USSP's `/readyz` names the failed re-fetch
+     (`refetch_failed`). Once the lookups answer again, the USSP's
+     sweep (`registry_revalidate_interval_s`, 60 s) restores the key.
+
+Fails if any sample of the registered flight is `unknown_operator`
+after step 1, or if an `identification` alert is raised for it. Record
+the image digests, the times and the USSP's `registry_feed_*` and
+`registry_refetch_*` counters.
 
 ## SC-18. Storage down while observations arrive
 
