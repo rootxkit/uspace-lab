@@ -206,7 +206,7 @@ Grouped by the plan that asked. "Decision" is what to write into the plan now. O
 | Plan | Q | Decision | Reason (one line) |
 |---|---|---|---|
 | cisp | Q1 | Follow core's `ed318.Metadata` (`issued`, `provider`) + top-level `cis_*` members (M15). | Core is the parser everyone runs; the spec names are from ED-269-era text. |
-| cisp | Q2 | The ANSP declares states; the CISP only expires `active → ended (ended_by: expiry)` at `ends_at`; a `planned` past `starts_at` stays `planned` and is flagged. | ANSP is the master (`03 §4`); the CISP never edits content. |
+| cisp | Q2 | The ANSP declares states; the CISP only expires `active → ended (ended_by: expiry)` at `ends_at`; a `planned` past `starts_at` stays `planned` and is flagged. Consumers install the CISP's expiry version by the F3 rule (erratum of 2026-10-16, `02` F3 `Transport / auth`) instead of holding it. | ANSP is the master (`03 §4`); the CISP never edits content. |
 | cisp | Q3 | `POST /v1/publishers/heartbeat` `{sent_at, active_refs?}` every 15 s; stale after 60 s (M3). | One endpoint for both publishers; three misses = the spec's 60 s. |
 | cisp | Q5 | The CISP owns `cis/ussp_list/v1` (M7, M14). | API-owner rule. |
 | cisp | Q6 | The CISP owns `cis/uspace_requirements/v1` and validates the blocks; restrictions must name a current `USPACE` feature (M9). | API-owner rule; ATS.TR.237 applies inside U-space airspace. |
